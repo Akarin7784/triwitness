@@ -52,6 +52,10 @@
 - shoot-ui21c 46 项全过；shoot-ui21、test-guards 全过（右键空白点改为动态寻找）
 - 界面审查：浅色 / 深色 / 英文 / 减少动态效果，139 张截图，报告见 `docs/ui-review-2026-10-11.md`
 
+**安装包 0.2.0**：`release/TriWitness_0.2.0_x64-setup.exe`（13,360,733 字节 ≈ 12.74 MiB，NSIS，未签名）
+- sha256 `857a0a8659d4ae9d50793990ae5c3efd8cc2b982603d91a9ddbf55d1805a7266`
+- 构建方式同 `docs/WINDOWS_BUILD.md` 方式 B：cargo-xwin 交叉编译，`--bundles nsis`
+
 ### 第 2 轮：设置、侧栏、消息操作、快捷键（b3d20d0 / f35b741）
 
 **设置**（Ctrl+,，左侧分区导航，改动即时保存）
