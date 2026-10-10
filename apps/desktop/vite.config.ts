@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
 import { fileURLToPath } from 'node:url'
+import { coreBridge } from './vite.coreBridge.ts'
 
 // 仓库根：fixture 直接从 evals/fixtures/events 导入（?raw），不复制
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
@@ -20,7 +21,7 @@ function woff2Only(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [woff2Only(), react(), tailwindcss()],
+  plugins: [woff2Only(), react(), tailwindcss(), coreBridge(repoRoot)],
   clearScreen: false,
   server: {
     port: 1420,

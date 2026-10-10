@@ -4,7 +4,11 @@ import clsx from 'clsx'
 import type { ChatMessage } from '../types'
 import { cacheHitRate, type RunView } from '../data/mapEvent'
 import { MessageBubble } from './MessageBubble'
-import { Composer } from './Composer'
+import { Composer, type ComposerRepo } from './Composer'
+import { ApprovalCard } from './ApprovalCard'
+import { ResultCard } from './ResultCard'
+import type { PendingApproval } from '../bridge/liveTask'
+import type { ApprovalScope, ResultMsg } from '../bridge/protocol'
 import { Tip } from './Tip'
 import { PHASE_DOT } from './phase'
 
@@ -13,14 +17,38 @@ interface ChatPanelProps {
   run: RunView | null
   messages: ChatMessage[]
   onSend: (text: string) => void
+  /** 真实任务（UI-10） */
+  approvals?: PendingApproval[]
+  onApprove?: (requestId: string, decision: 'allow' | 'deny', scope: ApprovalScope) => Promise<void>
+  result?: ResultMsg | null
+  notice?: string | null
+  repo?: ComposerRepo
+  running?: boolean
+  onStop?: () => void
+  allowEmpty?: boolean
 }
 
-export function ChatPanel({ title, run, messages, onSend }: ChatPanelProps) {
+export function ChatPanel({
+  title,
+  run,
+  messages,
+  onSend,
+  approvals = [],
+  onApprove,
+  result,
+  notice,
+  repo,
+  running,
+  onStop,
+  allowEmpty,
+}: ChatPanelProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length])
+  }, [messages.length, approvals.length, result])
+
+  const pending = approvals.length > 0 && !result
 
   return (
     <section className="flex min-w-0 flex-1 flex-col">
@@ -37,10 +65,15 @@ export function ChatPanel({ title, run, messages, onSend }: ChatPanelProps) {
               </Tip>
             )}
             <CostChip run={run} />
-            {run.label && (
-              <span className="chip fade-in" key={run.label} data-testid="state-chip">
-                <span className={clsx('h-1.5 w-1.5 rounded-full transition-colors duration-700', PHASE_DOT[run.phase])} />
-                {run.label}
+            {(run.label || pending) && (
+              <span className="chip fade-in" key={pending ? '待批' : run.label} data-testid="state-chip">
+                <span
+                  className={clsx(
+                    'h-1.5 w-1.5 rounded-full transition-colors duration-700',
+                    PHASE_DOT[pending ? 'waiting' : run.phase],
+                  )}
+                />
+                {pending ? '待批' : run.label}
               </span>
             )}
           </div>
@@ -51,10 +84,16 @@ export function ChatPanel({ title, run, messages, onSend }: ChatPanelProps) {
         {messages.map((m) => (
           <MessageBubble key={m.id} message={m} />
         ))}
+        {onApprove &&
+          approvals.map((a) => (
+            <ApprovalCard key={a.requestId} req={a} onDecide={(c) => onApprove(a.requestId, c.decision, c.scope)} />
+          ))}
+        {result && <ResultCard result={result} />}
+        {notice && <p className="fade-in text-center text-[12px] text-sepia-muted">{notice}</p>}
         <div ref={bottomRef} />
       </div>
 
-      <Composer onSend={onSend} />
+      <Composer onSend={onSend} repo={repo} running={running} onStop={onStop} allowEmpty={allowEmpty} />
     </section>
   )
 }

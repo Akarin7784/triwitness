@@ -1,7 +1,17 @@
+mod core;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(core::CoreState::default())
+        .invoke_handler(tauri::generate_handler![
+            core::core_start,
+            core::core_send,
+            core::core_cancel,
+            core::core_read_run,
+            core::core_alive
+        ])
         .setup(|app| {
             #[cfg(windows)]
             harden_webview2(app);

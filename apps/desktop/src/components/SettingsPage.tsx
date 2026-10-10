@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, Ban, Check, Clock, Info, KeyRound, Lock, Wallet } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Ban, Check, Clock, Feather, Info, KeyRound, Lock, Wallet } from 'lucide-react'
 import { Tip } from './Tip'
 import clsx from 'clsx'
 import {
@@ -12,6 +12,8 @@ import {
   ledger,
   rowCost,
 } from '../data/budget'
+import { coreMode, setCoreMode } from '../bridge/liveStore'
+import type { CoreMode } from '../bridge/protocol'
 
 const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
@@ -63,6 +65,10 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
               </Tip>
             </div>
           </div>
+        </Section>
+
+        <Section icon={<Feather size={14} strokeWidth={1.6} />} title="运行方式">
+          <CoreModePicker />
         </Section>
 
         <Section icon={<Clock size={14} strokeWidth={1.6} />} title="高峰闸门">
@@ -151,6 +157,37 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
         </Section>
       </div>
     </section>
+  )
+}
+
+const MODES: { id: CoreMode; label: string; tip: string }[] = [
+  { id: 'demo', label: '演示', tip: '脚本模型 · 示例仓库 · ¥0' },
+  { id: 'replay', label: '回放', tip: '用录好的模型回复 · ¥0' },
+  { id: 'live', label: '真实', tip: 'deepseek-flash · 计费 · 受高峰闸门约束' },
+]
+
+function CoreModePicker() {
+  const [mode, setMode] = useState<CoreMode>(coreMode)
+  return (
+    <div data-testid="core-mode" className="paper-card inline-flex rounded-full p-1">
+      {MODES.map((m) => (
+        <Tip key={m.id} label={m.tip} side="bottom">
+          <button
+            type="button"
+            onClick={() => {
+              setCoreMode(m.id)
+              setMode(m.id)
+            }}
+            className={clsx(
+              'rounded-full px-4 py-1 text-[13px] transition-colors duration-300',
+              mode === m.id ? 'bg-ink text-parchment' : 'text-ink-soft hover:text-amber',
+            )}
+          >
+            {m.label}
+          </button>
+        </Tip>
+      ))}
+    </div>
   )
 }
 

@@ -58,6 +58,7 @@ def run_cmd(
         raise typer.BadParameter("只能是 auto / docker / none")
     if verify not in ("off", "deterministic", "model"):
         raise typer.BadParameter("--verify 只能是 off / deterministic / model")
+    repo = repo.expanduser()  # 桌面端可能传 ~/...（Windows 下 shell 不展开）
     if demo:
         from triwitness.bridge import demo as demo_mod
 

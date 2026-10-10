@@ -1,11 +1,12 @@
 import { FIXTURE_NAMES, type FixtureName } from '../data/sources/fixture'
 
 /** ?source=fixture:success | fixture:failure | fixture:budget_exceeded | fixture:recorded | mock；默认 fixture:success */
-export type SourceKey = `fixture:${FixtureName}` | 'mock' | `local:${string}`
+export type SourceKey = `fixture:${FixtureName}` | 'mock' | `local:${string}` | `live:${string}`
 
 export function parseSourceParam(search: string): SourceKey {
   const raw = new URLSearchParams(search).get('source') ?? ''
   if (raw === 'mock') return 'mock'
+  if (/^live:[\w-]+$/.test(raw)) return raw as SourceKey
   const m = /^fixture:(.+)$/.exec(raw)
   if (m && (FIXTURE_NAMES as string[]).includes(m[1])) return `fixture:${m[1] as FixtureName}`
   return 'fixture:success'

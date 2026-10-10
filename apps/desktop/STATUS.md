@@ -2,6 +2,49 @@
 
 > 不按日历排期，做完一项记一项。
 
+## UI-10 · 桌面端驱动真实核心（已完成）
+
+**通路**：新会话 → 输入框上方的仓库签（点开填路径；演示模式可留空，核心自动建示例仓库）→ 发送 → 后端拉起 `tw run --jsonl` → 实时 tw-events/1 进入原有推流、状态 / 费用 chip 和角色点 → 审批卡 → 结论卡。
+
+**协议 tw-bridge/1**（`src/triwitness/bridge/stdio.py`，核心侧在 b49daa2）
+- stdout 每行一个 JSON：tw-events/1 事件原样输出；带 `bridge` 键的是控制行，包括 `hello`（协议 / 模式）、`run`（run_id / run_dir）、`result`（终态 / 裁决 / 风险 / 费用 / 步数 / pr.md）、`error`、`ack`。stderr 只放人读日志
+- stdin 收两种命令：`{"cmd":"approve","request_id","decision":"allow|deny","scope":"once|session|always"}` 和 `{"cmd":"cancel"}`
+- 审批走权限系统原有的 ApprovalBroker，所以有界面审批时 `tw run` 不再一律拒绝复现命令
+- 取消：核心收尾后发 `cancelled` 状态和 `task_finished(status=cancelled)`。Rust 侧 10 秒后仍未退出就强制结束进程
+
+**桌面端**
+- `src-tauri/src/core.rs` 提供五个命令：`core_start / core_send / core_cancel / core_read_run / core_alive`，输出通过事件 `tw://line`、`tw://exit` 推给前端
+  - 核心命令按顺序找：`TW_CORE`（JSON 数组）→ `tw` → Windows 上 `py -3 -m triwitness` → `python -m triwitness` → `python3 -m triwitness`
+  - 子进程设置 `PYTHONUTF8=1`；Windows 上不弹控制台窗口
+- `src/bridge/`
+  - `protocol.ts`：行解析和命令构造
+  - `transport.ts`：Tauri 实现和开发桥实现
+  - `liveTask.ts`：任务本身，实现 EventSource，同时维护审批 / 结果 / 退出快照
+  - `liveStore.ts`：注册表；任务清单存在 localStorage，侧栏据此显示
+- `vite.coreBridge.ts`：开发桥。只在 `npm run dev` 且 `TW_DEV_BRIDGE=1` 时启用，提供同一套 HTTP + SSE 接口，供浏览器预览、截图和 e2e 使用；正式构建不包含
+- **审批卡**：四个选择，允许一次 / 本次任务 / 总是 / 拒绝。笔写到审批那一行时出现，此时状态签显示「待批」；结案后收起
+- **结论卡**：裁决（复验通过 / 未过 / 证据不足）、风险等级、费用 / 步数、摘要、pr.md 前几行（可展开全文）。笔写完最后一行时出现
+- **停止**：任务进行中，发送键变成停止键
+- **续上**：刷新或重开界面后，若进程还在，读 `run_dir/trajectory.jsonl` 补齐，再接上实时流；若已结束，从记录回放全程，并用保存下来的结论重现结论卡
+- **设置 · 运行方式**：演示 / 回放 / 真实，默认演示。真实模式走 `--live`（deepseek-flash），已接通，本轮未运行
+
+**顺带修的三处（27b6cee）**
+- 补丁侧回归超时：判为证据不足，不再判失败
+- 薄证据：只有「自报风险」这一条时，不算证据
+- 跑测试时设置 `PYTHONDONTWRITEBYTECODE=1`
+
+**和任务卡的偏差**
+- 「续上」只做到重新接上 / 回放，不支持从 checkpoint 继续已停止的任务
+- 演示适配器是脚本化模型：费用 ¥0，不写账本；回放模式需要录好的模型回复
+
+**验证**
+- `npm test`：46 项通过。新增 protocol 和 liveTask 测试，其中 liveTask 用真实核心录下的 `__fixtures__/demo-run.jsonl` 做 e2e 回放：审批、结案、结论、跟笔折叠、幂等、续传
+- `npm run lint` / `check:events` / `build` 通过
+- `cargo xwin check --target x86_64-pc-windows-msvc`（含 `--tests`）通过
+- Python 侧：`tests/unit/bridge/`，包括真实子进程 `python -m triwitness run --demo --jsonl`；ruff / pyright / pytest 全部通过
+- `tools/shoot-live.mjs`：18/18 通过。流程为：起任务 → 推流 → 审批卡 → 允许 → 结论卡（复验通过 · 风险 L2 · ¥0.000）→ 再起一个并停止 → 刷新续上；页面没有报错
+- 本轮没有重建 Windows 安装包
+
 ## UI-09 · 回放 tw-events/1 fixture（已完成）
 
 **事件模型**
@@ -105,6 +148,10 @@
 - 详细步骤见 `docs/WINDOWS_BUILD.md`
 
 ## 截图（docs/）
+- `live-stream.png`：真实核心（演示适配器）实时推流
+- `approval-card.png`：审批卡，状态签为「待批」
+- `result.png`：结论卡（复验通过 · 风险 L2 · pr.md 摘要）
+- `stopped.png`：中途停止
 - `replay-success.png` / `replay-failure.png` / `replay-budget_exceeded.png`：三份 fixture 回放到终态
 - `replay-success-mid.png`：success 回放到规划阶段（状态、费用跟笔）
 - `replay-budget-tooltip.png`：费用 chip 的悬停提示
@@ -116,14 +163,18 @@
 - `main-reduced-motion.png`：开启减少动态效果时
 - `settings.png` / `settings-full.png`：设置与预算页
 
-重新截图：先运行 `npm run dev`，再运行 `cd tools && node shoot.mjs`；回放截图运行 `node tools/shoot-replay.mjs`（可用 `SPEED=` 调速）
+重新截图：先运行 `npm run dev`，再运行 `cd tools && node shoot.mjs`；回放截图运行 `node tools/shoot-replay.mjs`（可用 `SPEED=` 调速）；真实核心截图先运行 `TW_DEV_BRIDGE=1 TW_DEMO_DELAY_S=1.2 npm run dev`，再运行 `cd tools && node shoot-live.mjs`
 
 ## 下一步
 - [ ] 在 Windows 真机上装一次安装包，看字体渲染（ClearType）和窗口的 DPI 缩放
 - [ ] Win11 贴靠布局：自绘最大化按钮在 Rust 里处理窗口命中测试
 - [x] 用 tw-events/1 事件模型替换 mock（UI-09）
 - [ ] 实现 SSE 版 EventSource，接 `/v1/runs/{id}/events`（断线后按 afterSeq 续传）
-- [ ] 实现 hitl_request 卡片（批准 / 拒绝）
+- [x] 桌面端驱动真实核心：起任务 / 推流 / 审批卡 / 停止 / 续上 / 结论卡（UI-10）
+- [ ] Windows 真机跑一次真实核心（Git Bash / `py -3`），并重建安装包
+- [ ] 从 checkpoint 继续已停止的任务
+- [ ] 完整证据页（复现 / 回归 / 评审 / diff）
+- [ ] 实现 hitl_request 卡片（问答型）
 - [ ] 推流面板：可折叠、可停靠到底部，书写速度和字号可调
 - [ ] 证据包卡片，L0–L3 风险徽章
 - [ ] 接入法定节假日日历；账本改由 `tw budget` 驱动

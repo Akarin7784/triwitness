@@ -171,6 +171,9 @@ export interface RunView {
   budgetCny: number
   messages: ChatMessage[]
   lastSeq: number
+  /** 未结案的审批数（> 0 时状态签显示“待批”） */
+  approvalsPending: number
+  verdict: 'pass' | 'fail' | 'inconclusive' | null
 }
 
 export const EMPTY_RUN: RunView = {
@@ -188,6 +191,8 @@ export const EMPTY_RUN: RunView = {
   budgetCny: TASK_CAP_DEFAULT,
   messages: [],
   lastSeq: -1,
+  approvalsPending: 0,
+  verdict: null,
 }
 
 export function cacheHitRate(v: RunView): number | null {
@@ -231,8 +236,18 @@ export function reduceRun(v: RunView, e: AnyEvent): RunView {
       if (e.payload.peak) next.peakCalls = v.peakCalls + 1
       break
     }
+    case 'approval_requested':
+      next.approvalsPending = v.approvalsPending + 1
+      break
+    case 'approval_resolved':
+      next.approvalsPending = Math.max(0, v.approvalsPending - 1)
+      break
+    case 'verification':
+      next.verdict = e.payload.verdict
+      break
     case 'task_finished': {
       const p = e.payload
+      next.approvalsPending = 0
       const terminal: TaskState =
         p.status === 'stuck' ? 'failed' : (p.status as TaskState)
       next.state = terminal
