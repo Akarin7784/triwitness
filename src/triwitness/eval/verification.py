@@ -127,6 +127,30 @@ async def verify_attempt(
                                reasons=reasons, test_runs=runs, cost_cny=cost)  # fmt: skip
 
 
+async def verify_run(
+    *,
+    issue: str,
+    diff: str,
+    finish: FinishReport | None,
+    new_sandbox: Callable[[], Awaitable[Sandbox]],
+    mode: VerifierMode,
+    test_cmd: str | None,
+    run_regression: bool = True,
+    router: RouterLike | None = None,
+    task_id: str | None = None,
+) -> VerificationOutcome:
+    """评测一次 attempt 的验证（`tw eval run` 与 `tw eval reverify` 共用）。没有改动直接判 fail。"""
+    if not diff.strip():
+        return VerificationOutcome(
+            mode=mode, verdict="fail", deterministic="fail", repro_status="not_applicable",
+            clean_env="verified", risk_score=0, risk_level="L0", reasons=["没有改动"],
+        )  # fmt: skip
+    return await verify_attempt(
+        issue=issue, diff=diff, finish=finish, backend=FactoryBackend(new_sandbox), mode=mode, test_cmd=test_cmd,
+        run_regression=run_regression, router=router, task_id=task_id,
+    )  # fmt: skip
+
+
 # ---------------------------------------------------------------- 指标
 
 
@@ -170,4 +194,5 @@ __all__ = [
     "VerifierMode",
     "verifier_metrics",
     "verify_attempt",
+    "verify_run",
 ]

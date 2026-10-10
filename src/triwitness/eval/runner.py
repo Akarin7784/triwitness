@@ -31,7 +31,7 @@ from triwitness.cost.ledger import GlobalLedger
 from triwitness.eval.agents import FAKE_AGENTS, AgentKind, AgentRun, EvalAgent
 from triwitness.eval.grade import Grader, GradeResult
 from triwitness.eval.task import EvalTask
-from triwitness.eval.verification import FactoryBackend, VerificationOutcome, VerifierMode, verify_attempt
+from triwitness.eval.verification import VerificationOutcome, VerifierMode, verify_run
 from triwitness.llm.gate import PeakGate, estimate_run
 from triwitness.llm.pricing import to_shanghai
 from triwitness.telemetry.trajectory import TrajectoryRecorder
@@ -306,23 +306,17 @@ class EvalRunner:
         mode = job.config.verifier
         if mode == "none":
             return None, None
-        if not run.diff.strip():  # 没有改动：无需复跑，直接判 fail
-            out = VerificationOutcome(
-                mode=mode, verdict="fail", deterministic="fail", repro_status="not_applicable",
-                clean_env="verified", risk_score=0, risk_level="L0", reasons=["没有改动"],
+        try:
+            out = await verify_run(
+                issue=job.task.instruction, diff=run.diff, finish=run.finish,
+                new_sandbox=lambda: self.grader.new_sandbox(job.task), mode=mode, test_cmd=job.task.tw.test_cmd,
+                run_regression=job.config.verifier_regression,
+                router=self.verifier_router_factory() if mode == "model" and self.verifier_router_factory else None,
+                task_id=job.task.id,
             )  # fmt: skip
-        else:
-            try:
-                out = await verify_attempt(
-                    issue=job.task.instruction, diff=run.diff, finish=run.finish,
-                    backend=FactoryBackend(lambda: self.grader.new_sandbox(job.task)), mode=mode,
-                    test_cmd=job.task.tw.test_cmd, run_regression=job.config.verifier_regression,
-                    router=self.verifier_router_factory() if mode == "model" and self.verifier_router_factory else None,
-                    task_id=job.task.id,
-                )  # fmt: skip
-            except Exception as e:
-                log.exception("验证失败：%s", job.rel().as_posix())
-                return None, f"{type(e).__name__}: {e}"[:500]
+        except Exception as e:
+            log.exception("验证失败：%s", job.rel().as_posix())
+            return None, f"{type(e).__name__}: {e}"[:500]
         _write_json_atomic(d / "verification.json", out.model_dump(mode="json"))
         return out, None
 

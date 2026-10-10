@@ -239,6 +239,64 @@ def eval_run(
     typer.echo(f"结果：{summary.out_dir}" + (f"｜{'｜'.join(extra)}" if extra else ""))
 
 
+@eval_app.command("reverify")
+def eval_reverify(
+    results: Annotated[Path, typer.Option(help="已保存的评测结果目录（如 W2 基线），只读")],
+    out: Annotated[Path | None, typer.Option(help="输出目录（默认 <results>-reverify）；同目录再跑即续跑")] = None,
+    mode: Annotated[list[str] | None, typer.Option(help="none / deterministic / model，可多次；默认三档")] = None,
+    config: Annotated[list[str] | None, typer.Option(help="只验证这些原配置，可多次")] = None,
+    live: bool = typer.Option(False, "--live", help="model 档真实调用 Verifier（过高峰闸门与预估上限）"),
+    allow_peak: bool = typer.Option(False, "--allow-peak", help="允许高峰时段"),
+    max_total_cny: float = typer.Option(3.0, help="model 档保守预估超过此值则不开始（W3-14 上限 ¥3）"),
+    regression: bool = typer.Option(True, "--regression/--no-regression", help="是否跑回归对比"),
+    concurrency: int = typer.Option(2, help="并发沙箱数"),
+    limit: int | None = typer.Option(None, help="只取前 N 个 attempt"),
+) -> None:
+    """只重跑验证阶段（复用已保存的 diff / FinishReport，不重跑 Executor、不重新判分），出三档对比报告。"""
+    import asyncio
+    import os
+
+    from triwitness.core.errors import TriWitnessError
+    from triwitness.eval.grade import Grader
+    from triwitness.eval.report import render_markdown, write_report
+    from triwitness.eval.reverify import MODES, load_saved, reverify
+    from triwitness.eval.suites import discover_all
+    from triwitness.eval.task import load_task
+    from triwitness.llm.gate import PeakGate
+
+    modes = tuple(mode or MODES)
+    if any(m not in MODES for m in modes):
+        raise typer.BadParameter("--mode 只能是 none / deterministic / model")
+    if live:
+        os.environ["TW_LLM_MODE"] = "live"
+    elif "model" in modes and os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
+        raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
+    wanted = {s.result.task_id for s in load_saved(results)}
+    tasks = {}
+    for d in discover_all():
+        if d.name in wanted:
+            t = load_task(d)
+            tasks[t.id] = t
+
+    def router():  # type: ignore[no-untyped-def]
+        from triwitness.llm.router import Router
+
+        return Router.deepseek_default(allow_peak=allow_peak)
+
+    dest = out or results.with_name(results.name + "-reverify")
+    try:
+        s = asyncio.run(reverify(results, dest, tasks=tasks, grader=Grader(), modes=modes,  # type: ignore[arg-type]
+                                 router_factory=router, regression=regression, live=live,
+                                 gate=PeakGate(allow_peak=allow_peak), max_total_cny=max_total_cny,
+                                 concurrency=concurrency, limit=limit, configs=config))  # fmt: skip
+    except TriWitnessError as e:
+        typer.echo(f"未开始：{e}", err=True)
+        raise typer.Exit(2) from None
+    typer.echo(render_markdown(write_report(dest)))
+    typer.echo(f"结果：{dest}｜新完成 {s.done}｜跳过 {s.skipped_existing}｜验证错误 {len(s.errors)}"
+               f"｜缺任务 {len(s.missing_task)}｜Verifier ¥{s.verifier_cost_cny:.4f}")  # fmt: skip
+
+
 @eval_app.command("report")
 def eval_report(run_dir: Annotated[Path, typer.Argument(help="evals/results/<时间戳>")]) -> None:
     """从 result.json 重新生成 report.json / report.md。"""
