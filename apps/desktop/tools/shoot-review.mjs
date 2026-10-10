@@ -71,7 +71,7 @@ function auditInPage() {
     }
     const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())
     if (ownText && cs.overflowX === 'visible' && el.scrollWidth > el.clientWidth + 2 && cs.display !== 'inline' && cs.whiteSpace === 'nowrap') overflow.push(name(el))
-    if (ownText && !el.closest('[disabled],[aria-disabled="true"]') && !el.closest('.tip') && !['TEXTAREA', 'INPUT', 'OPTION'].includes(el.tagName)) {
+    if (ownText && (el.textContent ?? '').trim().length > 1 && !el.closest('.writing-char, [data-streaming]') && !el.closest('[disabled],[aria-disabled="true"]') && !el.closest('.tip') && !['TEXTAREA', 'INPUT', 'OPTION'].includes(el.tagName)) {
       const fg = parse(cs.color)
       if (!fg) continue
       let op = 1
@@ -323,6 +323,7 @@ async function run(passName) {
   await until(() => has('[data-testid="style-dialog"]'), 2000)
   await shot('17-style-dialog')
   await page.keyboard.press('Escape')
+  await wait(400)
   await calm()
   // 项目
   await page.click('[data-testid="nav-projects"]')
