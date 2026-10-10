@@ -1,0 +1,38 @@
+{
+  "started_at": "2026-10-10T18:12:28.288382+08:00",
+  "live": true,
+  "estimate_cny": 3.4454,
+  "max_total_cny": 21.0,
+  "configs": [
+    {
+      "name": "baseline-deepseek-nothink",
+      "agent": "llm",
+      "executor": {
+        "model": "deepseek-flash",
+        "thinking": false
+      },
+      "attempts": 1,
+      "budget_profile": "eval",
+      "harness": "configs/harness/baseline.yaml",
+      "category": "baseline"
+    }
+  ],
+  "tasks": [
+    "csv-blank-line",
+    "duration-minutes",
+    "lru-get-refresh",
+    "paginate-last-page",
+    "slugify-edges",
+    "swe-conllu-64",
+    "swe-crosstl-257",
+    "swe-dymos-1021",
+    "swe-flake8-bugbear-424",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58",
+    "swe-pyflakes-765",
+    "swe-pynmea2-124",
+    "swe-ro-crate-py-171",
+    "swe-slpp-32"
+  ],
+  "peak_flag": null
+}

@@ -1,0 +1,110 @@
+diff --git a/slpp.py b/slpp.py
+index 19a6405..99b2fdb 100644
+--- a/slpp.py
++++ b/slpp.py
+@@ -44,8 +44,7 @@ class SLPP(object):
+         if not text or not isinstance(text, six.string_types):
+             return
+         # FIXME: only short comments removed
+-        reg = re.compile('--.*$', re.M)
+-        text = reg.sub('', text, 0)
++        text = self.__strip_comments(text)
+         self.text = text
+         self.at, self.ch, self.depth = 0, '', 0
+         self.len = len(text)
+@@ -53,6 +52,63 @@ class SLPP(object):
+         result = self.value()
+         return result
+ 
++    def __strip_comments(self, text):
++        # FIXME: only short comments removed
++        # Remove Lua short comments (`-- ...`) while leaving anything that
++        # looks like a comment marker *inside a string literal* untouched.
++        result = []
++        i = 0
++        length = len(text)
++        while i < length:
++            ch = text[i]
++            # Long bracket string or long comment: [[ ... ]] / [=[ ... ]=]
++            if ch == '[':
++                m = re.match(r'\[(=*)\[', text[i:])
++                if m:
++                    eq = m.group(1)
++                    close = ']' + eq + ']'
++                    start = i + m.end()
++                    end = text.find(close, start)
++                    if end == -1:
++                        result.append(text[i:])
++                        break
++                    j = end + len(close)
++                    # A long comment starts with `--[[ ... ]]`
++                    if result and result[-1].endswith('-') and \
++                            len(result) >= 2 and result[-2].endswith('-'):
++                        # Drop the two dashes we already emitted.
++                        result[-1] = result[-1][:-1]
++                        result[-2] = result[-2][:-1]
++                        i = j
++                        continue
++                    result.append(text[i:j])
++                    i = j
++                    continue
++            # Quoted string literal: skip over it (respecting escapes).
++            if ch in ('"', "'"):
++                start = i
++                i += 1
++                while i < length:
++                    c = text[i]
++                    if c == '\\':
++                        i += 2
++                        continue
++                    if c == ch:
++                        i += 1
++                        break
++                    i += 1
++                result.append(text[start:i])
++                continue
++            # Short comment: `--` up to (not including) end of line.
++            if ch == '-' and i + 1 < length and text[i + 1] == '-':
++                i += 2
++                while i < length and text[i] != '\n':
++                    i += 1
++                continue
++            result.append(ch)
++            i += 1
++        return ''.join(result)
++
+     def encode(self, obj):
+         self.depth = 0
+         return self.__encode(obj)
+diff --git a/tests/tw_repro/test_issue_dashdash_string.py b/tests/tw_repro/test_issue_dashdash_string.py
+new file mode 100644
+index 0000000..892d550
+--- /dev/null
++++ b/tests/tw_repro/test_issue_dashdash_string.py
+@@ -0,0 +1,26 @@
++#!/usr/bin/python
++# -*- coding: utf-8 -*-
++"""Repro for issue: lua.decode('"--3"') fails.
++
++`'--3'` is a perfectly valid lua string; the parser must not detect
++comments inside string literals.
++"""
++
++from slpp import slpp
++
++
++def test_double_quoted_dashdash_string():
++    assert slpp.decode('"--3"') == '--3'
++
++
++def test_single_quoted_dashdash_string():
++    assert slpp.decode("'--3'") == '--3'
++
++
++def test_dashdash_inside_table_key_value():
++    assert slpp.decode('{ ["--3"] = "--4" }') == {'--3': '--4'}
++
++
++def test_real_comment_still_stripped():
++    assert slpp.decode('3 -- a trailing comment') == 3
++    assert slpp.decode('{ a = 1, -- comment\n b = 2 }') == {'a': 1, 'b': 2}

@@ -1,0 +1,52 @@
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..9044d87
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,34 @@
++import pytest
++
++from timefmt import parse_duration
++
++
++def test_hours_and_minutes():
++    assert parse_duration("1h30m") == 5400
++
++
++def test_minutes_only():
++    assert parse_duration("2m") == 120
++
++
++def test_full_combo():
++    assert parse_duration("1h30m15s") == 5415
++
++
++def test_seconds_only():
++    assert parse_duration("45s") == 45
++
++
++def test_hours_only():
++    assert parse_duration("2h") == 7200
++
++
++def test_unit_values():
++    assert parse_duration("1h") == 3600
++    assert parse_duration("1m") == 60
++    assert parse_duration("1s") == 1
++
++
++def test_invalid():
++    with pytest.raises(ValueError):
++        parse_duration("abc")
+diff --git a/timefmt/duration.py b/timefmt/duration.py
+index c5d95cf..ff42404 100644
+--- a/timefmt/duration.py
++++ b/timefmt/duration.py
+@@ -1,6 +1,6 @@
+ import re
+ 
+-_UNITS = {"h": 3600, "m": 1, "s": 1}
++_UNITS = {"h": 3600, "m": 60, "s": 1}
+ _PART = re.compile(r"(\d+)([hms])")
+ 
+ 

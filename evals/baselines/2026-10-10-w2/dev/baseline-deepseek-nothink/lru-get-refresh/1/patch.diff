@@ -1,0 +1,45 @@
+diff --git a/minicache/lru.py b/minicache/lru.py
+index fbe5ffd..433f1a2 100644
+--- a/minicache/lru.py
++++ b/minicache/lru.py
+@@ -12,6 +12,7 @@ class LRUCache:
+     def get(self, key: str, default: Any = None) -> Any:
+         if key not in self._data:
+             return default
++        self._data.move_to_end(key)
+         return self._data[key]
+ 
+     def put(self, key: str, value: Any) -> None:
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..18194d0
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,27 @@
++from minicache import LRUCache
++
++
++def test_get_refreshes_recency_so_lru_is_evicted():
++    """Issue: with capacity 2, get("a") makes "a" recently used,
++    so put("c") must evict "b", not "a"."""
++    c = LRUCache(2)
++    c.put("a", 1)
++    c.put("b", 2)
++    assert c.get("a") == 1  # "a" is now most recently used
++    c.put("c", 3)  # should evict "b"
++
++    assert c.get("b", None) is None, '"b" should have been evicted'
++    assert c.get("a") == 1, '"a" should still be present'
++    assert c.get("c") == 3
++    assert len(c) == 2
++
++
++def test_get_missing_does_not_change_eviction_order():
++    c = LRUCache(2)
++    c.put("a", 1)
++    c.put("b", 2)
++    assert c.get("zz") is None
++    c.put("c", 3)  # "a" is still the least recently used
++    assert c.get("a", None) is None
++    assert c.get("b") == 2
++    assert c.get("c") == 3

@@ -1,0 +1,65 @@
+diff --git a/faststream/_internal/application.py b/faststream/_internal/application.py
+index 021dfff..52e3ddd 100644
+--- a/faststream/_internal/application.py
++++ b/faststream/_internal/application.py
+@@ -112,6 +112,7 @@ class StartAbleApplication:
+             msg = f"`{self}` already has a broker. You can't use multiple brokers until 1.0.0 release."
+             raise SetupError(msg)
+ 
++        broker._update_fd_config(self.config)
+         self.brokers.append(broker)
+         _ = self.schema.add_broker(broker)
+ 
+diff --git a/tests/tw_repro/test_issue_2650.py b/tests/tw_repro/test_issue_2650.py
+new file mode 100644
+index 0000000..376cc44
+--- /dev/null
++++ b/tests/tw_repro/test_issue_2650.py
+@@ -0,0 +1,47 @@
++"""Repro for: set_broker() needs to call _update_fd_config.
++
++When a broker is passed to ``FastStream(...)`` at construction time,
++``_init_setupable_`` calls ``broker._update_fd_config(app.config)``, so the broker
++re-uses the application's FastDepends config (and, most importantly, its
++``ContextRepo``).
++
++``set_broker()`` used to only append the broker to ``self.brokers`` and register it
++in the AsyncAPI schema, so a postponed broker kept its **own** context and
++context-based dependency injection inside its subscribers was broken.
++"""
++
++import pytest
++
++from faststream import Context, FastStream
++from faststream.nats import NatsBroker, TestNatsBroker
++
++
++def test_set_broker_updates_fd_config() -> None:
++    broker = NatsBroker()
++    app = FastStream()
++
++    assert broker.context is not app.context, "sanity check: contexts start unrelated"
++
++    app.set_broker(broker)
++
++    assert app.context is broker.context
++    assert broker.context.get("app") is app
++
++
++@pytest.mark.asyncio()
++async def test_set_broker_context_injection() -> None:
++    """Context injection in a subscriber of a postponed broker."""
++    broker = NatsBroker()
++    app = FastStream()
++    app.set_broker(broker)
++
++    seen = {}
++
++    @broker.subscriber("test")
++    async def handler(found: FastStream = Context("app")) -> None:  # noqa: B008
++        seen["app"] = found
++
++    async with TestNatsBroker(broker) as br:
++        await br.publish("", "test")
++
++    assert seen == {"app": app}

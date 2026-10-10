@@ -1,0 +1,30 @@
+{
+  "task_id": "swe-icontract-297",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "budget_exhausted",
+  "agent_claimed_success": false,
+  "false_success": false,
+  "tamper_paths": [
+    "tests/test_invariant.py"
+  ],
+  "ignored_paths": [
+    "tests/test_inheritance_invariant.py",
+    "tests/tw_repro/__init__.py",
+    "tests/tw_repro/test_issue_295.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.322877,
+  "tokens_in": 2975718,
+  "tokens_cached": 2880128,
+  "tokens_out": 42421,
+  "peak_calls": 0,
+  "steps": 59,
+  "wall_s": 379.05,
+  "trajectory_id": "baseline-deepseek/swe-icontract-297/1/trajectory.jsonl",
+  "live": true,
+  "error": "单任务预算 max_input_tokens 已用尽：3.038e+06 / 3e+06"
+}

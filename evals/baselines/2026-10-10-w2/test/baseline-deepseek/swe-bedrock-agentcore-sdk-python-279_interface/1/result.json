@@ -1,0 +1,31 @@
+{
+  "task_id": "swe-bedrock-agentcore-sdk-python-279_interface",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_config.py",
+    "tests/tw_repro/test_issue_191.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.101771,
+  "tokens_in": 1007022,
+  "tokens_cached": 977664,
+  "tokens_out": 13215,
+  "peak_calls": 0,
+  "steps": 40,
+  "wall_s": 173.23,
+  "trajectory_id": "baseline-deepseek/swe-bedrock-agentcore-sdk-python-279_interface/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "edited_paths": [
+    "tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py",
+    "tests_integ/memory/integrations/test_session_manager.py"
+  ]
+}

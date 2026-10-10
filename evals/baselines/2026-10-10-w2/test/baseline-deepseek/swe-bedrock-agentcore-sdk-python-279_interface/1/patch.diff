@@ -1,0 +1,238 @@
+diff --git a/src/bedrock_agentcore/memory/integrations/strands/config.py b/src/bedrock_agentcore/memory/integrations/strands/config.py
+index 7017568..0cbaa34 100644
+--- a/src/bedrock_agentcore/memory/integrations/strands/config.py
++++ b/src/bedrock_agentcore/memory/integrations/strands/config.py
+@@ -31,6 +31,8 @@ class AgentCoreMemoryConfig(BaseModel):
+         retrieval_config: Optional dictionary mapping namespaces to retrieval configurations
+         batch_size: Number of messages to batch before sending to AgentCore Memory.
+             Default of 1 means immediate sending (no batching). Max 100.
++        context_tag: XML tag name used to wrap retrieved memory context injected into
++            agent messages. Defaults to "user_context" for backwards compatibility.
+     """
+ 
+     memory_id: str = Field(min_length=1)
+@@ -38,3 +40,4 @@ class AgentCoreMemoryConfig(BaseModel):
+     actor_id: str = Field(min_length=1)
+     retrieval_config: Optional[Dict[str, RetrievalConfig]] = None
+     batch_size: int = Field(default=1, ge=1, le=100)
++    context_tag: str = Field(default="user_context", min_length=1)
+diff --git a/src/bedrock_agentcore/memory/integrations/strands/session_manager.py b/src/bedrock_agentcore/memory/integrations/strands/session_manager.py
+index 1e2ef14..0b5eeea 100644
+--- a/src/bedrock_agentcore/memory/integrations/strands/session_manager.py
++++ b/src/bedrock_agentcore/memory/integrations/strands/session_manager.py
+@@ -640,8 +640,9 @@ class AgentCoreMemorySessionManager(RepositorySessionManager, SessionRepository)
+             # attend to most).
+             if all_context:
+                 context_text = "\n".join(all_context)
++                context_tag = self.config.context_tag
+                 event.agent.messages[-1]["content"].insert(
+-                    0, {"text": f"<retrieved_memory>{context_text}</retrieved_memory>"}
++                    0, {"text": f"<{context_tag}>{context_text}</{context_tag}>"}
+                 )
+                 logger.info("Retrieved %s customer context items", len(all_context))
+ 
+diff --git a/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_config.py b/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_config.py
+index cacef97..ba1f190 100644
+--- a/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_config.py
++++ b/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_config.py
+@@ -87,3 +87,15 @@ class TestAgentCoreMemoryConfig:
+             memory_id="mem-123", session_id="sess-456", actor_id="actor-789", retrieval_config={"namespace1": retrieval}
+         )
+         assert config.retrieval_config["namespace1"].top_k == 5
++
++    def test_context_tag_default(self):
++        """Test context_tag defaults to user_context for backwards compatibility."""
++        config = AgentCoreMemoryConfig(memory_id="mem-123", session_id="sess-456", actor_id="actor-789")
++        assert config.context_tag == "user_context"
++
++    def test_context_tag_custom(self):
++        """Test context_tag can be overridden by the user."""
++        config = AgentCoreMemoryConfig(
++            memory_id="mem-123", session_id="sess-456", actor_id="actor-789", context_tag="retrieved_memory"
++        )
++        assert config.context_tag == "retrieved_memory"
+diff --git a/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py b/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py
+index 1eafd2d..bbf72f3 100644
+--- a/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py
++++ b/tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py
+@@ -1937,7 +1937,7 @@ class TestThinkingModeCompatibility:
+                     # Memory prepended, original query remains last
+                     content = mock_agent.messages[0]["content"]
+                     assert len(content) == 2
+-                    assert "<retrieved_memory>" in content[0]["text"]
++                    assert "<user_context>" in content[0]["text"]
+                     assert content[1]["text"] == "What are my preferences?"
+ 
+     def test_retrieve_customer_context_no_assistant_message_multi_turn(
+@@ -1982,5 +1982,58 @@ class TestThinkingModeCompatibility:
+                     # Memory injected into last user message
+                     content = mock_agent.messages[-1]["content"]
+                     assert len(content) == 2
+-                    assert "<retrieved_memory>" in content[0]["text"]
++                    assert "<user_context>" in content[0]["text"]
+                     assert content[1]["text"] == "What do I like to eat?"
++
++
++class TestConfigurableContextTag:
++    """Tests for the configurable retrieved-memory context tag."""
++
++    def _run_retrieval(self, config, mock_memory_client, query="What are my preferences?"):
++        mock_memory_client.retrieve_memories.return_value = [{"content": {"text": "User likes sushi"}}]
++        manager = _create_session_manager(config, mock_memory_client)
++        mock_agent = Mock()
++        mock_agent.messages = [{"role": "user", "content": [{"text": query}]}]
++        event = MessageAddedEvent(agent=mock_agent, message={"role": "user", "content": [{"text": query}]})
++        manager.retrieve_customer_context(event)
++        return mock_agent
++
++    def test_default_tag_is_user_context(self, agentcore_config_with_retrieval, mock_memory_client):
++        """Retrieved memory is wrapped in <user_context> by default."""
++        mock_agent = self._run_retrieval(agentcore_config_with_retrieval, mock_memory_client)
++
++        injected = mock_agent.messages[-1]["content"][0]["text"]
++        assert injected.startswith("<user_context>User likes sushi")
++        assert injected.endswith("User likes sushi</user_context>")
++        assert "<retrieved_memory>" not in injected
++
++    def test_custom_tag(self, mock_memory_client):
++        """Retrieved memory uses the configured context_tag."""
++        config = AgentCoreMemoryConfig(
++            memory_id="test-memory-123",
++            session_id="test-session-456",
++            actor_id="test-actor-789",
++            retrieval_config={"user_preferences/{actorId}/": RetrievalConfig(top_k=5, relevance_score=0.3)},
++            context_tag="retrieved_memory",
++        )
++        mock_agent = self._run_retrieval(config, mock_memory_client)
++
++        injected = mock_agent.messages[-1]["content"][0]["text"]
++        assert injected == "<retrieved_memory>User likes sushi</retrieved_memory>"
++
++    def test_custom_tag_keeps_user_query_last(self, mock_memory_client):
++        """The user query remains the last content block when a custom tag is used."""
++        config = AgentCoreMemoryConfig(
++            memory_id="test-memory-123",
++            session_id="test-session-456",
++            actor_id="test-actor-789",
++            retrieval_config={"user_preferences/{actorId}/": RetrievalConfig(top_k=5, relevance_score=0.3)},
++            context_tag="my_memory",
++        )
++        mock_agent = self._run_retrieval(config, mock_memory_client, query="What do I like to eat?")
++
++        content = mock_agent.messages[-1]["content"]
++        assert len(content) == 2
++        assert content[0]["text"].startswith("<my_memory>")
++        assert content[0]["text"].endswith("</my_memory>")
++        assert content[1]["text"] == "What do I like to eat?"
+diff --git a/tests/tw_repro/test_issue_191.py b/tests/tw_repro/test_issue_191.py
+new file mode 100644
+index 0000000..a66abd3
+--- /dev/null
++++ b/tests/tw_repro/test_issue_191.py
+@@ -0,0 +1,84 @@
++"""Repro tests for the configurable memory context tag in AgentCoreMemorySessionManager.
++
++Issue: the `<user_context>` XML tag must remain the default (backwards compatibility)
++while users can opt in to another tag such as `<retrieved_memory>` via the new
++`context_tag` field on `AgentCoreMemoryConfig`.
++"""
++
++from unittest.mock import Mock, patch
++
++from strands.hooks import MessageAddedEvent
++
++from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig, RetrievalConfig
++from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
++
++NAMESPACE = "user_preferences/{actorId}/"
++
++
++def _config(**kwargs):
++    params = {
++        "memory_id": "mem-123",
++        "session_id": "sess-456",
++        "actor_id": "actor-789",
++        "retrieval_config": {NAMESPACE: RetrievalConfig(top_k=5, relevance_score=0.3)},
++    }
++    params.update(kwargs)
++    return AgentCoreMemoryConfig(**params)
++
++
++def _run_retrieval(config, mock_memory_client, query="What are my preferences?"):
++    mock_memory_client.retrieve_memories.return_value = [{"content": {"text": "User likes sushi"}}]
++    with (
++        patch(
++            "bedrock_agentcore.memory.integrations.strands.session_manager.MemoryClient",
++            return_value=mock_memory_client,
++        ),
++        patch("boto3.Session") as mock_boto_session,
++        patch("strands.session.repository_session_manager.RepositorySessionManager.__init__", return_value=None),
++    ):
++        mock_session = Mock()
++        mock_session.region_name = "us-west-2"
++        mock_session.client.return_value = Mock()
++        mock_boto_session.return_value = mock_session
++
++        manager = AgentCoreMemorySessionManager(config)
++        agent = Mock()
++        agent.messages = [{"role": "user", "content": [{"text": query}]}]
++        event = MessageAddedEvent(agent=agent, message={"role": "user", "content": [{"text": query}]})
++        manager.retrieve_customer_context(event)
++        return agent
++
++
++def test_context_tag_default_value():
++    """AgentCoreMemoryConfig exposes context_tag defaulting to user_context."""
++    assert _config().context_tag == "user_context"
++
++
++def test_context_tag_can_be_overridden():
++    """AgentCoreMemoryConfig accepts a custom context_tag."""
++    assert _config(context_tag="retrieved_memory").context_tag == "retrieved_memory"
++
++
++def test_retrieved_memory_wrapped_in_default_user_context_tag():
++    """Injected memory uses <user_context> unless configured otherwise."""
++    mock_memory_client = Mock()
++    mock_memory_client.retrieve_memories.return_value = []
++
++    agent = _run_retrieval(_config(), mock_memory_client)
++
++    content = agent.messages[-1]["content"]
++    assert content[0]["text"] == "<user_context>User likes sushi</user_context>"
++    assert content[1]["text"] == "What are my preferences?"
++    assert "<retrieved_memory>" not in content[0]["text"]
++
++
++def test_retrieved_memory_wrapped_in_custom_context_tag():
++    """Injected memory uses the configured context_tag."""
++    mock_memory_client = Mock()
++    mock_memory_client.retrieve_memories.return_value = []
++
++    agent = _run_retrieval(_config(context_tag="retrieved_memory"), mock_memory_client)
++
++    content = agent.messages[-1]["content"]
++    assert content[0]["text"] == "<retrieved_memory>User likes sushi</retrieved_memory>"
++    assert content[1]["text"] == "What are my preferences?"
+diff --git a/tests_integ/memory/integrations/test_session_manager.py b/tests_integ/memory/integrations/test_session_manager.py
+index d6ce766..3a93d12 100644
+--- a/tests_integ/memory/integrations/test_session_manager.py
++++ b/tests_integ/memory/integrations/test_session_manager.py
+@@ -151,7 +151,7 @@ class TestAgentCoreMemorySessionManager:
+         response2 = agent("What do I like to eat?")
+         assert response2 is not None
+         assert "sushi" in str(agent.messages)
+-        assert "<retrieved_memory>" in str(agent.messages)
++        assert "<user_context>" in str(agent.messages)
+ 
+     def test_multiple_namespace_retrieval_config(self, test_memory_ltm):
+         """Test session manager with multiple namespace retrieval configurations."""
+@@ -182,7 +182,7 @@ class TestAgentCoreMemorySessionManager:
+         response2 = agent("What do I like to eat?")
+         assert response2 is not None
+         assert "sushi" in str(agent.messages)
+-        assert "<retrieved_memory>" in str(agent.messages)
++        assert "<user_context>" in str(agent.messages)
+ 
+     def test_session_manager_error_handling(self):
+         """Test session manager error handling with invalid configuration."""

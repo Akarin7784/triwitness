@@ -1,0 +1,29 @@
+{
+  "task_id": "swe-spikeinterface-3778",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_3734.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.214184,
+  "tokens_in": 2098295,
+  "tokens_cached": 2069248,
+  "tokens_out": 35938,
+  "peak_calls": 0,
+  "steps": 62,
+  "wall_s": 1519.97,
+  "trajectory_id": "baseline-deepseek/swe-spikeinterface-3778/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "edited_paths": [
+    "src/spikeinterface/core/tests/test_unitsaggregationsorting.py"
+  ]
+}

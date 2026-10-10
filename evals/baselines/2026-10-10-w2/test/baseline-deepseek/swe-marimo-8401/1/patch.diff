@@ -1,0 +1,162 @@
+diff --git a/P_empty b/P_empty
+new file mode 100644
+index 0000000..e69de29
+diff --git a/test/P_empty.json b/test/P_empty.json
+new file mode 100644
+index 0000000..e69de29
+diff --git a/test/P_empty.pickle b/test/P_empty.pickle
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/app_data/cached_app.py b/tests/tw_repro/app_data/cached_app.py
+new file mode 100644
+index 0000000..6156e45
+--- /dev/null
++++ b/tests/tw_repro/app_data/cached_app.py
+@@ -0,0 +1,26 @@
++import marimo
++
++__generated_with = "0.14.15"
++app = marimo.App()
++
++
++with app.setup:
++    import marimo as mo
++
++
++@app.cell
++def _():
++    calls = []
++
++    @mo.cache
++    def slow():
++        calls.append(1)
++        return "Done sleeping!"
++
++    first = slow()
++    second = slow()
++    return calls, first, second
++
++
++if __name__ == "__main__":
++    app.run()
+diff --git a/tests/tw_repro/test_probe_norm.py b/tests/tw_repro/test_probe_norm.py
+new file mode 100644
+index 0000000..96a039a
+--- /dev/null
++++ b/tests/tw_repro/test_probe_norm.py
+@@ -0,0 +1,28 @@
++from __future__ import annotations
++
++
++class TestProbeNorm:
++    @staticmethod
++    async def test_double_call_in_cell(k, exec_req):
++        await k.run(
++            [
++                exec_req.get(
++                    """
++                    import marimo as mo
++
++                    calls = []
++
++                    @mo.cache
++                    def slow():
++                        calls.append(1)
++                        return "Done sleeping!"
++
++                    first = slow()
++                    second = slow()
++                    """
++                ),
++            ]
++        )
++        print("STDERR:", k.stderr.messages)
++        print("CALLS:", k.globals["calls"])
++        print("FIRST/SECOND:", k.globals["first"], k.globals["second"])
+diff --git a/tests/tw_repro/test_repro_probe.py b/tests/tw_repro/test_repro_probe.py
+new file mode 100644
+index 0000000..79583bd
+--- /dev/null
++++ b/tests/tw_repro/test_repro_probe.py
+@@ -0,0 +1,24 @@
++import logging
++from marimo._runtime.commands import ExecuteCellCommand
++
++
++class TestProbe:
++    @staticmethod
++    async def test_probe_normal_cell(k, caplog, exec_req):
++        with caplog.at_level(logging.WARNING):
++            await k.run(
++                [
++                    exec_req.get(
++                        """
++                        import marimo as mo
++
++                        @mo.cache
++                        def slow():
++                            return "Done sleeping!"
++
++                        res = slow()
++                        """
++                    )
++                ]
++            )
++        print("CAUTH: ", [r.message for r in caplog.records])
+diff --git a/tests/tw_repro/test_repro_probe2.py b/tests/tw_repro/test_repro_probe2.py
+new file mode 100644
+index 0000000..ae1650f
+--- /dev/null
++++ b/tests/tw_repro/test_repro_probe2.py
+@@ -0,0 +1,22 @@
++import logging
++
++
++class TestProbe2:
++    @staticmethod
++    def test_probe_app_fixture(app, caplog):
++        with app.setup:
++            import marimo as mo
++
++        with caplog.at_level(logging.WARNING):
++            @app.cell
++            def _():
++                @mo.cache
++                def slow():
++                    return "Done sleeping!"
++
++                res = slow()
++                return res
++
++        outputs = app.run()
++        print("CAUTH: ", [r.message for r in caplog.records])
++        print("OUT: ", outputs)
+diff --git a/tests/tw_repro/test_repro_probe3.py b/tests/tw_repro/test_repro_probe3.py
+new file mode 100644
+index 0000000..380608b
+--- /dev/null
++++ b/tests/tw_repro/test_repro_probe3.py
+@@ -0,0 +1,23 @@
++import logging
++
++
++class TestProbe3:
++    @staticmethod
++    async def test_embed_cache(k, exec_req):
++        await k.run(
++            [
++                exec_req.get(
++                    """
++                    from tests.tw_repro.app_data import cached_app
++                    """
++                ),
++                exec_req.get(
++                    """
++                    embedded = await cached_app.app.embed()
++                    print("CALLS", embedded.defs["calls"])
++                    print("FIRST", embedded.defs["first"], "SECOND", embedded.defs["second"])
++                    """
++                ),
++            ]
++        )
++        print("OUT: ", "".join(k.stdout.messages))

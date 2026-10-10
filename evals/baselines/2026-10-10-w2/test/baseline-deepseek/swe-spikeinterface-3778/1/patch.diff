@@ -1,0 +1,196 @@
+diff --git a/src/spikeinterface/core/tests/test_unitsaggregationsorting.py b/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
+index 09b8aff..06115df 100644
+--- a/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
++++ b/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
+@@ -78,7 +78,8 @@ def test_unitsaggregationsorting(create_cache_folder):
+     sorting1.set_property("template", np.zeros((num_units, 20, 50)))
+     sorting1.set_property("template", np.zeros((num_units, 2, 10)))
+ 
+-    # incomplete property (str can't be propagated)
++    # incomplete property (str is propagated with an empty string for the missing sorting)
++    # note that the strings of the two sortings have different lengths, i.e. dtypes "<U4" and "<U3"
+     sorting1.set_property("quality", ["good"] * num_units)
+     sorting2.set_property("quality", ["bad"] * num_units)
+ 
+@@ -86,10 +87,18 @@ def test_unitsaggregationsorting(create_cache_folder):
+     sorting1.set_property("rand", np.random.rand(num_units))
+     sorting2.set_property("rand", np.random.rand(num_units))
+ 
++    # incompatible property (int in one sorting, str in the other)
++    sorting1.set_property("incompatible", np.arange(num_units))
++    sorting2.set_property("incompatible", ["1"] * num_units)
++
+     sorting_agg_prop = aggregate_units([sorting1, sorting2, sorting3])
+     assert "brain_area" in sorting_agg_prop.get_property_keys()
+-    assert "quality" not in sorting_agg_prop.get_property_keys()
++    assert "quality" in sorting_agg_prop.get_property_keys()
++    assert list(sorting_agg_prop.get_property("quality")) == (
++        ["good"] * num_units + ["bad"] * num_units + [""] * num_units
++    )
+     assert "rand" in sorting_agg_prop.get_property_keys()
++    assert "incompatible" not in sorting_agg_prop.get_property_keys()
+     print(sorting_agg_prop.get_property("brain_area"))
+ 
+ 
+@@ -130,5 +139,24 @@ def test_unit_aggregation_does_not_preserve_ids_not_the_same_type():
+     assert list(aggregated_sorting.get_unit_ids()) == ["0", "1", "2", "3", "4"]
+ 
+ 
++def test_unit_aggregation_with_string_dtypes_of_different_size():
++    """
++    Fixes issue https://github.com/SpikeInterface/spikeinterface/issues/3734
++
++    This tests that string properties are propagated in the aggregation even if the strings of the
++    different sortings don't have the same length, i.e. different (string) dtypes.
++    """
++    sorting1 = generate_sorting(num_units=2)
++    sorting1.set_property("quality", np.array(["good", "good"], dtype="<U4"))
++
++    sorting2 = generate_sorting(num_units=2)
++    sorting2.set_property("quality", np.array(["ok", "ok"], dtype="<U2"))
++
++    aggregated_sorting = aggregate_units([sorting1, sorting2])
++    assert "quality" in aggregated_sorting.get_property_keys()
++    assert list(aggregated_sorting.get_property("quality")) == ["good", "good", "ok", "ok"]
++    assert aggregated_sorting.get_property("quality").dtype == np.dtype("<U4")
++
++
+ if __name__ == "__main__":
+-    test_unitsaggregationsorting()
++    test_unitsaggregationsorting()
+\ No newline at end of file
+diff --git a/src/spikeinterface/core/unitsaggregationsorting.py b/src/spikeinterface/core/unitsaggregationsorting.py
+index 9eb37e3..d694735 100644
+--- a/src/spikeinterface/core/unitsaggregationsorting.py
++++ b/src/spikeinterface/core/unitsaggregationsorting.py
+@@ -7,6 +7,28 @@ from .base import BaseExtractor
+ from .basesorting import BaseSorting, BaseSortingSegment
+ 
+ 
++def _get_promoted_dtype(dtype_1, dtype_2):
++    """
++    Find a common dtype for two properties of different sortings.
++
++    Some dtypes are not strictly equal but can still be safely merged, the typical example being strings
++    of different lengths ("<U2" vs "<U4"), which are both unicode strings (kind "U").
++
++    Returns None when the two dtypes cannot be merged.
++    """
++    if dtype_1 == dtype_2:
++        return dtype_1
++
++    # only dtypes of the same kind can be merged (e.g. we don't want to mix strings and numbers)
++    if dtype_1.kind != dtype_2.kind:
++        return None
++
++    try:
++        return np.promote_types(dtype_1, dtype_2)
++    except TypeError:
++        return None
++
++
+ class UnitsAggregationSorting(BaseSorting):
+     """
+     Aggregates units of multiple sortings into a single sorting object
+@@ -84,13 +106,19 @@ class UnitsAggregationSorting(BaseSorting):
+             for prop_name in sort.get_property_keys():
+                 if prop_name in deleted_keys:
+                     continue
++                prop_dtype = sort.get_property(prop_name).dtype
+                 if prop_name in property_keys:
+-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
++                    # dtypes can differ between sortings (e.g. strings of different lengths), in this case we try
++                    # to find a common dtype which can hold the values of all the sortings
++                    promoted_dtype = _get_promoted_dtype(property_keys[prop_name], prop_dtype)
++                    if promoted_dtype is None:
+                         print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                         del property_keys[prop_name]
+                         deleted_keys.append(prop_name)
++                    else:
++                        property_keys[prop_name] = promoted_dtype
+                 else:
+-                    property_keys[prop_name] = sort.get_property(prop_name).dtype
++                    property_keys[prop_name] = prop_dtype
+         for prop_name in property_keys:
+             dtype = property_keys[prop_name]
+             property_dict[prop_name] = np.array([], dtype=dtype)
+diff --git a/tests/tw_repro/test_issue_3734.py b/tests/tw_repro/test_issue_3734.py
+new file mode 100644
+index 0000000..8ce2a4f
+--- /dev/null
++++ b/tests/tw_repro/test_issue_3734.py
+@@ -0,0 +1,74 @@
++"""
++Repro for the issue: `aggregate_units` doesn't propagate properties when string lengths don't match.
++
++The dtype of a string property is f"U{n}" where n is the max length of the strings of the property.
++When two sortings have the same property whose strings have different lengths, the two dtypes are
++different ("<U4" vs "<U2") and the property was silently dropped during the aggregation.
++"""
++
++import numpy as np
++
++from spikeinterface.core import aggregate_units, generate_sorting
++
++
++def test_aggregate_units_propagates_string_property_with_different_lengths():
++    sorting1 = generate_sorting(num_units=2, seed=1205)
++    sorting1.set_property("chris_label", ["good"] * sorting1.get_num_units())
++
++    sorting2 = generate_sorting(num_units=3, seed=1205)
++    sorting2.set_property("chris_label", ["ok"] * sorting2.get_num_units())
++
++    # the dtypes are different because the strings have different lengths
++    assert sorting1.get_property("chris_label").dtype == np.dtype("<U4")
++    assert sorting2.get_property("chris_label").dtype == np.dtype("<U2")
++
++    aggregated_sorting = aggregate_units([sorting1, sorting2])
++
++    assert "chris_label" in aggregated_sorting.get_property_keys()
++    values = aggregated_sorting.get_property("chris_label")
++    assert values.dtype == np.dtype("<U4")
++    assert list(values) == ["good", "good", "ok", "ok", "ok"]
++
++
++def test_aggregate_units_propagates_string_property_issue_example():
++    """Same as above but with the exact snippet from the issue."""
++    import spikeinterface.full as si
++
++    rec, sort1 = si.generate_ground_truth_recording(
++        num_channels=4,
++        num_units=2,
++        seed=1205,
++    )
++    sort1.set_property("chris_label", ["good"] * sort1.get_num_units())
++
++    _, sort2 = si.generate_ground_truth_recording(
++        num_channels=4,
++        num_units=3,
++        seed=1205,
++    )
++    sort2.set_property("chris_label", ["ok"] * sort2.get_num_units())
++
++    sort = si.aggregate_units([sort1, sort2])
++
++    assert "chris_label" in sort.get_property_keys()
++    assert list(sort.get_property("chris_label")) == ["good", "good", "ok", "ok", "ok"]
++
++
++def test_aggregate_units_promotes_string_dtype_when_longest_string_comes_last():
++    sorting1 = generate_sorting(num_units=2, seed=1205)
++    sorting1.set_property("chris_label", ["ok"] * sorting1.get_num_units())
++
++    sorting2 = generate_sorting(num_units=3, seed=1205)
++    sorting2.set_property("chris_label", ["good"] * sorting2.get_num_units())
++
++    aggregated_sorting = aggregate_units([sorting1, sorting2])
++
++    values = aggregated_sorting.get_property("chris_label")
++    assert values.dtype == np.dtype("<U4")
++    assert list(values) == ["ok", "ok", "good", "good", "good"]
++
++
++if __name__ == "__main__":
++    test_aggregate_units_propagates_string_property_with_different_lengths()
++    test_aggregate_units_propagates_string_property_issue_example()
++    test_aggregate_units_promotes_string_dtype_when_longest_string_comes_last()

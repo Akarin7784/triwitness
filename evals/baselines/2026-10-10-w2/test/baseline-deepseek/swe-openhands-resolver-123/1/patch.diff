@@ -1,0 +1,104 @@
+diff --git a/openhands_resolver/send_pull_request.py b/openhands_resolver/send_pull_request.py
+index dd227b7..4f9e17d 100644
+--- a/openhands_resolver/send_pull_request.py
++++ b/openhands_resolver/send_pull_request.py
+@@ -139,6 +139,62 @@ def make_commit(repo_dir: str, issue: GithubIssue) -> None:
+         raise RuntimeError("Failed to commit changes")
+ 
+ 
++def find_existing_branches(repo_dir: str) -> list[str]:
++    """Find the branches that already exist in the repository at repo_dir.
++
++    Both local branches and remote-tracking branches are taken into account,
++    since the branch we are about to create may have been pushed by an earlier
++    attempt at fixing the issue. Remote-tracking branches are reported without
++    their remote prefix, so `remotes/origin/openhands-fix-issue-1` is reported
++    as `openhands-fix-issue-1`.
++    """
++    result = subprocess.run(
++        f"git -C {repo_dir} branch -a",
++        shell=True,
++        capture_output=True,
++        text=True,
++    )
++    if result.returncode != 0 or not isinstance(result.stdout, str):
++        # We cannot tell which branches exist, so report none of them
++        return []
++
++    existing_branches = []
++    for line in result.stdout.splitlines():
++        # `git branch` marks the current branch with a leading "* "
++        branch = line.strip().lstrip("*").strip()
++        # Skip empty lines and symbolic refs like "origin/HEAD -> origin/main"
++        if not branch or "->" in branch:
++            continue
++        parts = branch.split("/")
++        if parts[0] == "remotes":
++            # Drop the "remotes/<remote>/" prefix
++            parts = parts[2:]
++        elif parts[0] == "origin":
++            # Some versions of git print remote branches without the "remotes/" prefix
++            parts = parts[1:]
++        existing_branches.append("/".join(parts))
++
++    return existing_branches
++
++
++def get_unique_branch_name(branch_name: str, repo_dir: str) -> str:
++    """Return a branch name that does not exist yet.
++
++    The branch may already exist if the issue has been attempted before, in
++    which case `-try2`, `-try3`, ... is appended until an unused branch name is
++    found.
++    """
++    existing_branches = find_existing_branches(repo_dir)
++    if branch_name not in existing_branches:
++        return branch_name
++
++    try_num = 2
++    while f"{branch_name}-try{try_num}" in existing_branches:
++        try_num += 1
++
++    return f"{branch_name}-try{try_num}"
++
++
+ def send_pull_request(
+     github_issue: GithubIssue,
+     github_token: str,
+@@ -158,8 +214,11 @@ def send_pull_request(
+     }
+     base_url = f"https://api.github.com/repos/{github_issue.owner}/{github_issue.repo}"
+ 
+-    # Create a new branch
+-    branch_name = f"openhands-fix-issue-{github_issue.number}"
++    # Create a new branch, making sure that we do not reuse the name of a
++    # branch that was already created by an earlier (failed) attempt
++    branch_name = get_unique_branch_name(
++        f"openhands-fix-issue-{github_issue.number}", patch_dir
++    )
+ 
+     # Get the default branch
+     response = requests.get(f"{base_url}", headers=headers)
+diff --git a/tests/test_send_pull_request.py b/tests/test_send_pull_request.py
+index b67edd5..85ac9b7 100644
+--- a/tests/test_send_pull_request.py
++++ b/tests/test_send_pull_request.py
+@@ -220,6 +220,7 @@ def test_send_pull_request(
+ 
+     # Mock subprocess.run calls
+     mock_run.side_effect = [
++        MagicMock(returncode=0, stdout=""),  # git branch -a
+         MagicMock(returncode=0),  # git checkout -b
+         MagicMock(returncode=0),  # git push
+     ]
+@@ -237,8 +238,8 @@ def test_send_pull_request(
+     assert mock_get.call_count == 1
+ 
+     # Check branch creation and push
+-    assert mock_run.call_count == 2
+-    checkout_call, push_call = mock_run.call_args_list
++    assert mock_run.call_count == 3
++    _, checkout_call, push_call = mock_run.call_args_list
+ 
+     assert checkout_call == call(
+         f"git -C {repo_path} checkout -b openhands-fix-issue-42",

@@ -1,0 +1,73 @@
+diff --git a/param/reactive.py b/param/reactive.py
+index e11ef41..1bf4d37 100644
+--- a/param/reactive.py
++++ b/param/reactive.py
+@@ -1436,7 +1436,7 @@ class rx:
+ 
+     def __init__(
+         self, obj=None, operation=None, fn=None, depth=0, method=None, prev=None,
+-        _shared_obj=None, _current=None, _wrapper=None, **kwargs
++        _shared_obj=None, _current=None, _wrapper=None, _passthrough=False, **kwargs
+     ):
+         # _init is used to prevent to __getattribute__ to execute its
+         # specialized code.
+@@ -1453,6 +1453,7 @@ class rx:
+         self._method = method
+         self._operation = operation
+         self._depth = depth
++        self._passthrough = _passthrough
+         self._dirty = _current is None
+         self._dirty_obj = False
+         self._current_task = None
+@@ -1540,7 +1541,7 @@ class rx:
+     def _current(self):
+         if self._error_state:
+             raise self._error_state
+-        elif self._dirty or self._root._dirty_obj:
++        elif self._passthrough or self._dirty or self._root._dirty_obj:
+             self._resolve()
+         return self._current_
+ 
+@@ -1656,7 +1657,7 @@ class rx:
+     def _resolve(self):
+         if self._error_state:
+             raise self._error_state
+-        elif self._dirty or self._root._dirty_obj:
++        elif self._passthrough or self._dirty or self._root._dirty_obj:
+             try:
+                 obj = self._obj if self._prev is None else self._prev._resolve()
+                 if obj is Skip or obj is Undefined:
+@@ -1718,14 +1719,22 @@ class rx:
+         return evaluate
+ 
+     def _clone(self, operation=None, copy=False, **kwargs) -> 'rx':
+-        operation = operation or self._operation
+         depth = self._depth + 1
+         if copy:
++            # A copy is a new node that delegates to the node it was copied
++            # from, i.e. it is a pass-through which resolves the node it was
++            # copied from instead of duplicating and re-evaluating its
++            # operation. This ensures that a shared upstream expression, e.g.
++            # one consumed by multiple `.rx.pipe()` expressions, is only
++            # evaluated once per change. Like the node it was copied from the
++            # copy keeps a `_method`, allowing an attribute access (as in
++            # `dfi.A`) to be recorded without mutating the original node.
+             kwargs = dict(
+                 self._kwargs, _current=self._current, method=self._method,
+-                prev=self._prev, **kwargs
++                prev=self, _passthrough=True, **kwargs
+             )
+         else:
++            operation = operation or self._operation
+             kwargs = dict(prev=self, **dict(self._kwargs, **kwargs))
+         kwargs = dict(self._display_opts, **kwargs)
+         return type(self)(
+@@ -1766,7 +1775,7 @@ class rx:
+             return super().__getattribute__(name)
+ 
+         current = self_dict['_current_']
+-        dirty = self_dict['_dirty']
++        dirty = self_dict['_dirty'] or self_dict['_passthrough']
+         if dirty:
+             self._resolve()
+             current = self_dict['_current_']

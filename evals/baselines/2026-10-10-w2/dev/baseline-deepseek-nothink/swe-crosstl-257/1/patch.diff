@@ -1,0 +1,75 @@
+diff --git a/crosstl/translator/lexer.py b/crosstl/translator/lexer.py
+index 84cad4f..b88866d 100644
+--- a/crosstl/translator/lexer.py
++++ b/crosstl/translator/lexer.py
+@@ -33,6 +33,8 @@ TOKENS = OrderedDict(
+         ("RBRACE", r"\}"),
+         ("LPAREN", r"\("),
+         ("RPAREN", r"\)"),
++        ("LBRACKET", r"\["),
++        ("RBRACKET", r"\]"),
+         ("SEMICOLON", r";"),
+         ("COMMA", r","),
+         ("ASSIGN_ADD", r"\+="),
+diff --git a/tests/tw_repro/test_issue_41.py b/tests/tw_repro/test_issue_41.py
+new file mode 100644
+index 0000000..e5eea7e
+--- /dev/null
++++ b/tests/tw_repro/test_issue_41.py
+@@ -0,0 +1,56 @@
++"""Reproduction test for translator-frontend lexer token support (issue #41).
++
++The tracking issue asks to add token support to the ``translator`` frontend
++lexer so it can identify additional tokens.  The parser already references
++``LBRACKET`` / ``RBRACKET`` (see ``parse_cbuffer`` for array members such as
++``float values[4];``) but the lexer could not produce them, so any shader
++containing an array declaration failed with
++``SyntaxError: Illegal character '['``.
++"""
++
++import pytest
++
++from crosstl.translator.lexer import Lexer
++from crosstl.translator.parser import Parser
++
++
++def tokenize_code(code):
++    return Lexer(code).tokens
++
++
++def test_lbracket_tokenization():
++    code = """
++    cbuffer MyBuffer {
++        float values[4];
++    };
++    """
++    tokens = tokenize_code(code)
++    assert any(t[0] == "LBRACKET" for t in tokens), "Missing 'LBRACKET' token"
++    assert any(t[0] == "RBRACKET" for t in tokens), "Missing 'RBRACKET' token"
++    assert ("LBRACKET", "[") in tokens, "LBRACKET token text mismatch"
++    assert ("RBRACKET", "]") in tokens, "RBRACKET token text mismatch"
++
++
++def test_cbuffer_array_parses():
++    code = """
++    cbuffer MyBuffer {
++        float values[4];
++    };
++    """
++    tokens = tokenize_code(code)
++    ast = Parser(tokens).parse()
++    assert ast.cbuffers, "cbuffer was not parsed"
++    member = ast.cbuffers[0].members[0]
++    assert member.name == "values[4]", f"Unexpected member name: {member.name!r}"
++
++
++def test_bracket_no_longer_illegal_character():
++    # Previously raised: SyntaxError: Illegal character '['
++    code = "int a[2];"
++    tokens = tokenize_code(code)
++    assert any(t[0] == "LBRACKET" for t in tokens)
++    assert any(t[0] == "RBRACKET" for t in tokens)
++
++
++if __name__ == "__main__":
++    pytest.main()

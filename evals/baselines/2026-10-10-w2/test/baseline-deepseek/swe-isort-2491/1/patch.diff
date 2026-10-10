@@ -1,0 +1,104 @@
+diff --git a/isort/output.py b/isort/output.py
+index 12937db..03f6d01 100644
+--- a/isort/output.py
++++ b/isort/output.py
+@@ -436,6 +436,16 @@ def _with_from_imports(
+                         if specific_comment is not None:
+                             from_comments.append(specific_comment)
+ 
++                        # A comment that belongs to the whole ``from`` statement (such as a
++                        # comment on the opening line of a multi-line import) has to stay on
++                        # the statement's first line instead of being moved onto the alias
++                        # line it is rendered next to.
++                        statement_comment = False
++                        if comments:
++                            from_comments = list(comments) + from_comments
++                            comments = None
++                            statement_comment = True
++
+                         output.append(
+                             wrap.line(
+                                 with_comments(
+@@ -446,6 +456,7 @@ def _with_from_imports(
+                                 ),
+                                 parsed.line_separator,
+                                 config,
++                                statement_comment=statement_comment,
+                             )
+                         )
+ 
+diff --git a/isort/parse.py b/isort/parse.py
+index 5928b39..2ef3394 100644
+--- a/isort/parse.py
++++ b/isort/parse.py
+@@ -193,6 +193,16 @@ def file_contents(contents: str, config: Config = DEFAULT_CONFIG) -> ParsedConte
+             line_parts = [part for part in strip_syntax(import_string).strip().split(" ") if part]
+             if type_of_import == "from" and len(line_parts) == 2 and comments:
+                 nested_comments[line_parts[-1]] = comments[0]
++            # A comment on the opening line of a parenthesised import (for example
++            # ``from x import (  # comment``) documents the statement as a whole,
++            # rather than any individual imported name, so it must not be moved
++            # onto an alias line.
++            statement_comment = (
++                type_of_import == "from"
++                and comment is not None
++                and len(line_parts) < 2
++                and not config.force_single_line
++            )
+ 
+             def _get_next_line() -> tuple[str, str | None]:
+                 nonlocal index
+@@ -267,7 +277,7 @@ def file_contents(contents: str, config: Config = DEFAULT_CONFIG) -> ParsedConte
+                         elif as_name not in as_map["straight"][module]:
+                             as_map["straight"][module].append(as_name)
+ 
+-                    if comments and attach_comments_to is None:
++                    if comments and attach_comments_to is None and not statement_comment:
+                         if nested_module and config.combine_as_imports:
+                             attach_comments_to = categorized_comments["from"].setdefault(
+                                 f"{top_level_module}.__combined_as__", []
+diff --git a/isort/wrap.py b/isort/wrap.py
+index 5f0813d..cad24f4 100644
+--- a/isort/wrap.py
++++ b/isort/wrap.py
+@@ -68,8 +68,18 @@ def import_statement(
+     return statement
+ 
+ 
+-def line(content: str, line_separator: str, config: Config = DEFAULT_CONFIG) -> str:
+-    """Returns a line wrapped to the specified line-length, if possible."""
++def line(
++    content: str,
++    line_separator: str,
++    config: Config = DEFAULT_CONFIG,
++    statement_comment: bool = False,
++) -> str:
++    """Returns a line wrapped to the specified line-length, if possible.
++
++    When ``statement_comment`` is set, the trailing comment is treated as belonging to the
++    statement as a whole and is kept on the opening line (directly after the opening bracket)
++    instead of being moved onto the wrapped continuation line.
++    """
+     wrap_mode = config.multi_line_output
+     if len(content) > config.line_length and wrap_mode != Modes.NOQA:  # type: ignore
+         line_without_comment = content
+@@ -82,7 +92,9 @@ def line(content: str, line_separator: str, config: Config = DEFAULT_CONFIG) ->
+                 splitter
+             ):
+                 line_parts = re.split(exp, line_without_comment)
+-                if comment and not (config.use_parentheses and "noqa" in comment):
++                if comment and not (
++                    config.use_parentheses and (statement_comment or "noqa" in comment)
++                ):
+                     _comma_maybe = (
+                         ","
+                         if (
+@@ -123,7 +135,7 @@ def line(content: str, line_separator: str, config: Config = DEFAULT_CONFIG) ->
+                         else:
+                             _separator = ""
+                         noqa_comment = ""
+-                        if comment and "noqa" in comment:
++                        if comment and (statement_comment or "noqa" in comment):
+                             noqa_comment = f"{config.comment_prefix}{comment}"
+                             cont_line = cont_line.rstrip()
+                             _comma = "," if config.include_trailing_comma else ""

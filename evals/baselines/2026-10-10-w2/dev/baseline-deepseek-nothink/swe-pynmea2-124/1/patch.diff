@@ -1,0 +1,36 @@
+diff --git a/pynmea2/types/proprietary/ash.py b/pynmea2/types/proprietary/ash.py
+index d62a10e..0715bef 100644
+--- a/pynmea2/types/proprietary/ash.py
++++ b/pynmea2/types/proprietary/ash.py
+@@ -34,7 +34,7 @@ class ASHRATT(ASH):
+     '''
+     @staticmethod
+     def match(data):
+-        return re.match(r'^\d{6}\.\d{3}$', data[1])
++        return re.match(r'^\d{6}\.\d{2,3}$', data[1])
+ 
+     def __init__(self, *args, **kwargs):
+         self.subtype = 'ATT'
+diff --git a/test/test_ash.py b/test/test_ash.py
+index b33261e..8abfa7d 100644
+--- a/test/test_ash.py
++++ b/test/test_ash.py
+@@ -32,6 +32,18 @@ def test_ashratt():
+     assert msg.render() == data
+ 
+ 
++def test_ashratt_two_decimal_timestamp():
++    data = '$PASHR,122144.75,240.68,T,,,,,,,2*04'
++    msg = pynmea2.parse(data)
++    assert type(msg) == pynmea2.ash.ASHRATT
++    assert msg.data == ['R', '122144.75', '240.68', 'T', '', '', '', '', '', '', '2']
++    assert msg.manufacturer == 'ASH'
++    assert msg.timestamp == datetime.time(12, 21, 44, 750000)
++    assert msg.true_heading == 240.68
++    assert msg.is_true_heading == 'T'
++    assert msg.render() == data
++
++
+ def test_ash_undefined():
+     '''
+     Test that non-ATT messages still fall back to the generic ASH type

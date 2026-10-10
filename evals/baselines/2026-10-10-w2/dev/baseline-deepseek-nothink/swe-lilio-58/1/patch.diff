@@ -1,0 +1,56 @@
+diff --git a/lilio/utils.py b/lilio/utils.py
+index 0be2e70..d3e2c49 100644
+--- a/lilio/utils.py
++++ b/lilio/utils.py
+@@ -138,6 +138,12 @@ def replace_month_length(length: str) -> str:
+ def get_smallest_calendar_freq(calendar: "Calendar") -> pd.Timedelta:
+     """Return the smallest length of the calendar's intervals as a Timedelta."""
+     intervals = calendar.targets + calendar.precursors
++    if len(intervals) == 0:
++        raise ValueError(
++            "The calendar does not contain any intervals. Please add intervals to "
++            "the calendar before calling resample, e.g. with "
++            '`calendar.add_intervals("target", length="7d")`.'
++        )
+     lengthstr = [iv.length for iv in intervals]
+     lengthstr = [ln.replace("-", "") for ln in lengthstr]  # Account for neg. lengths
+     lengthstr = [replace_month_length(ln) if ln[-1] == "M" else ln for ln in lengthstr]
+diff --git a/tests/tw_repro/test_issue_empty_calendar.py b/tests/tw_repro/test_issue_empty_calendar.py
+new file mode 100644
+index 0000000..a3d54a7
+--- /dev/null
++++ b/tests/tw_repro/test_issue_empty_calendar.py
+@@ -0,0 +1,33 @@
++"""Reproduction test for empty calendar resample error message.
++
++Issue: Unclear error message when an empty calendar is passed to `resample`.
++`utils.get_smallest_calendar_freq(calendar)` raises `ValueError: min() arg is an
++empty sequence` instead of a helpful message telling the user to add intervals
++to the calendar.
++"""
++import numpy as np
++import pandas as pd
++import pytest
++
++import lilio
++from lilio import Calendar
++from lilio.utils import get_smallest_calendar_freq
++
++
++def _make_data():
++    time_index = pd.date_range("20191101", "20211101", freq="1d")
++    return pd.Series(np.arange(len(time_index)), index=time_index, name="data1")
++
++
++def test_get_smallest_calendar_freq_empty_calendar():
++    cal = Calendar("12-25")
++    with pytest.raises(ValueError, match="add intervals"):
++        get_smallest_calendar_freq(cal)
++
++
++def test_resample_empty_calendar():
++    data = _make_data()
++    cal = Calendar("12-25")
++    cal.map_to_data(data)
++    with pytest.raises(ValueError, match="add intervals"):
++        lilio.resample(cal, data)

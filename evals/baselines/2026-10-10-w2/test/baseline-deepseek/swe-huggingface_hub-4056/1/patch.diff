@@ -1,0 +1,263 @@
+diff --git a/src/huggingface_hub/_snapshot_download.py b/src/huggingface_hub/_snapshot_download.py
+index ed72652..44042ab 100644
+--- a/src/huggingface_hub/_snapshot_download.py
++++ b/src/huggingface_hub/_snapshot_download.py
+@@ -380,14 +380,20 @@ def snapshot_download(
+     results: list[str | DryRunFileInfo] = []
+ 
+     # User can use its own tqdm class or the default one from `huggingface_hub.utils`
++    has_custom_tqdm_class = tqdm_class is not None
+     tqdm_class = tqdm_class or hf_tqdm
+ 
++    # When a custom `tqdm_class` is provided, do not defer to tqdm's TTY auto-detection (`disable=None`).
++    # Otherwise the progress bar would be silently disabled in non-TTY environments (web servers,
++    # background threads, Docker, ...) and `update()` would become a no-op.
++    disable = False if has_custom_tqdm_class else is_tqdm_disabled(log_level=logger.getEffectiveLevel())
++
+     # Create a progress bar for the bytes downloaded
+     # This progress bar is shared across threads/files and gets updated each time we fetch
+     # metadata for a file.
+     bytes_progress = tqdm_class(
+         desc="Downloading (incomplete total...)",
+-        disable=is_tqdm_disabled(log_level=logger.getEffectiveLevel()),
++        disable=disable,
+         total=0,
+         initial=0,
+         unit="B",
+diff --git a/src/huggingface_hub/utils/tqdm.py b/src/huggingface_hub/utils/tqdm.py
+index 50e8a49..30ef52e 100644
+--- a/src/huggingface_hub/utils/tqdm.py
++++ b/src/huggingface_hub/utils/tqdm.py
+@@ -297,12 +297,18 @@ def _get_progress_bar_context(
+         #   Makes it easier to use the same code path for both cases but in the later
+         #   case, the progress bar is not closed when exiting the context manager.
+ 
++    # If a custom `tqdm_class` is provided, the user explicitly asked to track progress their own way.
++    # In that case we must not defer to tqdm's TTY auto-detection (`disable=None`): in non-TTY
++    # environments (web servers, background threads, Docker, ...) it would silently disable the
++    # progress bar and make `update()` a no-op.
++    disable = False if tqdm_class is not None else is_tqdm_disabled(log_level=log_level)
++
+     return (tqdm_class or tqdm)(  # type: ignore
+         unit=unit,
+         unit_scale=unit_scale,
+         total=total,
+         initial=initial,
+         desc=desc,
+-        disable=is_tqdm_disabled(log_level=log_level),
++        disable=disable,
+         name=name,
+     )
+diff --git a/tests/test_utils_tqdm.py b/tests/test_utils_tqdm.py
+index add7615..9ef9b14 100644
+--- a/tests/test_utils_tqdm.py
++++ b/tests/test_utils_tqdm.py
+@@ -1,3 +1,6 @@
++import io
++import logging
++import sys
+ import time
+ import unittest
+ from pathlib import Path
+@@ -14,6 +17,14 @@ from huggingface_hub.utils import (
+     tqdm,
+     tqdm_stream_file,
+ )
++from huggingface_hub.utils.tqdm import _get_progress_bar_context
++
++
++class NonTTYStderr(io.StringIO):
++    """Stand-in for `sys.stderr` in non-TTY environments (web server, Docker, background thread...)."""
++
++    def isatty(self) -> bool:
++        return False
+ 
+ 
+ class CapsysBaseTest(unittest.TestCase):
+@@ -121,6 +132,38 @@ class TestTqdmUtils(CapsysBaseTest):
+         self.assertEqual(captured.out, "")
+         self.assertIn("10/10", captured.err)  # tqdm log
+ 
++    @patch("huggingface_hub.utils._tqdm.HF_HUB_DISABLE_PROGRESS_BARS", None)
++    def test_tqdm_class_not_disabled_in_non_tty(self) -> None:
++        """A custom `tqdm_class` must not be silently disabled by tqdm's TTY auto-detection.
++
++        Regression test for https://github.com/huggingface/huggingface_hub/issues/1110: passing a custom
++        class means "track progress my way", so `disable` must not be left to `sys.stderr.isatty()`.
++        """
++        enable_progress_bars()
++
++        class CustomTqdm(tqdm):
++            def __init__(self, *args, **kwargs):
++                kwargs.pop("name", None)
++                super().__init__(*args, **kwargs)
++                self.disable_states = []
++
++            def update(self, n=1):
++                self.disable_states.append(self.disable)
++                super().update(n)
++
++        with patch("sys.stderr", NonTTYStderr()):
++            with _get_progress_bar_context(
++                desc="file.bin",
++                log_level=logging.WARNING,
++                total=10,
++                tqdm_class=CustomTqdm,
++            ) as pbar:
++                pbar.update(5)
++
++                self.assertFalse(pbar.disable)
++                self.assertEqual(pbar.disable_states, [False])
++                self.assertEqual(pbar.n, 5)
++
+     @patch("huggingface_hub.utils._tqdm.HF_HUB_DISABLE_PROGRESS_BARS", None)
+     def test_tqdm_stream_file(self) -> None:
+         enable_progress_bars()
+diff --git a/tests/tw_repro/test_issue_tqdm_class_disable.py b/tests/tw_repro/test_issue_tqdm_class_disable.py
+new file mode 100644
+index 0000000..f59fe18
+--- /dev/null
++++ b/tests/tw_repro/test_issue_tqdm_class_disable.py
+@@ -0,0 +1,142 @@
++"""Repro for: custom `tqdm_class` silently disabled in non-TTY environments.
++
++`_get_progress_bar_context` used to forward `disable=None` to a user-provided
++`tqdm_class`, which lets tqdm auto-detect a non-TTY stderr and turn `update()`
++into a no-op. Passing a custom class must not be silently disabled.
++"""
++
++import io
++import logging
++import sys
++from contextlib import contextmanager
++from pathlib import Path
++from unittest.mock import Mock, patch
++
++from tqdm.auto import tqdm as base_tqdm
++
++from huggingface_hub import hf_hub_download
++from huggingface_hub.file_download import HfFileMetadata
++from huggingface_hub.utils import disable_progress_bars, enable_progress_bars
++from huggingface_hub.utils import tqdm as hf_tqdm
++from huggingface_hub.utils.tqdm import _get_progress_bar_context
++
++
++class NonTTYStderr(io.StringIO):
++    """A stderr replacement that reports itself as non-TTY (Docker, server, thread, ...)."""
++
++    def isatty(self) -> bool:
++        return False
++
++
++class RecordingTqdm(base_tqdm):
++    """Custom tqdm class as a user would provide it."""
++
++    def __init__(self, *args, **kwargs):
++        kwargs.pop("name", None)  # hf-specific kwarg
++        super().__init__(*args, **kwargs)
++        self.updates = []
++        # `tqdm.close()` flips `disable` to True, so record the state seen by `update()`.
++        self.disable_states = []
++
++    def update(self, n=1):
++        self.disable_states.append(self.disable)
++        super().update(n)
++        self.updates.append(n)
++
++
++def test_custom_tqdm_class_is_not_disabled_in_non_tty_env(monkeypatch):
++    """`tqdm_class` means "track progress my way" => must not be disabled by TTY detection."""
++    monkeypatch.setattr(sys, "stderr", NonTTYStderr())
++
++    with _get_progress_bar_context(
++        desc="file.bin",
++        log_level=logging.WARNING,
++        total=10,
++        tqdm_class=RecordingTqdm,
++    ) as pbar:
++        pbar.update(5)
++
++        assert pbar.disable is False
++        assert pbar.disable_states == [False]
++        assert pbar.updates == [5]
++        assert pbar.n == 5
++
++
++def test_default_tqdm_still_auto_disabled_in_non_tty_env(monkeypatch):
++    """Without a custom class, the TTY auto-detection behaviour must be preserved."""
++    monkeypatch.setattr(sys, "stderr", NonTTYStderr())
++
++    with _get_progress_bar_context(desc="file.bin", log_level=logging.WARNING, total=10) as pbar:
++        pbar.update(5)
++
++        assert pbar.disable is True
++        assert pbar.n == 0
++
++
++def test_hf_hub_download_with_custom_tqdm_class_in_non_tty_env(monkeypatch, tmp_path: Path):
++    """End-to-end: `hf_hub_download(tqdm_class=...)` must report real progress outside a TTY."""
++    monkeypatch.setattr(sys, "stderr", NonTTYStderr())
++
++    created_bars: list[RecordingTqdm] = []
++
++    class DownloadProgress(RecordingTqdm):
++        def __init__(self, *args, **kwargs):
++            super().__init__(*args, **kwargs)
++            created_bars.append(self)
++
++    response = Mock()
++    response.status_code = 200
++    response.headers = {"Content-Length": "10"}
++    response.iter_bytes.return_value = iter([b"0123456789"])
++
++    @contextmanager
++    def _mock_stream(*args, **kwargs):
++        yield response
++
++    metadata = HfFileMetadata(
++        commit_hash="a" * 40,
++        etag="etag",
++        location="https://cdn-lfs.hf.co/file.bin",
++        size=10,
++        xet_file_data=None,
++    )
++
++    with (
++        patch("huggingface_hub.file_download.get_hf_file_metadata", return_value=metadata),
++        patch("huggingface_hub.file_download.http_stream_backoff", _mock_stream),
++    ):
++        filepath = hf_hub_download("user/repo", "file.bin", cache_dir=tmp_path, tqdm_class=DownloadProgress)
++
++    assert Path(filepath).read_bytes() == b"0123456789"
++    assert created_bars, "custom tqdm_class was never instantiated"
++    assert any(bar.updates for bar in created_bars), f"update() was never called: {created_bars}"
++    assert all(state is False for bar in created_bars for state in bar.disable_states)
++    assert sum(n for bar in created_bars for n in bar.updates) == 10
++
++
++def test_custom_tqdm_class_inheriting_hf_tqdm_still_respects_global_disable(monkeypatch):
++    """A custom class based on `huggingface_hub.utils.tqdm` keeps honoring `disable_progress_bars()`."""
++    monkeypatch.setattr(sys, "stderr", NonTTYStderr())
++    disable_progress_bars()
++    try:
++
++        class MyProgress(hf_tqdm):
++            def __init__(self, *args, **kwargs):
++                super().__init__(*args, **kwargs)
++                self.disable_states = []
++
++            def update(self, n=1):
++                self.disable_states.append(self.disable)
++                super().update(n)
++
++        with _get_progress_bar_context(
++            desc="file.bin",
++            log_level=logging.WARNING,
++            total=10,
++            tqdm_class=MyProgress,
++        ) as pbar:
++            pbar.update(5)
++            assert pbar.disable is True
++            assert pbar.n == 0
++    finally:
++        enable_progress_bars()

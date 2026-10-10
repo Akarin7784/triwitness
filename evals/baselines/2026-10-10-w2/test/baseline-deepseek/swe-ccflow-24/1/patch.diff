@@ -1,0 +1,175 @@
+diff --git a/ccflow/callable.py b/ccflow/callable.py
+index 24c84d4..b1c344c 100644
+--- a/ccflow/callable.py
++++ b/ccflow/callable.py
+@@ -60,6 +60,45 @@ def _cached_signature(fn):
+     return signature(fn)
+ 
+ 
++def _resolve_context(model: "_CallableModel", fn, context: Any = Signature.empty, kwargs: Optional[Dict[str, Any]] = None) -> ContextBase:
++    """Resolve the context for a `Flow`-decorated function from its arguments.
++
++    The context can be specified in one of three ways:
++
++    * As a positional/keyword argument named ``context`` (as before), which is coerced to the model's
++      ``context_type`` if necessary.
++    * As the keyword arguments of the context itself, i.e. ``model(a="foo")`` is equivalent to
++      ``model(model.context_type(a="foo"))``. This avoids having to explicitly construct the context.
++    * Omitted entirely, in which case the default value defined in the function signature is used (if any).
++
++    Args:
++        model: The model the function is being called on.
++        fn: The (undecorated) function being called, used to look up the default context.
++        context: The value passed as ``context``, or ``Signature.empty`` if none was passed.
++        kwargs: The keyword arguments passed to the function other than ``context``.
++
++    Raises:
++        TypeError: If both a context and context keyword arguments are passed, or if no context can be
++            resolved.
++    """
++    kwargs = kwargs or {}
++    if kwargs:
++        if context is not Signature.empty:
++            raise TypeError("Cannot pass both a context and context keyword arguments")
++        # Let the context type validate its fields from the keyword arguments
++        return model.context_type(**kwargs)
++
++    if context is Signature.empty:
++        context = _cached_signature(fn).parameters["context"].default
++        if context is Signature.empty:
++            raise TypeError(f"{fn.__name__}() missing 1 required positional argument: 'context'")
++
++    # Type coercion on input  TODO: Move to ModelEvaluationContext
++    if not isinstance(context, model.context_type):
++        context = model.context_type.model_validate(context)
++    return context
++
++
+ class MetaData(BaseModel):
+     """Class to represent metadata for all callable models"""
+ 
+@@ -234,7 +273,7 @@ class FlowOptions(BaseModel):
+         return self._get_evaluator_from_options(options)
+ 
+     def __call__(self, fn):
+-        def wrapper(model, context=Signature.empty):
++        def wrapper(model, context=Signature.empty, **kwargs):
+             # TODO: Let ModelEvaluationContext handle this type checking
+             if not isinstance(model, CallableModel):
+                 raise TypeError("Can only decorate methods on CallableModels with the flow decorator")
+@@ -242,13 +281,10 @@ class FlowOptions(BaseModel):
+                 raise TypeError(f"Context type {model.context_type} must be a subclass of ContextBase")
+             if not isclass(model.result_type) or not issubclass(model.result_type, ResultBase):
+                 raise TypeError(f"Result type {model.result_type} must be a subclass of ResultBase")
+-            if context is Signature.empty:
+-                context = _cached_signature(fn).parameters["context"].default
+-                if context is Signature.empty:
+-                    raise TypeError(f"{fn.__name__}() missing 1 required positional argument: 'context'")
+-            # Type coercion on input  TODO: Move to ModelEvaluationContext
+-            if not isinstance(context, model.context_type):
+-                context = model.context_type.model_validate(context)
++            # Allow the context to be specified directly via its fields as keyword arguments,
++            # i.e. model(a="foo") instead of model(MyContext(a="foo")), as well as via a
++            # positional/keyword argument named 'context' or the default in the signature.
++            context = _resolve_context(model, fn, context, kwargs)
+             # Create the evaluation context.
+             # Record the options that are used, in case the evaluators want to use it,
+             # but exclude the evaluator itself to avoid potential circular dependencies
+@@ -282,8 +318,9 @@ class FlowOptions(BaseModel):
+         wrap.get_options = self.get_options
+ 
+         # Used for building a graph of model evaluation contexts without evaluating
+-        def get_evaluation_context(model: CallableModelType, context: ContextType):
++        def get_evaluation_context(model: CallableModelType, context: ContextType = Signature.empty, **kwargs):
+             # TODO: This logic is duplicative of the logic in wrapper - combine into a single place
++            context = _resolve_context(model, fn, context, kwargs)
+             options = FlowOptionsOverride.get_options(model, self).model_dump(mode="python", exclude={"evaluator"}, exclude_unset=True)
+             evaluation_context = ModelEvaluationContext(model=model, context=context, fn=fn.__name__, options=options)
+             evaluator = self.get_evaluator(model)
+diff --git a/tests/tw_repro/test_issue_kwargs.py b/tests/tw_repro/test_issue_kwargs.py
+new file mode 100644
+index 0000000..34cf5d0
+--- /dev/null
++++ b/tests/tw_repro/test_issue_kwargs.py
+@@ -0,0 +1,81 @@
++"""Repro test for the feature request: "Ability to pass kwargs to CallableModel".
++
++A `CallableModel` should be callable by passing the fields of its context directly as
++keyword arguments, e.g. `model(a="foo")` instead of `model(MyContext(a="foo"))`.
++"""
++
++from unittest import TestCase
++
++from pydantic import ValidationError
++
++from ccflow import CallableModel, Flow, GenericResult, ResultBase
++from ccflow.tests.test_callable import MyCallable, MyContext, MyResult
++
++
++class MyKwargResult(ResultBase):
++    y: str
++
++
++class KwargModel(CallableModel):
++    i: int = 1
++
++    @Flow.call
++    def __call__(self, context: MyContext) -> MyKwargResult:
++        return MyKwargResult(y=context.a)
++
++
++class TestCallableModelKwargs(TestCase):
++    def test_kwargs_equivalent_to_context(self):
++        m = MyCallable(i=5)
++        self.assertEqual(m(a="foo"), m(MyContext(a="foo")))
++        self.assertEqual(m(a="foo"), MyResult(x=5, y="foo"))
++
++    def test_dict_context_still_works(self):
++        m = MyCallable(i=5)
++        self.assertEqual(m({"a": "foo"}), MyResult(x=5, y="foo"))
++
++    def test_context_kwarg_still_works(self):
++        m = MyCallable(i=5)
++        self.assertEqual(m(context=MyContext(a="foo")), MyResult(x=5, y="foo"))
++
++    def test_positional_context_still_works(self):
++        m = MyCallable(i=5)
++        self.assertEqual(m(MyContext(a="foo")), MyResult(x=5, y="foo"))
++
++    def test_kwargs_validate(self):
++        m = KwargModel()
++        # Valid kwargs are coerced/validated into the context type
++        self.assertEqual(m(a="foo"), MyKwargResult(y="foo"))
++
++    def test_missing_context_error(self):
++        m = MyCallable(i=5)
++        with self.assertRaisesRegex(
++            TypeError,
++            r"__call__\(\) missing 1 required positional argument: 'context'",
++        ):
++            m()
++
++    def test_context_and_kwargs_error(self):
++        m = MyCallable(i=5)
++        with self.assertRaises(TypeError):
++            m(MyContext(a="foo"), a="foo")
++
++    def test_bad_kwargs(self):
++        m = MyCallable(i=5)
++        self.assertRaises(ValidationError, m, b="foo")
++
++
++class DefaultModel(CallableModel):
++    @Flow.call
++    def __call__(self, context: MyContext = "bar") -> GenericResult:
++        return GenericResult(value=context.a)
++
++
++class TestDefaultContextKwargs(TestCase):
++    def test_default_still_works(self):
++        m = DefaultModel()
++        self.assertEqual(m(), GenericResult(value="bar"))
++
++    def test_kwargs_override_default(self):
++        m = DefaultModel()
++        self.assertEqual(m(a="foo"), GenericResult(value="foo"))

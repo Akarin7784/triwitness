@@ -1,0 +1,78 @@
+diff --git a/pyflakes/checker.py b/pyflakes/checker.py
+index 4d778a8..e654afa 100644
+--- a/pyflakes/checker.py
++++ b/pyflakes/checker.py
+@@ -1068,7 +1068,7 @@ class Checker:
+ 
+             binding = scope.get(name, None)
+             if isinstance(binding, Annotation) and not self._in_postponed_annotation:
+-                scope[name].used = True
++                scope[name].used = (self.scope, node)
+                 continue
+ 
+             if name == 'print' and isinstance(binding, Builtin):
+diff --git a/pyflakes/test/test_type_annotations.py b/pyflakes/test/test_type_annotations.py
+index f0fd3b9..420a249 100644
+--- a/pyflakes/test/test_type_annotations.py
++++ b/pyflakes/test/test_type_annotations.py
+@@ -706,3 +706,15 @@ class TestTypeAnnotations(TestCase):
+ 
+             def g(x: Shape[*Ts]) -> Shape[*Ts]: ...
+         """)
++
++    def test_annotation_used_then_assigned_in_function(self):
++        """Annotated name used at module scope then assigned in a function."""
++        self.flakes("""
++            test: int
++
++            test.__dict__
++
++
++            def fn():
++                test = 1
++        """, m.UndefinedName, m.UnusedVariable)
+diff --git a/tests/tw_repro/test_issue_760.py b/tests/tw_repro/test_issue_760.py
+new file mode 100644
+index 0000000..cf8e96d
+--- /dev/null
++++ b/tests/tw_repro/test_issue_760.py
+@@ -0,0 +1,39 @@
++"""Regression test: 'bool' object is not subscriptable (pyflakes 3.0).
++
++Reports an Annotation binding as used with a plain ``True`` instead of the
++``(scope, node)`` tuple every other load path uses.  A later assignment to
++the same name inside a function then crashed while trying to subscript it.
++"""
++
++from pyflakes import messages as m
++from pyflakes.test.harness import TestCase
++
++
++class TestAnnotationUsedAsTuple(TestCase):
++
++    def test_annotation_used_then_assigned_in_function(self):
++        self.flakes("""
++            test: int
++
++            test.__dict__
++
++
++            def fn():
++                test = 1
++        """, m.UndefinedName, m.UnusedVariable)
++
++    def test_annotation_used_in_module_scope(self):
++        self.flakes("""
++            test: int
++
++            print(test)
++        """, m.UndefinedName)
++
++    def test_annotation_used_then_assigned_in_function_no_load(self):
++        self.flakes("""
++            test: int
++
++
++            def fn():
++                test = 1
++        """, m.UnusedVariable)

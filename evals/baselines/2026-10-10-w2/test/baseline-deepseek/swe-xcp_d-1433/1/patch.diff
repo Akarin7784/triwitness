@@ -1,0 +1,274 @@
+diff --git a/conftest.py b/conftest.py
+new file mode 100644
+index 0000000..ba772e3
+--- /dev/null
++++ b/conftest.py
+@@ -0,0 +1,31 @@
++"""Pytest configuration shared by all tests in this repository.
++
++This file only ensures that the test session has a usable templateflow cache.
++
++``templateflow`` is imported transitively by ``xcp_d`` and, by default, it uses
++``~/.cache/templateflow``. In some containerized test environments ``HOME`` is
++not writable, which raises ``PermissionError`` at import time and makes every
++test that imports ``xcp_d`` fail during collection. When that happens, fall back
++to a writable directory in the system temporary directory.
++"""
++
++import os
++import tempfile
++from pathlib import Path
++
++
++def _ensure_templateflow_home():
++    """Point templateflow at a writable cache if its default one is unusable."""
++    if os.environ.get('TEMPLATEFLOW_HOME'):
++        return
++
++    try:
++        (Path.home() / '.cache' / 'templateflow').mkdir(parents=True, exist_ok=True)
++    except OSError:
++        os.environ['TEMPLATEFLOW_HOME'] = os.path.join(
++            tempfile.gettempdir(),
++            'xcp_d-templateflow-home',
++        )
++
++
++_ensure_templateflow_home()
+diff --git a/tests/tw_repro/test_issue_1432.py b/tests/tw_repro/test_issue_1432.py
+new file mode 100644
+index 0000000..712dcf2
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1432.py
+@@ -0,0 +1,214 @@
++"""Reproduction test for the native-space T2w collection bug.
++
++Issue: "Native-space T2w is collected even when no T1w-space T2w is available"
++
++When both a T1w and a T2w are present, but the T2w is *not* in T1w space (and no
++T2w-to-template transform is available), XCP-D falls back to T1w-only processing.
++In that situation the native-space T2w must be ignored, because the T1w-based
++transforms cannot be applied to it. Before the fix, ``collect_data`` returned the
++native-space T2w file, which then ended up in the executive summary.
++
++These tests build tiny synthetic fMRIPrep-style derivative datasets, because the
++real test datasets are not available in this environment.
++"""
++
++import json
++import os
++import tempfile
++from pathlib import Path
++
++
++def _make_templateflow_cache_available():
++    """Ensure that templateflow has a writable cache directory.
++
++    ``templateflow`` is imported transitively by ``xcp_d`` and its default cache
++    directory (``~/.cache/templateflow``) may not be writable in the test
++    environment.
++    """
++    if os.environ.get('TEMPLATEFLOW_HOME'):
++        return
++
++    try:
++        (Path.home() / '.cache' / 'templateflow').mkdir(parents=True, exist_ok=True)
++    except OSError:
++        os.environ['TEMPLATEFLOW_HOME'] = os.path.join(
++            tempfile.gettempdir(),
++            'xcp_d-templateflow-home',
++        )
++
++
++_make_templateflow_cache_available()
++
++import pytest  # noqa: E402
++from bids.layout import BIDSLayout  # noqa: E402
++
++import xcp_d.utils.bids as xbids  # noqa: E402
++
++BOLD_FILE = 'sub-01_task-rest_space-MNI152NLin6Asym_desc-preproc_bold.nii.gz'
++BRAINMASK_FILE = 'sub-01_space-MNI152NLin6Asym_desc-brain_mask.nii.gz'
++T1W_FILE = 'sub-01_desc-preproc_T1w.nii.gz'
++T2W_FILE = 'sub-01_desc-preproc_T2w.nii.gz'
++T1W_SPACE_T2W_FILE = 'sub-01_space-T1w_desc-preproc_T2w.nii.gz'
++T2W_SPACE_T1W_FILE = 'sub-01_space-T2w_desc-preproc_T1w.nii.gz'
++T1W_TO_STD_XFM = 'sub-01_from-T1w_to-MNI152NLin6Asym_mode-image_xfm.h5'
++STD_TO_T1W_XFM = 'sub-01_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.h5'
++T2W_TO_STD_XFM = 'sub-01_from-T2w_to-MNI152NLin6Asym_mode-image_xfm.h5'
++STD_TO_T2W_XFM = 'sub-01_from-MNI152NLin6Asym_to-T2w_mode-image_xfm.h5'
++
++
++def _make_dataset(tmp_path, anat_files, func_files=(BOLD_FILE,), subject='01'):
++    """Build a minimal fMRIPrep-style derivative dataset."""
++    root = Path(tmp_path)
++    anat_dir = root / f'sub-{subject}' / 'anat'
++    func_dir = root / f'sub-{subject}' / 'func'
++    anat_dir.mkdir(parents=True, exist_ok=True)
++    func_dir.mkdir(parents=True, exist_ok=True)
++
++    (root / 'dataset_description.json').write_text(
++        json.dumps(
++            {
++                'Name': 'synthetic',
++                'BIDSVersion': '1.9.0',
++                'DatasetType': 'derivative',
++            }
++        )
++    )
++
++    for filename in anat_files:
++        (anat_dir / filename).touch()
++
++    for filename in func_files:
++        (func_dir / filename).touch()
++
++    return str(root)
++
++
++def _collect(tmp_path, anat_files, **kwargs):
++    bids_dir = _make_dataset(tmp_path, anat_files, **kwargs)
++    layout = BIDSLayout(bids_dir, validate=False)
++    return xbids.collect_data(
++        layout=layout,
++        input_type='fmriprep',
++        participant_label='01',
++        bids_filters=None,
++        file_format='nifti',
++    )
++
++
++def test_native_space_t2w_is_ignored_when_no_t1w_space_t2w(tmp_path):
++    """The native-space T2w should be ignored if it is not in T1w space.
++
++    T1w is the anatomical reference here (only T1w-based transforms exist), so the
++    native-space T2w cannot be warped to standard space with those transforms.
++    """
++    subj_data = _collect(
++        tmp_path,
++        [
++            T1W_FILE,
++            T2W_FILE,
++            BRAINMASK_FILE,
++            T1W_TO_STD_XFM,
++            STD_TO_T1W_XFM,
++        ],
++    )
++
++    # The T1w is the anatomical reference and the T1w-based transforms are used.
++    assert subj_data['t1w'] is not None
++    assert os.path.basename(subj_data['t1w']) == T1W_FILE
++    assert os.path.basename(subj_data['anat_to_template_xfm']) == T1W_TO_STD_XFM
++    assert os.path.basename(subj_data['template_to_anat_xfm']) == STD_TO_T1W_XFM
++
++    # The native-space T2w must not be collected in this scenario.
++    assert subj_data['t2w'] is None, subj_data['t2w']
++
++
++def test_t2w_still_collected_when_registered_to_t1w(tmp_path):
++    """A T1w-space T2w should still be collected when T1w is the reference."""
++    subj_data = _collect(
++        tmp_path,
++        [
++            T1W_FILE,
++            T2W_FILE,
++            T1W_SPACE_T2W_FILE,
++            BRAINMASK_FILE,
++            T1W_TO_STD_XFM,
++            STD_TO_T1W_XFM,
++        ],
++    )
++
++    assert subj_data['t1w'] is not None
++    assert os.path.basename(subj_data['t1w']) == T1W_FILE
++    assert subj_data['t2w'] is not None
++    assert os.path.basename(subj_data['t2w']) == T1W_SPACE_T2W_FILE
++    assert os.path.basename(subj_data['anat_to_template_xfm']) == T1W_TO_STD_XFM
++
++
++def test_t2w_still_collected_when_t1w_is_registered_to_t2w(tmp_path):
++    """A native T2w should still be collected when T2w is the anatomical reference."""
++    subj_data = _collect(
++        tmp_path,
++        [
++            T2W_FILE,
++            T2W_SPACE_T1W_FILE,
++            BRAINMASK_FILE,
++            T2W_TO_STD_XFM,
++            STD_TO_T2W_XFM,
++        ],
++    )
++
++    assert subj_data['t2w'] is not None
++    assert os.path.basename(subj_data['t2w']) == T2W_FILE
++    assert os.path.basename(subj_data['anat_to_template_xfm']) == T2W_TO_STD_XFM
++    assert os.path.basename(subj_data['template_to_anat_xfm']) == STD_TO_T2W_XFM
++
++
++def test_t2w_only_processing_still_works(tmp_path):
++    """T2w-only processing should still collect the native T2w."""
++    subj_data = _collect(
++        tmp_path,
++        [T2W_FILE, BRAINMASK_FILE, T2W_TO_STD_XFM, STD_TO_T2W_XFM],
++    )
++
++    assert subj_data['t1w'] is None
++    assert subj_data['t2w'] is not None
++    assert os.path.basename(subj_data['t2w']) == T2W_FILE
++    assert os.path.basename(subj_data['anat_to_template_xfm']) == T2W_TO_STD_XFM
++    assert os.path.basename(subj_data['template_to_anat_xfm']) == STD_TO_T2W_XFM
++
++
++def test_t2w_only_processing_with_t2w_transform(tmp_path):
++    """T2w-only processing is used when T2w-to-template transforms are available."""
++    subj_data = _collect(
++        tmp_path,
++        [
++            T1W_FILE,
++            T2W_FILE,
++            BRAINMASK_FILE,
++            T1W_TO_STD_XFM,
++            STD_TO_T1W_XFM,
++            T2W_TO_STD_XFM,
++            STD_TO_T2W_XFM,
++        ],
++    )
++
++    assert subj_data['t1w'] is None
++    assert subj_data['t2w'] is not None
++    assert os.path.basename(subj_data['t2w']) == T2W_FILE
++    assert os.path.basename(subj_data['anat_to_template_xfm']) == T2W_TO_STD_XFM
++    assert os.path.basename(subj_data['template_to_anat_xfm']) == STD_TO_T2W_XFM
++
++
++def test_t1w_only_processing(tmp_path):
++    """T1w-only processing should not collect a T2w."""
++    subj_data = _collect(
++        tmp_path,
++        [T1W_FILE, BRAINMASK_FILE, T1W_TO_STD_XFM, STD_TO_T1W_XFM],
++    )
++
++    assert subj_data['t1w'] is not None
++    assert os.path.basename(subj_data['t1w']) == T1W_FILE
++    assert subj_data['t2w'] is None
++
++
++if __name__ == '__main__':
++    pytest.main([__file__, '-v'])
+diff --git a/xcp_d/utils/bids.py b/xcp_d/utils/bids.py
+index e6cc6ff..a8a1156 100644
+--- a/xcp_d/utils/bids.py
++++ b/xcp_d/utils/bids.py
+@@ -298,6 +298,12 @@ def collect_data(
+                         'T2w-to-template transform not found. Attempting T1w-only processing.'
+                     )
+                     queries['t1w']['space'] = ['T1w', None]
++                    # The T2w is not in the same space as the T1w,
++                    # so the T1w-based transforms can't be applied to it.
++                    # Restrict the T2w query to T1w-space T2w files,
++                    # which we have already established don't exist,
++                    # so that the native-space T2w is ignored.
++                    queries['t2w']['space'] = 'T1w'
+                     queries['template_to_anat_xfm']['to'] = 'T1w'
+                     queries['anat_to_template_xfm']['from'] = 'T1w'
+                 else:

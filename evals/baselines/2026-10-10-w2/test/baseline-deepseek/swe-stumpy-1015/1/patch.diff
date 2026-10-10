@@ -1,0 +1,195 @@
+diff --git a/stumpy/aamp_motifs.py b/stumpy/aamp_motifs.py
+index 0d5f67d..ac01ea9 100644
+--- a/stumpy/aamp_motifs.py
++++ b/stumpy/aamp_motifs.py
+@@ -65,10 +65,11 @@ def _aamp_motifs(
+         The largest matrix profile value (distance) that a candidate motif is allowed
+         to have.
+ 
+-    max_matches : int
++    max_matches : int or None
+         The maximum number of similar matches to be returned. The resulting
+         matches are sorted by distance (starting with the most similar). Note that the
+         first match is always the self-match/trivial-match for each motif.
++        If `None`, all matches are returned.
+ 
+     max_motifs : int
+         The maximum number of motifs to return.
+@@ -267,8 +268,6 @@ def aamp_motifs(
+ 
+     m = T.shape[-1] - P.shape[-1] + 1
+     excl_zone = int(np.ceil(m / config.STUMPY_EXCL_ZONE_DENOM))
+-    if max_matches is None:  # pragma: no cover
+-        max_matches = np.inf
+     if cutoff is None:  # pragma: no cover
+         P_copy = P.copy().astype(np.float64)
+         P_copy[np.isinf(P_copy)] = np.nan
+diff --git a/stumpy/motifs.py b/stumpy/motifs.py
+index eaad4cf..53a1213 100644
+--- a/stumpy/motifs.py
++++ b/stumpy/motifs.py
+@@ -66,10 +66,11 @@ def _motifs(
+         The largest matrix profile value (distance) that a candidate motif is allowed
+         to have.
+ 
+-    max_matches : int
++    max_matches : int or None
+         The maximum number of similar matches to be returned. The resulting
+         matches are sorted by distance (starting with the most similar). Note that
+         the first match is always the self-match/trivial-match for each motif.
++        If `None`, all matches are returned.
+ 
+     max_motifs : int
+         The maximum number of motifs to return.
+@@ -333,8 +334,6 @@ def motifs(
+ 
+     m = T.shape[-1] - P.shape[-1] + 1
+     excl_zone = int(np.ceil(m / config.STUMPY_EXCL_ZONE_DENOM))
+-    if max_matches is None:  # pragma: no cover
+-        max_matches = np.inf
+     if cutoff is None:  # pragma: no cover
+         P_copy = P.copy().astype(np.float64)
+         P_copy[np.isinf(P_copy)] = np.nan
+diff --git a/tests/tw_repro/test_issue_motifs_max_matches_none.py b/tests/tw_repro/test_issue_motifs_max_matches_none.py
+new file mode 100644
+index 0000000..bf97941
+--- /dev/null
++++ b/tests/tw_repro/test_issue_motifs_max_matches_none.py
+@@ -0,0 +1,137 @@
++"""
++Reproducer for the issue "`_motifs` max_matches=None bug".
++
++When ``max_matches=None`` is passed to ``stumpy.motifs`` (or
++``stumpy.aamp_motifs``/``stumpy.mmotifs``), the intent is that *all* matches
++within ``max_distance`` of the motif representative are returned. However,
++``None`` was converted to ``np.inf`` and then used as a slice index inside
++``_motifs``, which raised::
++
++    TypeError: slice indices must be integers or None or have an __index__ method
++"""
++
++import numpy as np
++import numpy.testing as npt
++import pytest
++
++import stumpy
++
++
++def test_motifs_max_matches_none_issue_example():
++    arr = np.array([0.0, 1, 2, 2, 0, 1, 2, 2, 0, 0, 0, 0])
++    m = 3
++    mp = stumpy.stump(arr, m=m)
++
++    # Previously raised `TypeError: slice indices must be integers or None or
++    # have an __index__ method`
++    motif_distances, motif_indices = stumpy.motifs(arr, mp[:, 0], max_matches=None)
++
++    npt.assert_almost_equal(motif_distances, np.array([[0.0, 0.0]]))
++    npt.assert_almost_equal(motif_indices, np.array([[0, 4]]))
++
++
++@pytest.mark.parametrize("max_motifs", [1, 2])
++def test_motifs_max_matches_none_returns_all_matches(max_motifs):
++    np.random.seed(0)
++    T = np.random.rand(64)
++    m = 3
++    mp = stumpy.stump(T, m=m)
++
++    distances_none, indices_none = stumpy.motifs(
++        T,
++        mp[:, 0],
++        max_distance=np.inf,
++        max_matches=None,
++        max_motifs=max_motifs,
++    )
++    # An integer that is larger than the number of subsequences is equivalent
++    # to not restricting the number of matches at all
++    distances_all, indices_all = stumpy.motifs(
++        T,
++        mp[:, 0],
++        max_distance=np.inf,
++        max_matches=T.shape[-1],
++        max_motifs=max_motifs,
++    )
++
++    npt.assert_almost_equal(distances_none, distances_all)
++    npt.assert_almost_equal(indices_none, indices_all)
++
++    # `None` must not be silently truncated to the default `max_matches=10`
++    assert indices_none.shape[1] > 10
++    for motif_idx in indices_none[:, 0]:
++        assert motif_idx >= 0
++
++
++def test_aamp_motifs_max_matches_none_returns_all_matches():
++    np.random.seed(0)
++    T = np.random.rand(64)
++    m = 3
++    mp = stumpy.stump(T, m=m)
++
++    distances_none, indices_none = stumpy.aamp_motifs(
++        T,
++        mp[:, 0],
++        max_distance=np.inf,
++        max_matches=None,
++        max_motifs=2,
++    )
++    distances_all, indices_all = stumpy.aamp_motifs(
++        T,
++        mp[:, 0],
++        max_distance=np.inf,
++        max_matches=T.shape[-1],
++        max_motifs=2,
++    )
++
++    npt.assert_almost_equal(distances_none, distances_all)
++    npt.assert_almost_equal(indices_none, indices_all)
++    assert indices_none.shape[1] > 10
++
++
++def test_motifs_max_matches_none_non_normalized():
++    np.random.seed(0)
++    T = np.random.rand(64)
++    m = 3
++    mp = stumpy.stump(T, m=m)
++
++    distances_none, indices_none = stumpy.motifs(
++        T,
++        mp[:, 0],
++        max_distance=np.inf,
++        max_matches=None,
++        max_motifs=1,
++        normalize=False,
++        p=2.0,
++    )
++    distances_all, indices_all = stumpy.motifs(
++        T,
++        mp[:, 0],
++        max_distance=np.inf,
++        max_matches=T.shape[-1],
++        max_motifs=1,
++        normalize=False,
++        p=2.0,
++    )
++
++    npt.assert_almost_equal(distances_none, distances_all)
++    npt.assert_almost_equal(indices_none, indices_all)
++
++
++def test_mmotifs_max_matches_none_returns_all_matches():
++    np.random.seed(0)
++    T = np.random.rand(2, 64)
++    m = 3
++    mps, indices = stumpy.mstump(T, m=m)
++
++    result_none = stumpy.mmotifs(T, mps, indices, max_matches=None)
++    result_all = stumpy.mmotifs(T, mps, indices, max_matches=T.shape[-1])
++
++    npt.assert_almost_equal(result_none[0], result_all[0])
++    npt.assert_almost_equal(result_none[1], result_all[1])
++
++    aamp_result_none = stumpy.aamp_mmotifs(T, mps, indices, max_matches=None)
++    aamp_result_all = stumpy.aamp_mmotifs(T, mps, indices, max_matches=T.shape[-1])
++
++    npt.assert_almost_equal(aamp_result_none[0], aamp_result_all[0])
++    npt.assert_almost_equal(aamp_result_none[1], aamp_result_all[1])

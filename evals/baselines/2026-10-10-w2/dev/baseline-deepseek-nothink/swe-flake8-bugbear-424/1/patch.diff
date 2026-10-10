@@ -1,0 +1,205 @@
+diff --git a/README.rst b/README.rst
+index b0ddfa7..7f7df57 100644
+--- a/README.rst
++++ b/README.rst
+@@ -343,6 +343,8 @@ Unreleased
+ 
+ * B026: Fix bug where the check was not triggered for calls where the callee
+   is an attribute
++* B017: Detect ``raises(Exception)`` when ``raises`` is imported directly with
++  ``from pytest import raises``
+ 
+ 23.9.16
+ ~~~~~~~
+diff --git a/bugbear.py b/bugbear.py
+index 5fbfa19..e6a8dd2 100644
+--- a/bugbear.py
++++ b/bugbear.py
+@@ -652,15 +652,28 @@ class BugBearVisitor(ast.NodeVisitor):
+ 
+         if (
+             hasattr(item_context, "func")
+-            and isinstance(item_context.func, ast.Attribute)
+             and (
+-                item_context.func.attr == "assertRaises"
++                # "with self.assertRaises"
++                (
++                    isinstance(item_context.func, ast.Attribute)
++                    and item_context.func.attr == "assertRaises"
++                )
++                # "with pytest.raises" or "with raises"
++                # ("with raises" is used when importing with
++                # `from pytest import raises`)
+                 or (
+-                    item_context.func.attr == "raises"
+-                    and isinstance(item_context.func.value, ast.Name)
+-                    and item_context.func.value.id == "pytest"
+-                    and "match" not in [kwd.arg for kwd in item_context.keywords]
++                    (
++                        isinstance(item_context.func, ast.Attribute)
++                        and item_context.func.attr == "raises"
++                        and isinstance(item_context.func.value, ast.Name)
++                        and item_context.func.value.id == "pytest"
++                    )
++                    or (
++                        isinstance(item_context.func, ast.Name)
++                        and item_context.func.id == "raises"
++                    )
+                 )
++                and "match" not in [kwd.arg for kwd in item_context.keywords]
+             )
+             and len(item_context.args) == 1
+             and isinstance(item_context.args[0], ast.Name)
+diff --git a/tests/b017.py b/tests/b017.py
+index 2365cd1..41af925 100644
+--- a/tests/b017.py
++++ b/tests/b017.py
+@@ -1,12 +1,13 @@
+ """
+ Should emit:
+-B017 - on lines 24, 26, 28, 31 and 32.
++B017 - on lines 26, 28, 30 and 32.
+ """
+ 
+ import asyncio
+ import unittest
+ 
+ import pytest
++from pytest import raises
+ 
+ CONSTANT = True
+ 
+@@ -28,6 +29,8 @@ class Foobar(unittest.TestCase):
+             raise Exception("Evil I say!")
+         with pytest.raises(Exception):
+             raise Exception("Evil I say!")
++        with raises(Exception):
++            raise Exception("Evil I say!")
+         # These are evil as well but we are only testing inside a with statement
+         self.assertRaises(Exception, lambda x, y: x / y, 1, y=0)
+         pytest.raises(Exception, lambda x, y: x / y, 1, y=0)
+diff --git a/tests/test_bugbear.py b/tests/test_bugbear.py
+index 49377b4..22ccd6a 100644
+--- a/tests/test_bugbear.py
++++ b/tests/test_bugbear.py
+@@ -258,7 +258,7 @@ class BugbearTestCase(unittest.TestCase):
+         filename = Path(__file__).absolute().parent / "b017.py"
+         bbc = BugBearChecker(filename=str(filename))
+         errors = list(bbc.run())
+-        expected = self.errors(B017(25, 8), B017(27, 8), B017(29, 8))
++        expected = self.errors(B017(26, 8), B017(28, 8), B017(30, 8), B017(32, 8))
+         self.assertEqual(errors, expected)
+ 
+     def test_b018_functions(self):
+@@ -530,9 +530,11 @@ class BugbearTestCase(unittest.TestCase):
+             B908(15, 8),
+             B908(21, 8),
+             B908(27, 8),
++            B017(37, 0),
+             B908(37, 0),
+             B908(41, 0),
+             B908(45, 0),
++            B017(56, 0),
+         )
+         self.assertEqual(errors, expected)
+ 
+diff --git a/tests/tw_repro/test_issue_b017.py b/tests/tw_repro/test_issue_b017.py
+new file mode 100644
+index 0000000..1c3375a
+--- /dev/null
++++ b/tests/tw_repro/test_issue_b017.py
+@@ -0,0 +1,94 @@
++"""Repro for B017 false negative when ``raises`` is imported directly.
++
++Issue: B017 fails to warn for ``with raises(Exception):`` when ``raises`` is
++imported via ``from pytest import raises`` (i.e. used as an ``ast.Name``
++instead of the ``pytest.raises`` attribute access).
++"""
++import textwrap
++
++import pytest
++
++from bugbear import BugBearChecker
++
++
++def _b017_lines(source: str, tmp_path):
++    path = tmp_path / "repro.py"
++    path.write_text(textwrap.dedent(source))
++    bbc = BugBearChecker(filename=str(path))
++    return [e[0] for e in bbc.run()]
++
++
++ISSUE_SOURCE = """\
++import pytest
++from pytest import raises
++
++
++def foo():
++    raise
++
++
++def test_pytest_raises():
++    with raises(Exception):
++        foo()
++    with pytest.raises(Exception):
++        foo()
++"""
++
++
++def test_imported_raises_is_flagged(tmp_path):
++    # ``with raises(Exception):`` is line 10 and
++    # ``with pytest.raises(Exception):`` is line 12.
++    assert _b017_lines(ISSUE_SOURCE, tmp_path) == [10, 12]
++
++
++def test_imported_raises_with_match_not_flagged(tmp_path):
++    source = """\
++from pytest import raises
++
++
++def foo():
++    raise
++
++
++def test_raises_with_match():
++    with raises(Exception, match="foo"):
++        foo()
++"""
++    assert _b017_lines(source, tmp_path) == []
++
++
++def test_imported_raises_with_target_not_flagged(tmp_path):
++    source = """\
++from pytest import raises
++
++
++def foo():
++    raise
++
++
++def test_raises_with_target():
++    with raises(Exception) as exc:
++        foo()
++    assert exc.value
++"""
++    assert _b017_lines(source, tmp_path) == []
++
++
++def test_pytest_raises_attr_still_flagged(tmp_path):
++    source = """\
++import pytest
++
++
++def foo():
++    raise
++
++
++def test_pytest_raises():
++    with pytest.raises(Exception):
++        foo()
++"""
++    assert _b017_lines(source, tmp_path) == [9]
++
++
++if __name__ == "__main__":
++    raise SystemExit(pytest.main([__file__, "-v"]))

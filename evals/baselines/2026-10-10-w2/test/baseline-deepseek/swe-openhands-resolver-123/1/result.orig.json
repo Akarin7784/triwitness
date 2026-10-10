@@ -1,0 +1,26 @@
+{
+  "task_id": "swe-openhands-resolver-123",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": false,
+  "reward": 0.0,
+  "agent_status": "budget_exhausted",
+  "agent_claimed_success": false,
+  "false_success": false,
+  "tamper_paths": [
+    "tests/test_send_pull_request.py"
+  ],
+  "ignored_paths": [],
+  "patch_applied": true,
+  "cost_cny": 0.374745,
+  "tokens_in": 1268304,
+  "tokens_cached": 1169664,
+  "tokens_out": 63178,
+  "peak_calls": 0,
+  "steps": 31,
+  "wall_s": 495.02,
+  "trajectory_id": "baseline-deepseek/swe-openhands-resolver-123/1/trajectory.jsonl",
+  "live": true,
+  "error": "单任务预算 max_cost_cny 已用尽：0.5 / 0.5"
+}

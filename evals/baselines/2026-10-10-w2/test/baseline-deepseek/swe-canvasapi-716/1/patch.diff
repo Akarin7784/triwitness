@@ -1,0 +1,560 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 2bedc43..035daf9 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,6 +2,10 @@
+ 
+ ## [Unreleased]
+ 
++### Bugfixes
++
++- Fixed `obj_or_str` rejecting `str` arguments. `Account.get_feature_flag`, `Course.get_feature_flag`, `User.get_feature_flag`, `FeatureFlag.delete` and `FeatureFlag.set_feature_flag` now accept either a `Feature` object or the name of a feature.
++
+ ## [3.5.0] - 2026-03-12
+ 
+ ### General
+diff --git a/canvasapi/account.py b/canvasapi/account.py
+index a1c39c1..71fbd76 100644
+--- a/canvasapi/account.py
++++ b/canvasapi/account.py
+@@ -1107,7 +1107,9 @@ class Account(CanvasObject):
+             "accounts/{}/features/flags/{}".format(self.id, feature_name),
+             _kwargs=combine_kwargs(**kwargs),
+         )
+-        return FeatureFlag(self._requester, response.json())
++        feature_flag = FeatureFlag(self._requester, response.json())
++        feature_flag._parent = ("account", self.id)
++        return feature_flag
+ 
+     def get_features(self, **kwargs):
+         """
+diff --git a/canvasapi/course.py b/canvasapi/course.py
+index 9d0cacf..72ac781 100644
+--- a/canvasapi/course.py
++++ b/canvasapi/course.py
+@@ -1331,7 +1331,9 @@ class Course(CanvasObject):
+             "courses/{}/features/flags/{}".format(self.id, feature_name),
+             _kwargs=combine_kwargs(**kwargs),
+         )
+-        return FeatureFlag(self._requester, response.json())
++        feature_flag = FeatureFlag(self._requester, response.json())
++        feature_flag._parent = ("course", self.id)
++        return feature_flag
+ 
+     def get_features(self, **kwargs):
+         """
+diff --git a/canvasapi/feature.py b/canvasapi/feature.py
+index ebd48d7..7a636c1 100644
+--- a/canvasapi/feature.py
++++ b/canvasapi/feature.py
+@@ -50,6 +50,36 @@ class FeatureFlag(CanvasObject):
+             self.context_type, self.context_id, self.feature, self.state
+         )
+ 
++    def _get_parent(self, feature):
++        """
++        Return the type and id of the account, course or user that the given
++        feature belongs to.
++
++        A :class:`canvasapi.feature.Feature` object knows which account, course
++        or user it was retrieved from. If the name of a feature was passed in
++        instead, the parent of this feature flag is used.
++
++        :param feature: The feature object or name of the feature.
++        :type feature: :class:`canvasapi.feature.Feature` or str
++
++        :rtype: tuple
++        """
++        if isinstance(feature, Feature):
++            return feature._parent_type, feature._parent_id
++
++        parent = getattr(self, "_parent", None)
++        if parent is not None:
++            return parent
++
++        try:
++            return self.context_type.lower(), self.context_id
++        except AttributeError:
++            raise TypeError(
++                "Unable to determine which account, course or user the feature belongs to. "
++                "Pass a Feature object, or use a FeatureFlag with a context_type and "
++                "context_id."
++            )
++
+     def delete(self, feature, **kwargs):
+         """
+         Remove a feature flag for a given account, course or user.
+@@ -66,15 +96,17 @@ class FeatureFlag(CanvasObject):
+             <https://canvas.instructure.com/doc/api/
+             feature_flags.html#method.feature_flags.delete>`_
+ 
++        :param feature: The feature object or name of the feature to remove.
++        :type feature: :class:`canvasapi.feature.Feature` or str
++
+         :rtype: :class:`canvasapi.feature.FeatureFlag`
+         """
+         feature_name = obj_or_str(feature, "name", (Feature,))
++        parent_type, parent_id = self._get_parent(feature)
+ 
+         response = self._requester.request(
+             "DELETE",
+-            "{}s/{}/features/flags/{}".format(
+-                feature._parent_type, feature._parent_id, feature_name
+-            ),
++            "{}s/{}/features/flags/{}".format(parent_type, parent_id, feature_name),
+             _kwargs=combine_kwargs(**kwargs),
+         )
+         return FeatureFlag(self._requester, response.json())
+@@ -95,18 +127,17 @@ class FeatureFlag(CanvasObject):
+             <https://canvas.instructure.com/doc/api/
+             feature_flags.html#method.feature_flags.update>`_
+ 
+-        :param feature: The feature object to set
+-        :type feature: :class:`canvasapi.feature.Feature`
++        :param feature: The feature object or name of the feature to set
++        :type feature: :class:`canvasapi.feature.Feature` or str
+ 
+         :rtype: :class:`canvasapi.feature.FeatureFlag`
+         """
+         feature_name = obj_or_str(feature, "name", (Feature,))
++        parent_type, parent_id = self._get_parent(feature)
+ 
+         response = self._requester.request(
+             "PUT",
+-            "{}s/{}/features/flags/{}".format(
+-                feature._parent_type, feature._parent_id, feature_name
+-            ),
++            "{}s/{}/features/flags/{}".format(parent_type, parent_id, feature_name),
+             _kwargs=combine_kwargs(**kwargs),
+         )
+         return FeatureFlag(self._requester, response.json())
+diff --git a/canvasapi/user.py b/canvasapi/user.py
+index 6f9adab..0d85f37 100644
+--- a/canvasapi/user.py
++++ b/canvasapi/user.py
+@@ -519,7 +519,9 @@ class User(CanvasObject):
+             "users/{}/features/flags/{}".format(self.id, feature_name),
+             _kwargs=combine_kwargs(**kwargs),
+         )
+-        return FeatureFlag(self._requester, response.json())
++        feature_flag = FeatureFlag(self._requester, response.json())
++        feature_flag._parent = ("user", self.id)
++        return feature_flag
+ 
+     def get_features(self, **kwargs):
+         """
+diff --git a/canvasapi/util.py b/canvasapi/util.py
+index 21c2a02..5db0489 100644
+--- a/canvasapi/util.py
++++ b/canvasapi/util.py
+@@ -135,35 +135,41 @@ def obj_or_id(parameter, param_name, object_types):
+ 
+ def obj_or_str(obj, attr, object_types):
+     """
+-    Accepts an object. If the object has the attribute, return the
+-    corresponding string. Otherwise, throw an exception.
++    Accepts either a str or an object. If it is a str, return it. If it is an
++    object and the object is of correct type, return the value of the given
++    attribute as a string. Otherwise, throw an exception.
+ 
+-    :param obj: object from which to retrieve attribute
+-    :type obj: object
++    :param obj: str or object from which to retrieve attribute
++    :type obj: str or object
+     :param attr: name of the attribute to retrieve
+     :type attr: str
+     :param object_types: tuple containing the types of the object being passed in
+     :type object_types: tuple
+     :rtype: str
+     """
++    if isinstance(obj, str):
++        return obj
++
+     try:
+         return str(getattr(obj, attr))
+     except (AttributeError, TypeError):
+         if not isinstance(attr, str):
+             raise TypeError(
+-                "Atttibute parameter {} must be of type string".format(attr)
++                "Attribute parameter {} must be of type string".format(attr)
+             )
+         for obj_type in object_types:
+             if isinstance(obj, obj_type):
+                 try:
+                     return str(getattr(obj, attr))
+                 except AttributeError:
+-                    raise AttributeError("{} object does not have {} attribute").format(
+-                        obj, attr
++                    raise AttributeError(
++                        "{} object does not have {} attribute".format(obj, attr)
+                     )
+ 
+         obj_type_list = ",".join([obj_type.__name__ for obj_type in object_types])
+-        raise TypeError("Parameter {} must be of type {}.".format(obj, obj_type_list))
++        raise TypeError(
++            "Parameter {} must be of type {} or str.".format(obj, obj_type_list)
++        )
+ 
+ 
+ def get_institution_url(base_url):
+diff --git a/tests/test_account.py b/tests/test_account.py
+index 9a0d04e..4eef9d9 100644
+--- a/tests/test_account.py
++++ b/tests/test_account.py
+@@ -1429,3 +1429,11 @@ class TestAccountReport(unittest.TestCase):
+ 
+         self.assertIsInstance(feature_flag, FeatureFlag)
+         self.assertEqual(feature_flag.feature, "epub_export")
++
++    def test_get_feature_flag_str(self, m):
++        register_uris({"account": ["get_feature_flag"]}, m)
++
++        feature_flag = self.account.get_feature_flag("epub_export")
++
++        self.assertIsInstance(feature_flag, FeatureFlag)
++        self.assertEqual(feature_flag.feature, "epub_export")
+diff --git a/tests/test_course.py b/tests/test_course.py
+index ec554c5..6e9a5ac 100644
+--- a/tests/test_course.py
++++ b/tests/test_course.py
+@@ -1826,6 +1826,14 @@ class TestCourse(unittest.TestCase):
+         self.assertIsInstance(feature_flag, FeatureFlag)
+         self.assertEqual(feature_flag.feature, "epub_export")
+ 
++    def test_get_feature_flag_str(self, m):
++        register_uris({"course": ["get_feature_flag"]}, m)
++
++        feature_flag = self.course.get_feature_flag("epub_export")
++
++        self.assertIsInstance(feature_flag, FeatureFlag)
++        self.assertEqual(feature_flag.feature, "epub_export")
++
+     # get_features()
+     def test_get_features(self, m):
+         register_uris({"course": ["get_features"]}, m)
+diff --git a/tests/test_feature.py b/tests/test_feature.py
+index f2ef4bb..71b7747 100644
+--- a/tests/test_feature.py
++++ b/tests/test_feature.py
+@@ -94,6 +94,28 @@ class TestFeatureFlag(unittest.TestCase):
+         string = str(self.feature_flag_course)
+         self.assertIsInstance(string, str)
+ 
++    # _get_parent()
++    def test_get_parent_from_feature(self, m):
++        parent = self.feature_flag_account._get_parent(self.feature_account)
++
++        self.assertEqual(parent, ("account", 1))
++
++    def test_get_parent_from_context(self, m):
++        feature_flag = FeatureFlag(
++            self.canvas._Canvas__requester,
++            {"context_type": "Course", "context_id": 2},
++        )
++
++        self.assertEqual(feature_flag._get_parent("epub_export"), ("course", 2))
++
++    def test_get_parent_no_context(self, m):
++        feature_flag = FeatureFlag(
++            self.canvas._Canvas__requester, {"feature": "epub_export"}
++        )
++
++        with self.assertRaises(TypeError):
++            feature_flag._get_parent("epub_export")
++
+     # delete()
+     def test_delete_account(self, m):
+         register_uris({"account": ["delete_feature_flag"]}, m)
+@@ -101,18 +123,51 @@ class TestFeatureFlag(unittest.TestCase):
+ 
+         self.assertIsInstance(delete_flag, FeatureFlag)
+ 
++    def test_delete_account_str(self, m):
++        register_uris({"account": ["delete_feature_flag"]}, m)
++        delete_flag = self.feature_flag_account.delete("epub_export")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
++    def test_delete_account_str_flag_from_context(self, m):
++        register_uris({"account": ["delete_feature_flag"]}, m)
++        feature_flag = FeatureFlag(
++            self.canvas._Canvas__requester,
++            {
++                "context_type": "Account",
++                "context_id": 1,
++                "feature": "epub_export",
++                "state": "on",
++            },
++        )
++        delete_flag = feature_flag.delete("epub_export")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
+     def test_delete_course(self, m):
+         register_uris({"course": ["delete_feature_flag"]}, m)
+         delete_flag = self.feature_flag_course.delete(self.feature_course)
+ 
+         self.assertIsInstance(delete_flag, FeatureFlag)
+ 
++    def test_delete_course_str(self, m):
++        register_uris({"course": ["delete_feature_flag"]}, m)
++        delete_flag = self.feature_flag_course.delete("epub_export")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
+     def test_delete_user(self, m):
+         register_uris({"user": ["delete_feature_flag"]}, m)
+         delete_flag = self.feature_flag_user.delete(self.feature_user)
+ 
+         self.assertIsInstance(delete_flag, FeatureFlag)
+ 
++    def test_delete_user_str(self, m):
++        register_uris({"user": ["delete_feature_flag"]}, m)
++        delete_flag = self.feature_flag_user.delete("high_contrast")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
+     # set_feature_flag()
+     def test_set_feature_flag_account(self, m):
+         register_uris({"account": ["set_feature_flag"]}, m)
+@@ -120,14 +175,32 @@ class TestFeatureFlag(unittest.TestCase):
+ 
+         self.assertIsInstance(update_flag, FeatureFlag)
+ 
++    def test_set_feature_flag_account_str(self, m):
++        register_uris({"account": ["set_feature_flag"]}, m)
++        update_flag = self.feature_flag_account.set_feature_flag("epub_export")
++
++        self.assertIsInstance(update_flag, FeatureFlag)
++
+     def test_set_feature_flag_course(self, m):
+         register_uris({"course": ["set_feature_flag"]}, m)
+         update_flag = self.feature_flag_course.set_feature_flag(self.feature_course)
+ 
+         self.assertIsInstance(update_flag, FeatureFlag)
+ 
++    def test_set_feature_flag_course_str(self, m):
++        register_uris({"course": ["set_feature_flag"]}, m)
++        update_flag = self.feature_flag_course.set_feature_flag("epub_export")
++
++        self.assertIsInstance(update_flag, FeatureFlag)
++
+     def test_set_feature_flag_user(self, m):
+         register_uris({"user": ["set_feature_flag"]}, m)
+         update_flag = self.feature_flag_user.set_feature_flag(self.feature_user)
+ 
+         self.assertIsInstance(update_flag, FeatureFlag)
++
++    def test_set_feature_flag_user_str(self, m):
++        register_uris({"user": ["set_feature_flag"]}, m)
++        update_flag = self.feature_flag_user.set_feature_flag("high_contrast")
++
++        self.assertIsInstance(update_flag, FeatureFlag)
+diff --git a/tests/test_user.py b/tests/test_user.py
+index 84a8b04..081875f 100644
+--- a/tests/test_user.py
++++ b/tests/test_user.py
+@@ -564,6 +564,14 @@ class TestUser(unittest.TestCase):
+         self.assertIsInstance(feature_flag, FeatureFlag)
+         self.assertEqual(feature_flag.feature, "high_contrast")
+ 
++    def test_get_feature_flag_str(self, m):
++        register_uris({"user": ["get_feature_flag"]}, m)
++
++        feature_flag = self.user.get_feature_flag("high_contrast")
++
++        self.assertIsInstance(feature_flag, FeatureFlag)
++        self.assertEqual(feature_flag.feature, "high_contrast")
++
+     # get_authentication_events()
+     def test_get_authentication_events(self, m):
+         register_uris({"user": ["get_authentication_events"]}, m)
+diff --git a/tests/test_util.py b/tests/test_util.py
+index cd85648..18b8b76 100644
+--- a/tests/test_util.py
++++ b/tests/test_util.py
+@@ -468,7 +468,13 @@ class TestUtil(unittest.TestCase):
+ 
+     def test_obj_or_str_invalid_obj_type(self, m):
+         with self.assertRaises(TypeError):
+-            obj_or_str("user", "name", (User,))
++            obj_or_str(1, "name", (User,))
++
++    def test_obj_or_str_str(self, m):
++        user_name = obj_or_str("John Doe", "name", (User,))
++
++        self.assertIsInstance(user_name, str)
++        self.assertEqual(user_name, "John Doe")
+ 
+     # get_institution_url()
+     def test_get_institution_url(self, m):
+diff --git a/tests/tw_repro/test_issue_obj_or_str.py b/tests/tw_repro/test_issue_obj_or_str.py
+new file mode 100644
+index 0000000..1c35b10
+--- /dev/null
++++ b/tests/tw_repro/test_issue_obj_or_str.py
+@@ -0,0 +1,164 @@
++"""
++Reproduction test for the issue "`obj_or_str` improperly rejects strings".
++
++`obj_or_str` is expected to behave like `obj_or_id`: the user may either pass
++the name of a feature directly (a `str`), or pass a
++`canvasapi.feature.Feature` object from which the name is taken. Every function
++that relies on `obj_or_str` should therefore work with either:
++
++- `canvasapi.account.Account.get_feature_flag()`
++- `canvasapi.course.Course.get_feature_flag()`
++- `canvasapi.feature.FeatureFlag.delete()`
++- `canvasapi.feature.FeatureFlag.set_feature_flag()`
++- `canvasapi.user.User.get_feature_flag()`
++"""
++
++import unittest
++
++import requests_mock
++
++from canvasapi import Canvas
++from canvasapi.feature import Feature, FeatureFlag
++from canvasapi.user import User
++from canvasapi.util import obj_or_str
++from tests import settings
++from tests.util import register_uris
++
++
++@requests_mock.Mocker()
++class TestObjOrStr(unittest.TestCase):
++    def setUp(self):
++        self.canvas = Canvas(settings.BASE_URL, settings.API_KEY)
++
++        with requests_mock.Mocker() as m:
++            register_uris({"user": ["get_by_id"]}, m)
++            self.user = self.canvas.get_user(1)
++
++    # obj_or_str()
++    def test_obj_or_str_returns_str(self, m):
++        feature_name = obj_or_str("epub_export", "name", (Feature,))
++
++        self.assertIsInstance(feature_name, str)
++        self.assertEqual(feature_name, "epub_export")
++
++    def test_obj_or_str_returns_object_attr(self, m):
++        user_name = obj_or_str(self.user, "name", (User,))
++
++        self.assertIsInstance(user_name, str)
++        self.assertEqual(user_name, "John Doe")
++
++    def test_obj_or_str_invalid_type(self, m):
++        with self.assertRaises(TypeError):
++            obj_or_str(1, "name", (User,))
++
++
++@requests_mock.Mocker()
++class TestFeatureFlagsAcceptStrings(unittest.TestCase):
++    def setUp(self):
++        self.canvas = Canvas(settings.BASE_URL, settings.API_KEY)
++
++        with requests_mock.Mocker() as m:
++            requires = {
++                "account": ["get_by_id", "get_features", "get_feature_flag"],
++                "course": ["get_by_id", "get_features", "get_feature_flag"],
++                "user": ["get_by_id", "get_features", "get_feature_flag"],
++            }
++            register_uris(requires, m)
++
++            self.account = self.canvas.get_account(1)
++            self.course = self.canvas.get_course(1)
++            self.user = self.canvas.get_user(1)
++
++            self.feature_account = self.account.get_features()[0]
++            self.feature_course = self.course.get_features()[0]
++            self.feature_user = self.user.get_features()[0]
++
++            self.feature_flag_account = self.account.get_feature_flag(
++                self.feature_account
++            )
++            self.feature_flag_course = self.course.get_feature_flag(self.feature_course)
++            self.feature_flag_user = self.user.get_feature_flag(self.feature_user)
++
++    # get_feature_flag() with a str
++    def test_account_get_feature_flag_str(self, m):
++        register_uris({"account": ["get_feature_flag"]}, m)
++
++        feature_flag = self.account.get_feature_flag("epub_export")
++
++        self.assertIsInstance(feature_flag, FeatureFlag)
++        self.assertEqual(feature_flag.feature, "epub_export")
++
++    def test_course_get_feature_flag_str(self, m):
++        register_uris({"course": ["get_feature_flag"]}, m)
++
++        feature_flag = self.course.get_feature_flag("epub_export")
++
++        self.assertIsInstance(feature_flag, FeatureFlag)
++        self.assertEqual(feature_flag.feature, "epub_export")
++
++    def test_user_get_feature_flag_str(self, m):
++        register_uris({"user": ["get_feature_flag"]}, m)
++
++        feature_flag = self.user.get_feature_flag("high_contrast")
++
++        self.assertIsInstance(feature_flag, FeatureFlag)
++        self.assertEqual(feature_flag.feature, "high_contrast")
++
++    # delete() with a str
++    def test_delete_account_str(self, m):
++        register_uris({"account": ["delete_feature_flag"]}, m)
++
++        delete_flag = self.feature_flag_account.delete("epub_export")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
++    def test_delete_course_str(self, m):
++        register_uris({"course": ["delete_feature_flag"]}, m)
++
++        delete_flag = self.feature_flag_course.delete("epub_export")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
++    def test_delete_user_str(self, m):
++        register_uris({"user": ["delete_feature_flag"]}, m)
++
++        delete_flag = self.feature_flag_user.delete("high_contrast")
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
++    # set_feature_flag() with a str
++    def test_set_feature_flag_account_str(self, m):
++        register_uris({"account": ["set_feature_flag"]}, m)
++
++        update_flag = self.feature_flag_account.set_feature_flag("epub_export")
++
++        self.assertIsInstance(update_flag, FeatureFlag)
++
++    def test_set_feature_flag_course_str(self, m):
++        register_uris({"course": ["set_feature_flag"]}, m)
++
++        update_flag = self.feature_flag_course.set_feature_flag("epub_export")
++
++        self.assertIsInstance(update_flag, FeatureFlag)
++
++    def test_set_feature_flag_user_str(self, m):
++        register_uris({"user": ["set_feature_flag"]}, m)
++
++        update_flag = self.feature_flag_user.set_feature_flag("high_contrast")
++
++        self.assertIsInstance(update_flag, FeatureFlag)
++
++    # Feature objects keep working
++    def test_delete_account_feature_obj(self, m):
++        register_uris({"account": ["delete_feature_flag"]}, m)
++
++        delete_flag = self.feature_flag_account.delete(self.feature_account)
++
++        self.assertIsInstance(delete_flag, FeatureFlag)
++
++    def test_set_feature_flag_course_feature_obj(self, m):
++        register_uris({"course": ["set_feature_flag"]}, m)
++
++        update_flag = self.feature_flag_course.set_feature_flag(self.feature_course)
++
++        self.assertIsInstance(update_flag, FeatureFlag)

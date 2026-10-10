@@ -1,0 +1,67 @@
+diff --git a/conllu/serializer.py b/conllu/serializer.py
+index 39e9854..aa8fd4c 100644
+--- a/conllu/serializer.py
++++ b/conllu/serializer.py
+@@ -36,9 +36,9 @@ def serialize(tokenlist: 'TokenList') -> str:
+     if tokenlist.metadata:
+         for key, value in tokenlist.metadata.items():
+             if value:
+-                line = "# " + key + " = " + value
++                line = f"# {key} = {value}"
+             else:
+-                line = "# " + key
++                line = f"# {key}"
+             lines.append(line)
+ 
+     for token_data in tokenlist:
+diff --git a/tests/tw_repro/test_issue_155.py b/tests/tw_repro/test_issue_155.py
+new file mode 100644
+index 0000000..21931b7
+--- /dev/null
++++ b/tests/tw_repro/test_issue_155.py
+@@ -0,0 +1,45 @@
++"""Reproduction test for the serializer crash on non-string metadata values.
++
++Issue: serializing metadata whose value is not a string (e.g. an int produced by
++a custom metadata_parser) raised:
++
++    TypeError: can only concatenate str (not "int") to str
++
++A metadata_parser that converts values to int should not break serialization.
++"""
++import unittest
++
++from conllu import parse
++from conllu.models import Metadata, TokenList
++
++
++class TestNonStringMetadataSerialization(unittest.TestCase):
++    def test_serialize_int_metadata_value(self):
++        tokenlist = TokenList([], Metadata([("id", 5)]))
++        self.assertEqual(tokenlist.serialize(), "# id = 5\n\n")
++
++    def test_serialize_non_string_metadata_values(self):
++        tokenlist = TokenList([], Metadata([("int", 42), ("float", 1.5), ("bool", True)]))
++        self.assertEqual(
++            tokenlist.serialize(),
++            "# int = 42\n# float = 1.5\n# bool = True\n\n",
++        )
++
++    def test_serialize_empty_metadata_value(self):
++        tokenlist = TokenList([], Metadata([("empty", "")]))
++        self.assertEqual(tokenlist.serialize(), "# empty\n\n")
++
++    def test_metadata_parser_returning_int(self):
++        data = "# id = 5\n1\tThe\tthe\tDET\tDT\t_\t4\tdet\t_\t_\n"
++
++        def int_metadata_parser(key, value):
++            return key, int(value)
++
++        sentence = parse(data, metadata_parsers={"__fallback__": int_metadata_parser})[0]
++        self.assertEqual(sentence.metadata["id"], 5)
++        # Serialization must not raise TypeError on the int value.
++        self.assertIn("# id = 5", sentence.serialize())
++
++
++if __name__ == "__main__":
++    unittest.main()

@@ -1,0 +1,178 @@
+diff --git a/msal/managed_identity.py b/msal/managed_identity.py
+index 5636f56..632ed25 100644
+--- a/msal/managed_identity.py
++++ b/msal/managed_identity.py
+@@ -237,12 +237,34 @@ class ManagedIdentityClient(object):
+             self.__instance = socket.getfqdn()  # Moved from class definition to here
+         return self.__instance
+ 
+-    def acquire_token_for_client(self, *, resource):  # We may support scope in the future
++    def acquire_token_for_client(self, *, resource, claims=None, claims_challenge=None):
++        # We may support scope in the future
+         """Acquire token for the managed identity.
+ 
+         The result will be automatically cached.
+         Subsequent calls will automatically search from cache first.
+ 
++        :param str resource:
++            The resource (aka scope) for which a token shall be acquired.
++
++        :param str claims:
++            *Added in version 1.31.0*:
++            It is a string of a JSON object which contains
++            the claims (aka *claims challenge*) being requested by the resource provider,
++            typically obtained from the ``WWW-Authenticate`` header
++            of a 401 response from that resource provider.
++
++            Managed identity's token endpoint does not accept any claims,
++            therefore this parameter will NOT be sent to the endpoint.
++            It is used by MSAL itself:
++            When claims are present, MSAL will bypass its token cache and
++            acquire a new token from the managed identity service,
++            as required by the Continuous Access Evaluation (CAE) feature.
++
++        :param str claims_challenge:
++            An alias of :paramref:`claims`, for consistency with
++            :func:`msal.ClientApplication.acquire_token_silent`'s parameter name.
++
+         .. note::
+ 
+             Known issue: When an Azure VM has only one user-assigned managed identity,
+@@ -252,11 +274,14 @@ class ManagedIdentityClient(object):
+             This is a service-side behavior that cannot be changed by this library.
+             `Azure VM docs <https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http>`_
+         """
++        claims = claims or claims_challenge  # They are essentially the same thing
+         access_token_from_cache = None
++        now = time.time()
+         client_id_in_cache = self._managed_identity.get(
+             ManagedIdentity.ID, "SYSTEM_ASSIGNED_MANAGED_IDENTITY")
+-        if True:  # Does not offer an "if not force_refresh" option, because
+-                  # there would be built-in token cache in the service side anyway
++        if not claims:  # When claims are present, we bypass the cache.
++            # Otherwise, does not offer an "if not force_refresh" option, because
++            # there would be built-in token cache in the service side anyway
+             matches = self._token_cache.find(
+                 self._token_cache.CredentialType.ACCESS_TOKEN,
+                 target=[resource],
+@@ -267,7 +292,6 @@ class ManagedIdentityClient(object):
+                     home_account_id=None,
+                 ),
+             )
+-            now = time.time()
+             for entry in matches:
+                 expires_in = int(entry["expires_on"]) - now
+                 if expires_in < 5*60:  # Then consider it expired
+diff --git a/tests/tw_repro/test_issue_mi_claims.py b/tests/tw_repro/test_issue_mi_claims.py
+new file mode 100644
+index 0000000..a7a6286
+--- /dev/null
++++ b/tests/tw_repro/test_issue_mi_claims.py
+@@ -0,0 +1,107 @@
++"""Repro test for: Implement Claims API to Bypass Cache When Claims are Present
++in MSAL with Managed Identity.
++
++Expected behavior from the Issue:
++- Managed Identity's acquire-token API exposes a claims parameter.
++- When claims are present in the token request, MSAL bypasses the token cache
++  (so that a fresh token is acquired, in line with CAE requirement).
++- The claims are NOT sent to the MSI endpoint
++  ("msi v1 endpoint is unchanged so there is no need to pass any claims to the endpoint itself").
++"""
++import os
++import unittest
++try:
++    from unittest.mock import patch
++except ImportError:
++    from mock import patch
++
++import requests
++
++from tests.http_client import MinimalResponse
++from msal import ManagedIdentityClient
++
++
++CLAIMS = '{"access_token": {"xms_cc": {"values": ["CP1"]}}}'
++
++RESPONSE = '{"access_token": "AT", "expires_in": "3600", "resource": "R"}'
++
++
++class ClaimsBypassCacheTestCase(unittest.TestCase):
++
++    def setUp(self):
++        self.app = ManagedIdentityClient(
++            # Raw dict form, to be consistent with the other MI tests
++            {"ManagedIdentityIdType": "SystemAssigned", "Id": None},
++            http_client=requests.Session(),
++            )
++
++    def test_claims_should_bypass_cache(self):
++        with patch.object(self.app._http_client, "get", return_value=MinimalResponse(
++                status_code=200, text=RESPONSE,
++        )) as mocked_method:
++            result = self.app.acquire_token_for_client(resource="R")
++            self.assertEqual("AT", result.get("access_token"))
++            self.assertEqual(1, mocked_method.call_count)
++
++            self.app.acquire_token_for_client(resource="R")
++            self.assertEqual(
++                1, mocked_method.call_count,
++                "Should hit the cache when there are no claims")
++
++            result = self.app.acquire_token_for_client(resource="R", claims=CLAIMS)
++            self.assertEqual(
++                2, mocked_method.call_count,
++                "Should bypass the cache when claims are present")
++            self.assertEqual("AT", result.get("access_token"))
++
++            self.app.acquire_token_for_client(resource="R")
++            self.assertEqual(
++                2, mocked_method.call_count,
++                "Should hit the newly acquired token from cache")
++
++    def test_claims_should_not_be_sent_to_the_endpoint(self):
++        with patch.object(self.app._http_client, "get", return_value=MinimalResponse(
++                status_code=200, text=RESPONSE,
++        )) as mocked_method:
++            self.app.acquire_token_for_client(resource="R", claims=CLAIMS)
++            self.assertEqual(1, mocked_method.call_count)
++            self.assertNotIn(
++                "claims", str(mocked_method.call_args),
++                "The MSI endpoint does not accept claims; claims shall be used by MSAL only")
++
++    def test_claims_challenge_is_an_alias_of_claims(self):
++        with patch.object(self.app._http_client, "get", return_value=MinimalResponse(
++                status_code=200, text=RESPONSE,
++        )) as mocked_method:
++            self.app.acquire_token_for_client(resource="R")
++            self.assertEqual(1, mocked_method.call_count)
++            self.app.acquire_token_for_client(resource="R", claims_challenge=CLAIMS)
++            self.assertEqual(
++                2, mocked_method.call_count,
++                "Should bypass the cache when claims_challenge is present")
++
++    def test_claims_should_bypass_cache_with_refresh_on(self):
++        # A long-lived token will also have a refresh_on computed,
++        # even when the cache lookup was bypassed due to claims.
++        expires_in = 7890
++        with patch.object(self.app._http_client, "get", return_value=MinimalResponse(
++                status_code=200,
++                text='{"access_token": "AT", "expires_in": "%s", "resource": "R"}' % expires_in,
++        )) as mocked_method:
++            result = self.app.acquire_token_for_client(resource="R", claims=CLAIMS)
++            self.assertEqual(1, mocked_method.call_count)
++            self.assertEqual(expires_in, result["expires_in"])
++            self.assertIn("refresh_on", result)
++
++    def test_no_claims_should_still_hit_the_cache(self):
++        with patch.object(self.app._http_client, "get", return_value=MinimalResponse(
++                status_code=200, text=RESPONSE,
++        )) as mocked_method:
++            self.app.acquire_token_for_client(resource="R")
++            self.app.acquire_token_for_client(resource="R", claims=None)
++            self.assertEqual(
++                1, mocked_method.call_count, "Should still use the cache")
++
++
++if __name__ == "__main__":
++    unittest.main()

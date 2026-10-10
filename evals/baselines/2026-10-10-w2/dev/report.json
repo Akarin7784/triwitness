@@ -1,0 +1,41 @@
+{
+  "run_dir": "evals/results/2026-10-10-w2-dev",
+  "rows": [
+    {
+      "config": "baseline-deepseek-nothink",
+      "agent": "llm",
+      "tasks": 15,
+      "attempts": 15,
+      "resolved_at_1": 0.8,
+      "solved": 12,
+      "total_cost_cny": 0.8101,
+      "avg_cost_per_task": 0.054,
+      "cost_per_resolved": 0.0675,
+      "avg_steps": 29.3,
+      "avg_wall_s": 285.1,
+      "false_success": 2,
+      "tampered": 0,
+      "cache_hit_rate": 0.9761,
+      "live": true,
+      "ci95": [
+        0.6,
+        1.0
+      ],
+      "graded": 15,
+      "failure_categories": {
+        "resolved": 12,
+        "false_success": 2,
+        "unresolved": 1
+      },
+      "test_edited": 1,
+      "verifier_mode": null,
+      "verifier": null
+    }
+  ],
+  "missing": [],
+  "warnings": [
+    "baseline-deepseek-nothink：2 次虚假成功（声称修好但隐藏测试不过）",
+    "baseline-deepseek-nothink：1 次改写已有测试期望（未应用、不算篡改，建议人审）"
+  ],
+  "infra_errors": {}
+}

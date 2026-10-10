@@ -1,0 +1,34 @@
+diff --git a/src/cfnlint/rules/resources/Metadata.py b/src/cfnlint/rules/resources/Metadata.py
+index 7b96df6..1318d5c 100644
+--- a/src/cfnlint/rules/resources/Metadata.py
++++ b/src/cfnlint/rules/resources/Metadata.py
+@@ -8,7 +8,10 @@ from typing import Any
+ import cfnlint.data.schemas.other.resources
+ import cfnlint.helpers
+ from cfnlint.jsonschema import ValidationResult, Validator
+-from cfnlint.jsonschema._keywords import additionalProperties, properties
++from cfnlint.jsonschema._keywords import properties
++from cfnlint.jsonschema._keywords_cfn import (
++    additionalProperties as cfn_additional_properties,
++)
+ from cfnlint.rules.jsonschema.CfnLintJsonSchema import CfnLintJsonSchema, SchemaDetails
+ 
+ 
+@@ -52,13 +55,16 @@ class Metadata(CfnLintJsonSchema):
+         # We have to rework pattern properties
+         # to re-add the keyword or we will have an
+         # infinite loop
++        # We use the CloudFormation aware additionalProperties so
++        # functions (Fn::Transform, Fn::ForEach) can be used alongside
++        # other properties in the metadata
+         validator = validator.evolve(
+             function_filter=validator.function_filter.evolve(
+                 add_cfn_lint_keyword=True,
+             )
+         )
+ 
+-        yield from additionalProperties(validator, pP, instance, schema)
++        yield from cfn_additional_properties(validator, pP, instance, schema)
+ 
+     def validate(
+         self, validator: Validator, keywords: Any, instance: Any, schema: Any

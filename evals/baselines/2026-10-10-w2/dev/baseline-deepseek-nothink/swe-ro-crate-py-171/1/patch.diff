@@ -1,0 +1,327 @@
+diff --git a/rocrate/cli.py b/rocrate/cli.py
+index 9e63e54..803b643 100644
+--- a/rocrate/cli.py
++++ b/rocrate/cli.py
+@@ -17,6 +17,7 @@
+ # limitations under the License.
+ 
+ import os
++import shutil
+ from pathlib import Path
+ 
+ import click
+@@ -69,6 +70,81 @@ def add():
+     pass
+ 
+ 
++@add.command(name="file")
++@click.argument('path', type=click.Path(exists=True))
++@OPTION_CRATE_PATH
++def file(crate_dir, path):
++    """\
++    Add a file to the crate.
++
++    The file is copied into the crate (at the top level if the source is
++    outside the crate directory, or at the path it already has relative to the
++    crate directory, otherwise) and registered in the metadata file.
++    """
++    crate_dir = Path(crate_dir).resolve()
++    crate = ROCrate(crate_dir, init=False, gen_preview=False)
++    source, dest_path = _resolve_data_entity_path(crate_dir, path, must_be_dir=False)
++    if source is not None:
++        dest = crate_dir / dest_path
++        dest.parent.mkdir(parents=True, exist_ok=True)
++        shutil.copyfile(source, dest)
++    crate.add_file(dest_path, dest_path=dest_path)
++    crate.metadata.write(crate_dir)
++
++
++@add.command(name="dataset")
++@click.argument('path', type=click.Path(exists=True))
++@OPTION_CRATE_PATH
++def dataset(crate_dir, path):
++    """\
++    Add a directory (dataset) to the crate.
++
++    The directory is copied into the crate (at the top level if the source is
++    outside the crate directory, or at the path it already has relative to the
++    crate directory, otherwise), together with its contents, and registered in
++    the metadata file.
++    """
++    crate_dir = Path(crate_dir).resolve()
++    crate = ROCrate(crate_dir, init=False, gen_preview=False)
++    source, dest_path = _resolve_data_entity_path(crate_dir, path, must_be_dir=True)
++    if source is not None:
++        dest = crate_dir / dest_path
++        if not dest.exists():
++            shutil.copytree(source, dest)
++    crate.add_dataset(dest_path, dest_path=dest_path)
++    crate.metadata.write(crate_dir)
++
++
++def _resolve_data_entity_path(crate_dir, path, must_be_dir=False):
++    """\
++    Return a ``(source, dest_path)`` pair for a file or directory to be added
++    to the crate.
++
++    ``source`` is ``None`` if the entity is already in the crate directory
++    (i.e., there is nothing to copy), otherwise it's the path to copy from.
++    ``dest_path`` is the entity's path relative to the crate directory.
++    """
++    crate_dir = Path(crate_dir).resolve()
++    if not (crate_dir / "ro-crate-metadata.json").is_file():
++        raise click.ClickException(
++            f"{crate_dir}: not an RO-Crate (missing ro-crate-metadata.json)"
++        )
++    source = Path(path).resolve(strict=True)
++    is_dir = source.is_dir()
++    if must_be_dir and not is_dir:
++        raise click.ClickException(f"{source}: not a directory")
++    if not must_be_dir and is_dir:
++        raise click.ClickException(f"{source}: is a directory")
++    try:
++        dest_path = source.relative_to(crate_dir)
++    except ValueError:
++        # Source outside the crate dir: copy it to the top level
++        return source, Path(source.name)
++    if dest_path == Path("."):
++        raise click.ClickException(f"{source}: cannot add the crate directory itself")
++    return None, dest_path
++
++
+ @add.command()
+ @click.argument('path', type=click.Path(exists=True))
+ @click.option('-l', '--language', type=click.Choice(LANG_CHOICES), default="cwl")
+diff --git a/tests/tw_repro/test_issue_103.py b/tests/tw_repro/test_issue_103.py
+new file mode 100644
+index 0000000..88c0fd0
+--- /dev/null
++++ b/tests/tw_repro/test_issue_103.py
+@@ -0,0 +1,227 @@
++# Copyright 2019-2024 The University of Manchester, UK
++# Copyright 2020-2024 Vlaams Instituut voor Biotechnologie (VIB), BE
++# Copyright 2020-2024 Barcelona Supercomputing Center (BSC), ES
++# Copyright 2020-2024 Center for Advanced Studies, Research and Development in Sardinia (CRS4), IT
++# Copyright 2022-2024 École Polytechnique Fédérale de Lausanne, CH
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""\
++Reproduction test for the issue "CLI subcommands to add files and
++directories".
++
++The issue asks for two new subcommands, so that the following workflow
++works:
++
++    mkdir crate
++    cd crate
++    rocrate init  # generates minimal metadata file and nothing else
++    cp /some/other/path/file1 .
++    cp -rf /some/path/dir1 .
++    rocrate add file file1
++    rocrate add dataset dir1
++
++NOTE: pytest arguments are used as *fixture names* (the deprecated
++``--fixtures``-style behavior of pytest 8.3), so using built-in fixtures
++such as ``tmpdir`` together with parametrization is unreliable on this
++setup. This module therefore only depends on ``tmp_path_factory`` (a
++session-scoped factory fixture, so the parametrized value can never be
++mistaken for a fixture) and manages the working directory itself.
++"""
++
++import contextlib
++import json
++import os
++import shutil
++from pathlib import Path
++
++from click.testing import CliRunner
++import pytest
++
++from rocrate.cli import cli
++from rocrate.rocrate import ROCrate
++
++
++METADATA_FILE_NAME = "ro-crate-metadata.json"
++TEST_DIR = Path(__file__).absolute().parent
++
++
++@contextlib.contextmanager
++def chdir(path):
++    cwd = os.getcwd()
++    os.chdir(str(path))
++    try:
++        yield
++    finally:
++        os.chdir(cwd)
++
++
++@pytest.fixture(scope="module")
++def work_dir(tmp_path_factory):
++    return tmp_path_factory.mktemp("issue-103")
++
++
++@pytest.fixture
++def sample_sources(work_dir):
++    """A file and a directory outside of the crate dir."""
++    src_dir = work_dir / "some" / "other" / "path"
++    src_dir.mkdir(parents=True)
++    file1 = src_dir / "file1"
++    file1.write_text("file1 contents\n")
++    dir1 = work_dir / "some" / "path" / "dir1"
++    (dir1 / "subdir").mkdir(parents=True)
++    (dir1 / "inner.txt").write_text("inner\n")
++    (dir1 / "subdir" / "deep.txt").write_text("deep\n")
++    return file1, dir1
++
++
++def run_cli(*args):
++    runner = CliRunner()
++    result = runner.invoke(cli, list(args))
++    return result
++
++
++def make_crate(work_dir, name):
++    crate_dir = work_dir / name
++    crate_dir.mkdir()
++    return crate_dir
++
++
++def read_entities(crate_dir):
++    with open(Path(crate_dir) / METADATA_FILE_NAME, "rt") as f:
++        json_data = json.load(f)
++    return {_["@id"]: _ for _ in json_data["@graph"]}
++
++
++def test_cli_help():
++    result = run_cli("add", "--help")
++    assert result.exit_code == 0, result.output
++    assert "file" in result.output
++    assert "dataset" in result.output
++    for cmd in ("add file", "add dataset"):
++        result = run_cli(*cmd.split(), "--help")
++        assert result.exit_code == 0, result.output
++        assert "Usage:" in result.output
++
++
++@pytest.mark.parametrize("cwd", [False, True])
++def test_issue_workflow(work_dir, sample_sources, cwd):
++    """The workflow from the issue, step by step."""
++    file1, dir1 = sample_sources
++    crate_dir = make_crate(work_dir, f"crate_workflow_{int(cwd)}")
++
++    def invoke(*args):
++        if cwd:
++            with chdir(crate_dir):
++                return run_cli(*args)
++        return run_cli(*args, "-c", str(crate_dir))
++
++    # rocrate init: generates a minimal metadata file and nothing else
++    result = invoke("init")
++    assert result.exit_code == 0, result.output
++    assert (crate_dir / METADATA_FILE_NAME).is_file()
++    assert sorted(_.name for _ in crate_dir.iterdir()) == [METADATA_FILE_NAME]
++
++    # cp /some/other/path/file1 .
++    # cp -rf /some/path/dir1 .
++    shutil.copy(file1, crate_dir)
++    shutil.copytree(dir1, crate_dir / "dir1")
++
++    # rocrate add file file1
++    result = invoke("add", "file", "file1")
++    assert result.exit_code == 0, result.output
++
++    # rocrate add dataset dir1
++    result = invoke("add", "dataset", "dir1")
++    assert result.exit_code == 0, result.output
++
++    # both entities must be in the metadata file
++    json_entities = read_entities(crate_dir)
++    assert "file1" in json_entities
++    assert json_entities["file1"]["@type"] == "File"
++    assert "dir1/" in json_entities
++    assert json_entities["dir1/"]["@type"] == "Dataset"
++    has_part = {_["@id"] for _ in json_entities["./"]["hasPart"]}
++    assert {"file1", "dir1/"} <= has_part
++
++    # the crate must still be loadable and the data must be there
++    crate = ROCrate(crate_dir)
++    assert crate.dereference("file1")
++    assert crate.dereference("dir1/")
++    assert (crate_dir / "file1").is_file()
++    assert (crate_dir / "dir1" / "inner.txt").is_file()
++    assert (crate_dir / "dir1" / "subdir" / "deep.txt").is_file()
++
++
++def test_add_file_copies_into_crate(work_dir, sample_sources):
++    """A file outside the crate dir is copied into the crate."""
++    file1, _ = sample_sources
++    crate_dir = make_crate(work_dir, "crate_copy_file")
++    assert run_cli("init", "-c", str(crate_dir)).exit_code == 0
++    result = run_cli("add", "file", "-c", str(crate_dir), str(file1))
++    assert result.exit_code == 0, result.output
++    dest = crate_dir / file1.name
++    assert dest.is_file()
++    assert dest.read_text() == file1.read_text()
++    json_entities = read_entities(crate_dir)
++    assert file1.name in json_entities
++    assert json_entities[file1.name]["@type"] == "File"
++    assert {"@id": file1.name} in json_entities["./"]["hasPart"]
++
++
++def test_add_dataset_copies_into_crate(work_dir, sample_sources):
++    """A directory outside the crate dir is copied into the crate."""
++    _, dir1 = sample_sources
++    crate_dir = make_crate(work_dir, "crate_copy_dataset")
++    assert run_cli("init", "-c", str(crate_dir)).exit_code == 0
++    result = run_cli("add", "dataset", "-c", str(crate_dir), str(dir1))
++    assert result.exit_code == 0, result.output
++    dest = crate_dir / dir1.name
++    assert (dest / "inner.txt").is_file()
++    assert (dest / "subdir" / "deep.txt").is_file()
++    json_entities = read_entities(crate_dir)
++    assert "dir1/" in json_entities
++    assert json_entities["dir1/"]["@type"] == "Dataset"
++    assert {"@id": "dir1/"} in json_entities["./"]["hasPart"]
++
++
++def test_add_file_relative_path(work_dir):
++    """Files already in a crate subdirectory keep their relative path."""
++    crate_dir = make_crate(work_dir, "crate_relative")
++    (crate_dir / "subdir").mkdir()
++    (crate_dir / "subdir" / "file1").write_text("file1 contents\n")
++    with chdir(crate_dir):
++        assert run_cli("init").exit_code == 0
++        result = run_cli("add", "file", os.path.join("subdir", "file1"))
++    assert result.exit_code == 0, result.output
++    json_entities = read_entities(crate_dir)
++    assert "subdir/file1" in json_entities
++    assert json_entities["subdir/file1"]["@type"] == "File"
++
++
++def test_add_file_and_dataset_errors(work_dir, sample_sources):
++    file1, dir1 = sample_sources
++    crate_dir = make_crate(work_dir, "crate_errors")
++    # not an RO-Crate yet: the metadata file is missing
++    assert not (crate_dir / METADATA_FILE_NAME).exists()
++    assert run_cli("add", "file", "-c", str(crate_dir), str(file1)).exit_code != 0
++    assert run_cli("init", "-c", str(crate_dir)).exit_code == 0
++    # add file on a directory
++    result = run_cli("add", "file", "-c", str(crate_dir), str(dir1))
++    assert result.exit_code != 0
++    # add dataset on a file
++    result = run_cli("add", "dataset", "-c", str(crate_dir), str(file1))
++    assert result.exit_code != 0
++    # nonexistent path
++    result = run_cli("add", "file", "-c", str(crate_dir), str(work_dir / "nope"))
++    assert result.exit_code != 0

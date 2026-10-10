@@ -1,0 +1,305 @@
+diff --git a/sqlglot/expressions/functions.py b/sqlglot/expressions/functions.py
+index 757ecba..6253f2b 100644
+--- a/sqlglot/expressions/functions.py
++++ b/sqlglot/expressions/functions.py
+@@ -321,6 +321,49 @@ class AIClassify(Expression, Func):
+     _sql_names = ["AI_CLASSIFY"]
+ 
+ 
++class AIEmbed(Expression, Func):
++    # AI.EMBED produces an embedding for the given content, so it accepts a positional argument
++    # followed by named ones, e.g. AI.EMBED('content', connection_id => 'us.connection')
++    # https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-embed
++    arg_types = {
++        "this": True,
++        "connection_id": False,
++        "endpoint": False,
++        "model_params": False,
++        "expressions": False,
++    }
++    is_var_len_args = True
++    _sql_names = ["AI_EMBED"]
++
++
++class AIGenerate(Expression, Func):
++    # AI.GENERATE generates text for the given prompt. It can either be called with named
++    # arguments, e.g. AI.GENERATE('prompt', connection_id => 'us.connection'), or with a model,
++    # e.g. AI.GENERATE(MODEL `mydataset.gemini_model`, 'prompt'), in which case the model and
++    # the optional STRUCT of parameters are set in the `model` and `params_struct` arguments.
++    # https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-generate
++    arg_types = {
++        "this": True,
++        "connection_id": False,
++        "endpoint": False,
++        "request_type": False,
++        "model_params": False,
++        "model": False,
++        "params_struct": False,
++        "expressions": False,
++    }
++    is_var_len_args = True
++    _sql_names = ["AI_GENERATE"]
++
++
++class AISimilarity(Expression, Func):
++    # AI.SIMILARITY computes the similarity of two embeddings
++    # https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-similarity
++    arg_types = {"this": True, "expression": False, "expressions": False}
++    is_var_len_args = True
++    _sql_names = ["AI_SIMILARITY"]
++
++
+ class FeaturesAtTime(Expression, Func):
+     arg_types = {"this": True, "time": False, "num_rows": False, "ignore_feature_nulls": False}
+ 
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 9ba486b..0d785e3 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -4713,6 +4713,45 @@ class Generator:
+             expression.args.get("context_window"),
+         )
+ 
++    def aiembed_sql(self, expression: exp.AIEmbed) -> str:
++        return self.func(
++            "EMBED",
++            expression.this,
++            expression.args.get("connection_id"),
++            expression.args.get("endpoint"),
++            expression.args.get("model_params"),
++            *expression.args.get("expressions") or [],
++        )
++
++    def aigenerate_sql(self, expression: exp.AIGenerate) -> str:
++        model = expression.args.get("model")
++
++        if model:
++            return self.func(
++                "GENERATE",
++                f"MODEL {self.sql(model)}",
++                expression.this,
++                expression.args.get("params_struct"),
++            )
++
++        return self.func(
++            "GENERATE",
++            expression.this,
++            expression.args.get("connection_id"),
++            expression.args.get("endpoint"),
++            expression.args.get("request_type"),
++            expression.args.get("model_params"),
++            *expression.args.get("expressions") or [],
++        )
++
++    def aisimilarity_sql(self, expression: exp.AISimilarity) -> str:
++        return self.func(
++            "SIMILARITY",
++            expression.this,
++            expression.expression,
++            *expression.args.get("expressions") or [],
++        )
++
+     def featuresattime_sql(self, expression: exp.FeaturesAtTime) -> str:
+         this_sql = self.sql(expression, "this")
+         if isinstance(expression.this, exp.Table):
+diff --git a/sqlglot/parsers/bigquery.py b/sqlglot/parsers/bigquery.py
+index 64b6042..647c2d4 100644
+--- a/sqlglot/parsers/bigquery.py
++++ b/sqlglot/parsers/bigquery.py
+@@ -289,6 +289,11 @@ class BigQueryParser(parser.Parser):
+         "GENERATE_DOUBLE": lambda self: self._parse_generate(exp.GenerateDouble),
+         "VECTOR_SEARCH": lambda self: self._parse_vector_search(),
+         "FORECAST": lambda self: self._parse_forecast(),
++        "EMBED": lambda self: self._parse_ai_scalar(
++            exp.AIEmbed, "connection_id", "endpoint", "model_params"
++        ),
++        "GENERATE": lambda self: self._parse_ai_generate(),
++        "SIMILARITY": lambda self: self._parse_ai_scalar(exp.AISimilarity),
+     }
+ 
+     NO_PAREN_FUNCTIONS: t.ClassVar = {
+@@ -649,6 +654,49 @@ class BigQueryParser(parser.Parser):
+ 
+         return expr
+ 
++    def _parse_ai_scalar(self, expr_type: t.Type[E], *named_args: str) -> E:
++        # AI.* scalar functions take a positional argument followed by named ones, e.g.
++        # AI.EMBED('content', connection_id => 'us.connection'). The named arguments are promoted
++        # to dedicated fields, while the remaining ones are kept in `expressions`, so that
++        # arbitrary usage is not lossy.
++        args = self._parse_function_args()
++        kwargs: t.Dict[str, exp.Expr] = {}
++        expressions = []
++
++        for i, arg in enumerate(args):
++            name = arg.this.name.lower() if i and isinstance(arg, exp.Kwarg) else None
++
++            if name in named_args and name not in kwargs:
++                kwargs[name] = arg
++            else:
++                expressions.append(arg)
++
++        expr = expr_type(this=seq_get(expressions, 0), expressions=expressions[1:] or None, **kwargs)
++
++        if "expression" in expr_type.arg_types and len(expressions) > 1:
++            # e.g. AI.SIMILARITY(embedding1, embedding2)
++            expr.set("expression", expressions[1])
++            expr.set("expressions", expressions[2:] or None)
++
++        return self.expression(expr)
++
++    def _parse_ai_generate(self) -> exp.AIGenerate:
++        # AI.GENERATE(MODEL <model>, <prompt> [, <params_struct>]) is the model-first form, while
++        # AI.GENERATE(<prompt> [, connection_id => ...]) is the connection-first one.
++        if self._match_text_seq("MODEL"):
++            model = self._parse_table()
++            self._match(TokenType.COMMA)
++            prompt = self._parse_bitwise()
++            params_struct = self._match(TokenType.COMMA) and self._parse_bitwise()
++
++            return self.expression(
++                exp.AIGenerate(this=prompt, model=model, params_struct=params_struct)
++            )
++
++        return self._parse_ai_scalar(
++            exp.AIGenerate, "connection_id", "endpoint", "request_type", "model_params"
++        )
++
+     def _parse_features_at_time(self) -> exp.FeaturesAtTime:
+         self._match(TokenType.TABLE)
+         this = self._parse_table()
+diff --git a/sqlglot/typing/bigquery.py b/sqlglot/typing/bigquery.py
+index 218097a..4b036c2 100644
+--- a/sqlglot/typing/bigquery.py
++++ b/sqlglot/typing/bigquery.py
+@@ -322,6 +322,13 @@ EXPRESSION_METADATA = {
+     },
+     **{expr_type: {"returns": exp.DType.TIMESTAMPTZ} for expr_type in TIMESTAMP_EXPRESSIONS},
+     exp.ApproxTopK: {"annotator": lambda self, e: _annotate_by_args_approx_top(self, e)},
++    exp.AIEmbed: {
++        "annotator": lambda self, e: self._set_type(
++            e, exp.DataType.build("ARRAY<FLOAT64>", dialect="bigquery")
++        )
++    },
++    exp.AIGenerate: {"annotator": lambda self, e: self._set_type(e, exp.DataType.build("STRUCT"))},
++    exp.AISimilarity: {"returns": exp.DType.DOUBLE},
+     exp.ApproxTopSum: {"annotator": lambda self, e: _annotate_by_args_approx_top(self, e)},
+     exp.Array: {"annotator": _annotate_array},
+     exp.Concat: {"annotator": _annotate_concat},
+diff --git a/tests/dialects/test_bigquery.py b/tests/dialects/test_bigquery.py
+index 03f55e1..62ce8c8 100644
+--- a/tests/dialects/test_bigquery.py
++++ b/tests/dialects/test_bigquery.py
+@@ -2445,6 +2445,31 @@ OPTIONS (
+             "SELECT AI.GENERATE_BOOL(MODEL `mydataset.gemini_model`, 'Is sky blue?')"
+         )
+ 
++    def test_ai_scalar_functions(self):
++        self.validate_identity("SELECT AI.EMBED('hello')")
++        self.validate_identity(
++            "SELECT AI.EMBED('hello', connection_id => 'us.connection', endpoint => 'text-embedding-005')"
++        )
++        self.validate_identity("SELECT AI.SIMILARITY(embedding1, embedding2)")
++        self.validate_identity("SELECT AI.GENERATE('Write a haiku')")
++        self.validate_identity("SELECT AI.GENERATE('Write a haiku', connection_id => 'us.connection')")
++        self.validate_identity(
++            "SELECT AI.GENERATE(MODEL `mydataset.gemini_model`, 'Write a haiku')"
++        )
++
++        self.assertIsInstance(
++            parse_one("SELECT AI.EMBED('hello')", dialect="bigquery").expressions[0].expression,
++            exp.AIEmbed,
++        )
++        self.assertIsInstance(
++            parse_one("SELECT AI.SIMILARITY(e1, e2)", dialect="bigquery").expressions[0].expression,
++            exp.AISimilarity,
++        )
++        self.assertIsInstance(
++            parse_one("SELECT AI.GENERATE('hi')", dialect="bigquery").expressions[0].expression,
++            exp.AIGenerate,
++        )
++
+     def test_merge(self):
+         self.validate_all(
+             """
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..b0ce1ac
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,75 @@
++"""Repro for the BigQuery AI.* typed scalar functions enhancement.
++
++AI.EMBED / AI.SIMILARITY / AI.GENERATE used to be parsed as Dot + Anonymous.
++They should now map onto richer typed AST nodes (exp.AIEmbed / exp.AISimilarity /
++exp.AIGenerate) while keeping parse/round trip behavior backward compatible.
++"""
++
++import unittest
++
++from sqlglot import exp, parse_one
++
++
++def _call(sql: str) -> exp.Expression:
++    query = parse_one(sql, dialect="bigquery")
++    node = query.expressions[0]
++    assert isinstance(node, exp.Dot), f"expected Dot, got {type(node).__name__}"
++    return node.expression
++
++
++class TestBigQueryAIScalarFunctions(unittest.TestCase):
++    def test_typed_nodes(self):
++        cases = (
++            ('SELECT AI.EMBED("hello")', exp.AIEmbed),
++            ('SELECT AI.SIMILARITY("a", "b")', exp.AISimilarity),
++            ('SELECT AI.GENERATE("Write a haiku")', exp.AIGenerate),
++        )
++
++        for sql, node_type in cases:
++            with self.subTest(sql=sql):
++                call = _call(sql)
++                self.assertIsInstance(call, node_type)
++
++    def test_roundtrip_is_backward_compatible(self):
++        cases = (
++            "SELECT AI.EMBED('hello')",
++            "SELECT AI.SIMILARITY('a', 'b')",
++            "SELECT AI.GENERATE('Write a haiku')",
++            "SELECT AI.EMBED('hello', connection_id => 'us.conn', endpoint => 'pub')",
++            "SELECT AI.GENERATE('prompt', connection_id => 'us.conn')",
++        )
++
++        for sql in cases:
++            with self.subTest(sql=sql):
++                self.assertEqual(parse_one(sql, dialect="bigquery").sql("bigquery"), sql)
++
++    def test_named_arguments_are_promoted(self):
++        call = _call(
++            "SELECT AI.EMBED('hello', connection_id => 'us.conn', endpoint => 'pub', model_params => x)"
++        )
++        self.assertIsInstance(call, exp.AIEmbed)
++        self.assertEqual(call.this.name, "hello")
++        self.assertEqual(call.args["connection_id"].expression.name, "us.conn")
++        self.assertEqual(call.args["endpoint"].expression.name, "pub")
++        self.assertEqual(call.args["model_params"].expression.name, "x")
++
++        sim = _call("SELECT AI.SIMILARITY('a', 'b')")
++        self.assertEqual(sim.this.name, "a")
++        self.assertEqual(sim.expression.name, "b")
++
++    def test_arbitrary_arguments_are_not_lost(self):
++        sql = "SELECT AI.EMBED('hello', model_params => x, something_else => 1)"
++        self.assertEqual(parse_one(sql, dialect="bigquery").sql("bigquery"), sql)
++
++    def test_generate_model_first_form(self):
++        # previously a ParseError: AI.GENERATE(MODEL <model>, <prompt>)
++        sql = "SELECT AI.GENERATE(MODEL `mydataset.gemini_model`, 'prompt')"
++        call = _call(sql)
++        self.assertIsInstance(call, exp.AIGenerate)
++        self.assertIsInstance(call.args["model"], exp.Table)
++        self.assertEqual(call.this.name, "prompt")
++        self.assertEqual(parse_one(sql, dialect="bigquery").sql("bigquery"), sql)
++
++
++if __name__ == "__main__":
++    unittest.main()

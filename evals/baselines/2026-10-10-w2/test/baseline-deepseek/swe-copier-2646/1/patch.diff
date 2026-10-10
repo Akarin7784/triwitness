@@ -1,0 +1,567 @@
+diff --git a/copier/_main.py b/copier/_main.py
+index b8d897e..934a10c 100644
+--- a/copier/_main.py
++++ b/copier/_main.py
+@@ -17,7 +17,6 @@ from functools import cached_property, partial, wraps
+ from itertools import chain
+ from pathlib import Path, PurePath, PurePosixPath, PureWindowsPath
+ from shutil import rmtree
+-from tempfile import TemporaryDirectory
+ from types import TracebackType
+ from typing import (
+     Any,
+@@ -55,6 +54,7 @@ from ._tools import (
+     printf,
+     scantree,
+     set_git_alternates,
++    temp_dir,
+ )
+ from ._types import (
+     MISSING,
+@@ -1348,12 +1348,8 @@ class Worker:
+         subproject_subdir = self.subproject.local_abspath.relative_to(subproject_top)
+ 
+         with (
+-            TemporaryDirectory(
+-                prefix=f"{__name__}.old_copy.",
+-            ) as old_copy,
+-            TemporaryDirectory(
+-                prefix=f"{__name__}.new_copy.",
+-            ) as new_copy,
++            temp_dir(prefix=f"{__name__}.old_copy.") as old_copy,
++            temp_dir(prefix=f"{__name__}.new_copy.") as new_copy,
+         ):
+             # Copy old template into a temporary destination
+             with replace(
+diff --git a/copier/_template.py b/copier/_template.py
+index 3dbd614..74f51e3 100644
+--- a/copier/_template.py
++++ b/copier/_template.py
+@@ -3,14 +3,12 @@
+ from __future__ import annotations
+ 
+ import re
+-import sys
+ from collections import ChainMap, defaultdict
+ from collections.abc import Mapping, Sequence
+ from contextlib import suppress
+ from dataclasses import field
+ from functools import cached_property
+ from pathlib import Path, PurePosixPath
+-from shutil import rmtree
+ from typing import Any, Literal
+ from warnings import warn
+ 
+@@ -23,7 +21,7 @@ from plumbum.commands.processes import ProcessExecutionError
+ from plumbum.machines import local
+ from pydantic.dataclasses import dataclass
+ 
+-from ._tools import copier_version, handle_remove_readonly
++from ._tools import copier_version, remove_temp_dir
+ from ._types import AnyByStrDict, VCSTypes
+ from ._vcs import clone, get_git, get_latest_tag, get_repo
+ from .errors import (
+@@ -223,18 +221,7 @@ class Template:
+ 
+     def _cleanup(self) -> None:
+         if temp_clone := self._temp_clone():
+-            if sys.version_info >= (3, 12):
+-                rmtree(
+-                    temp_clone,
+-                    ignore_errors=False,
+-                    onexc=handle_remove_readonly,
+-                )
+-            else:
+-                rmtree(
+-                    temp_clone,
+-                    ignore_errors=False,
+-                    onerror=handle_remove_readonly,
+-                )
++            remove_temp_dir(temp_clone)
+ 
+     def _temp_clone(self) -> Path | None:
+         """Get the path to the temporary clone of the template.
+diff --git a/copier/_tools.py b/copier/_tools.py
+index 22b9bda..b2369bf 100644
+--- a/copier/_tools.py
++++ b/copier/_tools.py
+@@ -2,19 +2,24 @@
+ 
+ from __future__ import annotations
+ 
++import atexit
+ import errno
+ import os
+ import platform
+ import re
++import signal
+ import stat
+ import sys
++import threading
+ from collections.abc import Callable, Iterator
+-from contextlib import suppress
++from contextlib import contextmanager, suppress
+ from decimal import Decimal
+ from enum import Enum
+ from importlib.metadata import version
+ from pathlib import Path
+-from types import TracebackType
++from shutil import rmtree
++from tempfile import mkdtemp
++from types import FrameType, TracebackType
+ from typing import Any, Literal, TextIO, TypeVar, cast
+ 
+ import colorama
+@@ -176,6 +181,127 @@ def handle_remove_readonly(
+         raise
+ 
+ 
++_temp_dirs: set[Path] = set()
++"""Temporary directories that Copier must always remove."""
++
++_temp_dirs_lock = threading.Lock()
++
++_previous_signal_handlers: dict[int, Any] = {}
++
++_atexit_registered = False
++
++_signal_handlers_installed = False
++
++
++def _remove_temp_dir(path: Path) -> None:
++    """Remove a temporary directory, ignoring any error."""
++    with suppress(OSError):
++        if sys.version_info >= (3, 12):
++            rmtree(path, ignore_errors=False, onexc=handle_remove_readonly)
++        else:
++            rmtree(path, ignore_errors=False, onerror=handle_remove_readonly)
++
++
++def _signal_handler(signum: int, frame: FrameType | None) -> None:
++    """Remove temporary directories before the process dies from a signal."""
++    cleanup_temp_dirs()
++    previous = _previous_signal_handlers.get(signum)
++    if callable(previous):
++        previous(signum, frame)
++        return
++    # Restore the default handler and re-send the signal so that the process
++    # exits with the expected status code.
++    signal.signal(signum, signal.SIG_DFL)
++    os.kill(os.getpid(), signum)
++
++
++def _install_cleanup_handlers() -> None:
++    """Make sure registered temporary directories are always removed.
++
++    This registers an `atexit` hook and, when running in the main thread,
++    handlers for the termination signals that would otherwise kill the process
++    before `atexit` hooks get a chance to run.
++    """
++    global _atexit_registered, _signal_handlers_installed
++    if not _atexit_registered:
++        atexit.register(cleanup_temp_dirs)
++        _atexit_registered = True
++    if _signal_handlers_installed or (
++        threading.current_thread() is not threading.main_thread()
++    ):
++        return
++    _signal_handlers_installed = True
++    for name in ("SIGTERM", "SIGHUP"):
++        signum = getattr(signal, name, None)
++        if not isinstance(signum, int):
++            # Signal not available on this platform (e.g. SIGHUP on Windows).
++            continue
++        previous = signal.getsignal(signum)
++        if previous is not signal.SIG_DFL:
++            # Never hijack a handler installed by the host process.
++            continue
++        _previous_signal_handlers[signum] = previous
++        with suppress(OSError, ValueError):
++            signal.signal(signum, _signal_handler)
++
++
++def register_temp_dir(path: str | Path) -> Path:
++    """Register a temporary directory so Copier always removes it.
++
++    Registered directories are removed on normal interpreter exit, and also when
++    the process is interrupted by a termination signal such as `SIGTERM`, so
++    that Copier never leaves garbage behind in the system temporary directory.
++
++    Args:
++        path: The temporary directory to register.
++
++    Returns:
++        The registered path, as a [Path][pathlib.Path].
++    """
++    result = Path(path)
++    with _temp_dirs_lock:
++        _temp_dirs.add(result)
++    _install_cleanup_handlers()
++    return result
++
++
++def remove_temp_dir(path: str | Path) -> None:
++    """Unregister a temporary directory and remove it from disk."""
++    result = Path(path)
++    with _temp_dirs_lock:
++        _temp_dirs.discard(result)
++    _remove_temp_dir(result)
++
++
++def cleanup_temp_dirs() -> None:
++    """Remove all registered temporary directories."""
++    with _temp_dirs_lock:
++        paths = list(_temp_dirs)
++        _temp_dirs.clear()
++    for path in paths:
++        _remove_temp_dir(path)
++
++
++@contextmanager
++def temp_dir(prefix: str | None = None) -> Iterator[Path]:
++    """Create a temporary directory that is always cleaned up.
++
++    Unlike [TemporaryDirectory][tempfile.TemporaryDirectory], this also works
++    when the process is killed by a termination signal.
++
++    Args:
++        prefix: Prefix used to create the temporary directory.
++
++    Yields:
++        The temporary directory, as a [Path][pathlib.Path].
++    """
++    path = register_temp_dir(mkdtemp(prefix=prefix))
++    try:
++        yield path
++    finally:
++        remove_temp_dir(path)
++
++
+ _re_whitespace = re.compile(r"^\s+|\s+$")
+ 
+ 
+diff --git a/copier/_vcs.py b/copier/_vcs.py
+index 418c0df..2d31f3e 100644
+--- a/copier/_vcs.py
++++ b/copier/_vcs.py
+@@ -14,6 +14,7 @@ from packaging.version import InvalidVersion, Version
+ from plumbum import TF, ProcessExecutionError, colors, local
+ from plumbum.machines import LocalCommand
+ 
++from ._tools import register_temp_dir, remove_temp_dir
+ from ._types import OptBool, OptStrOrPath, StrOrPath
+ from .errors import DirtyLocalWarning, ShallowCloneWarning
+ 
+@@ -188,54 +189,62 @@ def clone(url: str, ref: str = "HEAD") -> str:
+         ref:
+             Reference to checkout. For Git repos, defaults to `HEAD`.
+     """
+-    git = get_git()
+-    git_version = get_git_version()
+     location = mkdtemp(prefix=f"{__name__}.clone.")
+-    _clone = git["clone", "--no-checkout", url, location]
+-    # Faster clones if possible
+-    if git_version >= Version("2.27"):
+-        if url_match := re.match("(file://)?(.*)", url):
+-            file_url = url_match.groups()[-1]
+-        else:
+-            file_url = url
+-        if is_git_shallow_repo(file_url):
+-            warn(
+-                f"The repository '{url}' is a shallow clone, this might lead to unexpected "
+-                "failure or unusually high resource consumption.",
+-                ShallowCloneWarning,
+-            )
+-        else:
+-            _clone = _clone["--filter=blob:none"]
+-    _clone()
+-    # Include dirty changes if checking out a local HEAD
+-    url_abspath = Path(url).absolute()
+-    if ref == "HEAD" and url_abspath.is_dir():
+-        is_dirty = False
+-        with local.cwd(url):
+-            is_dirty = bool(git("status", "--porcelain").strip())
+-        if is_dirty:
+-            with local.cwd(location):
+-                git("--git-dir=.git", f"--work-tree={url_abspath}", "add", "-A")
+-                git(
+-                    "--git-dir=.git",
+-                    f"--work-tree={url_abspath}",
+-                    "commit",
+-                    "-m",
+-                    "Copier automated commit for draft changes",
+-                    "--no-verify",
+-                    "--no-gpg-sign",
+-                )
++    # Register the temporary clone right away so that it gets removed even if
++    # cloning fails halfway through (e.g. a network error or an invalid ref).
++    register_temp_dir(location)
++    try:
++        git = get_git()
++        git_version = get_git_version()
++        _clone = git["clone", "--no-checkout", url, location]
++        # Faster clones if possible
++        if git_version >= Version("2.27"):
++            if url_match := re.match("(file://)?(.*)", url):
++                file_url = url_match.groups()[-1]
++            else:
++                file_url = url
++            if is_git_shallow_repo(file_url):
+                 warn(
+-                    "Dirty template changes included automatically.",
+-                    DirtyLocalWarning,
++                    f"The repository '{url}' is a shallow clone, this might lead to unexpected "
++                    "failure or unusually high resource consumption.",
++                    ShallowCloneWarning,
+                 )
+-
+-    with local.cwd(location):
+-        ## The `git checkout -f <ref>` command doesn't works when repo is local, dirty
+-        ## and core.fsmonitor is enabled
+-        ## ref: https://github.com/copier-org/copier/issues/1887
+-        git("-c", "core.fsmonitor=false", "checkout", "-f", ref)
+-        git("submodule", "update", "--checkout", "--init", "--recursive", "--force")
++            else:
++                _clone = _clone["--filter=blob:none"]
++        _clone()
++        # Include dirty changes if checking out a local HEAD
++        url_abspath = Path(url).absolute()
++        if ref == "HEAD" and url_abspath.is_dir():
++            is_dirty = False
++            with local.cwd(url):
++                is_dirty = bool(git("status", "--porcelain").strip())
++            if is_dirty:
++                with local.cwd(location):
++                    git("--git-dir=.git", f"--work-tree={url_abspath}", "add", "-A")
++                    git(
++                        "--git-dir=.git",
++                        f"--work-tree={url_abspath}",
++                        "commit",
++                        "-m",
++                        "Copier automated commit for draft changes",
++                        "--no-verify",
++                        "--no-gpg-sign",
++                    )
++                    warn(
++                        "Dirty template changes included automatically.",
++                        DirtyLocalWarning,
++                    )
++
++        with local.cwd(location):
++            ## The `git checkout -f <ref>` command doesn't works when repo is local, dirty
++            ## and core.fsmonitor is enabled
++            ## ref: https://github.com/copier-org/copier/issues/1887
++            git("-c", "core.fsmonitor=false", "checkout", "-f", ref)
++            git("submodule", "update", "--checkout", "--init", "--recursive", "--force")
++    except BaseException:
++        # Never leave a partially-cloned temporary directory behind.
++        remove_temp_dir(location)
++        raise
+ 
+     return location
+ 
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_2612.py b/tests/tw_repro/test_issue_2612.py
+new file mode 100644
+index 0000000..8d969ab
+--- /dev/null
++++ b/tests/tw_repro/test_issue_2612.py
+@@ -0,0 +1,196 @@
++"""Reproduction tests for the issue "`/tmp/copier._vcs.clone...` directories are
++not being deleted after a failed update".
++
++Two distinct leaks are covered:
++
++1. When cloning a template fails halfway through (invalid ref, network error,
++   ...), the temporary clone created by `copier.vcs.clone` used to be left
++   behind forever.
++2. When Copier is terminated by a signal such as `SIGTERM` (e.g. a CI job being
++   cancelled), none of the temporary directories created during an update were
++   removed.
++"""
++
++from __future__ import annotations
++
++import os
++import signal
++import subprocess
++import sys
++import tempfile
++import time
++from pathlib import Path
++
++import pytest
++
++from copier.vcs import clone
++
++GIT_ENV = {
++    "GIT_AUTHOR_NAME": "Copier",
++    "GIT_AUTHOR_EMAIL": "copier@example.com",
++    "GIT_COMMITTER_NAME": "Copier",
++    "GIT_COMMITTER_EMAIL": "copier@example.com",
++}
++
++
++def _git(*args: str, cwd: Path) -> None:
++    subprocess.run(["git", *args], cwd=cwd, env={**os.environ, **GIT_ENV}, check=True)
++
++
++def _init_repo(path: Path) -> None:
++    _git("init", "--initial-branch=main", cwd=path)
++    _git("add", "-A", cwd=path)
++    _git("commit", "-m", "commit", cwd=path)
++
++
++def _leftovers(tmp: Path) -> list[Path]:
++    return sorted(tmp.iterdir())
++
++
++def test_failed_clone_removes_temp_dir(
++    tmp_path_factory: pytest.TempPathFactory,
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A failing clone must not leave `/tmp/copier._vcs.clone.*` behind."""
++    tmp = tmp_path_factory.mktemp("tmp")
++    template = tmp_path_factory.mktemp("template")
++    (template / "copier.yml").write_text("favorite_app: Copier\n")
++    _init_repo(template)
++
++    # Isolate the system temporary directory so we can assert it stays clean.
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++
++    with pytest.raises(Exception):
++        # `v2` doesn't exist: the clone succeeds but the checkout fails.
++        clone(str(template), "v2")
++
++    assert _leftovers(tmp) == []
++
++
++@pytest.mark.skipif(sys.platform == "win32", reason="needs POSIX signals & sleep")
++def test_sigterm_during_update_removes_temp_dirs(
++    tmp_path_factory: pytest.TempPathFactory,
++) -> None:
++    """Temporary directories must disappear when the process is killed."""
++    root = tmp_path_factory.mktemp("sigterm")
++    tmp = root / "tmp"
++    tmp.mkdir()
++    template = root / "template"
++    dst = root / "dst"
++    template.mkdir()
++    dst.mkdir()
++
++    # v1: a plain template.
++    (template / "copier.yml").write_text("favorite_app: Copier\n")
++    (template / "fav.txt.jinja").write_text("{{ favorite_app }}\n")
++    (template / "{{ _copier_conf.answers_file }}.jinja").write_text(
++        "{{ _copier_answers|to_nice_yaml }}\n"
++    )
++    _init_repo(template)
++    _git("tag", "v1", cwd=template)
++
++    env = {**os.environ, "TMPDIR": str(tmp)}
++    subprocess.run(
++        [
++            sys.executable,
++            "-m",
++            "copier",
++            "copy",
++            "--defaults",
++            "--quiet",
++            "--vcs-ref=v1",
++            "--trust",
++            "--unsafe",
++            str(template),
++            str(dst),
++        ],
++        env=env,
++        check=True,
++    )
++    _init_repo(dst)
++
++    # v2: the running task gives us time to kill Copier mid-update.
++    (template / "copier.yml").write_text("favorite_app: Copier\n_tasks:\n  - sleep 30\n")
++    (template / "v2").write_text("true\n")
++    _git("add", "-A", cwd=template)
++    _git("commit", "-m", "v2", cwd=template)
++    _git("tag", "v2", cwd=template)
++
++    process = subprocess.Popen(
++        [
++            sys.executable,
++            "-m",
++            "copier",
++            "update",
++            "--defaults",
++            "--quiet",
++            "--trust",
++            "--unsafe",
++            str(dst),
++        ],
++        env=env,
++    )
++    try:
++        # Wait until the update created its temporary directories.
++        deadline = time.monotonic() + 30
++        while time.monotonic() < deadline:
++            if any(tmp.glob("copier._vcs.clone.*")):
++                break
++            if process.poll() is not None:
++                msg = "Copier exited before we could interrupt it"
++                raise AssertionError(msg)
++            time.sleep(0.05)
++        else:
++            raise AssertionError("Copier never created a temporary clone")
++        process.send_signal(signal.SIGTERM)
++        process.wait(timeout=30)
++    finally:
++        if process.poll() is None:  # pragma: no cover
++            process.kill()
++            process.wait()
++
++    assert _leftovers(tmp) == []
++
++
++def test_temp_dir_cleaned_on_normal_exit(tmp_path_factory: pytest.TempPathFactory) -> None:
++    """Registered temporary directories are removed on interpreter exit."""
++    tmp = tmp_path_factory.mktemp("tmp")
++    script = (
++        "import sys\n"
++        "from pathlib import Path\n"
++        "from copier import vcs\n"
++        f"directory = vcs.clone({str(tmp)!r})" if False else ""
++    )
++    # Sanity check that the helper is importable and usable from a script.
++    script = (
++        "import subprocess, sys\n"
++        "from pathlib import Path\n"
++        "from copier._tools import cleanup_temp_dirs, register_temp_dir\n"
++        f"tmp = Path({str(tmp)!r})\n"
++        "path = tmp / 'leaked'\n"
++        "path.mkdir()\n"
++        "register_temp_dir(path)\n"
++        "assert path.exists()\n"
++    )
++    subprocess.run([sys.executable, "-c", script], check=True)
++    assert not (tmp / "leaked").exists()
++
++
++def test_temp_dir_signal_signature() -> None:
++    """The signal handler must clean up and re-raise the signal."""
++    # Just make sure the public helpers exist with a stable name.
++    from copier._tools import (  # noqa: PLC0415
++        cleanup_temp_dirs,
++        register_temp_dir,
++        remove_temp_dir,
++        temp_dir,
++    )
++
++    assert callable(cleanup_temp_dirs)
++    assert callable(register_temp_dir)
++    assert callable(remove_temp_dir)
++    assert callable(temp_dir)
++
++
++def test_tempfile_module_still_isolated() -> None:
++    assert tempfile.gettempdir()

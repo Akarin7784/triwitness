@@ -1,0 +1,158 @@
+diff --git a/conftest.py b/conftest.py
+index c4bac66..c793a75 100644
+--- a/conftest.py
++++ b/conftest.py
+@@ -28,7 +28,11 @@ def pytest_collection_modifyitems(config, items):
+     rootdir = Path(config.rootdir)
+     modules_location = rootdir / "src" / "spikeinterface"
+     for item in items:
+-        rel_path = Path(item.fspath).relative_to(modules_location)
++        try:
++            rel_path = Path(item.fspath).relative_to(modules_location)
++        except ValueError:
++            # tests that are not inside src/spikeinterface (e.g. tests/tw_repro) can not be marked
++            continue
+         module = rel_path.parts[0]
+         if module == "sorters":
+             if "internal" in rel_path.parts:
+diff --git a/src/spikeinterface/core/sortinganalyzer.py b/src/spikeinterface/core/sortinganalyzer.py
+index 46d0209..5c6f003 100644
+--- a/src/spikeinterface/core/sortinganalyzer.py
++++ b/src/spikeinterface/core/sortinganalyzer.py
+@@ -1608,7 +1608,10 @@ class AnalyzerExtension:
+         if self.format == "binary_folder":
+             extension_folder = self._get_binary_extension_folder()
+             for ext_data_file in extension_folder.iterdir():
+-                if ext_data_file.name == "params.json":
++                if ext_data_file.name in ("params.json", "info.json"):
++                    # "params.json" is handled by load_params()
++                    # "info.json" is the importing provenance saved by _save_importing_provenance()
++                    # and it is not a data of the extension : it must not be loaded into self.data
+                     continue
+                 ext_data_name = ext_data_file.stem
+                 if ext_data_file.suffix == ".json":
+diff --git a/tests/tw_repro/test_issue_2864.py b/tests/tw_repro/test_issue_2864.py
+new file mode 100644
+index 0000000..bc64e5e
+--- /dev/null
++++ b/tests/tw_repro/test_issue_2864.py
+@@ -0,0 +1,119 @@
++"""
++Repro test for the Issue:
++
++    `select_units` fails in `SortingAnalyzer` after using `load_sorting_analyzer`
++
++After saving a SortingAnalyzer to a binary folder (or zarr) and reloading it, the
++`info.json` file (importing provenance) that is written next to `params.json` in each
++extension folder was loaded inside `extension.data` under the key "info".
++Because this data value is a dict and not an array, any unit slicing of the extension
++data (`select_units()` / `save_as()`) was crashing with:
++
++    TypeError: unhashable type: 'numpy.ndarray'
++
++The expected behaviour is that the importing provenance is NOT part of the extension
++data, so that `load_sorting_analyzer()` followed by `select_units()` works.
++"""
++
++import numpy as np
++import pytest
++
++import spikeinterface as si
++
++
++def _create_and_compute(folder, format, durations=[2.0], num_channels=4, num_units=3):
++    rec, sorting = si.generate_ground_truth_recording(
++        durations=durations, num_channels=num_channels, num_units=num_units, seed=0
++    )
++    analyzer = si.create_sorting_analyzer(sorting, rec, format=format, folder=str(folder), sparse=False)
++    analyzer.compute(["random_spikes", "waveforms", "templates"])
++    return analyzer, sorting
++
++
++def test_mre_select_units_after_load(tmp_path):
++    """Exact MRE of the Issue (default sparse=True analyzer)."""
++    folder = tmp_path / "mre"
++    rec, sorting = si.generate_ground_truth_recording()
++
++    analyzer = si.create_sorting_analyzer(sorting, rec, format="binary_folder", folder=str(folder))
++    analyzer.compute(["random_spikes", "waveforms", "templates"])
++
++    new_analyzer = si.load_sorting_analyzer(folder=folder)
++    selected_analyzer = new_analyzer.select_units(unit_ids=[1])
++
++    assert np.array_equal(selected_analyzer.unit_ids, [1])
++    assert selected_analyzer.get_extension("templates").data["average"].shape[0] == 1
++
++
++def test_info_is_not_loaded_in_extension_data(tmp_path):
++    folder = tmp_path / "analyzer_binary"
++    analyzer, sorting = _create_and_compute(folder, "binary_folder")
++
++    # the info.json file is present in the extension folders
++    for extension_name in ("random_spikes", "waveforms", "templates"):
++        assert (folder / "extensions" / extension_name / "info.json").is_file()
++
++    new_analyzer = si.load_sorting_analyzer(folder=folder)
++
++    # the importing provenance must not be loaded as extension data
++    for extension_name in ("random_spikes", "waveforms", "templates"):
++        extension = new_analyzer.get_extension(extension_name)
++        assert "info" not in extension.data
++
++    # data is still correctly loaded
++    assert "waveforms" in new_analyzer.get_extension("waveforms").data
++    assert "average" in new_analyzer.get_extension("templates").data
++
++
++def test_select_units_after_load_binary_folder(tmp_path):
++    folder = tmp_path / "analyzer_binary_select"
++    analyzer, sorting = _create_and_compute(folder, "binary_folder")
++    new_analyzer = si.load_sorting_analyzer(folder=folder)
++
++    unit_ids = sorting.unit_ids[:2]
++    selected_analyzer = new_analyzer.select_units(unit_ids=unit_ids)
++
++    assert np.array_equal(selected_analyzer.unit_ids, unit_ids)
++
++    for extension_name in ("random_spikes", "waveforms", "templates"):
++        extension = selected_analyzer.get_extension(extension_name)
++        # the info dict must not sneak into the data after the copy either
++        assert "info" not in extension.data
++
++    # the selected data must have the correct shape
++    templates_extension = selected_analyzer.get_extension("templates")
++    assert templates_extension.data["average"].shape[0] == len(unit_ids)
++    waveforms_extension = selected_analyzer.get_extension("waveforms")
++    assert waveforms_extension.data["waveforms"].shape[2] == new_analyzer.get_num_channels()
++
++
++def test_select_units_after_load_binary_folder_with_folder(tmp_path):
++    folder = tmp_path / "analyzer_binary_select_folder"
++    analyzer, sorting = _create_and_compute(folder, "binary_folder")
++    new_analyzer = si.load_sorting_analyzer(folder=folder)
++
++    unit_ids = sorting.unit_ids[:2]
++    other_folder = tmp_path / "selected_analyzer"
++    selected_analyzer = new_analyzer.select_units(
++        unit_ids=unit_ids, format="binary_folder", folder=str(other_folder)
++    )
++
++    assert np.array_equal(selected_analyzer.unit_ids, unit_ids)
++    assert "info" not in selected_analyzer.get_extension("templates").data
++
++
++def test_select_units_after_load_zarr(tmp_path):
++    if not hasattr(si, "load_sorting_analyzer"):
++        pytest.skip("no SortingAnalyzer")
++    folder = tmp_path / "analyzer.zarr"
++    analyzer, sorting = _create_and_compute(folder, "zarr")
++
++    new_analyzer = si.load_sorting_analyzer(folder=folder)
++
++    for extension_name in ("random_spikes", "waveforms", "templates"):
++        extension = new_analyzer.get_extension(extension_name)
++        assert "info" not in extension.data
++
++    unit_ids = sorting.unit_ids[:2]
++    selected_analyzer = new_analyzer.select_units(unit_ids=unit_ids)
++    assert np.array_equal(selected_analyzer.unit_ids, unit_ids)

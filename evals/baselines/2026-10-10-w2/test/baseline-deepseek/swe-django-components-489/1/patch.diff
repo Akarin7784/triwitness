@@ -1,0 +1,115 @@
+diff --git a/src/django_components/template_loader.py b/src/django_components/template_loader.py
+index ea897b8..dc5fe06 100644
+--- a/src/django_components/template_loader.py
++++ b/src/django_components/template_loader.py
+@@ -37,6 +37,12 @@ class Loader(FilesystemLoader):
+ 
+         directories: Set[Path] = set()
+         for component_dir in component_dirs:
++            # STATICFILES_DIRS may contain tuples of `(prefix, path)`, see
++            # https://docs.djangoproject.com/en/5.0/ref/settings/#std-setting-STATICFILES_DIRS
++            # In that case, we care only about the path (the second item).
++            if isinstance(component_dir, (list, tuple)):
++                component_dir = component_dir[1]
++
+             curr_directories: Set[Path] = set()
+ 
+             # For each dir in `settings.STATICFILES_DIRS`, we go over all Django apps
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_445.py b/tests/tw_repro/test_issue_445.py
+new file mode 100644
+index 0000000..692b40d
+--- /dev/null
++++ b/tests/tw_repro/test_issue_445.py
+@@ -0,0 +1,89 @@
++"""
++Reproduction for: "template_loader blocks on STATICFILES_DIRS if there are tuples"
++
++Django allows entries of `STATICFILES_DIRS` to be tuples/lists of `(prefix, path)`.
++`django_components.template_loader.Loader.get_dirs()` must use the *second* item
++(the path) of such entries instead of raising
++`TypeError: expected str, bytes or os.PathLike object, not tuple`.
++"""
++
++from pathlib import Path
++
++from django.template.engine import Engine
++from django.test import override_settings
++
++# isort: off
++from tests.django_test_setup import settings  # noqa: F401  (sets up Django settings)
++from tests.testutils import BaseTestCase
++
++# isort: on
++
++from django_components.template_loader import Loader
++
++TESTS_DIR = Path(__file__).parent.parent.resolve()
++COMPONENTS_DIR = TESTS_DIR / "components"
++
++
++class TestStaticfilesDirsTuples(BaseTestCase):
++    """`STATICFILES_DIRS` may contain (prefix, path) tuples or lists."""
++
++    def test_tuple_entry(self):
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[("downloads", "components")],
++        ):
++            dirs = Loader(Engine.get_default()).get_dirs()
++
++        self.assertEqual(sorted(dirs), sorted([COMPONENTS_DIR]))
++
++    def test_list_entry(self):
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[["downloads", "components"]],
++        ):
++            dirs = Loader(Engine.get_default()).get_dirs()
++
++        self.assertEqual(sorted(dirs), sorted([COMPONENTS_DIR]))
++
++    def test_tuple_entry_with_path(self):
++        """The path part of a tuple entry may also be a `Path` object."""
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[("downloads", Path("components"))],
++        ):
++            dirs = Loader(Engine.get_default()).get_dirs()
++
++        self.assertEqual(sorted(dirs), sorted([COMPONENTS_DIR]))
++
++    def test_tuple_entry_absolute_path(self):
++        """Absolute paths are supported too."""
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[("downloads", str(COMPONENTS_DIR))],
++        ):
++            dirs = Loader(Engine.get_default()).get_dirs()
++
++        self.assertEqual(sorted(dirs), sorted([COMPONENTS_DIR]))
++
++    def test_mixed_entries(self):
++        """String and tuple entries may be mixed together."""
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[
++                "components",
++                ("downloads", "components"),
++            ],
++        ):
++            dirs = Loader(Engine.get_default()).get_dirs()
++
++        self.assertEqual(sorted(dirs), sorted([COMPONENTS_DIR]))
++
++    def test_str_entry_still_works(self):
++        """Plain string entries keep working (regression check)."""
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=["components"],
++        ):
++            dirs = Loader(Engine.get_default()).get_dirs()
++
++        self.assertEqual(sorted(dirs), sorted([COMPONENTS_DIR]))

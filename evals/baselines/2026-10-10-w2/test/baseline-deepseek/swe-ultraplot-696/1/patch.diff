@@ -1,0 +1,110 @@
+diff --git a/tests/tw_repro/test_issue_600.py b/tests/tw_repro/test_issue_600.py
+new file mode 100644
+index 0000000..ece88f7
+--- /dev/null
++++ b/tests/tw_repro/test_issue_600.py
+@@ -0,0 +1,79 @@
++"""
++Regression test for the issue "Adding a legend to right of plot can remove
++y-axis tick labels".
++
++Reproduction (sharey='labs', three columns, last one hidden)::
++
++    fig, axs = uplt.subplots(ncols=3, sharey='labs')
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label='line')
++    axs[-2].legend(loc='r')  # <- hid the y tick labels of axs[-2]
++
++With ``share='labs'`` (sharing level 1) tick labels must appear on *every*
++subplot, so adding an outer ("filled") legend panel must not hide the
++``labelleft`` tick labels of the parent axes.  Note the issue number was not
++part of the report, hence the placeholder ``600`` in the filename.
++"""
++
++import matplotlib
++
++matplotlib.use("Agg")
++
++import ultraplot as uplt  # noqa: E402
++
++
++def _make_figure(sharey):
++    fig, axs = uplt.subplots(ncols=3, sharey=sharey)
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    fig.canvas.draw()
++    return fig, axs
++
++
++def test_outer_legend_keeps_shared_tick_labels():
++    """Right-side legend must not hide the parent y tick labels with share='labs'."""
++    fig, axs = _make_figure("labs")
++    assert axs[1]._is_ticklabel_on("labelleft")  # sanity check, baseline
++    assert len(axs[1].get_yticklabels()) > 0
++
++    axs[-2].legend(loc="r")
++    fig.canvas.draw()
++
++    assert axs[1]._is_ticklabel_on("labelleft")
++    assert axs[1].get_yticklabels()
++    uplt.close(fig)
++
++
++def test_inset_legend_keeps_shared_tick_labels():
++    """Inset legend never affected the parent y tick labels (reference behavior)."""
++    fig, axs = _make_figure("labs")
++    axs[-2].legend(loc="lr")
++    fig.canvas.draw()
++    assert axs[1]._is_ticklabel_on("labelleft")
++    assert axs[1].get_yticklabels()
++    uplt.close(fig)
++
++
++def test_outer_colorbar_keeps_shared_tick_labels():
++    """Filled colorbar panels must behave like filled legend panels."""
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    axs[-1].set_visible(False)
++    mappable = None
++    for ax in axs[:-1]:
++        mappable = ax.pcolormesh([[0, 1], [0, 1]])
++    axs[-2].colorbar(mappable, loc="r")
++    fig.canvas.draw()
++    assert axs[1]._is_ticklabel_on("labelleft")
++    assert axs[1].get_yticklabels()
++    uplt.close(fig)
++
++
++def test_default_share_still_hides_inner_tick_labels():
++    """Sharing level 3 (default) keeps hiding non-border tick labels."""
++    fig, axs = _make_figure(True)
++    axs[-2].legend(loc="r")
++    fig.canvas.draw()
++    assert not axs[1]._is_ticklabel_on("labelleft")
++    uplt.close(fig)
+diff --git a/ultraplot/figure.py b/ultraplot/figure.py
+index 1c0e47c..72b0f8d 100644
+--- a/ultraplot/figure.py
++++ b/ultraplot/figure.py
+@@ -1488,10 +1488,19 @@ class Figure(mfigure.Figure):
+             return 3
+ 
+         # Adjacent panels on any relevant side
++        # NOTE: Mirror the filtering in _apply_auto_share(). Fillled guide panels
++        # (colorbars and legends) have their parent share setting stored on the
++        # panel but never push the parent tick labels outwards, so they must not
++        # promote the sharing level (e.g. hide the parent tick labels).
+         panel_dict = getattr(axi, "_panel_dict", {})
+         for side in sides:
+             side_panels = panel_dict.get(side) or []
+-            if side_panels and getattr(side_panels[0], f"_share{axis}", False):
++            if any(
++                getattr(panel, f"_share{axis}", False)
++                and getattr(panel, "_panel_share", False)
++                and not getattr(panel, "_panel_hidden", False)
++                for panel in side_panels
++            ):
+                 return 3
+ 
+         return level

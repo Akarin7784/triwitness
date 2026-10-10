@@ -1,0 +1,344 @@
+diff --git a/crosstl/src/translator/codegen/directx_codegen.py b/crosstl/src/translator/codegen/directx_codegen.py
+index 47eedd4..3d2318f 100644
+--- a/crosstl/src/translator/codegen/directx_codegen.py
++++ b/crosstl/src/translator/codegen/directx_codegen.py
+@@ -360,6 +360,12 @@ class HLSLCodeGen:
+             "ASSIGN_SUB": "-=",
+             "ASSIGN_MUL": "*=",
+             "ASSIGN_DIV": "/=",
++            "ASSIGN_AND": "&=",
++            "ASSIGN_OR": "|=",
++            "ASSIGN_XOR": "^=",
++            "ASSIGN_MOD": "%=",
++            "ASSIGN_SHIFT_RIGHT": ">>=",
++            "ASSIGN_SHIFT_LEFT": "<<=",
+             "LESS_EQUAL": "<=",
+             "GREATER_EQUAL": ">=",
+             "EQUAL": "==",
+diff --git a/crosstl/src/translator/codegen/metal_codegen.py b/crosstl/src/translator/codegen/metal_codegen.py
+index 2a258c9..7db13d0 100644
+--- a/crosstl/src/translator/codegen/metal_codegen.py
++++ b/crosstl/src/translator/codegen/metal_codegen.py
+@@ -419,6 +419,12 @@ class MetalCodeGen:
+             "ASSIGN_SUB": "-=",
+             "ASSIGN_MUL": "*=",
+             "ASSIGN_DIV": "/=",
++            "ASSIGN_AND": "&=",
++            "ASSIGN_OR": "|=",
++            "ASSIGN_XOR": "^=",
++            "ASSIGN_MOD": "%=",
++            "ASSIGN_SHIFT_RIGHT": ">>=",
++            "ASSIGN_SHIFT_LEFT": "<<=",
+             "GREATER_THAN": ">",
+             "LESS_EQUAL": "<=",
+             "GREATER_EQUAL": ">=",
+diff --git a/crosstl/src/translator/codegen/opengl_codegen.py b/crosstl/src/translator/codegen/opengl_codegen.py
+index 0a462c1..bf25dc9 100644
+--- a/crosstl/src/translator/codegen/opengl_codegen.py
++++ b/crosstl/src/translator/codegen/opengl_codegen.py
+@@ -276,6 +276,12 @@ class GLSLCodeGen:
+             "ASSIGN_SUB": "-=",
+             "ASSIGN_MUL": "*=",
+             "ASSIGN_DIV": "/=",
++            "ASSIGN_AND": "&=",
++            "ASSIGN_OR": "|=",
++            "ASSIGN_XOR": "^=",
++            "ASSIGN_MOD": "%=",
++            "ASSIGN_SHIFT_RIGHT": ">>=",
++            "ASSIGN_SHIFT_LEFT": "<<=",
+             "GREATER_THAN": ">",
+             "LESS_EQUAL": "<=",
+             "GREATER_EQUAL": ">=",
+diff --git a/crosstl/src/translator/parser.py b/crosstl/src/translator/parser.py
+index 82899e6..ca6ee57 100644
+--- a/crosstl/src/translator/parser.py
++++ b/crosstl/src/translator/parser.py
+@@ -634,12 +634,18 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
++            "ASSIGN_OR",
++            "ASSIGN_XOR",
++            "ASSIGN_MOD",
+             "LESS_THAN",
+             "GREATER_THAN",
+             "LESS_EQUAL",
+             "GREATER_EQUAL",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
++            "ASSIGN_SHIFT_RIGHT",
++            "ASSIGN_SHIFT_LEFT",
+         ]:
+             return self.parse_assignment(name)
+         elif self.current_token[0] == "INCREMENT":
+@@ -689,6 +695,10 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
++            "ASSIGN_OR",
++            "ASSIGN_XOR",
++            "ASSIGN_MOD",
+             "EQUAL",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -696,6 +706,8 @@ class Parser:
+             "GREATER_EQUAL",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
++            "ASSIGN_SHIFT_RIGHT",
++            "ASSIGN_SHIFT_LEFT",
+         ]:
+             op = self.current_token[1]
+             self.eat(self.current_token[0])
+@@ -719,6 +731,10 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
++            "ASSIGN_OR",
++            "ASSIGN_XOR",
++            "ASSIGN_MOD",
+             "EQUALS",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -726,6 +742,8 @@ class Parser:
+             "GREATER_EQUAL",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
++            "ASSIGN_SHIFT_RIGHT",
++            "ASSIGN_SHIFT_LEFT",
+             "EQUAL",
+         ):
+             op = self.current_token[0]
+@@ -769,6 +787,10 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
++            "ASSIGN_OR",
++            "ASSIGN_XOR",
++            "ASSIGN_MOD",
+             "EQUAL",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -776,6 +798,8 @@ class Parser:
+             "GREATER_EQUAL",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
++            "ASSIGN_SHIFT_RIGHT",
++            "ASSIGN_SHIFT_LEFT",
+         ]:
+             op = self.current_token[0]
+             op_name = self.current_token[1]
+@@ -934,8 +958,14 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
++            "ASSIGN_OR",
++            "ASSIGN_XOR",
++            "ASSIGN_MOD",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
++            "ASSIGN_SHIFT_RIGHT",
++            "ASSIGN_SHIFT_LEFT",
+         ]:
+             op = self.current_token[0]
+             self.eat(op)
+diff --git a/tests/test_translator/test_parser.py b/tests/test_translator/test_parser.py
+index 672f075..24243d9 100644
+--- a/tests/test_translator/test_parser.py
++++ b/tests/test_translator/test_parser.py
+@@ -335,6 +335,60 @@ def test_var_assignment():
+         pytest.fail("Variable assignment parsing not implemented.")
+ 
+ 
++def test_assignment_operators_parsing():
++    code = """
++    shader LightControl {
++    vertex {
++        input vec3 position;
++        output int isLightOn;
++        void main() {
++            int a = 1;
++            a += 1;
++            a *= 2;
++            a /= a;
++            a -= -1;
++            a %= 2;
++            a &= 1;
++            a |= 1;
++            a ^= 1;
++            a >>= 1;
++            a <<= 1;
++        }
++    }
++    }
++    """
++    try:
++        tokens = tokenize_code(code)
++        parse_code(tokens)
++    except SyntaxError:
++        pytest.fail("Assignment operators parsing not implemented.")
++
++
++def test_assignment_and_operator_parsing():
++    """`&=` (ASSIGN_AND) must be parsed as a compound assignment."""
++    code = """
++    shader LightControl {
++    vertex {
++        input vec3 position;
++        output int isLightOn;
++        void main() {
++            int a = 1;
++            a &= 1;
++            for (int i = 0; i < 10; i &= 3) {
++                a = a + 1;
++            }
++            isLightOn = a;
++        }
++    }
++    }
++    """
++    try:
++        tokens = tokenize_code(code)
++        parse_code(tokens)
++    except SyntaxError:
++        pytest.fail("Assignment AND (`&=`) parsing not implemented.")
++
++
+ def test_bitwise_operators():
+     code = """
+         shader LightControl {
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..0cf7791
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,124 @@
++"""Reproduction test for: Add Parsing for `Assignment AND` Token.
++
++The lexer already produces the ASSIGN_AND token (``&=``) and the parser must
++accept it, both as a plain assignment statement and as a variable
++initialization, mirroring the other compound assignment operators
++(``+=``, ``-=``, ``*=``, ``/=``).
++"""
++
++from typing import List
++
++import pytest
++
++from crosstl.src.translator.ast import BinaryOpNode
++from crosstl.src.translator.lexer import Lexer
++from crosstl.src.translator.parser import Parser
++
++
++def tokenize_code(code: str) -> List:
++    """Helper function to tokenize code."""
++    lexer = Lexer(code)
++    return lexer.tokens
++
++
++def parse_code(tokens: List):
++    """Helper function to parse tokens into an AST."""
++    parser = Parser(tokens)
++    return parser.parse()
++
++
++def test_lexer_emits_assign_and_token():
++    tokens = tokenize_code("a &= 1;")
++    assert [t[0] for t in tokens][:4] == [
++        "IDENTIFIER",
++        "ASSIGN_AND",
++        "NUMBER",
++        "SEMICOLON",
++    ]
++    assert tokens[1][1] == "&="
++
++
++def test_parse_assign_and_statement():
++    code = """
++    shader PerlinNoise {
++    vertex {
++        input vec3 position;
++        output vec2 vUV;
++
++        void main() {
++            int a = 1;
++            a &= 1;
++            gl_Position = vec4(position, 1.0);
++        }
++    }
++    }
++    """
++    try:
++        ast = parse_code(tokenize_code(code))
++    except SyntaxError:
++        pytest.fail("Assignment AND (`&=`) parsing not implemented.")
++
++    vertex_body = list(ast.vertex_section.intermidiate)
++    for func in ast.vertex_section.functions:
++        vertex_body.extend(func.body)
++    binary_ops = []
++
++    def collect(node):
++        if isinstance(node, BinaryOpNode):
++            binary_ops.append(node)
++            collect(node.left)
++            collect(node.right)
++
++    for statement in vertex_body:
++        collect(statement)
++
++    assert any(
++        getattr(node, "op", None) == "&=" for node in binary_ops
++    ), "expected a BinaryOpNode with the `&=` operator"
++
++
++def test_parse_assign_and_in_expression_context():
++    code = """
++    shader Test {
++    vertex {
++        input vec3 position;
++        output vec2 vUV;
++
++        void main() {
++            int a = 1;
++            for (int i = 0; i < 10; i &= 3) {
++                vUV = vec2(0.0, 0.0);
++            }
++        }
++    }
++    }
++    """
++    try:
++        parse_code(tokenize_code(code))
++    except SyntaxError:
++        pytest.fail("Assignment AND (`&=`) parsing in expressions not implemented.")
++
++
++def test_parse_all_compound_assignments():
++    code = """
++    shader Test {
++    vertex {
++        input vec3 position;
++        output vec2 vUV;
++
++        void main() {
++            int a = 1;
++            a += 1;
++            a *= 2;
++            a /= a;
++            a -= -1;
++            a &= 1;
++            gl_Position = vec4(position, 1.0);
++        }
++    }
++    }
++    """
++    try:
++        parse_code(tokenize_code(code))
++    except SyntaxError:
++        pytest.fail("Compound assignment parsing failed.")

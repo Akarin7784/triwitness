@@ -1,0 +1,428 @@
+diff --git a/server/configuration.md b/server/configuration.md
+index f573c53..e79adfe 100644
+--- a/server/configuration.md
++++ b/server/configuration.md
+@@ -216,7 +216,7 @@ Host-side storage related to **volume mounts** (host bind allowlist and OSSFS mo
+ 
+ | Key | Type | Default | Description |
+ |-----|------|---------|-------------|
+-| `allowed_host_paths` | list of strings | `[]` | Absolute path **prefixes** allowed for **host** bind mounts. If **empty**, all host bind mounts are rejected (secure-by-default). |
++| `allowed_host_paths` | list of strings | `[]` | Absolute path **prefixes** allowed for **host** bind mounts. If **empty**, all host bind mounts are rejected (secure-by-default). Host paths containing a **symbolic link** component are always rejected (lexically they may stay inside a prefix while resolving outside of it). |
+ | `ossfs_mount_root` | string | `"/mnt/ossfs"` | Host directory under which OSSFS-backed mounts are resolved (`<root>/<bucket>/...`). |
+ | `volume_default_size` | string | `"1Gi"` | Default storage size for auto-created Kubernetes PVCs when the caller does not specify a size in the PVC provisioning hints. |
+ 
+diff --git a/server/opensandbox_server/services/docker.py b/server/opensandbox_server/services/docker.py
+index 66d4422..0e1f8cc 100644
+--- a/server/opensandbox_server/services/docker.py
++++ b/server/opensandbox_server/services/docker.py
+@@ -1466,8 +1466,9 @@ class DockerSandboxService(DockerDiagnosticsMixin, OSSFSMixin, SandboxService, E
+         Docker-specific validation for host bind mount volumes.
+ 
+         Validates that the resolved host path (host.path + optional subPath)
+-        remains within allowed prefixes, then ensures the directory exists on
+-        the filesystem — creating it automatically if it does not.
++        remains within allowed prefixes — both lexically and after symbolic
++        link resolution — then ensures the directory exists on the filesystem,
++        creating it automatically if it does not.
+ 
+         Args:
+             volume: Volume with host backend.
+@@ -1487,6 +1488,56 @@ class DockerSandboxService(DockerDiagnosticsMixin, OSSFSMixin, SandboxService, E
+         if allowed_prefixes and resolved_path != volume.host.path:
+             ensure_valid_host_path(resolved_path, allowed_prefixes)
+ 
++        # ── Symlink-aware allowlist check (defense in depth) ──
++        #
++        # Everything validated above is purely lexical: ``normpath`` does not
++        # resolve symbolic links.  A symlink inside an allowed prefix can point
++        # outside of it (e.g. ``/data/opensandbox/escape -> /``) and Docker
++        # follows that link when creating the bind mount, which would let a
++        # caller mount an arbitrary host path.  Mirror the canonical-path check
++        # used by ``_validate_pvc_volume`` (``os.path.realpath(strict=True)``).
++        #
++        # ``strict=True`` makes realpath raise OSError when a component is
++        # missing or unreadable instead of returning the unresolved lexical
++        # path (which would silently turn this check into a no-op).  Host paths
++        # that do not exist yet are skipped here — they are created below and
++        # the lexical validation still applies.
++        if allowed_prefixes:
++            try:
++                canonical_path = os.path.realpath(resolved_path, strict=True)
++            except OSError:
++                canonical_path = None
++
++            if canonical_path is not None:
++                canonical_prefixes: list[str] = []
++                for prefix in allowed_prefixes:
++                    try:
++                        canonical_prefixes.append(os.path.realpath(prefix, strict=True))
++                    except OSError:
++                        # Prefix does not exist yet (e.g. to be created on bind
++                        # mount): fall back to its lexical form.
++                        canonical_prefixes.append(prefix)
++
++                is_within_allowed = any(
++                    canonical_path == canonical_prefix
++                    or canonical_path.startswith(
++                        canonical_prefix.rstrip(os.sep) + os.sep
++                    )
++                    for canonical_prefix in canonical_prefixes
++                )
++                if not is_within_allowed:
++                    raise HTTPException(
++                        status_code=status.HTTP_400_BAD_REQUEST,
++                        detail={
++                            "code": SandboxErrorCodes.HOST_PATH_NOT_ALLOWED,
++                            "message": (
++                                f"Volume '{volume.name}': host path '{resolved_path}' "
++                                f"escapes the allowed prefixes after symlink "
++                                f"resolution. Allowed prefixes: {allowed_prefixes}"
++                            ),
++                        },
++                    )
++
+         # Allow existing host files (for example ISO binds to /boot.iso)
+         # without attempting directory creation.
+         if os.path.isfile(resolved_path):
+diff --git a/server/opensandbox_server/services/validators.py b/server/opensandbox_server/services/validators.py
+index 4b37b57..dba1c80 100644
+--- a/server/opensandbox_server/services/validators.py
++++ b/server/opensandbox_server/services/validators.py
+@@ -22,6 +22,7 @@ enforce the same preconditions before performing runtime-specific work.
+ from __future__ import annotations
+ 
+ from datetime import datetime, timedelta, timezone
++import os
+ from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
+ 
+ from fastapi import HTTPException, status
+@@ -388,6 +389,62 @@ def ensure_valid_sub_path(sub_path: Optional[str]) -> None:
+             )
+ 
+ 
++def _path_prefixes(path: str) -> List[str]:
++    """
++    Return every non-empty path prefix of ``path``, from the root downwards.
++
++    The returned list contains each intermediate component path plus the full
++    path itself, e.g. ``/a/b/c`` -> ``["/a", "/a/b", "/a/b/c"]``.  Windows
++    drive prefixes are preserved (``D:/a/b`` -> ``["D:/a", "D:/a/b"]``) so the
++    helper behaves consistently regardless of the OS the server runs on.
++    """
++    separator = "\\" if os.sep == "\\" else "/"
++    # Normalize separators for the current platform so Windows-style request
++    # paths can be walked on Windows (and vice versa; on POSIX a Windows-style
++    # path simply never matches a real symlink, which is the safe default).
++    normalized = os.path.normpath(path.replace("\\" if separator == "/" else "/", separator))
++    drive, tail = os.path.splitdrive(normalized)
++    prefix = drive
++    if tail.startswith(separator):
++        prefix = f"{prefix}{separator}"
++        tail = tail[len(separator):]
++
++    prefixes: List[str] = []
++    for part in tail.split(separator):
++        if not part or part == ".":
++            continue
++        prefix = os.path.join(prefix, part)
++        prefixes.append(prefix)
++    return prefixes
++
++
++def _first_symlink_component(path: str) -> Optional[str]:
++    """
++    Return the first path component of ``path`` that is a symbolic link.
++
++    Every intermediate component is inspected (not only the final one) because
++    a symlink anywhere in the path is followed by the container runtime when a
++    bind mount is created.  Components that do not exist yet are not symlinks
++    and are therefore accepted — host paths may legitimately be created on
++    demand.
++
++    Args:
++        path: Host path to inspect.
++
++    Returns:
++        The offending component path, or ``None`` when no symlink is present.
++    """
++    for prefix in _path_prefixes(path):
++        try:
++            if os.path.islink(prefix):
++                return prefix
++        except OSError:
++            # Unreadable component: treat as non-symlink; the caller's other
++            # checks (and the runtime's own errors) still apply.
++            continue
++    return None
++
++
+ def ensure_valid_host_path(
+     path: str,
+     allowed_prefixes: Optional[List[str]] = None,
+@@ -395,6 +452,13 @@ def ensure_valid_host_path(
+     """
+     Validate that a host path is absolute and optionally within allowed prefixes.
+ 
++    Paths containing symbolic link components are rejected: a symlink placed
++    inside an allowed prefix can point anywhere on the host (e.g.
++    ``/data/opensandbox/escape -> /``), and the container runtime resolves
++    symlinks when creating a bind mount.  Lexical prefix checks alone cannot
++    detect that escape, so any path whose components include a symlink is
++    refused regardless of the allowlist.
++
+     Args:
+         path: Host path to validate.
+         allowed_prefixes: Optional list of allowed path prefixes.
+@@ -450,6 +514,24 @@ def ensure_valid_host_path(
+             },
+         )
+ 
++    # Reject any path that contains a symbolic link component.  Validation
++    # happens before the allowlist comparison on purpose: the symlink may live
++    # *inside* an allowed prefix while resolving outside of it, in which case
++    # the lexical prefix check below would pass but Docker would silently bind
++    # mount the (attacker chosen) symlink target.
++    symlink_component = _first_symlink_component(path)
++    if symlink_component is not None:
++        raise HTTPException(
++            status_code=status.HTTP_400_BAD_REQUEST,
++            detail={
++                "code": SandboxErrorCodes.INVALID_HOST_PATH,
++                "message": (
++                    f"Host path '{path}' contains a symbolic link (symlink) component "
++                    f"'{symlink_component}', which is not allowed."
++                ),
++            },
++        )
++
+     # Check against allowed prefixes if provided
+     if allowed_prefixes is not None:
+         # Normalize separators for cross-platform prefix checks so Windows-style
+diff --git a/server/tests/test_validators.py b/server/tests/test_validators.py
+index 5522bd0..5c73336 100644
+--- a/server/tests/test_validators.py
++++ b/server/tests/test_validators.py
+@@ -369,6 +369,49 @@ class TestEnsureValidHostPath:
+         assert exc_info.value.status_code == 400
+         assert exc_info.value.detail["code"] == SandboxErrorCodes.HOST_PATH_NOT_ALLOWED
+ 
++    def test_symlink_inside_allowed_prefix_raises(self, tmp_path):
++        """A symlink within an allowed prefix can point anywhere; reject it."""
++        allowed_dir = tmp_path / "allowed"
++        allowed_dir.mkdir()
++        escape = allowed_dir / "escape"
++        escape.symlink_to("/")
++
++        with pytest.raises(HTTPException) as exc_info:
++            ensure_valid_host_path(str(escape), [str(allowed_dir)])
++        assert exc_info.value.status_code == 400
++        assert exc_info.value.detail["code"] == SandboxErrorCodes.INVALID_HOST_PATH
++        assert "symbolic link" in exc_info.value.detail["message"]
++
++    def test_intermediate_symlink_raises(self, tmp_path):
++        """Symlinks in intermediate components are rejected as well."""
++        allowed_dir = tmp_path / "allowed"
++        allowed_dir.mkdir()
++        escape = allowed_dir / "escape"
++        escape.symlink_to("/etc")
++
++        with pytest.raises(HTTPException) as exc_info:
++            ensure_valid_host_path(str(escape / "passwd"), [str(allowed_dir)])
++        assert exc_info.value.status_code == 400
++        assert exc_info.value.detail["code"] == SandboxErrorCodes.INVALID_HOST_PATH
++
++    def test_symlink_raises_without_allowlist(self, tmp_path):
++        """Symlinks are rejected even when no allowlist is configured."""
++        escape = tmp_path / "escape"
++        escape.symlink_to("/")
++
++        with pytest.raises(HTTPException) as exc_info:
++            ensure_valid_host_path(str(escape))
++        assert exc_info.value.status_code == 400
++        assert exc_info.value.detail["code"] == SandboxErrorCodes.INVALID_HOST_PATH
++
++    def test_real_path_under_allowed_prefix_remains_valid(self, tmp_path):
++        """Regular directories (existing or not yet created) stay valid."""
++        allowed_dir = tmp_path / "allowed"
++        (allowed_dir / "user-a").mkdir(parents=True)
++
++        assert ensure_valid_host_path(str(allowed_dir / "user-a"), [str(allowed_dir)]) is None
++        assert ensure_valid_host_path(str(allowed_dir / "new"), [str(allowed_dir)]) is None
++
+ class TestEnsureValidPvcName:
+ 
+     def test_valid_simple_name(self):
+diff --git a/server/tests/tw_repro/test_issue_host_path_symlink.py b/server/tests/tw_repro/test_issue_host_path_symlink.py
+new file mode 100644
+index 0000000..cf4f02c
+--- /dev/null
++++ b/server/tests/tw_repro/test_issue_host_path_symlink.py
+@@ -0,0 +1,168 @@
++# Copyright 2025 Alibaba Group Holding Ltd.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""
++Reproduction for the ``allowed_host_paths`` symlink bypass.
++
++A symlink created inside a whitelisted host path can point at the host root
++``/``; the lexical validation in ``ensure_valid_host_path`` used to accept it
++because the requested path starts with the whitelisted prefix, while Docker
++resolves the link when performing the bind mount.  Both the validator and the
++Docker-specific host volume validation must reject such a request.
++"""
++
++import os
++
++import pytest
++from fastapi import HTTPException
++
++from opensandbox_server.api.schema import Host, Volume
++from opensandbox_server.services.constants import SandboxErrorCodes
++from opensandbox_server.services.docker import DockerSandboxService
++from opensandbox_server.services.validators import ensure_valid_host_path
++
++
++def _make_escape_symlink(tmp_path):
++    """Create ``<allowed>/escape -> /`` and return (allowed, symlink path)."""
++    allowed = tmp_path / "allowed"
++    allowed.mkdir()
++    escape = allowed / "escape"
++    os.symlink("/", escape)
++    return allowed, escape
++
++
++def test_ensure_valid_host_path_rejects_symlink_in_allowed_prefix(tmp_path):
++    """A symlink inside a whitelisted prefix must be rejected."""
++    allowed, escape = _make_escape_symlink(tmp_path)
++
++    with pytest.raises(HTTPException) as exc_info:
++        ensure_valid_host_path(str(escape), [str(allowed)])
++
++    assert exc_info.value.status_code == 400
++    assert "symlink" in exc_info.value.detail["message"]
++    assert "symbolic link" in exc_info.value.detail["message"]
++
++
++def test_ensure_valid_host_path_rejects_intermediate_symlink(tmp_path):
++    """A symlink in an intermediate component must be rejected too."""
++    allowed, escape = _make_escape_symlink(tmp_path)
++
++    with pytest.raises(HTTPException) as exc_info:
++        ensure_valid_host_path(str(escape / "etc"), [str(allowed)])
++
++    assert exc_info.value.status_code == 400
++    assert exc_info.value.detail["code"] == SandboxErrorCodes.INVALID_HOST_PATH
++
++
++def test_ensure_valid_host_path_rejects_symlink_without_allowlist(tmp_path):
++    """Symbolic links are rejected even when no allowlist is configured."""
++    _, escape = _make_escape_symlink(tmp_path)
++
++    with pytest.raises(HTTPException) as exc_info:
++        ensure_valid_host_path(str(escape))
++
++    assert exc_info.value.status_code == 400
++    assert exc_info.value.detail["code"] == SandboxErrorCodes.INVALID_HOST_PATH
++
++
++def test_ensure_valid_host_path_still_accepts_real_paths(tmp_path):
++    """Regular (non-symlink) paths under an allowed prefix keep working."""
++    allowed = tmp_path / "allowed"
++    (allowed / "user-a").mkdir(parents=True)
++
++    assert ensure_valid_host_path(str(allowed / "user-a"), [str(allowed)]) is None
++    # Not-yet-existing directories are allowed as well
++    assert ensure_valid_host_path(str(allowed / "to-be-created"), [str(allowed)]) is None
++
++
++def test_validate_host_volume_rejects_symlink_escape(tmp_path):
++    """``_validate_host_volume`` must not accept a symlink escaping the allowlist."""
++    allowed, escape = _make_escape_symlink(tmp_path)
++
++    volume = Volume(
++        name="workdir",
++        host=Host(path=str(escape)),
++        mount_path="/mnt/work",
++        read_only=False,
++    )
++
++    with pytest.raises(HTTPException) as exc_info:
++        DockerSandboxService._validate_host_volume(volume, [str(allowed)])
++
++    assert exc_info.value.status_code == 400
++    assert exc_info.value.detail["code"] == SandboxErrorCodes.HOST_PATH_NOT_ALLOWED
++
++
++def test_validate_host_volume_accepts_real_path(tmp_path):
++    """A real host directory under an allowed prefix stays valid."""
++    allowed = tmp_path / "allowed"
++    allowed.mkdir()
++
++    volume = Volume(
++        name="workdir",
++        host=Host(path=str(allowed)),
++        mount_path="/mnt/work",
++        read_only=False,
++    )
++
++    assert DockerSandboxService._validate_host_volume(volume, [str(allowed)]) is None
++
++
++@pytest.mark.asyncio
++async def test_create_sandbox_rejects_symlink_mount(tmp_path, monkeypatch):
++    """End-to-end: a mount request going through a symlink is rejected."""
++    from unittest.mock import MagicMock
++
++    from opensandbox_server.api.schema import (
++        CreateSandboxRequest,
++        ImageSpec,
++        ResourceLimits,
++    )
++    from opensandbox_server.config import AppConfig, RuntimeConfig, ServerConfig, StorageConfig
++    from opensandbox_server.services import docker as docker_module
++
++    mock_client = MagicMock()
++    mock_client.containers.list.return_value = []
++    monkeypatch.setattr(docker_module.docker, "from_env", lambda: mock_client)
++
++    _, escape = _make_escape_symlink(tmp_path)
++
++    cfg = AppConfig(
++        server=ServerConfig(),
++        runtime=RuntimeConfig(type="docker", execd_image="ghcr.io/opensandbox/platform:latest"),
++    )
++    cfg.storage = StorageConfig(allowed_host_paths=[str(tmp_path / "allowed")])
++    service = DockerSandboxService(config=cfg)
++
++    request = CreateSandboxRequest(
++        image=ImageSpec(uri="python:3.11"),
++        timeout=120,
++        resourceLimits=ResourceLimits(root={}),
++        env={},
++        metadata={},
++        entrypoint=["python"],
++        volumes=[
++            Volume(
++                name="workdir",
++                host=Host(path=str(escape)),
++                mount_path="/mnt/work",
++                read_only=False,
++            )
++        ],
++    )
++
++    with pytest.raises(HTTPException) as exc_info:
++        await service.create_sandbox(request)
++
++    assert exc_info.value.status_code == 400

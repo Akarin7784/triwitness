@@ -1,0 +1,277 @@
+diff --git a/README.md b/README.md
+index 7dcd8d5..b41b2d2 100644
+--- a/README.md
++++ b/README.md
+@@ -78,6 +78,14 @@ table["author"] = alice
+ diagram["author"] = bob
+ ```
+ 
++Note that RO-Crate metadata is flattened, so a property value can either be a
++plain value (e.g., a string) or a reference to another entity, represented as a
++dictionary with an `@id`. For this reason, setting a property to a dictionary
++that does not have an `@id` raises a `ValueError`: add the referenced entity to
++the crate first (with `crate.add`) and assign that entity instead. Inline
++objects (dictionaries without an `@id`) that are found when reading an existing
++crate are still returned as they are by `__getitem__`.
++
+ You can also add whole directories together with their contents. In an RO-Crate, a directory is represented by the `Dataset` entity. Create a directory with some placeholder files:
+ 
+ ```bash
+diff --git a/rocrate/model/entity.py b/rocrate/model/entity.py
+index 22e69a5..6948274 100644
+--- a/rocrate/model/entity.py
++++ b/rocrate/model/entity.py
+@@ -40,7 +40,10 @@ class Entity(MutableMapping):
+                 if name.startswith("@"):
+                     self._jsonld[name] = value
+                 else:
+-                    self[name] = value
++                    # properties are not validated here, since they can come
++                    # from an existing JSON-LD document, which might contain
++                    # inline objects (dicts without an @id)
++                    self._jsonld[name] = self._as_jsonld_value(value)
+ 
+     @property
+     def id(self):
+@@ -81,6 +84,15 @@ class Entity(MutableMapping):
+         return val
+ 
+     def __getitem__(self, key):
++        """\
++        Get the value of a property.
++
++        Entity references (dictionaries with an @id) are dereferenced to the
++        entity they point to, if the crate contains it; otherwise the id is
++        returned as a string. Inline values (dictionaries without an @id) are
++        returned as they are, so that, e.g., crates created by other tools can
++        still be accessed.
++        """
+         v = self._jsonld[key]
+         if v is None or key.startswith("@"):
+             return v
+@@ -88,22 +100,48 @@ class Entity(MutableMapping):
+         deref_values = []
+         for entry in values:
+             if isinstance(entry, dict):
+-                try:
+-                    id_ = entry["@id"]
+-                except KeyError:
+-                    raise ValueError(f"no @id in {entry}")
++                id_ = entry.get("@id")
++                if id_ is None:
++                    deref_values.append(entry)
+                 else:
+                     deref_values.append(self.crate.get(id_, id_))
+             else:
+                 deref_values.append(entry)
+         return deref_values if isinstance(v, list) else deref_values[0]
+ 
++    @staticmethod
++    def _as_jsonld(value, validate=False):
++        """\
++        Convert a single property value to its JSON-LD representation.
++
++        Entities are replaced by references of the form ``{"@id": ...}``.
++
++        If `validate` is true, a `ValueError` is raised for dictionaries that
++        do not have an `@id` key: such values cannot be represented as entity
++        references in a flattened and compacted JSON-LD document. Note that
++        validation is not applied to values read from an existing JSON-LD
++        document, which might legitimately contain inline objects.
++        """
++        if isinstance(value, Entity):
++            return {"@id": value.id}
++        if validate and isinstance(value, dict) and "@id" not in value:
++            raise ValueError(f"no @id in {value}")
++        return value
++
++    @classmethod
++    def _as_jsonld_value(cls, value, validate=False):
++        """\
++        Convert a property value (a scalar, an entity or a list of those) to
++        its JSON-LD representation. See `_as_jsonld`.
++        """
++        values = value if isinstance(value, list) else [value]
++        converted = [cls._as_jsonld(_, validate=validate) for _ in values]
++        return converted if isinstance(value, list) else converted[0]
++
+     def __setitem__(self, key: str, value):
+         if key.startswith("@"):
+             raise KeyError(f"cannot set '{key}'")
+-        values = value if isinstance(value, list) else [value]
+-        ref_values = [{"@id": _.id} if isinstance(_, Entity) else _ for _ in values]
+-        self._jsonld[key] = ref_values if isinstance(value, list) else ref_values[0]
++        self._jsonld[key] = self._as_jsonld_value(value, validate=True)
+ 
+     def __delitem__(self, key: str):
+         if key.startswith("@"):
+@@ -156,11 +194,11 @@ class Entity(MutableMapping):
+     def append_to(self, key: str, value, compact=False):
+         if key.startswith("@"):
+             raise KeyError(f"cannot append to '{key}'")
++        values = value if isinstance(value, list) else [value]
++        values = self._as_jsonld_value(values, validate=True)
+         current_value = self._jsonld.setdefault(key, [])
+         if not isinstance(current_value, list):
+             current_value = self._jsonld[key] = [current_value]
+-        if not isinstance(value, list):
+-            value = [value]
+-        current_value.extend([{"@id": _.id} if isinstance(_, Entity) else _ for _ in value])
++        current_value.extend(values)
+         if compact and len(current_value) == 1:
+             self._jsonld[key] = current_value[0]
+diff --git a/test/test_model.py b/test/test_model.py
+index 4465ece..a1d7cbb 100644
+--- a/test/test_model.py
++++ b/test/test_model.py
+@@ -411,8 +411,9 @@ def test_entity_as_mapping(tmpdir, helpers):
+         "application/json",
+         "https://www.json.org",
+     }
+-    with pytest.raises(ValueError):
+-        correction["badProp"]
++    # inline objects (dicts without an @id) are returned as they are, so that
++    # e.g. crates created by other tools can still be accessed
++    assert correction["badProp"] == {"k": "v"}
+ 
+ 
+ def test_wf_types():
+diff --git a/tests/tw_repro/test_issue_190.py b/tests/tw_repro/test_issue_190.py
+new file mode 100644
+index 0000000..ab2b6b3
+--- /dev/null
++++ b/tests/tw_repro/test_issue_190.py
+@@ -0,0 +1,133 @@
++"""\
++Reproduction tests for the issue "Setting/Accessing nested properties on
++entities without @id".
++
++RO-Crates are supposed to contain flattened, compacted JSON-LD, so a property
++whose value is a dictionary must be an entity reference, i.e., it must have an
++``@id``. Setting a property to a dictionary without an ``@id`` used to be
++allowed, but the value could not be read back from the resulting object:
++
++    crate.root_dataset["license"] = {"@type": "CreativeWork", "name": "CC-O"}
++    crate.root_dataset["license"]  # ValueError: no @id in {...}
++
++The tests below lock the intended behavior:
++
++* assigning a dict (or a list of dicts) without ``@id`` raises ``ValueError``
++* accessing an inline dict (e.g. in a crate created by another tool, or by an
++  older version of this library) returns it as is instead of raising
++* entity references keep working as before, including round trips
++"""
++
++import json
++from pathlib import Path
++
++import pytest
++
++from rocrate.model import ContextEntity
++from rocrate.rocrate import ROCrate
++
++
++LICENSE = {
++    "@type": "CreativeWork",
++    "name": "CC0-1.0",
++    "url": "https://spdx.org/licenses/CC0-1.0",
++}
++
++
++def write_metadata(base_path, root_properties):
++    metadata = {
++        "@context": "https://w3id.org/ro/crate/1.1/context",
++        "@graph": [
++            {
++                "@id": "ro-crate-metadata.json",
++                "@type": "CreativeWork",
++                "about": {"@id": "./"},
++                "conformsTo": {"@id": "https://w3id.org/ro/crate/1.1"},
++            },
++            {"@id": "./", "@type": "Dataset", **root_properties},
++        ],
++    }
++    base_path = Path(base_path)
++    base_path.mkdir(parents=True, exist_ok=True)
++    with open(base_path / "ro-crate-metadata.json", "wt") as f:
++        json.dump(metadata, f)
++    return base_path
++
++
++# --- setting
++
++
++def test_set_dict_without_id_raises():
++    crate = ROCrate()
++    with pytest.raises(ValueError, match="no @id"):
++        crate.root_dataset["license"] = LICENSE
++
++
++def test_set_list_with_dict_without_id_raises():
++    crate = ROCrate()
++    with pytest.raises(ValueError, match="no @id"):
++        crate.root_dataset["license"] = [LICENSE]
++    # nothing was set
++    assert "license" not in crate.root_dataset
++
++
++def test_append_dict_without_id_raises():
++    crate = ROCrate()
++    with pytest.raises(ValueError, match="no @id"):
++        crate.root_dataset.append_to("license", LICENSE)
++    # nothing was added
++    assert "license" not in crate.root_dataset
++
++
++def test_set_dict_with_id_ok():
++    crate = ROCrate()
++    crate.root_dataset["license"] = {"@id": "https://spdx.org/licenses/CC0-1.0"}
++    assert "license" in crate.root_dataset
++    # the id does not resolve to an entity in the crate: it is returned as is
++    assert crate.root_dataset["license"] == "https://spdx.org/licenses/CC0-1.0"
++
++
++def test_set_entity_ok():
++    crate = ROCrate()
++    license_ = crate.add(ContextEntity(crate, "#license", properties={
++        "@type": "CreativeWork",
++        "name": "CC0-1.0",
++    }))
++    crate.root_dataset["license"] = license_
++    assert crate.root_dataset["license"] is license_
++
++
++# --- accessing
++
++
++def test_get_inline_dict_from_read_crate(tmpdir):
++    """A crate with an inline (no @id) dict property must be accessible."""
++    crate_dir = write_metadata(tmpdir / "in_crate", {"license": LICENSE})
++    crate = ROCrate(crate_dir)
++    assert crate.root_dataset["license"] == LICENSE
++
++
++def test_read_write_read_inline_dict(tmpdir):
++    """Reading and writing back a crate must not raise, either."""
++    crate_dir = write_metadata(tmpdir / "in_crate", {"license": LICENSE})
++    crate = ROCrate(crate_dir)
++    crate.write(tmpdir / "out_crate")
++    out_crate = ROCrate(tmpdir / "out_crate")
++    assert out_crate.root_dataset["license"] == LICENSE
++
++
++# --- round trip
++
++
++def test_reference_round_trip(tmpdir):
++    crate = ROCrate()
++    license_ = crate.add(ContextEntity(crate, "#license", properties={
++        "@type": "CreativeWork",
++        "name": "CC0-1.0",
++    }))
++    crate.root_dataset["license"] = license_
++    crate.write(tmpdir / "out_crate")
++    out_crate = ROCrate(tmpdir / "out_crate")
++    out_license = out_crate.root_dataset["license"]
++    assert out_license is out_crate.get("#license")
++    assert out_license["name"] == "CC0-1.0"

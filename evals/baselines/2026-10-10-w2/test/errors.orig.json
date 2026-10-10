@@ -1,0 +1,3 @@
+{
+  "baseline-deepseek/swe-opensandbox-816/1": "BuildError: The command '/bin/sh -c apt-get update -qq && apt-get install -y -qq --no-install-recommends git >/dev/null && rm -rf /var/lib/apt/lists/*' returned a non-zero code: 100"
+}

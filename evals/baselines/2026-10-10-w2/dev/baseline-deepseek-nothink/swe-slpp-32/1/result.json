@@ -1,0 +1,26 @@
+{
+  "task_id": "swe-slpp-32",
+  "config": "baseline-deepseek-nothink",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_dashdash_string.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.028411,
+  "tokens_in": 171525,
+  "tokens_cached": 162304,
+  "tokens_out": 3986,
+  "peak_calls": 0,
+  "steps": 17,
+  "wall_s": 47.24,
+  "trajectory_id": "baseline-deepseek-nothink/swe-slpp-32/1/trajectory.jsonl",
+  "live": true,
+  "error": null
+}

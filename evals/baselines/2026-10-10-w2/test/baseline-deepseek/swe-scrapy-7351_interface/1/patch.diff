@@ -1,0 +1,208 @@
+diff --git a/scrapy/pqueues.py b/scrapy/pqueues.py
+index ad0b36f..cd309d3 100644
+--- a/scrapy/pqueues.py
++++ b/scrapy/pqueues.py
+@@ -277,7 +277,8 @@ class DownloaderInterface:
+ class DownloaderAwarePriorityQueue:
+     """PriorityQueue which takes Downloader activity into account:
+     domains (slots) with the least amount of active downloads are dequeued
+-    first.
++    first. Slots with the same number of active downloads are dequeued in a
++    round-robin fashion, so that no slot can starve the others.
+ 
+     Disk persistence
+     ================
+@@ -350,6 +351,10 @@ class DownloaderAwarePriorityQueue:
+         self.crawler: Crawler = crawler
+ 
+         self.pqueues: dict[str, ScrapyPriorityQueue] = {}  # slot -> priority queue
++        # Last slot selected by pop(), used as the starting point of the
++        # round-robin rotation used to break ties between slots that have the
++        # same number of active downloads.
++        self._last_slot: str | None = None
+         if slot_startprios:
+             for slot, startprios in slot_startprios.items():
+                 self.pqueues[slot] = self.pqfactory(slot, startprios)
+@@ -365,13 +370,35 @@ class DownloaderAwarePriorityQueue:
+             start_queue_cls=self._start_queue_cls,
+         )
+ 
+-    def pop(self) -> Request | None:
+-        stats = self._downloader_interface.stats(self.pqueues)
++    def _select_slot(self) -> str | None:
++        """Return the slot to pick the next request from, or ``None`` if there
++        are no slots.
+ 
++        Slots with the lowest number of active downloads go first. When
++        several slots have the same number of active downloads, they are
++        picked in a round-robin fashion, starting after the slot that was
++        picked last, instead of always picking the first one. This prevents
++        some of those slots from starving the others.
++        """
++        stats = self._downloader_interface.stats(self.pqueues)
+         if not stats:
+             return None
++        min_active = min(active for active, _ in stats)
++        slots = sorted(slot for active, slot in stats if active == min_active)
++        if self._last_slot is not None:
++            for slot in slots:
++                # Continue the rotation right after the slot picked last, even
++                # if that slot is no longer queued.
++                if slot > self._last_slot:
++                    return slot
++        # Wrap around to the first available slot.
++        return slots[0]
+ 
+-        slot = min(stats)[1]
++    def pop(self) -> Request | None:
++        slot = self._select_slot()
++        if slot is None:
++            return None
++        self._last_slot = slot
+         queue = self.pqueues[slot]
+         request = queue.pop()
+         if len(queue) == 0:
+@@ -392,10 +419,9 @@ class DownloaderAwarePriorityQueue:
+         Raises :exc:`NotImplementedError` if the underlying queue class does
+         not implement a ``peek`` method, which is optional for queues.
+         """
+-        stats = self._downloader_interface.stats(self.pqueues)
+-        if not stats:
++        slot = self._select_slot()
++        if slot is None:
+             return None
+-        slot = min(stats)[1]
+         queue = self.pqueues[slot]
+         return queue.peek()
+ 
+diff --git a/tests/tw_repro/test_issue_7246.py b/tests/tw_repro/test_issue_7246.py
+new file mode 100644
+index 0000000..c2af4d5
+--- /dev/null
++++ b/tests/tw_repro/test_issue_7246.py
+@@ -0,0 +1,125 @@
++"""Reproducer for the unfair (non round-robin) tie-break of
++:class:`scrapy.pqueues.DownloaderAwarePriorityQueue`.
++
++When several download slots have the same number of active downloads,
++``pop()`` must rotate through them instead of always picking the same
++(insertion-first / lexicographically first) slot.  The behavior is observed
++through the ``download_slot`` request meta key.
++"""
++
++from __future__ import annotations
++
++from unittest.mock import Mock
++
++from scrapy.core.downloader import Downloader
++from scrapy.http.request import Request
++from scrapy.pqueues import DownloaderAwarePriorityQueue
++from scrapy.spiders import Spider
++from scrapy.squeues import FifoMemoryQueue
++from scrapy.utils.test import get_crawler
++from tests.test_scheduler import MockDownloader
++
++SLOT_META = Downloader.DOWNLOAD_SLOT
++
++
++def _make_queue() -> DownloaderAwarePriorityQueue:
++    crawler = get_crawler(Spider)
++    crawler.engine = Mock(downloader=MockDownloader())
++    return DownloaderAwarePriorityQueue.from_crawler(
++        crawler=crawler,
++        downstream_queue_cls=FifoMemoryQueue,
++        key="foo/bar",
++    )
++
++
++def _push(queue: DownloaderAwarePriorityQueue, slot: str, count: int) -> None:
++    for i in range(count):
++        queue.push(
++            Request(f"http://example.com/{slot}/{i}", meta={SLOT_META: slot})
++        )
++
++
++def _popped_slots(queue: DownloaderAwarePriorityQueue, count: int) -> list[str]:
++    slots = []
++    for _ in range(count):
++        request = queue.pop()
++        assert request is not None
++        slots.append(request.meta[SLOT_META])
++    return slots
++
++
++def test_two_equal_slots_alternate():
++    queue = _make_queue()
++    try:
++        _push(queue, "slot-a", 3)
++        _push(queue, "slot-b", 3)
++        # Both slots have 0 active downloads (a tie), so the queue must
++        # alternate between them.
++        assert _popped_slots(queue, 6) == [
++            "slot-a",
++            "slot-b",
++            "slot-a",
++            "slot-b",
++            "slot-a",
++            "slot-b",
++        ]
++        assert queue.pop() is None
++    finally:
++        queue.close()
++
++
++def test_three_equal_slots_rotate():
++    queue = _make_queue()
++    try:
++        for slot in ("slot-a", "slot-b", "slot-c"):
++            _push(queue, slot, 2)
++        assert _popped_slots(queue, 6) == [
++            "slot-a",
++            "slot-b",
++            "slot-c",
++            "slot-a",
++            "slot-b",
++            "slot-c",
++        ]
++    finally:
++        queue.close()
++
++
++def test_rotation_continues_from_removed_slot():
++    queue = _make_queue()
++    try:
++        _push(queue, "slot-a", 2)
++        _push(queue, "slot-b", 1)  # emptied and removed by the 2nd pop
++        _push(queue, "slot-c", 1)
++        # After "slot-b" is emptied, the rotation must continue with
++        # "slot-c" instead of restarting from "slot-a".
++        assert _popped_slots(queue, 4) == [
++            "slot-a",
++            "slot-b",
++            "slot-c",
++            "slot-a",
++        ]
++        assert queue.pop() is None
++    finally:
++        queue.close()
++
++
++def test_rotation_only_among_least_active_slots():
++    queue = _make_queue()
++    crawler = queue.crawler
++    downloader = crawler.engine.downloader
++    try:
++        _push(queue, "slot-a", 3)
++        _push(queue, "slot-b", 3)
++        _push(queue, "slot-c", 3)
++        # "slot-a" is busy (2 active downloads), the other two are tied.
++        downloader.increment("slot-a")
++        downloader.increment("slot-a")
++        assert _popped_slots(queue, 4) == [
++            "slot-b",
++            "slot-c",
++            "slot-b",
++            "slot-c",
++        ]
++    finally:
++        queue.close()

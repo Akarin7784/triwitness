@@ -1,0 +1,276 @@
+diff --git a/cyclopts/command_spec.py b/cyclopts/command_spec.py
+index f112eb3..fc7b4eb 100644
+--- a/cyclopts/command_spec.py
++++ b/cyclopts/command_spec.py
+@@ -115,17 +115,18 @@ class CommandSpec:
+                 )
+ 
+             # Copy parent groups if not set (matches direct App registration behavior)
+-            from cyclopts.core import _apply_parent_defaults_to_app
++            from cyclopts.core import _apply_parent_defaults_to_app, _apply_subapp_registration_defaults
+ 
+             _apply_parent_defaults_to_app(target, parent_app)
+ 
+             self._resolved = target
++            _apply_subapp_registration_defaults(self._resolved, parent_app)
+         else:
+             # It's a function - wrap it in an App with parent defaults
+             # Match the behavior of direct function registration
+             app_kwargs = dict(self.app_kwargs)  # Copy to avoid mutating
+ 
+-            from cyclopts.core import _apply_parent_groups_to_kwargs
++            from cyclopts.core import _apply_parent_groups_to_kwargs, _apply_subapp_registration_defaults
+ 
+             app_kwargs.setdefault("help_flags", parent_app.help_flags)
+             app_kwargs.setdefault("version_flags", parent_app.version_flags)
+@@ -136,6 +137,7 @@ class CommandSpec:
+ 
+             self._resolved = App(name=self.name, **app_kwargs)
+             self._resolved.default(target)
++            _apply_subapp_registration_defaults(self._resolved, parent_app)
+ 
+         return self._resolved
+ 
+diff --git a/cyclopts/core.py b/cyclopts/core.py
+index 08c9a4a..53c066d 100644
+--- a/cyclopts/core.py
++++ b/cyclopts/core.py
+@@ -150,6 +150,42 @@ def _apply_parent_defaults_to_app(app: "App", parent_app: "App") -> None:
+         app.version = parent_app.version
+ 
+ 
++def _hide_subapp_special_flags(app: "App") -> None:
++    """Hide a subapp's help/version flags from its own help-page.
++
++    The flags remain fully functional commands, but are not listed in the
++    subapp's ``Commands`` panel. This matches the behavior of subapps that were
++    registered directly; the same treatment must be applied to subapps that are
++    resolved from a :class:`~cyclopts.command_spec.CommandSpec` (lazy loading).
++
++    Parameters
++    ----------
++    app : App
++        The subapp whose help/version flags should be hidden.
++    """
++    for flag in chain(app.help_flags, app.version_flags):
++        app[flag].show = False
++
++
++def _apply_subapp_registration_defaults(app: "App", parent_app: "App") -> None:
++    """Apply parent-derived bookkeeping to a subapp being registered.
++
++    This performs the parts of :meth:`App.command` that must be applied to the
++    subapp itself (as opposed to the parent's command mapping) so that lazily
++    loaded subapps behave identically to directly registered ones.
++
++    Parameters
++    ----------
++    app : App
++        The subapp that is being registered to ``parent_app``.
++    parent_app : App
++        The parent app that the subapp is registered to.
++    """
++    _hide_subapp_special_flags(app)
++    if app._name_transform is None:
++        app.name_transform = parent_app.name_transform
++
++
+ def _apply_parent_groups_to_kwargs(kwargs: dict[str, Any], parent_app: "App") -> None:
+     """Apply parent app's groups to kwargs dict if not already specified.
+ 
+@@ -1340,11 +1376,7 @@ class App:
+             # directly call the default decorator, in case we do additional processing there.
+             app.default(obj)
+ 
+-        for flag in chain(app.help_flags, app.version_flags):
+-            app[flag].show = False
+-
+-        if app._name_transform is None:
+-            app.name_transform = self.name_transform
++        _apply_subapp_registration_defaults(app, self)
+ 
+         if name is None:
+             name = app.name
+diff --git a/tests/test_lazy_commands.py b/tests/test_lazy_commands.py
+index b9d6294..365237a 100644
+--- a/tests/test_lazy_commands.py
++++ b/tests/test_lazy_commands.py
+@@ -590,3 +590,57 @@ def test_lazy_app_name_match_allows_resolution():
+         assert resolved is test_module.subapp
+     finally:
+         del sys.modules["test_lazy_module"]
++
++
++def test_lazy_subapp_help_hides_its_own_help_and_version_flags(console):
++    """Lazily loaded subapps must not list ``--help``/``--version`` in their help.
++
++    Directly registered subapps became "clean" in v3.10 (PR #363): their help
++    and version flag commands stay functional, but are hidden from the subapp's
++    ``Commands`` panel. Lazy loading must behave identically.
++    """
++    test_module = ModuleType("test_lazy_module")
++    test_module.subapp = App(name="greet", help="Subapp help")  # type: ignore[attr-defined]
++    sys.modules["test_lazy_module"] = test_module
++
++    try:
++        parent = App(name="parent", result_action="return_value")
++        parent.command("test_lazy_module:subapp", name="greet")
++
++        with console.capture() as capture:
++            parent(["greet", "--help"], console=console)
++
++        output = capture.get()
++        assert "Subapp help" in output
++        assert "Display this message and exit." not in output
++        assert "Display application version." not in output
++        assert "Commands" not in output
++    finally:
++        del sys.modules["test_lazy_module"]
++
++
++def test_lazy_subapp_help_matches_direct_subapp_help(console):
++    """Direct and lazy subapp registration must produce identical help output."""
++    direct_subapp = App(name="greet", help="Subapp help")
++    test_module = ModuleType("test_lazy_module")
++    test_module.subapp = App(name="greet", help="Subapp help")  # type: ignore[attr-defined]
++    sys.modules["test_lazy_module"] = test_module
++
++    try:
++        direct_parent = App(name="parent", result_action="return_value")
++        direct_parent.command(direct_subapp)
++
++        lazy_parent = App(name="parent", result_action="return_value")
++        lazy_parent.command("test_lazy_module:subapp", name="greet")
++
++        with console.capture() as capture:
++            direct_parent(["greet", "--help"], console=console)
++        direct_output = capture.get()
++
++        with console.capture() as capture:
++            lazy_parent(["greet", "--help"], console=console)
++        lazy_output = capture.get()
++
++        assert lazy_output == direct_output
++    finally:
++        del sys.modules["test_lazy_module"]
+diff --git a/tests/tw_repro/test_issue_708_lazy_subapp_help.py b/tests/tw_repro/test_issue_708_lazy_subapp_help.py
+new file mode 100644
+index 0000000..dba3189
+--- /dev/null
++++ b/tests/tw_repro/test_issue_708_lazy_subapp_help.py
+@@ -0,0 +1,115 @@
++"""Repro: lazy command loading changes a subapp's ``--help`` output.
++
++Registering a subapp directly hides the subapp's own ``--help``/``--version``
++flags from its help-page (behavior introduced in v3.10). Registering the very
++same subapp through an import path string (lazy loading) must behave
++identically.
++"""
++
++import sys
++
++import pytest
++
++from cyclopts import App
++
++
++MODULE_NAME = "tw_repro_lazy_subapp_mod"
++
++MODULE_SOURCE = '''
++import cyclopts
++
++direct_subapp = cyclopts.App("greet")
++lazy_subapp = cyclopts.App("greet")
++
++
++@direct_subapp.default
++def greet_direct(name: str):
++    """Greet a person by name."""
++    print(f"Hello, {name}!")
++
++
++@lazy_subapp.default
++def greet_lazy(name: str):
++    """Greet a person by name."""
++    print(f"Hello, {name}!")
++
++
++def greet_function(name: str):
++    """Greet a person by name."""
++    print(f"Hello, {name}!")
++'''
++
++
++@pytest.fixture
++def lazy_module(tmp_path, monkeypatch):
++    module_path = tmp_path / f"{MODULE_NAME}.py"
++    module_path.write_text(MODULE_SOURCE)
++    monkeypatch.syspath_prepend(str(tmp_path))
++    sys.modules.pop(MODULE_NAME, None)
++    yield MODULE_NAME
++    sys.modules.pop(MODULE_NAME, None)
++
++
++def _help(app: App, console, *tokens: str) -> str:
++    with console.capture() as capture:
++        app([*tokens, "--help"], console=console)
++    return capture.get()
++
++
++def _direct_subapp_help(console) -> str:
++    import tw_repro_lazy_subapp_mod
++
++    app = App("App", result_action="return_value")
++    app.command(tw_repro_lazy_subapp_mod.direct_subapp)
++    return _help(app, console, "greet")
++
++
++def _lazy_subapp_help(console) -> str:
++    app = App("App", result_action="return_value")
++    app.command(f"{MODULE_NAME}:lazy_subapp", name="greet")
++    return _help(app, console, "greet")
++
++
++def test_lazy_subapp_help_hides_help_and_version_flags(lazy_module, console):
++    """The lazily loaded subapp must not list its own help/version flags."""
++    output = _lazy_subapp_help(console)
++
++    assert "Greet a person by name." in output
++    assert "Commands" not in output
++    assert "Display this message and exit." not in output
++    assert "Display application version." not in output
++
++
++def test_lazy_subapp_help_matches_direct_subapp_help(lazy_module, console):
++    """Direct and lazy subapp registration must produce identical help."""
++    assert _lazy_subapp_help(console) == _direct_subapp_help(console)
++
++
++def test_lazy_function_help_hides_help_and_version_flags(lazy_module, console):
++    """The same holds when the lazy import path points at a function."""
++    app = App("App", result_action="return_value")
++    app.command(f"{MODULE_NAME}:greet_function", name="greet")
++    output = _help(app, console, "greet")
++
++    assert "Greet a person by name." in output
++    assert "Display this message and exit." not in output
++    assert "Display application version." not in output
++
++    direct_app = App("App", result_action="return_value")
++    import tw_repro_lazy_subapp_mod
++
++    direct_app.command(tw_repro_lazy_subapp_mod.greet_function, name="greet")
++    assert output == _help(direct_app, console, "greet")
++
++
++def test_lazy_subapp_flags_still_usable(lazy_module, console):
++    """Hidden or not, the flags keep working on the lazily loaded subapp."""
++    app = App("App", result_action="return_value")
++    app.command(f"{MODULE_NAME}:lazy_subapp", name="greet")
++
++    # ``--help`` still triggers the subapp help-page.
++    assert "Greet a person by name." in _help(app, console, "greet")
++
++    # ``greet`` itself still executes.
++    result = app(["greet", "Alice"], console=console)
++    assert result is None

@@ -1,0 +1,186 @@
+diff --git a/wip_repro/cache_stuff.py b/wip_repro/cache_stuff.py
+new file mode 100644
+index 0000000..9622a99
+--- /dev/null
++++ b/wip_repro/cache_stuff.py
+@@ -0,0 +1,28 @@
++import marimo
++
++__generated_with = "0.14.17"
++app = marimo.App(width="medium")
++
++
++@app.cell
++def _():
++    import marimo as mo
++    return (mo,)
++
++
++@app.function
++def compute(x, y):
++    return x + y
++
++
++@app.cell
++def _(mo):
++    with mo.persistent_cache("random"):
++        print(compute(1, 2))
++
++    [1, 2, 3]
++    return
++
++
++if __name__ == "__main__":
++    app.run()
+diff --git a/wip_repro/cache_stuff_solo.py b/wip_repro/cache_stuff_solo.py
+new file mode 100644
+index 0000000..4377ef9
+--- /dev/null
++++ b/wip_repro/cache_stuff_solo.py
+@@ -0,0 +1,28 @@
++import marimo
++
++__generated_with = "0.14.17"
++app = marimo.App(width="medium")
++
++
++@app.cell
++def _():
++    import marimo as mo
++    return (mo,)
++
++
++@app.function
++def compute(x, y):
++    return x + y
++
++
++@app.cell
++def _(mo):
++    with mo.persistent_cache("random"):
++        print(compute(1, 2))
++
++
++    return
++
++
++if __name__ == "__main__":
++    app.run()
+diff --git a/wip_repro/drive_fail.py b/wip_repro/drive_fail.py
+new file mode 100644
+index 0000000..63950c1
+--- /dev/null
++++ b/wip_repro/drive_fail.py
+@@ -0,0 +1,20 @@
++import marimo._ast.transformers as T
++
++_orig_init = T.CacheExtractWithBlock.__init__
++def patched_init(self, line, *a, **kw):
++    print("CacheExtractWithBlock target_line=", line)
++    return _orig_init(self, line, *a, **kw)
++T.CacheExtractWithBlock.__init__ = patched_init
++
++_orig_gv = T.ExtractWithBlock.generic_visit
++def gv(self, node):
++    print("generic_visit node types:", [type(n).__name__ + f"(L{n.lineno})" for n in node])
++    try:
++        return _orig_gv(self, node)
++    except T.BlockException as e:
++        print("  -> BlockException:", e)
++        raise
++T.ExtractWithBlock.generic_visit = gv
++
++import runpy
++runpy.run_path("cache_stuff.py", run_name="__main__")
+diff --git a/wip_repro/drive_solo.py b/wip_repro/drive_solo.py
+new file mode 100644
+index 0000000..5b280bd
+--- /dev/null
++++ b/wip_repro/drive_solo.py
+@@ -0,0 +1,20 @@
++import marimo._ast.transformers as T
++
++_orig_init = T.CacheExtractWithBlock.__init__
++def patched_init(self, line, *a, **kw):
++    print("CacheExtractWithBlock target_line=", line)
++    return _orig_init(self, line, *a, **kw)
++T.CacheExtractWithBlock.__init__ = patched_init
++
++_orig_gv = T.ExtractWithBlock.generic_visit
++def gv(self, node):
++    print("generic_visit node types:", [type(n).__name__ + f"(L{n.lineno})" for n in node])
++    try:
++        return _orig_gv(self, node)
++    except T.BlockException as e:
++        print("  -> BlockException:", e)
++        raise
++T.ExtractWithBlock.generic_visit = gv
++
++import runpy
++runpy.run_path("cache_stuff_solo.py", run_name="__main__")
+diff --git a/wip_repro/probe_anon.py b/wip_repro/probe_anon.py
+new file mode 100644
+index 0000000..4fc7c2d
+--- /dev/null
++++ b/wip_repro/probe_anon.py
+@@ -0,0 +1,38 @@
++import marimo
++from marimo._ast.app import App
++
++def plain():
++    app = App()
++    app._anonymous_file = True
++    @app.cell
++    def one():
++        from marimo._save.save import persistent_cache
++        from tests._save.loaders.mocks import MockLoader
++        with persistent_cache(name="one", _loader=MockLoader()) as cache:
++            Y = 8
++        return
++    try:
++        app.run()
++        print("OK plain")
++    except Exception as e:
++        print("FAIL plain", type(e).__name__, e)
++
++def trailing():
++    app = App()
++    app._anonymous_file = True
++    @app.cell
++    def one():
++        from marimo._save.save import persistent_cache
++        from tests._save.loaders.mocks import MockLoader
++        with persistent_cache(name="one", _loader=MockLoader()) as cache:
++            Y = 8
++        Z = 3
++        return
++    try:
++        app.run()
++        print("OK trailing")
++    except Exception as e:
++        print("FAIL trailing", type(e).__name__, e)
++
++plain()
++trailing()
+diff --git a/wip_repro/probe_sp.py b/wip_repro/probe_sp.py
+new file mode 100644
+index 0000000..2060f27
+--- /dev/null
++++ b/wip_repro/probe_sp.py
+@@ -0,0 +1,16 @@
++import marimo._ast.compiler as C
++
++orig = C.compile_cell
++def patched(code, cell_id, source_position=None, **kw):
++    if source_position is None:
++        import marimo._ast.compiler as CC
++        # emulate
++        pass
++    print("compile_cell:", repr(code[:40]), "cell_id=", cell_id, "sp=", source_position)
++    if source_position is not None:
++        print("   offset:", source_position.lineno, "col", source_position.col_offset)
++    return orig(code, cell_id, source_position=source_position, **kw)
++C.compile_cell = patched
++import marimo._ast.cell_manager as CM
++import marimo._ast.app as A
++import importlib, cache_stuff

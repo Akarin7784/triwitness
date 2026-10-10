@@ -1,0 +1,28 @@
+{
+  "task_id": "swe-leanclient-24",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/integration/test_line_range_diagnostics.py",
+    "tests/tw_repro/test_issue_fullrange_line_filtering.py",
+    "tests/unit/test_utils.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.153163,
+  "tokens_in": 1598291,
+  "tokens_cached": 1565824,
+  "tokens_out": 22345,
+  "peak_calls": 0,
+  "steps": 46,
+  "wall_s": 220.28,
+  "trajectory_id": "baseline-deepseek/swe-leanclient-24/1/trajectory.jsonl",
+  "live": true,
+  "error": null
+}

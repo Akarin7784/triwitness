@@ -1,0 +1,413 @@
+diff --git a/leanclient/file_manager.py b/leanclient/file_manager.py
+index 7becc34..f411384 100644
+--- a/leanclient/file_manager.py
++++ b/leanclient/file_manager.py
+@@ -5,7 +5,12 @@ import urllib.parse
+ import logging
+ from typing import Any
+ 
+-from .utils import DocumentContentChange, apply_changes_to_text, normalize_newlines
++from .utils import (
++    DocumentContentChange,
++    apply_changes_to_text,
++    diagnostic_overlaps_range,
++    normalize_newlines,
++)
+ from .base_client import BaseLeanLSPClient
+ 
+ logger = logging.getLogger(__name__)
+@@ -101,6 +106,9 @@ class FileState:
+     ) -> list[dict]:
+         """Filter diagnostics to only those within the specified line range.
+ 
++        Checks both the display ``range`` and the semantic ``fullRange`` of every
++        diagnostic, since Lean may truncate ``range`` for display purposes.
++
+         Supports open-ended ranges:
+         - start_line only: filter from start_line to EOF
+         - end_line only: filter from beginning to end_line
+@@ -113,11 +121,7 @@ class FileState:
+         range_end = end_line if end_line is not None else float("inf")
+ 
+         for diag in self.diagnostics:
+-            diag_range = diag.get("range", {})
+-            diag_start = diag_range.get("start", {}).get("line", 0)
+-            diag_end = diag_range.get("end", {}).get("line", 0)
+-
+-            if diag_start <= range_end and diag_end >= range_start:
++            if diagnostic_overlaps_range(diag, range_start, range_end):
+                 filtered.append(diag)
+ 
+         return filtered
+diff --git a/leanclient/utils.py b/leanclient/utils.py
+index a05d878..e65087c 100644
+--- a/leanclient/utils.py
++++ b/leanclient/utils.py
+@@ -201,6 +201,66 @@ def apply_changes_to_text(text: str, changes: list[DocumentContentChange]) -> st
+     return text
+ 
+ 
++def diagnostic_line_span(diagnostic: dict) -> tuple[int, int]:
++    """Return the (start_line, end_line) span a diagnostic covers.
++
++    Lean diagnostics carry two range fields:
++
++    - ``range``: the display range, which Lean may truncate.
++    - ``fullRange``: the semantic span of the error.
++
++    Only looking at ``range`` can exclude a diagnostic whose display range was
++    truncated away from the actual error location. Both fields are therefore
++    taken into account (the union of their line spans).
++
++    Args:
++        diagnostic (dict): A single LSP diagnostic.
++
++    Returns:
++        tuple[int, int]: Inclusive start and end line of the diagnostic.
++    """
++    starts: list[int] = []
++    ends: list[int] = []
++
++    for key in ("range", "fullRange", "full_range"):
++        rng = diagnostic.get(key) if isinstance(diagnostic, dict) else None
++        if not isinstance(rng, dict):
++            continue
++
++        start = rng.get("start")
++        if isinstance(start, dict):
++            starts.append(start.get("line", 0))
++        end = rng.get("end")
++        if isinstance(end, dict):
++            ends.append(end.get("line", 0))
++
++    if not starts or not ends:
++        return (0, 0)
++
++    return (min(starts), max(ends))
++
++
++def diagnostic_overlaps_range(
++    diagnostic: dict, start_line: int, end_line: int
++) -> bool:
++    """Check whether a diagnostic overlaps the given inclusive line range.
++
++    Considers both ``range`` (display) and ``fullRange`` (semantic span) so that
++    truncated display ranges cannot hide diagnostics. See
++    :func:`diagnostic_line_span`.
++
++    Args:
++        diagnostic (dict): A single LSP diagnostic.
++        start_line (int): Start line of the queried range (inclusive).
++        end_line (int): End line of the queried range (inclusive).
++
++    Returns:
++        bool: True if the diagnostic overlaps the queried range.
++    """
++    diag_start, diag_end = diagnostic_line_span(diagnostic)
++    return diag_start <= end_line and diag_end >= start_line
++
++
+ def get_diagnostics_in_range(
+     diagnostics: list,
+     start_line: int,
+@@ -208,6 +268,10 @@ def get_diagnostics_in_range(
+ ) -> list:
+     """Find overlapping diagnostics for a range of lines.
+ 
++    Both the display ``range`` and the semantic ``fullRange`` of every
++    diagnostic are checked, since Lean may truncate ``range``. Diagnostics
++    without a ``fullRange`` fall back to their ``range``.
++
+     Args:
+         diagnostics (list): List of diagnostics.
+         start_line (int): Start line.
+@@ -219,8 +283,7 @@ def get_diagnostics_in_range(
+     return [
+         diag
+         for diag in diagnostics
+-        if diag["range"]["start"]["line"] <= end_line
+-        and diag["range"]["end"]["line"] >= start_line
++        if diagnostic_overlaps_range(diag, start_line, end_line)
+     ]
+ 
+ 
+diff --git a/tests/integration/test_line_range_diagnostics.py b/tests/integration/test_line_range_diagnostics.py
+index 970b7f3..0632aeb 100644
+--- a/tests/integration/test_line_range_diagnostics.py
++++ b/tests/integration/test_line_range_diagnostics.py
+@@ -139,6 +139,41 @@ def test_filter_diagnostics_by_range_empty():
+     assert filtered == []
+ 
+ 
++def test_filter_diagnostics_by_range_uses_full_range():
++    """A truncated `range` must not hide a diagnostic whose `fullRange` overlaps."""
++    diagnostics = [
++        # Display range truncated to line 0, error actually at lines 15-16.
++        {
++            "range": {"start": {"line": 0}, "end": {"line": 0}},
++            "fullRange": {"start": {"line": 15}, "end": {"line": 16}},
++            "message": "truncated_range",
++        },
++        # Outside both ranges.
++        {
++            "range": {"start": {"line": 0}, "end": {"line": 1}},
++            "fullRange": {"start": {"line": 1}, "end": {"line": 2}},
++            "message": "before",
++        },
++    ]
++
++    state = FileState(uri="file:///test.lean", content="test", diagnostics=diagnostics)
++    filtered = state.filter_diagnostics_by_range(10, 20)
++
++    assert [d["message"] for d in filtered] == ["truncated_range"]
++
++
++def test_filter_diagnostics_by_range_without_full_range():
++    """Diagnostics without `fullRange` still use `range`."""
++    diagnostics = [
++        {"range": {"start": {"line": 15}, "end": {"line": 15}}, "message": "inside"},
++    ]
++
++    state = FileState(uri="file:///test.lean", content="test", diagnostics=diagnostics)
++    filtered = state.filter_diagnostics_by_range(10, 20)
++
++    assert [d["message"] for d in filtered] == ["inside"]
++
++
+ # ============================================================================
+ # Integration-style tests with mocked file manager
+ # ============================================================================
+diff --git a/tests/tw_repro/test_issue_fullrange_line_filtering.py b/tests/tw_repro/test_issue_fullrange_line_filtering.py
+new file mode 100644
+index 0000000..6271bab
+--- /dev/null
++++ b/tests/tw_repro/test_issue_fullrange_line_filtering.py
+@@ -0,0 +1,171 @@
++"""Reproduction test: line range filtering must consider `fullRange`.
++
++Issue: `get_diagnostics(path, start_line=X, end_line=Y)` can miss errors because
++filtering only uses the `range` field, which Lean may truncate for display
++purposes. Lean diagnostics carry two range fields:
++
++- `range`: display range (may be truncated)
++- `fullRange`: semantic span of the error
++
++Affected functions:
++- `FileState.filter_diagnostics_by_range()` in `file_manager.py`
++- `get_diagnostics_in_range()` in `utils.py`
++
++These tests are pure-Python (no Lean server required).
++"""
++
++import pytest
++
++from leanclient.file_manager import FileState
++from leanclient.utils import get_diagnostics_in_range
++
++
++def _diag(range_lines, message, full_range_lines=None):
++    """Build a diagnostic with a display range and optional fullRange."""
++    diag = {
++        "range": {
++            "start": {"line": range_lines[0], "character": 0},
++            "end": {"line": range_lines[1], "character": 10},
++        },
++        "message": message,
++    }
++    if full_range_lines is not None:
++        diag["fullRange"] = {
++            "start": {"line": full_range_lines[0], "character": 0},
++            "end": {"line": full_range_lines[1], "character": 10},
++        }
++    return diag
++
++
++# ============================================================================
++# FileState.filter_diagnostics_by_range
++# ============================================================================
++
++
++def test_filter_uses_full_range_when_range_is_truncated():
++    """A truncated display range must not hide a diagnostic."""
++    diagnostics = [
++        # Display range truncated to line 0, actual error at lines 15-16.
++        _diag([0, 0], "truncated_display_range", full_range_lines=[15, 16]),
++    ]
++    state = FileState(uri="file:///test.lean", content="test", diagnostics=diagnostics)
++
++    filtered = state.filter_diagnostics_by_range(10, 20)
++
++    assert [d["message"] for d in filtered] == ["truncated_display_range"]
++
++
++def test_filter_excludes_diagnostics_outside_both_ranges():
++    """Diagnostics outside both `range` and `fullRange` stay excluded."""
++    diagnostics = [
++        _diag([0, 2], "before", full_range_lines=[1, 3]),
++        _diag([30, 32], "after", full_range_lines=[35, 40]),
++        _diag([50, 50], "truncated", full_range_lines=[60, 62]),
++    ]
++    state = FileState(uri="file:///test.lean", content="test", diagnostics=diagnostics)
++
++    assert state.filter_diagnostics_by_range(10, 20) == []
++
++
++def test_filter_falls_back_to_range_without_full_range():
++    """Diagnostics without `fullRange` keep working via `range`."""
++    diagnostics = [
++        _diag([5, 5], "before"),
++        _diag([15, 15], "inside"),
++        _diag([25, 25], "after"),
++    ]
++    state = FileState(uri="file:///test.lean", content="test", diagnostics=diagnostics)
++
++    filtered = state.filter_diagnostics_by_range(10, 20)
++
++    assert [d["message"] for d in filtered] == ["inside"]
++
++
++def test_filter_open_ended_ranges_use_full_range():
++    """Open-ended ranges also take `fullRange` into account."""
++    # start_line only: range alone (line 0) would be excluded, fullRange overlaps.
++    state = FileState(
++        uri="file:///test.lean",
++        content="test",
++        diagnostics=[
++            _diag([0, 0], "truncated", full_range_lines=[40, 41]),
++            _diag([0, 0], "irrelevant", full_range_lines=[5, 6]),
++        ],
++    )
++    filtered = state.filter_diagnostics_by_range(30, None)
++    assert [d["message"] for d in filtered] == ["truncated"]
++
++    # end_line only: range alone (line 90) would be excluded, fullRange overlaps.
++    state = FileState(
++        uri="file:///test.lean",
++        content="test",
++        diagnostics=[
++            _diag([90, 90], "truncated", full_range_lines=[5, 6]),
++            _diag([90, 90], "irrelevant", full_range_lines=[80, 81]),
++        ],
++    )
++    filtered = state.filter_diagnostics_by_range(None, 20)
++    assert [d["message"] for d in filtered] == ["truncated"]
++
++
++def test_get_diagnostics_with_range_uses_full_range():
++    """`get_diagnostics` range filtering must not miss truncated diagnostics."""
++    import threading
++
++    from leanclient.file_manager import LSPFileManager
++
++    diagnostics = [
++        _diag([0, 0], "truncated", full_range_lines=[15, 15]),
++        _diag([50, 50], "far_away", full_range_lines=[60, 60]),
++    ]
++    state = FileState(
++        uri="file:///test.lean",
++        content="test",
++        diagnostics=diagnostics,
++        complete=True,
++        current_processing=[],
++        diagnostics_version=0,
++    )
++
++    class _StubManager:
++        def __init__(self):
++            self.opened_files = {"test.lean": state}
++            self._opened_files_lock = threading.Lock()
++
++    result = LSPFileManager.get_diagnostics(
++        _StubManager(), "test.lean", start_line=10, end_line=20
++    )
++
++    assert [d["message"] for d in result] == ["truncated"]
++
++
++# ============================================================================
++# utils.get_diagnostics_in_range
++# ============================================================================
++
++
++def test_get_diagnostics_in_range_uses_full_range():
++    """`get_diagnostics_in_range` must consider `fullRange` too."""
++    diagnostics = [
++        _diag([0, 0], "truncated", full_range_lines=[15, 15]),
++        _diag([50, 50], "far_away", full_range_lines=[60, 60]),
++        _diag([12, 12], "plain_display_range"),
++    ]
++
++    result = get_diagnostics_in_range(diagnostics, 10, 20)
++
++    assert {d["message"] for d in result} == {"truncated", "plain_display_range"}
++
++
++def test_get_diagnostics_in_range_no_overlap():
++    """Nothing overlapping means an empty result."""
++    diagnostics = [
++        _diag([0, 1], "before", full_range_lines=[0, 2]),
++        _diag([50, 51], "after", full_range_lines=[55, 56]),
++    ]
++
++    assert get_diagnostics_in_range(diagnostics, 10, 20) == []
++
++
++if __name__ == "__main__":  # pragma: no cover
++    pytest.main([__file__, "-v"])
+diff --git a/tests/unit/test_utils.py b/tests/unit/test_utils.py
+index 7f4756a..d0a15f2 100644
+--- a/tests/unit/test_utils.py
++++ b/tests/unit/test_utils.py
+@@ -4,6 +4,7 @@ import pytest
+ from leanclient.utils import (
+     apply_changes_to_text,
+     DocumentContentChange,
++    get_diagnostics_in_range,
+     normalize_newlines,
+     _utf16_pos_to_utf8_pos,
+     has_mathlib_dependency,
+@@ -188,6 +189,44 @@ def test_has_mathlib_dependency_without_manifest(tmp_path):
+     assert has_mathlib_dependency(tmp_path) is False
+ 
+ 
++@pytest.mark.unit
++def test_get_diagnostics_in_range_uses_full_range():
++    """Truncated `range` must not hide a diagnostic whose `fullRange` overlaps."""
++    diagnostics = [
++        {
++            "range": {"start": {"line": 0}, "end": {"line": 0}},
++            "fullRange": {"start": {"line": 15}, "end": {"line": 15}},
++            "message": "truncated_range",
++        },
++        {
++            "range": {"start": {"line": 12}, "end": {"line": 12}},
++            "message": "range_only",
++        },
++        {
++            "range": {"start": {"line": 0}, "end": {"line": 1}},
++            "fullRange": {"start": {"line": 1}, "end": {"line": 2}},
++            "message": "before",
++        },
++    ]
++
++    result = get_diagnostics_in_range(diagnostics, 10, 20)
++
++    assert {d["message"] for d in result} == {"truncated_range", "range_only"}
++
++
++@pytest.mark.unit
++def test_get_diagnostics_in_range_empty_result():
++    diagnostics = [
++        {
++            "range": {"start": {"line": 30}, "end": {"line": 31}},
++            "fullRange": {"start": {"line": 35}, "end": {"line": 36}},
++            "message": "after",
++        },
++    ]
++
++    assert get_diagnostics_in_range(diagnostics, 10, 20) == []
++
++
+ @pytest.mark.unit
+ def test_has_mathlib_dependency_without_mathlib(tmp_path):
+     """Test when manifest exists but mathlib is not listed."""

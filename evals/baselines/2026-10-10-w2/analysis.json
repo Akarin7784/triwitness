@@ -1,0 +1,230 @@
+{
+ "test": {
+  "n_tasks": 35,
+  "graded": 33,
+  "infra": 2,
+  "solved": 16,
+  "resolved_at_1": 0.4848,
+  "ci95": [
+   0.3333,
+   0.6667
+  ],
+  "cost_cny": 8.1596,
+  "cny_per_task": 0.2331,
+  "cny_per_resolved": 0.51,
+  "avg_input_tokens": 2135637,
+  "avg_output_tokens": 32979,
+  "cache_hit": 0.972,
+  "false_success": 6,
+  "budget_exhausted": 17
+ },
+ "test/leaderboard": {
+  "n_tasks": 23,
+  "graded": 22,
+  "infra": 1,
+  "solved": 10,
+  "resolved_at_1": 0.4545,
+  "ci95": [
+   0.2727,
+   0.6818
+  ],
+  "cost_cny": 5.3839,
+  "cny_per_task": 0.2341,
+  "cny_per_resolved": 0.5384,
+  "avg_input_tokens": 2179201,
+  "avg_output_tokens": 32800,
+  "cache_hit": 0.9722,
+  "false_success": 3,
+  "budget_exhausted": 12
+ },
+ "test/filtered": {
+  "n_tasks": 12,
+  "graded": 11,
+  "infra": 1,
+  "solved": 6,
+  "resolved_at_1": 0.5455,
+  "ci95": [
+   0.2727,
+   0.8182
+  ],
+  "cost_cny": 2.7757,
+  "cny_per_task": 0.2313,
+  "cny_per_resolved": 0.4626,
+  "avg_input_tokens": 2052139,
+  "avg_output_tokens": 33322,
+  "cache_hit": 0.9717,
+  "false_success": 3,
+  "budget_exhausted": 5
+ },
+ "test/easy": {
+  "n_tasks": 6,
+  "graded": 6,
+  "infra": 0,
+  "solved": 2,
+  "resolved_at_1": 0.3333,
+  "ci95": [
+   0.0,
+   0.6667
+  ],
+  "cost_cny": 1.1558,
+  "cny_per_task": 0.1926,
+  "cny_per_resolved": 0.5779,
+  "avg_input_tokens": 2268852,
+  "avg_output_tokens": 26773,
+  "cache_hit": 0.9819,
+  "false_success": 2,
+  "budget_exhausted": 3
+ },
+ "test/medium": {
+  "n_tasks": 18,
+  "graded": 17,
+  "infra": 1,
+  "solved": 11,
+  "resolved_at_1": 0.6471,
+  "ci95": [
+   0.4118,
+   0.8824
+  ],
+  "cost_cny": 3.8651,
+  "cny_per_task": 0.2147,
+  "cny_per_resolved": 0.3514,
+  "avg_input_tokens": 1913297,
+  "avg_output_tokens": 30141,
+  "cache_hit": 0.9702,
+  "false_success": 2,
+  "budget_exhausted": 7
+ },
+ "test/hard": {
+  "n_tasks": 11,
+  "graded": 10,
+  "infra": 1,
+  "solved": 3,
+  "resolved_at_1": 0.3,
+  "ci95": [
+   0.0,
+   0.6
+  ],
+  "cost_cny": 3.1387,
+  "cny_per_task": 0.2853,
+  "cny_per_resolved": 1.0462,
+  "avg_input_tokens": 2426802,
+  "avg_output_tokens": 41008,
+  "cache_hit": 0.9694,
+  "false_success": 2,
+  "budget_exhausted": 7
+ },
+ "dev": {
+  "n_tasks": 15,
+  "graded": 15,
+  "infra": 0,
+  "solved": 12,
+  "resolved_at_1": 0.8,
+  "ci95": [
+   0.6,
+   1.0
+  ],
+  "cost_cny": 0.8101,
+  "cny_per_task": 0.054,
+  "cny_per_resolved": 0.0675,
+  "avg_input_tokens": 658316,
+  "avg_output_tokens": 6350,
+  "cache_hit": 0.9761,
+  "false_success": 2,
+  "budget_exhausted": 1
+ },
+ "dev/synthetic": {
+  "n_tasks": 5,
+  "graded": 5,
+  "infra": 0,
+  "solved": 5,
+  "resolved_at_1": 1.0,
+  "ci95": [
+   1.0,
+   1.0
+  ],
+  "cost_cny": 0.0499,
+  "cny_per_task": 0.01,
+  "cny_per_resolved": 0.01,
+  "avg_input_tokens": 29009,
+  "avg_output_tokens": 1323,
+  "cache_hit": 0.8551,
+  "false_success": 0,
+  "budget_exhausted": 0
+ },
+ "dev/filtered": {
+  "n_tasks": 10,
+  "graded": 10,
+  "infra": 0,
+  "solved": 7,
+  "resolved_at_1": 0.7,
+  "ci95": [
+   0.4,
+   1.0
+  ],
+  "cost_cny": 0.7602,
+  "cny_per_task": 0.076,
+  "cny_per_resolved": 0.1086,
+  "avg_input_tokens": 972970,
+  "avg_output_tokens": 8864,
+  "cache_hit": 0.9779,
+  "false_success": 2,
+  "budget_exhausted": 1
+ },
+ "dev/easy": {
+  "n_tasks": 8,
+  "graded": 8,
+  "infra": 0,
+  "solved": 7,
+  "resolved_at_1": 0.875,
+  "ci95": [
+   0.625,
+   1.0
+  ],
+  "cost_cny": 0.1935,
+  "cny_per_task": 0.0242,
+  "cny_per_resolved": 0.0276,
+  "avg_input_tokens": 189575,
+  "avg_output_tokens": 2882,
+  "cache_hit": 0.9523,
+  "false_success": 1,
+  "budget_exhausted": 0
+ },
+ "dev/medium": {
+  "n_tasks": 7,
+  "graded": 7,
+  "infra": 0,
+  "solved": 5,
+  "resolved_at_1": 0.7143,
+  "ci95": [
+   0.2857,
+   1.0
+  ],
+  "cost_cny": 0.6166,
+  "cny_per_task": 0.0881,
+  "cny_per_resolved": 0.1233,
+  "avg_input_tokens": 1194021,
+  "avg_output_tokens": 10314,
+  "cache_hit": 0.9804,
+  "false_success": 1,
+  "budget_exhausted": 1
+ },
+ "all50": {
+  "n_tasks": 50,
+  "graded": 48,
+  "infra": 2,
+  "solved": 28,
+  "resolved_at_1": 0.5833,
+  "ci95": [
+   0.4583,
+   0.7083
+  ],
+  "cost_cny": 8.9697,
+  "cny_per_task": 0.1794,
+  "cny_per_resolved": 0.3203,
+  "avg_input_tokens": 1692441,
+  "avg_output_tokens": 24990,
+  "cache_hit": 0.9725,
+  "false_success": 8,
+  "budget_exhausted": 18
+ }
+}

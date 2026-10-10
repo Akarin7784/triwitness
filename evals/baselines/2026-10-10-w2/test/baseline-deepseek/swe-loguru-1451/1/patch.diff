@@ -1,0 +1,177 @@
+diff --git a/CHANGELOG.rst b/CHANGELOG.rst
+index 342d0b0..f8a1063 100644
+--- a/CHANGELOG.rst
++++ b/CHANGELOG.rst
+@@ -15,6 +15,7 @@
+ - Add requirement for ``TERM`` environment variable not to be ``"dumb"`` to enable colorization (`#1287 <https://github.com/Delgan/loguru/pull/1287>`_, thanks `@snosov1 <https://github.com/snosov1>`_).
+ - Make ``logger.catch()`` usable as an asynchronous context manager (`#1084 <https://github.com/Delgan/loguru/issues/1084>`_).
+ - Make ``logger.catch()`` compatible with asynchronous generators (`#1302 <https://github.com/Delgan/loguru/issues/1302>`_).
++- Improve error message reported when a format string references a non-existent log record key, notably by listing the available keys and by suggesting the use of ``logger.bind()`` with ``{extra[key]}``.
+ 
+ `0.7.3`_ (2024-12-06)
+ =====================
+diff --git a/loguru/_handler.py b/loguru/_handler.py
+index d5ef46a..5f0876f 100644
+--- a/loguru/_handler.py
++++ b/loguru/_handler.py
+@@ -20,6 +20,33 @@ def prepare_stripped_format(format_):
+     return colored.strip()
+ 
+ 
++def format_record(precomputed_format, formatter_record):
++    try:
++        return precomputed_format.format_map(formatter_record)
++    except KeyError as error:
++        raise KeyError(_format_key_error_message(error, formatter_record)) from None
++
++
++def _format_key_error_message(error, formatter_record):
++    key = error.args[0] if error.args else None
++
++    available_keys = ", ".join(str(k) for k in formatter_record)
++
++    message = (
++        "Invalid format key: %r. The format string refers to a log record key which does not "
++        "exist. Available record keys are: %s. Extra values can be added to the record with "
++        "'logger.bind(key=value)' and then referenced as '{extra[key]}' in the format string"
++        % (key, available_keys)
++    )
++
++    if isinstance(key, str) and key.isidentifier():
++        message += (
++            " (for example: 'logger.bind(%s=...)' and then '{extra[%s]}')" % (key, key)
++        )
++
++    return message + "."
++
++
+ def memoize(function):
+     return functools.lru_cache(maxsize=64)(function)
+ 
+@@ -158,11 +185,11 @@ class Handler:
+             elif self._is_formatter_dynamic:
+                 if not self._colorize:
+                     precomputed_format = self._memoize_dynamic_format(dynamic_format)
+-                    formatted = precomputed_format.format_map(formatter_record)
++                    formatted = format_record(precomputed_format, formatter_record)
+                 elif colored_message is None:
+                     ansi_level = self._levels_ansi_codes[level_id]
+                     _, precomputed_format = self._memoize_dynamic_format(dynamic_format, ansi_level)
+-                    formatted = precomputed_format.format_map(formatter_record)
++                    formatted = format_record(precomputed_format, formatter_record)
+                 else:
+                     ansi_level = self._levels_ansi_codes[level_id]
+                     formatter, precomputed_format = self._memoize_dynamic_format(
+@@ -172,16 +199,16 @@ class Handler:
+                         record["message"], ansi_level=ansi_level, colored_message=colored_message
+                     )
+                     formatter_record["message"] = coloring_message
+-                    formatted = precomputed_format.format_map(formatter_record)
++                    formatted = format_record(precomputed_format, formatter_record)
+ 
+             else:
+                 if not self._colorize:
+                     precomputed_format = self._decolorized_format
+-                    formatted = precomputed_format.format_map(formatter_record)
++                    formatted = format_record(precomputed_format, formatter_record)
+                 elif colored_message is None:
+                     ansi_level = self._levels_ansi_codes[level_id]
+                     precomputed_format = self._precolorized_formats[level_id]
+-                    formatted = precomputed_format.format_map(formatter_record)
++                    formatted = format_record(precomputed_format, formatter_record)
+                 else:
+                     ansi_level = self._levels_ansi_codes[level_id]
+                     precomputed_format = self._precolorized_formats[level_id]
+@@ -189,7 +216,7 @@ class Handler:
+                         record["message"], ansi_level=ansi_level, colored_message=colored_message
+                     )
+                     formatter_record["message"] = coloring_message
+-                    formatted = precomputed_format.format_map(formatter_record)
++                    formatted = format_record(precomputed_format, formatter_record)
+ 
+             if self._serialize:
+                 formatted = self._serialize_record(formatted, record)
+diff --git a/tests/tw_repro/test_issue_invalid_format_key.py b/tests/tw_repro/test_issue_invalid_format_key.py
+new file mode 100644
+index 0000000..2f3d693
+--- /dev/null
++++ b/tests/tw_repro/test_issue_invalid_format_key.py
+@@ -0,0 +1,78 @@
++import pytest
++
++from loguru import logger
++
++
++def test_missing_format_key_raises_key_error_with_guidance(writer):
++    logger.add(writer, format="{nonexistent}", catch=False)
++
++    with pytest.raises(KeyError) as excinfo:
++        logger.info("Hello world")
++
++    message = str(excinfo.value)
++
++    assert "nonexistent" in message
++    assert "Invalid format key" in message
++    assert "logger.bind(key=value)" in message
++    assert "extra[key]" in message
++    assert writer.read() == ""
++
++
++def test_missing_format_key_diagnostic_with_catch(capsys, writer):
++    logger.add(writer, format="{nonexistent}", catch=True)
++
++    logger.info("Hello world")
++
++    out, err = capsys.readouterr()
++
++    assert out == ""
++    assert writer.read() == ""
++    assert "--- Logging error in Loguru Handler #0 ---" in err
++    assert "Invalid format key: 'nonexistent'" in err
++    assert "logger.bind(key=value)" in err
++    assert "extra[key]" in err
++
++    for key in ("elapsed", "exception", "extra", "file", "level", "message"):
++        assert key in err
++
++
++def test_available_keys_in_raised_error(writer):
++    logger.add(writer, format="{nonexistent}", catch=False)
++
++    with pytest.raises(KeyError) as excinfo:
++        logger.info("Hello world")
++
++    message = str(excinfo.value)
++
++    for key in ("elapsed", "exception", "extra", "file", "level", "message"):
++        assert key in message
++
++
++def test_missing_extra_key_gives_guidance(writer):
++    logger.add(writer, format="{extra[nonexistent]}", catch=False)
++
++    with pytest.raises(KeyError) as excinfo:
++        logger.info("Hello world")
++
++    message = str(excinfo.value)
++
++    assert "nonexistent" in message
++    assert "logger.bind" in message
++    assert "extra[key]" in message
++
++
++def test_format_key_added_by_patcher(writer):
++    def patcher(record):
++        record["custom"] = "patched"
++
++    logger.add(writer, format="{custom} {message}", catch=False)
++    logger.patch(patcher).info("Hello world")
++
++    assert writer.read() == "patched Hello world\n"
++
++
++def test_bind_value_can_be_referenced(writer):
++    logger.add(writer, format="{extra[nonexistent]} {message}", catch=False)
++    logger.bind(nonexistent="bound").info("Hello world")
++
++    assert writer.read() == "bound Hello world\n"

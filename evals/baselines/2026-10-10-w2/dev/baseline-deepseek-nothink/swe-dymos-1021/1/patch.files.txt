@@ -1,0 +1,13 @@
+a/<stdin>_out/.openmdao_out
+a/<stdin>_out/coloring_files/total_coloring.pkl
+a/<stdin>_out/reports/driver_scaling_report.html
+a/<stdin>_out/reports/inputs.html
+a/<stdin>_out/reports/opt_report.html
+a/<stdin>_out/reports/total_coloring.html
+a/__main__2_out/.openmdao_out
+a/__main__2_out/reports/inputs.html
+a/__main___out/.openmdao_out
+a/__main___out/reports/inputs.html
+a/dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py
+a/dymos/transcriptions/pseudospectral/birkhoff.py
+a/tests/tw_repro/test_issue_birkhoff_poly_control.py

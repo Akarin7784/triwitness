@@ -1,0 +1,165 @@
+diff --git a/cyclopts/parameter.py b/cyclopts/parameter.py
+index 8bb86f2..35de9e8 100644
+--- a/cyclopts/parameter.py
++++ b/cyclopts/parameter.py
+@@ -272,9 +272,11 @@ class Parameter:
+ 
+         type_ = resolve_annotated(type_)
+         if is_union(type_):
+-            out = []
++            # ``dict`` is used to preserve ordering while removing duplicates.
++            out = {}
+             for x in get_args(type_):
+-                out.extend(self.get_negatives(x))
++                for negative in self.get_negatives(x):
++                    out[negative] = None
+             return tuple(out)
+ 
+         origin = get_origin(type_)
+diff --git a/tests/tw_repro/test_issue_0000.py b/tests/tw_repro/test_issue_0000.py
+new file mode 100644
+index 0000000..bda18f3
+--- /dev/null
++++ b/tests/tw_repro/test_issue_0000.py
+@@ -0,0 +1,141 @@
++"""Reproduction tests for "Duplicate negative shown in help for a ``bool | None`` parameter".
++
++The issue::
++
++    import cyclopts
++    from typing import Annotated
++
++    app = cyclopts.App()
++
++    @app.default
++    def cmd(
++        *,
++        param: Annotated[bool | None, cyclopts.Parameter(negative="--negative")] = None,
++    ):
++        pass
++
++renders ``--negative`` twice in the ``--help`` page. The same example with a
++plain ``bool`` type only shows it once.
++
++The duplicate originates from :meth:`cyclopts.Parameter.get_negatives`, which
++recurses into every member of a union; both ``bool`` and ``NoneType`` produced
++the same user-provided negative flag.
++"""
++
++from textwrap import dedent
++from typing import Annotated
++
++import pytest
++
++from cyclopts import App, Parameter
++from cyclopts.argument import ArgumentCollection
++from cyclopts.help import create_parameter_help_panel
++from cyclopts.help.formatters import DefaultFormatter
++
++
++@pytest.fixture
++def capture_parameter_panel(console):
++    def inner(cmd):
++        argument_collection = ArgumentCollection._from_callable(cmd, None, parse_docstring=True)
++        with console.capture() as capture:
++            group = argument_collection.groups[0]
++            panel = create_parameter_help_panel(
++                group, argument_collection.filter_by(group=group), "restructuredtext"
++            )
++            rendered = DefaultFormatter()._render_panel(panel, console, console.options)
++            console.print(rendered)
++        return capture.get()
++
++    return inner
++
++
++def test_help_bool_none_negative_not_duplicated(capture_parameter_panel):
++    """The exact minimal example from the issue."""
++
++    def cmd(
++        *,
++        param: Annotated[bool | None, Parameter(negative="--negative")] = None,
++    ):
++        pass
++
++    actual = capture_parameter_panel(cmd)
++    expected = dedent(
++        """\
++        ╭─ Parameters ───────────────────────────────────────────────────────╮
++        │ --param --negative                                                 │
++        ╰────────────────────────────────────────────────────────────────────╯
++        """
++    )
++    assert actual == expected
++    assert actual.count("--negative") == 1
++
++
++def test_help_bool_non_optional_negative_unchanged(capture_parameter_panel):
++    """The plain-``bool`` variant must keep showing exactly one negative flag."""
++
++    def cmd(
++        *,
++        param: Annotated[bool, Parameter(negative="--negative")] = None,
++    ):
++        pass
++
++    actual = capture_parameter_panel(cmd)
++    assert actual.count("--negative") == 1
++
++
++def test_help_end_to_end_bool_none_negative_not_duplicated(console):
++    """Full ``--help`` page example from the issue."""
++    app = App(name="app", result_action="return_value")
++
++    @app.default
++    def cmd(
++        *,
++        param: Annotated[bool | None, Parameter(negative="--negative")] = None,
++    ):
++        pass
++
++    with console.capture() as capture:
++        app(["--help"], console=console)
++
++    actual = capture.get()
++    assert actual.count("--negative") == 1
++
++
++@pytest.mark.parametrize("type_", [bool | None, type(None) | bool])
++def test_get_negatives_optional_bool_deduplicated(type_):
++    """``get_negatives`` must not repeat a user-provided negative flag."""
++    p = Parameter(negative="--negative", name="--param")
++    assert p.get_negatives(type_) == ("--negative",)
++
++
++def test_get_negatives_user_negative_suffix_deduplicated():
++    """A non-hyphen prefixed user negative must also only appear once."""
++    p = Parameter(negative="no-", name="--param")
++    assert p.get_negatives(bool | None) == ("--no-",)
++
++
++def test_get_negatives_union_of_bool_and_iterable_bool_deduplicated():
++    """Distinct union members that generate the same flag should not duplicate."""
++    p = Parameter(negative_bool=("no-", "not-"), name="--param")
++    assert p.get_negatives(bool | list[bool]) == ("--no-param", "--not-param")
++
++
++def test_get_negatives_optional_bool_default_negatives_unchanged():
++    """Default (auto-generated) negatives for ``bool | None`` stay as-is."""
++    p = Parameter(name="--param")
++    assert p.get_negatives(bool | None) == ("--no-param",)
++
++
++def test_optional_bool_custom_negative_parsing(app, assert_parse_args, assert_parse_args_partial):
++    """The deduplicated flag must still parse to ``False``."""
++
++    @app.default
++    def cmd(
++        *,
++        param: Annotated[bool | None, Parameter(negative="--negative")] = None,
++    ):
++        pass
++
++    assert_parse_args(cmd, "--param", param=True)
++    assert_parse_args(cmd, "--negative", param=False)
++    assert_parse_args_partial(cmd, "")

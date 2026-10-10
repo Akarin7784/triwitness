@@ -1,0 +1,430 @@
+diff --git a/docs/source/usage.rst b/docs/source/usage.rst
+index 393874b..d189b21 100644
+--- a/docs/source/usage.rst
++++ b/docs/source/usage.rst
+@@ -391,13 +391,12 @@ a meta class set to :class:`icontract.DBCMeta`.
+ 
+ 	The inheritance from :class:`DBC` or using the meta class :class:`icontract.DBCMeta` is necessary so that
+ 	the contracts are correctly inherited from the parent to the child class. Otherwise, it is undefined
+-	behavior how invariants, preconditions and postconditions will be inherited; most probably breaking
++	behavior how preconditions and postconditions will be inherited; most probably breaking
+ 	the Liskov substitution principle.
+ 
+-	In particular, the contracts are collapsed into lists for efficiency. If your child class does not
+-	inherit from :class:`DBC` or you do not use the meta class :class:`icontract.DBCMeta`, the inherited
+-	contracts in the child class will leak, and thus contracts from the child will be inserted into the
+-	parent class.
++	Mind that the invariants are inherited correctly even without :class:`DBC` and :class:`icontract.DBCMeta`,
++	as the invariants of the child class do not leak into the parent class (nor into the sibling classes)
++	anymore. See `the issue #295 <https://github.com/Parquery/icontract/issues/295>`_.
+ 
+ 	Hence, make sure you always use :class:`DBC` or :class:`icontract.DBCMeta` when dealing with inheritance.
+ 
+diff --git a/icontract/_decorators.py b/icontract/_decorators.py
+index c7b0ecd..3361349 100644
+--- a/icontract/_decorators.py
++++ b/icontract/_decorators.py
+@@ -8,6 +8,7 @@ from typing import (
+     Union,
+     Any,
+     List,
++    Tuple,
+     Type,
+ )  # pylint: disable=unused-import
+ 
+@@ -16,6 +17,35 @@ from icontract._globals import CallableT, ExceptionT, ClassT
+ from icontract._types import Contract, Snapshot, InvariantCheckEvent, Invariant
+ 
+ 
++def _collect_inherited_invariants(
++    cls: type,
++) -> Tuple[List[Invariant], List[Invariant], List[Invariant]]:
++    """
++    Collect the invariants inherited from the direct bases of ``cls`` as new lists.
++
++    The lists are newly created so that adding an invariant to a derived class
++    does not modify the invariants of its base classes (and, consequently,
++    of its sibling classes).
++
++    :param cls: class whose inherited invariants we want to collect
++    :return: tuple of
++        (all inherited invariants, inherited invariants on call, inherited invariants on setting attributes)
++    """
++    invariants = []  # type: List[Invariant]
++    invariants_on_call = []  # type: List[Invariant]
++    invariants_on_setattr = []  # type: List[Invariant]
++
++    for base in cls.__bases__:
++        if not hasattr(base, "__invariants__"):
++            continue
++
++        invariants.extend(getattr(base, "__invariants__"))
++        invariants_on_call.extend(getattr(base, "__invariants_on_call__", []))
++        invariants_on_setattr.extend(getattr(base, "__invariants_on_setattr__", []))
++
++    return invariants, invariants_on_call, invariants_on_setattr
++
++
+ class require:  # pylint: disable=invalid-name
+     """
+     Decorate a function with a precondition.
+@@ -475,34 +505,51 @@ class invariant:  # pylint: disable=invalid-name
+             self._invariant is not None
+         ), "self._contract must be set if the contract was enabled."
+ 
+-        if not hasattr(cls, "__invariants__"):
+-            invariants = []  # type: List[Invariant]
+-            setattr(cls, "__invariants__", invariants)
+-
+-            invariants_on_call = []  # type: List[Invariant]
+-            setattr(cls, "__invariants_on_call__", invariants_on_call)
++        # (Marko Ristin, 2024-05-04):
++        # We need to make sure that the invariants of the base classes are not modified when we add
++        # an invariant to the derived class. Otherwise, the invariant of the derived class "leaks"
++        # into its base classes, and, consequently, into its sibling classes.
++        # See https://github.com/Parquery/icontract/issues/295.
++        if (
++            "__invariants__" not in cls.__dict__
++            or "__invariants_on_call__" not in cls.__dict__
++            or "__invariants_on_setattr__" not in cls.__dict__
++        ):
++            (
++                inherited_invariants,
++                inherited_invariants_on_call,
++                inherited_invariants_on_setattr,
++            ) = _collect_inherited_invariants(cls=cls)
++
++            if "__invariants__" not in cls.__dict__:
++                setattr(cls, "__invariants__", inherited_invariants)
++
++            if "__invariants_on_call__" not in cls.__dict__:
++                setattr(cls, "__invariants_on_call__", inherited_invariants_on_call)
++
++            if "__invariants_on_setattr__" not in cls.__dict__:
++                setattr(
++                    cls, "__invariants_on_setattr__", inherited_invariants_on_setattr
++                )
+ 
+-            invariants_on_setattr = []  # type: List[Invariant]
+-            setattr(cls, "__invariants_on_setattr__", invariants_on_setattr)
+-        else:
+-            invariants = getattr(cls, "__invariants__")
+-            assert isinstance(
+-                invariants, list
+-            ), "Expected invariants of class {} to be a list, but got: {}".format(
+-                cls, type(invariants)
+-            )
++        invariants = cls.__dict__["__invariants__"]
++        assert isinstance(
++            invariants, list
++        ), "Expected invariants of class {} to be a list, but got: {}".format(
++            cls, type(invariants)
++        )
+ 
+-            invariants_on_call = getattr(cls, "__invariants_on_call__")
+-            assert isinstance(invariants_on_call, list), (
+-                "Expected invariants on call of class {} to be a list, "
+-                "but got: {}".format(cls, type(invariants_on_call))
+-            )
++        invariants_on_call = cls.__dict__["__invariants_on_call__"]
++        assert isinstance(invariants_on_call, list), (
++            "Expected invariants on call of class {} to be a list, "
++            "but got: {}".format(cls, type(invariants_on_call))
++        )
+ 
+-            invariants_on_setattr = getattr(cls, "__invariants_on_setattr__")
+-            assert isinstance(invariants_on_setattr, list), (
+-                "Expected invariants on call of class {} to be a list, "
+-                "but got: {}".format(cls, type(invariants_on_setattr))
+-            )
++        invariants_on_setattr = cls.__dict__["__invariants_on_setattr__"]
++        assert isinstance(invariants_on_setattr, list), (
++            "Expected invariants on call of class {} to be a list, "
++            "but got: {}".format(cls, type(invariants_on_setattr))
++        )
+ 
+         invariants.append(self._invariant)
+ 
+diff --git a/tests/test_inheritance_invariant.py b/tests/test_inheritance_invariant.py
+index 9672d6c..6898130 100644
+--- a/tests/test_inheritance_invariant.py
++++ b/tests/test_inheritance_invariant.py
+@@ -266,6 +266,62 @@ class TestViolation(unittest.TestCase):
+             tests.error.wo_mandatory_location(str(violation_error)),
+         )
+ 
++    def test_subclass_does_not_affect_the_base_class(self) -> None:
++        # NOTE (mristin):
++        # Regression test for:
++        # https://github.com/Parquery/icontract/issues/295
++        #
++        # The invariants of the derived class must not be checked on the instances
++        # of the base class, and they must not leak into the sibling classes.
++        @icontract.invariant(lambda self: self.x > 0)
++        class A(icontract.DBC):
++            def __init__(self) -> None:
++                self.x = 10
++
++            def func(self) -> None:
++                self.x = 100
++
++            def __repr__(self) -> str:
++                return "instance of A"
++
++        @icontract.invariant(lambda self: self.x < 50)
++        class B(A):
++            def __repr__(self) -> str:
++                return "instance of B"
++
++        @icontract.invariant(lambda self: self.x < 1000)
++        class C(A):
++            def __repr__(self) -> str:
++                return "instance of C"
++
++        # No ``ViolationError`` is expected on the base class, although the derived
++        # classes introduced new invariants.
++        a = A()
++        a.func()
++
++        # The sibling class ``C`` must not be affected by the invariants of ``B``.
++        c = C()
++        c.func()
++
++        # The derived class ``B`` has to satisfy its own invariants, though.
++        b = B()
++        violation_error = None  # type: Optional[icontract.ViolationError]
++        try:
++            b.func()
++        except icontract.ViolationError as err:
++            violation_error = err
++
++        self.assertIsNotNone(violation_error)
++        self.assertEqual(
++            textwrap.dedent(
++                """\
++                self.x < 50:
++                self was instance of B
++                self.x was 100"""
++            ),
++            tests.error.wo_mandatory_location(str(violation_error)),
++        )
++
+ 
+ class TestProperty(unittest.TestCase):
+     def test_inherited_getter(self) -> None:
+diff --git a/tests/test_invariant.py b/tests/test_invariant.py
+index e40ecd9..2a7067e 100644
+--- a/tests/test_invariant.py
++++ b/tests/test_invariant.py
+@@ -910,7 +910,7 @@ class TestInvalid(unittest.TestCase):
+         )
+ 
+     # noinspection PyUnusedLocal
+-    def test_subclasses_affect_the_base_class_if_no_DBC(self) -> None:
++    def test_subclasses_do_not_affect_the_base_class_if_no_DBC(self) -> None:
+         # NOTE (mristin):
+         # This is a regression test for:
+         # https://github.com/Parquery/icontract/issues/295
+@@ -918,34 +918,31 @@ class TestInvalid(unittest.TestCase):
+         # where the invariants of the derived class erroneously "slipped into"
+         # the base class when DBC or DBCMeta were not set in the ``Base`` class.
+ 
+-        # NOTE (mristin):
+-        # ``Base`` class should either inherit from ``icontract.DBC`` or have
+-        # the metaclass ``icontract.DBCMeta``. If it does not, the invariants will be
+-        # copied by reference, thus allowing the ``Derived`` class to mess them up.
+         @icontract.invariant(lambda: True)
+         class Base:
+             def __repr__(self) -> str:
+                 return "an instance of {}".format(self.__class__.__name__)
+ 
+-        # NOTE (mristin):
+-        # We do not want to instantiate a derived class, but this is a regression test.
+         @icontract.invariant(lambda: False)
+-        class Derived(Base):  # pylint: disable=unused-variable
++        class Derived(Base):
+             pass
+ 
+         # NOTE (mristin):
+-        # This causes a ``ViolationError``, as invariants are copied by reference if
+-        # the ``Base`` does not inherit from ``icontract.DBC`` or uses
+-        # ``icontract.DBCMeta`` as the metaclass.
++        # The base class must not be affected by the invariants of the derived class.
++        _ = Base()
++
++        # NOTE (mristin):
++        # The derived class, however, has to satisfy both the invariants of the base class
++        # and its own invariants.
+         violation_error = None  # type: Optional[icontract.ViolationError]
+         try:
+-            _ = Base()
++            _ = Derived()
+         except icontract.ViolationError as err:
+             violation_error = err
+ 
+         self.assertIsNotNone(violation_error)
+         self.assertEqual(
+-            textwrap.dedent("""False: self was an instance of Base"""),
++            textwrap.dedent("""False: self was an instance of Derived"""),
+             tests.error.wo_mandatory_location(str(violation_error)),
+         )
+ 
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..0f44ffa
+--- /dev/null
++++ b/tests/tw_repro/__init__.py
+@@ -0,0 +1 @@
++"""Reproduction tests for the issues reported on GitHub."""
+diff --git a/tests/tw_repro/test_issue_295.py b/tests/tw_repro/test_issue_295.py
+new file mode 100644
+index 0000000..b40f0f6
+--- /dev/null
++++ b/tests/tw_repro/test_issue_295.py
+@@ -0,0 +1,146 @@
++# pylint: disable=missing-docstring
++# pylint: disable=invalid-name
++import textwrap
++import unittest
++from typing import Optional
++
++import icontract
++import tests.error
++
++
++class TestInvariantOfSubclassDoesNotApplyToBase(unittest.TestCase):
++    """
++    Reproduce https://github.com/Parquery/icontract/issues/295.
++
++    The invariants of a derived class must not be checked on the instances of its base
++    class, and they must not leak into the sibling classes.
++
++    The original example from the issue:
++
++    .. code-block:: python
++
++        from icontract import invariant
++
++        @invariant(lambda: True)
++        class Base:
++            pass
++
++        @invariant(lambda: False)
++        class Derived(Base):
++            pass
++
++        Base()  # ViolationError
++    """
++
++    def test_base_class_is_not_affected(self) -> None:
++        # NOTE: this is the exact example from the issue.
++        @icontract.invariant(lambda: True)
++        class Base:
++            pass
++
++        # pylint: disable=unused-variable
++        @icontract.invariant(lambda: False)
++        class Derived(Base):
++            pass
++
++        # The base class must not violate the invariant of the derived class.
++        _ = Base()
++
++        # The derived class has to satisfy its own invariant, though.
++        violation_error = None  # type: Optional[icontract.ViolationError]
++        try:
++            _ = Derived()
++        except icontract.ViolationError as err:
++            violation_error = err
++
++        self.assertIsNotNone(violation_error)
++        self.assertIn("False", str(violation_error))
++        self.assertIn("Derived", str(violation_error))
++
++    def test_sibling_class_is_not_affected(self) -> None:
++        @icontract.invariant(lambda self: self.x > 0)
++        class Base:
++            def __init__(self) -> None:
++                self.x = 10
++
++            def func(self) -> None:
++                self.x = 100
++
++            def __repr__(self) -> str:
++                return "instance of Base"
++
++        # pylint: disable=unused-variable
++        @icontract.invariant(lambda self: self.x < 50)
++        class Derived(Base):
++            def __repr__(self) -> str:
++                return "instance of Derived"
++
++        @icontract.invariant(lambda self: self.x < 1000)
++        class Sibling(Base):
++            def __repr__(self) -> str:
++                return "instance of Sibling"
++
++        # No invariant of the derived class may leak into the base class.
++        base = Base()
++        base.func()
++
++        # Nor may it leak into the sibling class.
++        sibling = Sibling()
++        sibling.func()
++
++        # The derived class needs to satisfy both the invariant of the base class
++        # and its own invariant.
++        derived = Derived()
++        violation_error = None  # type: Optional[icontract.ViolationError]
++        try:
++            derived.func()
++        except icontract.ViolationError as err:
++            violation_error = err
++
++        self.assertIsNotNone(violation_error)
++        self.assertEqual(
++            textwrap.dedent(
++                """\
++                self.x < 50:
++                self was instance of Derived
++                self.x was 100"""
++            ),
++            tests.error.wo_mandatory_location(str(violation_error)),
++        )
++
++    def test_base_class_with_metaclass_is_not_affected(self) -> None:
++        # The invariants are collapsed in ``icontract.DBCMeta``. Make sure that
++        # the invariants of the base class are not messed up there either.
++        @icontract.invariant(lambda: True)
++        class Base(icontract.DBC):
++            def method(self) -> None:
++                pass
++
++            def __repr__(self) -> str:
++                return "instance of {}".format(self.__class__.__name__)
++
++        # pylint: disable=unused-variable
++        @icontract.invariant(lambda: False)
++        class Derived(Base):
++            pass
++
++        # Neither the initialization nor the method calls of the base class
++        # must be affected by the invariant of the derived class.
++        base = Base()
++        base.method()
++
++        violation_error = None  # type: Optional[icontract.ViolationError]
++        try:
++            Derived().method()
++        except icontract.ViolationError as err:
++            violation_error = err
++
++        self.assertIsNotNone(violation_error)
++        self.assertEqual(
++            "False: self was instance of Derived",
++            tests.error.wo_mandatory_location(str(violation_error)),
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

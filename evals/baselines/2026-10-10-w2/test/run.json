@@ -1,0 +1,59 @@
+{
+  "started_at": "2026-10-10T18:12:24.008992+08:00",
+  "live": true,
+  "estimate_cny": 8.0393,
+  "max_total_cny": 30.0,
+  "configs": [
+    {
+      "name": "baseline-deepseek",
+      "agent": "llm",
+      "executor": {
+        "model": "deepseek-flash",
+        "thinking": true,
+        "effort": "high"
+      },
+      "attempts": 1,
+      "budget_profile": "eval",
+      "harness": "configs/harness/baseline.yaml",
+      "category": "baseline"
+    }
+  ],
+  "tasks": [
+    "swe-bedrock-agentcore-sdk-python-279_interface",
+    "swe-canvasapi-716",
+    "swe-ccflow-24",
+    "swe-cfn-python-lint-4368",
+    "swe-conan-19750",
+    "swe-copier-2646",
+    "swe-crosstl-98",
+    "swe-cyclopts-633",
+    "swe-cyclopts-701",
+    "swe-django-components-489",
+    "swe-faststream-2701",
+    "swe-fromager-1106",
+    "swe-huggingface_hub-4056",
+    "swe-icontract-297",
+    "swe-isort-2491",
+    "swe-leanclient-24",
+    "swe-llm-sandbox-101",
+    "swe-loguru-1306",
+    "swe-loguru-1451",
+    "swe-marimo-6819",
+    "swe-marimo-8401",
+    "swe-microsoft-authentication-library-for-python-730",
+    "swe-openhands-resolver-123",
+    "swe-opensandbox-816",
+    "swe-param-1117",
+    "swe-ro-crate-py-193",
+    "swe-scrapy-7351_interface",
+    "swe-spikeinterface-3047",
+    "swe-spikeinterface-3778",
+    "swe-sqlfluff-7615",
+    "swe-sqlglot-7457",
+    "swe-sqlglot-7479",
+    "swe-stumpy-1015",
+    "swe-ultraplot-696",
+    "swe-xcp_d-1433"
+  ],
+  "peak_flag": null
+}
