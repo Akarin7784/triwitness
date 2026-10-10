@@ -8,14 +8,17 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 
-def test_subprocess_bridge_round_trip(tmp_path: Path) -> None:
+
+@pytest.mark.parametrize("extra", [[], ["--max-cost", "0.5", "--permission-mode", "ask", "--backend", "none"]])
+def test_subprocess_bridge_round_trip(tmp_path: Path, extra: list[str]) -> None:
     home = tmp_path / "home"
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "TW_DEMO_DELAY_S": "0",
            "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}  # fmt: skip
     env.pop("TW_HOME", None)
     p = subprocess.Popen(
-        [sys.executable, "-m", "triwitness", "run", "--repo", str(tmp_path / "verses"), "--demo", "--jsonl"],
+        [sys.executable, "-m", "triwitness", "run", "--repo", str(tmp_path / "verses"), "--demo", "--jsonl", *extra],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, text=True,
         encoding="utf-8",
     )  # fmt: skip

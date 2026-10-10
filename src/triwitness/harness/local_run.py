@@ -23,7 +23,7 @@ from triwitness.harness.approvals import Approver, PermissionGate
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import RouterLike
 from triwitness.harness.run import TaskResult, run_task
-from triwitness.permissions.config import load_policy
+from triwitness.permissions.config import SessionOverrides, load_policy
 from triwitness.permissions.engine import PermissionEngine
 from triwitness.sandbox.base import SandboxBackend, SandboxSpec, select_backend
 from triwitness.telemetry.trajectory import TrajectoryEvent, TrajectoryRecorder
@@ -64,6 +64,7 @@ async def run_local(
     harness: HarnessConfig | None = None,
     verify: VerifyPref = "off",
     on_event: Callable[[TrajectoryEvent], None] | None = None,
+    session: SessionOverrides | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -78,7 +79,8 @@ async def run_local(
     branch: str | None = None
     result: TaskResult | None = None
     try:
-        policy = load_policy(repo, backend=choice.backend.name, interactive=approver is not None, home=home)
+        policy = load_policy(repo, backend=choice.backend.name, interactive=approver is not None, home=home,
+                             session=session)  # fmt: skip
         engine = PermissionEngine(policy, workspace=sb.spec.workdir)
         gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo)
         shell = getattr(getattr(sb, "shell", None), "kind", "bash")
