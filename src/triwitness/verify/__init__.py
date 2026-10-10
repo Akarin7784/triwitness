@@ -8,5 +8,6 @@
 """
 
 from triwitness.verify.claim import ClaimVerdict, verify_claim
+from triwitness.verify.evidence import build_evidence, render_pr
 
-__all__ = ["ClaimVerdict", "verify_claim"]
+__all__ = ["ClaimVerdict", "build_evidence", "render_pr", "verify_claim"]

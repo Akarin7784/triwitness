@@ -315,9 +315,13 @@ class Evidence(_Model):
     root_cause: str
     repro_status: Literal["reproduced", "not_applicable", "inconclusive", "failed"]
     repro_path: str | None = None
+    base_ref: str | None = None  # 复现对照的基线提交
+    clean_env: Literal["verified", "unverified"] = "verified"  # 无沙箱 → unverified（ADR-0005 §3.3）
+    unverified_reason: str | None = None
     test_runs: list[TestRun]
     static_checks: dict[str, Literal["pass", "fail", "skipped"]]
     anticheat_flags: list[str] = Field(default_factory=list)
+    claim_flags: list[str] = Field(default_factory=list)  # 完成声明审计（verify.claim）
     verdict: Literal["pass", "fail", "inconclusive"]
     verifier_model: str
     criteria_results: dict[str, Literal["met", "unmet", "unknown"]]
