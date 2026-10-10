@@ -1,0 +1,17 @@
+# 元 / 百万 token；来源与核对日期见每条。W1-11 实现 price_call 时读取本文件。
+verified_at: "2026-10-10"
+timezone: Asia/Shanghai
+deepseek:
+  source: https://api-docs.deepseek.com/zh-cn/quick_start/pricing
+  peak_windows:            # 周一至周五，不含法定节假日（节假日表：configs/cn_holidays.yaml，W1-11 补齐）
+    - ["09:00", "12:00"]
+    - ["14:00", "18:00"]
+  models:
+    deepseek-flash:
+      aliases: [deepseek-v4.1-flash, deepseek-v4-flash]
+      peak:     {cache_hit: 0.04, cache_miss: 2.0, output: 8.0}
+      off_peak: {cache_hit: 0.02, cache_miss: 1.0, output: 4.0}
+    deepseek-v4-pro:
+      banned: true          # ADR-0002：永不路由；仅保留价格对照
+      peak:     {cache_hit: 0.30, cache_miss: 9.0, output: 27.0}
+      off_peak: {cache_hit: 0.15, cache_miss: 4.5, output: 13.5}

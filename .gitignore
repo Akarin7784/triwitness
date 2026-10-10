@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+*.egg-info/
+build/
+dist/
+
+# 密钥与本地配置（永不提交）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# 运行产物
+evals/results/*
+!evals/results/.gitkeep
+.tw/
+.triwitness/
+*.log
+
+# 桌面端构建产物（安装包只在需要时本地构建，不进仓库）
+apps/desktop/node_modules/
+apps/desktop/dist/
+apps/desktop/release/
+apps/desktop/tools/node_modules/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+*.exe
+*.msi
+
+# 编辑器
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store

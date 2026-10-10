@@ -1,0 +1,16 @@
+# ADR-0002：v0.1 单厂商模式；只允许 deepseek-flash，永不 deepseek-v4-pro
+transport: direct              # direct | litellm（W2-01）
+vendor_policy: single_vendor   # single_vendor | cross_vendor（资金到位后）
+allowed_models:
+  - deepseek-flash
+  - deepseek-v4.1-flash
+  - deepseek-v4-flash          # 旧别名，按 Flash 计费
+denied_models:
+  - deepseek-v4-pro
+roles:
+  executor:   {model: deepseek/deepseek-flash, thinking: true, effort: high}
+  planner:    {model: deepseek/deepseek-flash, thinking: true}
+  verifier:   {model: deepseek/deepseek-flash, thinking: true}
+  reviewer:   {model: deepseek/deepseek-flash, thinking: true, effort: max, variant: adversarial}
+  summarizer: {model: deepseek/deepseek-flash, thinking: false}
+  classifier: {model: deepseek/deepseek-flash, thinking: false}

@@ -1,0 +1,6 @@
+# RunConfig（ADR-0001 #9）：tw eval --config configs/runs/baseline-deepseek.yaml
+name: baseline-deepseek
+harness: configs/harness/baseline.yaml   # W2-15 建立
+executor: {model: deepseek-flash, thinking: true, effort: high}
+attempts: 1
+budget_profile: eval
