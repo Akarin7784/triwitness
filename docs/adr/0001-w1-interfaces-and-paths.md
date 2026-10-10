@@ -15,8 +15,9 @@
 | 7 | `.tw/` 位置 | 沙箱内 `/workspace/.tw/`（在 `/workspace/repo` 之外），放 `NOTES.md` 与 `outputs/`；仓库内的 `.tw/` 一律排除出 diff |
 | 8 | 复现测试路径 | 目标仓库内 `tests/tw_repro/test_issue_<n>.py`；没有 Issue 号时用 task_id 短码 |
 | 9 | `--config` | `tw eval --config configs/runs/<name>.yaml`；RunConfig 再引用 `configs/harness/*.yaml` |
-| 12 | 许可证 | Apache-2.0 |
-| 15 | 模型 ID | 配置用别名 `deepseek-flash`；运行时记录 `served_model`；Leaderboard 展示快照名 |
+| 12 | 许可证 | Apache-2.0（Eva 在同一指令中确认） |
+
+> 待确认（不属于本 ADR 的采纳范围）：NOTES #15 模型 ID —— 建议配置用别名 `deepseek-flash`、运行时记录 `served_model`、Leaderboard 展示快照名。
 
 ## 影响与回写
 - specs/002（#7）、003（#2 #3 #4、Budget）、004（#6 #9）、005（#5、事件格式）已在“变更记录”中注明。
