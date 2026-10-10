@@ -15,12 +15,12 @@ concurrency:
 jobs:
   python:
     name: python (ruff / pyright / pytest)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       TW_LLM_MODE: replay   # 单测与 CI 永不真调模型（ADR-0002）
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
       - name: Install
@@ -34,13 +34,13 @@ jobs:
 
   desktop:
     name: desktop (oxlint / vitest / tsc / vite build, no installer)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: apps/desktop
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
