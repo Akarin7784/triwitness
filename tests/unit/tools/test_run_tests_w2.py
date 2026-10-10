@@ -1,3 +1,4 @@
+# pyright: reportOptionalSubscript=false
 """W2-10：run_tests 的 mode（full / related / selected）、rerun_failed、junit 解析与只保留失败段。"""
 
 from __future__ import annotations
@@ -15,10 +16,13 @@ JUNIT = "/workspace/.tw/junit.xml"
 XML_FAIL = b"""<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="1"
 skipped="1" tests="4"><testcase classname="tests.test_a" name="test_ok" file="tests/test_a.py"/>
 <testcase classname="tests.test_a.TestX" name="test_bad[1]" file="tests/test_a.py"><failure message="assert 1 == 2">"""
-XML_FAIL += b"x = 1\n" * 2000 + b"""E       assert 1 == 2
+XML_FAIL += (
+    b"x = 1\n" * 2000
+    + b"""E       assert 1 == 2
 tests/test_a.py:9: AssertionError</failure></testcase>
 <testcase classname="tests.test_b" name="test_skip" file="tests/test_b.py"><skipped message="s"/></testcase>
 <testcase classname="tests.test_b" name="test_ok2" file="tests/test_b.py"/></testsuite></testsuites>"""
+)
 NOISE = "collected 4 items\n" + "tests/test_a.py ....\n" * 3000 + "FAILED tests/test_a.py::TestX::test_bad[1]\n"
 
 
@@ -26,7 +30,7 @@ def tool_ctx(sb: FakeSandbox, **kw: object) -> ToolContext:
     return ToolContext(sandbox=sb, test_command="python -m pytest -q", **kw)  # type: ignore[arg-type]
 
 
-def sandbox(xml: bytes | None, code: int = 1, files: dict[str, str] | None = None) -> FakeSandbox:
+def sandbox(xml: bytes | None, code: int = 1, files: dict[str, str | bytes] | None = None) -> FakeSandbox:
     def handler(cmd: str, sb: FakeSandbox) -> ExecResult:
         if cmd.startswith("find "):  # collect_files 在沙箱里用 find 列文件
             out = "\n".join(sorted(k for k in sb.files if not k.startswith("/")))
@@ -73,7 +77,7 @@ async def test_selected_and_full_modes() -> None:
 
 
 async def test_related_mode_infers_tests_from_changes() -> None:
-    files = {"src/pkg/slug.py": "x = 1\n", "tests/test_slug.py": "", "tests/test_other.py": ""}
+    files: dict[str, str | bytes] = {"src/pkg/slug.py": "x = 1\n", "tests/test_slug.py": "", "tests/test_other.py": ""}
     sb = sandbox(XML_FAIL, files=files)
     c = tool_ctx(sb)
     r = await run(c, mode="related")

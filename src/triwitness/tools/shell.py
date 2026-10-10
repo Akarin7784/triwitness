@@ -115,7 +115,9 @@ class RunTestsParams(BaseModel):
         default="full",
         description="full=全部；related=与改动文件相关的测试（按命名约定推断，找不到则全部）；selected=只跑 selector",
     )
-    selector: str | None = Field(default=None, description="selected 模式：测试选择器，如 tests/test_x.py::test_y 或 -k 表达式")
+    selector: str | None = Field(
+        default=None, description="selected 模式：测试选择器，如 tests/test_x.py::test_y 或 -k 表达式"
+    )
     rerun_failed: bool = Field(default=False, description="只重跑上一次失败的用例（忽略 mode / selector）")
 
 

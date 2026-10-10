@@ -101,7 +101,9 @@ def render_failures(rep: JunitReport) -> str:
         if f.detail:
             out.append(f.detail)
     if len(rep.failures) > MAX_FAILURES_SHOWN:
-        out.append(f"…另有 {len(rep.failures) - MAX_FAILURES_SHOWN} 个失败未展开（可用 selected / rerun_failed 单独跑）")
+        out.append(
+            f"…另有 {len(rep.failures) - MAX_FAILURES_SHOWN} 个失败未展开（可用 selected / rerun_failed 单独跑）"
+        )
     return "\n".join(out)
 
 
