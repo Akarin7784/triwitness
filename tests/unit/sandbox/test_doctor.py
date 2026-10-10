@@ -31,6 +31,12 @@ def test_docker_installed_but_stopped() -> None:
     assert r.docker.state == "stopped" and not r.sandbox_ready and r.recommended == []
 
 
+def test_docker_permission_denied_even_with_rc0() -> None:
+    run, _ = fake({"docker": (0, b"permission denied while trying to connect to the Docker daemon socket")})
+    r = detect(platform="linux", which=lambda n: n, run=run)
+    assert r.docker.state == "stopped" and "权限" in r.docker.detail and not r.sandbox_ready
+
+
 def test_windows_nothing_installed() -> None:
     run, calls = fake({})
     r = detect(platform="win32", which=lambda n: "C:/winget.exe" if n == "winget" else None, run=run)

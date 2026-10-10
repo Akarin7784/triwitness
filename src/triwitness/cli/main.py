@@ -40,7 +40,12 @@ def doctor(as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（�
         return
     for name, c in (("Docker", r.docker), ("WSL2", r.wsl), ("winget", r.winget)):
         typer.echo(f"{name:7} {c.state:8} {c.detail}{f'（{c.version}）' if c.version else ''}")
-    typer.echo("沙箱就绪" if r.sandbox_ready else f"建议安装：{' / '.join(r.recommended) or '启动 Docker Desktop'}")
+    if r.sandbox_ready:
+        typer.echo("沙箱就绪")
+    elif r.recommended:
+        typer.echo(f"建议安装：{' / '.join(r.recommended)}（tw sandbox install <名称> --plan 查看命令）")
+    else:
+        typer.echo(f"沙箱未就绪：{r.docker.detail}")
 
 
 @app.command("run")

@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -73,8 +74,11 @@ def detect(*, platform: str | None = None, which: Which = shutil.which, run: Run
     else:
         rc, out = run(["docker", "info", "--format", "{{.ServerVersion}}"], 15)
         text = decode(out).strip()
-        if rc == 0 and text:
-            docker = Component("ok", "Docker 守护进程在运行", text.splitlines()[0][:40])
+        first = text.splitlines()[0].strip() if text else ""
+        if rc == 0 and re.match(r"^\d+\.\d+", first):
+            docker = Component("ok", "Docker 守护进程在运行", first[:40])
+        elif "permission denied" in text.lower():
+            docker = Component("stopped", "没有权限访问 Docker（Linux：把当前用户加入 docker 组）")
         else:
             docker = Component("stopped", "已安装，但守护进程未运行（请启动 Docker Desktop）")
     if not win:
