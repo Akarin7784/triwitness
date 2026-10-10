@@ -2,42 +2,94 @@
 
 > 不按日历排期，做完一项记一项。
 
-## UI-21 · Claude 交互对齐（第 1 轮已完成，第 2 轮进行中）
+## UI-21 · Claude 交互对齐（已完成：两轮）
 
 原则（Eva）：操作方式与 Claude Desktop 一一对应，不缺也不多；差异只放在审美和复验功能上。没做的功能也放真入口，点了提示“即将推出”。逐项状态见 `docs/claude-parity.md`。
 
-**核心（a3f9c7b，提交名误写成 UI-20；UI-20 实为勇士模式 UI）**
+> 提交名更正：核心流式提交 a3f9c7b 和桌面端第 1 轮 710dbf5 的提交说明误写成 “UI-20”，它们属于 **UI-21**；UI-20 是勇士模式 UI。历史不改写，只在这里和任务表里更正。
+
+### 第 1 轮：输入框、模型选择、流式消息（a3f9c7b / 710dbf5）
+
+**核心**
 - tw-events/1 新增 `model_delta` / `reasoning_delta`（call_id、index、text），属于增量字段，v 仍为 1
 - `model_call` / `tool_call` 带 call_id；`tool_call` 带参数和输出预览（已脱敏）
 - DeepSeek 流式：`stream=true` 解析 SSE，再拼回非流式形状，所以回放缓存的 key 不变；已经输出一部分后不重试。只用合成 SSE 夹具测试，没有真实调用
 - 回放命中时，把缓存回复切成 delta 输出；DeltaWriter 按 50ms / 48 字合并
 - 只在 `tw run --jsonl`（桌面端）时写 delta，eval 不写
 - `--model` / `--thinking`：关 / 低 / 中 / 高 → thinking + reasoning_effort（low / high / max），只接受 deepseek-flash
-- 演示适配器按强度流式输出思考和正文（含列表和代码块）
 
-**桌面端（710dbf5）**
-- 输入框：自动增高，Enter 发送，Shift+Enter 换行，输入法安全，每个会话单独保存草稿；底部依次是 + 菜单（各项为占位）、仓库签、模型选择、发送 / 停止 / 语音（弹簧切换），Esc 停止
-- 模型选择：DeepSeek Flash 可选；通义千问、智谱 GLM 灰显“稍后”；不出现 v4-pro。思考强度是子菜单（照 Claude 的 Effort）。选择会保存，并经 tw-bridge 传给核心（Rust 和开发桥两侧都做白名单）
-- 流式消息：rAF 平滑显示，新字淡入，柔和光标；Markdown（列表、表格、代码块带复制）；思考块边想边流，结束后折叠为“思考了 N 秒”；工具调用是可展开的紧凑行，与正文交错
-- 滚动：默认贴底；向上滚时暂停，并出现“回到底部”
-- 消息操作：复制可用；重试、赞 / 踩、编辑后重发为占位
-- 动画用 framer-motion 弹簧，整体包在 `MotionConfig reducedMotion="user"` 里
+**桌面端**
+- 输入框：自动增高，Enter 发送，Shift+Enter 换行，输入法安全，每个会话单独保存草稿；+ 菜单（各项为占位）、仓库签、模型选择、发送 / 停止 / 语音
+- 模型选择：只有 DeepSeek Flash 可选；通义千问、智谱 GLM 灰显“稍后”；不出现 v4-pro。思考强度是子菜单（照 Claude 的 Effort）
+- 流式消息：新字淡入，柔和光标；Markdown（代码块带复制）；思考块折叠为“思考了 N 秒”；工具调用是可展开的紧凑行
+- 滚动贴底；向上滚时暂停，并出现“回到底部”
 
-**和 UI-09 的偏差**
-- 对话区改为实时显示，不再跟笔；右侧书写推流和角色点仍跟笔
+### 第 2 轮：设置、侧栏、消息操作、快捷键（b3d20d0 / f35b741）
+
+**设置**（Ctrl+,，左侧分区导航，改动即时保存）
+- 常规：主题浅色 / 跟随系统 / 深色（深色是“灯下读书”配色，只覆盖 CSS 变量）；对话字体宋体 / 黑体 / 系统；字号四档，只作用于对话区；语言只有简体中文，English 灰显
+- 个人资料：称呼、偏好，只存在本机（还没注入提示词）
+- 模型：默认模型、思考强度、运行方式；**API 密钥**存系统凭据库（Rust `keyring`：Windows 凭据管理器 / macOS 钥匙串 / Linux 密钥环）。前端只能写入、清除、查询是否已设置，拿不到明文；真实模式启动核心时把密钥注入子进程的 `DEEPSEEK_API_KEY`。浏览器预览里显示“仅桌面应用”
+- 预算：单任务上限 ¥0.10–1.00，只能调低；“高峰也允许真实调用”开关只影响真实模式；高峰闸门图；账本仍是 mock
+- 权限：plan / ask / auto_edit / auto / full_access（无沙箱时禁选）；红色的“无限制（勇士模式）”需要两步确认（勾选 + 输入“我了解风险”），只对下一个任务生效，从不落盘，任务运行时对话区顶部有常驻红色横幅；内置规则只读列表（拒绝 54 / 询问 38），“添加规则”为占位
+- 沙箱：后端 自动 / Docker / 本机；一键安装 Docker、启用 WSL2 为占位（UI-19）
+- 连接器、隐私为占位；关于：版本、快捷键入口
+
+**设置接到核心**：每次起任务，把设置作为本次任务的选择传给 `tw run`
+- 参数：`--backend`、`--max-cost`、`--permission-mode`、`--confirm-unrestricted`、`--allow-peak`
+- 白名单三处一致：Rust `choice_args`、`src/bridge/choices.ts`（开发桥和前端共用）、核心 CLI 再校验一次
+- 核心侧的约束：`--max-cost` 只能调低，不超过 `Budget.for_run()`；权限模式走 session 层；勇士模式只在交互运行（`--jsonl`）中、带确认短语时才开启，scope=task；`load_policy` 仍然做最终检查
+
+**侧栏**
+- 新会话、搜索（Ctrl+K 面板：方向键、回车）、会话、项目（占位）、作品（占位）
+- 星标分组和近期分组
+- 每个会话的 … 菜单：星标、重命名、加入项目（占位）、删除。重命名和删除都有对话框；删除时会停掉仍在运行的任务
+- 收起侧栏（Ctrl+Shift+S）：变成图标窄栏，宽度用弹簧过渡
+- 底部用户菜单：设置、快捷键、帮助（占位）、关于
+
+**消息操作**
+- 重试、编辑后重发是真功能：在同一会话里起一个新任务，作为新版本，用 ‹ n / m › 切换
+  - 编辑产生的版本显示在用户消息下，重试产生的显示在回复操作条上，与 Claude 一致
+  - 版本不会单独出现在侧栏
+- 赞 / 踩可以附一段文字，只存在本机；再点一次取消
+
+**快捷键**：照 Claude 的整套做，Ctrl+/ 打开快捷键列表
+- 会话：新会话 Ctrl+Shift+O、搜索 Ctrl+K、收起侧栏 Ctrl+Shift+S、下 / 上一个会话 Ctrl+Shift+] / [
+- 对话：停止 Esc、聚焦输入框 Shift+Esc、复制最后一条回复 Ctrl+Shift+C、添加文件 Ctrl+U（占位）
+- 菜单：设置 Ctrl+,、模型菜单 Ctrl+Shift+I、思考强度 Ctrl+Shift+E
+- macOS 上显示 ⌘ ⇧
+- 防护层改成只取消浏览器默认动作、不拦截冒泡，所以 Ctrl+U、Ctrl+Shift+C/I 能用作应用快捷键（release 版里 WebView2 的浏览器快捷键在原生层已关）
+
+**顶部**：会话标题下拉（星标 / 重命名 / 加入项目（占位）/ 删除）；分享按钮下的复制链接、导出 Markdown、导出 PDF 都是占位。+ 菜单新增“风格”（占位）
+
+**动画**：对话框、菜单、侧栏宽度、分区切换、选中滑块、开关、单选点都用弹簧；整体包在 `MotionConfig reducedMotion="user"` 里
+
+**和 UI-09 的偏差**（第 1 轮起）
+- 对话区实时显示，不跟笔；右侧书写推流和角色点仍跟笔
+- 切换版本后，右侧推流从头写
 
 **验证**
-- vitest 56 项通过（新增 turns、prefs、streamText 测试；turns 用真实核心录下的 `__fixtures__/demo-stream.jsonl`）
-- lint / check:events / build 通过；`cargo xwin check --tests` 通过（含 `choices_are_whitelisted`）
-- `tools/shoot-chat.mjs` 全部通过；`tools/shoot-live.mjs` 18/18 通过
-- Python 侧：新增 test_stream（9 项）、test_deltas 和 bridge 流式测试；ruff / pyright / pytest 全部通过
-- 截图（docs/）：`composer-model-picker.png`、`composer-plus-menu.png`、`thinking-streaming.png`、`streaming-mid-message.png`、`chat-tool-rows.png`、`chat-result.png`
+- vitest 68 项通过。新增 choices（白名单）、chats（重命名 / 星标 / 版本 / 反馈）、shortcuts（全表）、rules（解析真实规则文件）测试，prefs 测试补了坏值回退和勇士模式不落盘
+- lint / check:events / build 通过
+- `cargo xwin check --tests` 通过（新增 `secrets.rs` 和 Choices 白名单测试；本机缺 webkit，Rust 单测只做了编译检查）
+- Python 侧：`tests/unit/cli/test_run_overrides.py`；bridge 子进程测试加了一组带覆盖参数的运行；ruff / format / pyright / pytest 全部通过
+- e2e 全部通过：
+  - `tools/shoot-ui21.mjs`：设置九个分区、勇士模式两步确认、深色主题、Ctrl+/ 和 Ctrl+K、侧栏星标 / 重命名 / 删除 / 收起、标题下拉、分享占位、踩、复制最后一条、重试 2/2、单任务上限 ¥0.50 传到核心、编辑后重发 3/3、切回 2/3、其余快捷键；页面没有报错
+  - `shoot-chat.mjs` 19/19，`shoot-live.mjs` 18/18
+- `tools/test-guards.mjs`：第 1 轮之前就有一项失败（“右键 UI 空白处无菜单”，点击坐标落在了输入框上），其余通过；侧栏选择器已更新
+- 截图（docs/）
+  - 第 1 轮：`composer-model-picker.png`、`composer-plus-menu.png`、`thinking-streaming.png`、`streaming-mid-message.png`、`chat-tool-rows.png`、`chat-result.png`
+  - 第 2 轮：`settings-general.png`、`settings-general-dark.png`、`settings-model.png`、`settings-budget.png`、`settings-permissions.png`、`settings-unrestricted-dialog.png`、`settings-sandbox.png`、`settings-about.png`、`sidebar-chat-menu.png`、`sidebar-collapsed.png`、`search-palette.png`、`shortcuts.png`、`title-menu.png`、`edit-message.png`、`version-nav.png`
+- 全程 ¥0，没有重建安装包
 
-**第 2 轮**
-- 设置分区：常规、模型（API Key 存系统钥匙串）、预算、权限（含红色无限制）、沙箱、关于
-- 侧栏：搜索 Ctrl+K、重命名 / 删除 / 星标、收起
-- 重试和编辑后重发做成真功能
-- 快捷键和快捷键列表
+**还没做**（占位或 todo，见对齐清单）
+- 文件 / 图片附件、截图、网页搜索、深度研究、技能、连接器、插件、风格、语音
+- 项目、作品（Artifacts）面板、分享 / 导出、Chat / Cowork
+- 英文界面
+- 用户自定义规则编辑
+- Docker / WSL2 一键安装（UI-19）
+- 个人资料注入提示词
+- 勇士模式横幅改为由 `mode_changed` 事件驱动（UI-20 剩余部分）
 
 ## UI-10 · 桌面端驱动真实核心（已完成）
 
