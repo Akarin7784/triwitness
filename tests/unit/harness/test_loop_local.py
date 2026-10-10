@@ -13,7 +13,7 @@ from triwitness.harness.events import EventEmitter
 from triwitness.harness.loop import AgentLoop
 from triwitness.harness.testing import FakeRouter, call, say
 from triwitness.sandbox.base import SandboxSpec
-from triwitness.sandbox.local import LocalSandboxBackend
+from triwitness.sandbox.local import LocalSandbox, LocalSandboxBackend
 from triwitness.tools import ToolContext, ToolRegistry, default_tools
 
 SECRET = "sk-live-0123456789abcdef0123456789abcdef"
@@ -37,6 +37,7 @@ async def test_loop_on_local_worktree_unrestricted(tmp_path: Path, monkeypatch: 
     git(repo, "add", "-A")
     git(repo, "commit", "-qm", "init")
     sb = await LocalSandboxBackend(home=tmp_path / "home").create(SandboxSpec(repo=repo, run_id="r_e2e"))
+    assert isinstance(sb, LocalSandbox)
     test_cmd = f'"{Path(sys.executable).as_posix()}" -m pytest -q -p no:cacheprovider'
 
     fin = {
@@ -55,7 +56,7 @@ async def test_loop_on_local_worktree_unrestricted(tmp_path: Path, monkeypatch: 
     loop = AgentLoop(
         FakeRouter(script), ToolRegistry(default_tools()), system_prompt="s", budget=Budget(), emitter=em
     )  # 无权限门 = unrestricted 等效
-    out = await loop.run("x", ToolContext(sandbox=sb, test_command=test_cmd, run_id="r_e2e"))
+    out = await loop.run("x", ToolContext(sandbox=sb, test_command=test_cmd, run_id="r_e2e", tw_dir=str(sb.tw_dir)))
     try:
         assert out.status == "finished"
         env_out = next(m for m in loop.messages if m.role == "tool").content or ""

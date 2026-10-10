@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -51,8 +52,9 @@ def test_subset_and_missing_task(tmp_path: Path) -> None:
 def test_test_suite_requires_allow_test() -> None:
     from triwitness.cli.main import app
 
-    r = CliRunner().invoke(app, ["eval", "run", "--suite", "test", "--agent", "null"])
-    assert r.exit_code != 0 and "--allow-test" in r.output
+    r = CliRunner().invoke(app, ["eval", "run", "--suite", "test", "--agent", "null"], env={"NO_COLOR": "1"})
+    plain = re.sub(r"\x1b\[[0-9;]*m|[\s│╭╮╰╯─]", "", r.output)  # rich 面板会上色、折行
+    assert r.exit_code != 0 and "--allow-test" in plain
 
 
 @pytest.mark.skipif(not (SUITES / "test.yaml").exists(), reason="切分尚未生成")
