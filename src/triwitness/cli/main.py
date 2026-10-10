@@ -68,6 +68,7 @@ def run_cmd(
     typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl）")
 
 
+DEFAULT_RESULTS_DIR = Path("evals/results")
 eval_app = typer.Typer(add_completion=False, no_args_is_help=True, help="评测")
 app.add_typer(eval_app, name="eval")
 
@@ -77,15 +78,31 @@ def eval_estimate(
     tasks: int = typer.Option(10, help="任务数"),
     configs: int = typer.Option(1, help="配置数"),
     attempts: int = typer.Option(1, help="每配置尝试次数"),
-    avg_input: int = typer.Option(800_000, help="每任务平均输入 token（含缓存命中）"),
-    avg_output: int = typer.Option(20_000, help="每任务平均输出 token"),
-    hit_rate: float = typer.Option(0.9, help="缓存命中率"),
+    avg_input: int | None = typer.Option(None, help="每任务平均输入 token（含缓存命中）；默认取历史，否则 W1 先验"),
+    avg_output: int | None = typer.Option(None, help="每任务平均输出 token；默认同上"),
+    hit_rate: float | None = typer.Option(None, help="缓存命中率；默认取历史实测，没有历史用 0.9"),
+    results: Annotated[Path, typer.Option(help="历史结果目录（读 live 的 result.json）")] = DEFAULT_RESULTS_DIR,
+    history: bool = typer.Option(True, "--history/--no-history", help="用历史平均用量与实测命中率"),
 ) -> None:
     """估算一次评测的花费（空闲价 / 高峰价），并显示当前闸门状态。不调用 API。"""
     from datetime import UTC, datetime
 
+    from triwitness.eval.runner import DEFAULT_AVG_INPUT, DEFAULT_AVG_OUTPUT, historical_usage
     from triwitness.llm.gate import estimate_run
     from triwitness.llm.pricing import is_peak, next_off_peak, to_shanghai
+
+    h = historical_usage(results) if history else None
+    if h:
+        typer.echo(
+            f"历史：{h.n} 次 live 任务，平均输入 {h.avg_input_tokens:,} / 输出 {h.avg_output_tokens:,}，"
+            f"命中率 {h.cache_hit_rate:.0%}，实际 ¥{h.avg_cost_cny:.4f}/任务"
+        )
+    else:
+        why = "没有历史 live 结果" if history else "未用历史（--no-history）"
+        typer.echo(f"{why}：用 W1 先验（输入 800K / 输出 20K / 命中 90%），显式参数优先")
+    avg_input = avg_input or (h.avg_input_tokens if h else DEFAULT_AVG_INPUT)
+    avg_output = avg_output or (h.avg_output_tokens if h else DEFAULT_AVG_OUTPUT)
+    hit_rate = hit_rate if hit_rate is not None else (h.cache_hit_rate if h else 0.9)
 
     e = estimate_run(
         tasks=tasks,

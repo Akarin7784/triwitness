@@ -52,7 +52,7 @@ def test_estimate_peak_is_double() -> None:
 
 def test_cli_eval_estimate() -> None:
     r = CliRunner().invoke(
-        app, ["eval", "estimate", "--tasks", "10", "--avg-input", "1000000", "--avg-output", "10000"]
+        app, ["eval", "estimate", "--tasks", "10", "--avg-input", "1000000", "--avg-output", "10000", "--no-history"]
     )
     assert r.exit_code == 0, r.output
     assert "空闲价 ¥1.5800" in r.output and "高峰价 ¥3.1600" in r.output

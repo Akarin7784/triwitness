@@ -134,7 +134,7 @@ async def test_ac5_report_matches_results(tmp_path: Path, tasks: list[EvalTask])
     assert rows["scripted"].cost_per_resolved == pytest.approx(0.004)
     assert rows["scripted"].cache_hit_rate == pytest.approx(0.95)
     md = (out / "report.md").read_text(encoding="utf-8")
-    for col in ("Resolved@1", "解决/总数", "总成本", "平均每任务", "每解决任务", "平均步数", "平均耗时", "虚假成功",
+    for col in ("Resolved@1", "解决/有效", "总成本", "平均每任务", "每解决任务", "平均步数", "平均耗时", "虚假成功",
                 "缓存命中"):  # fmt: skip
         assert col in md
     assert "tamper-agent" in md and "虚假成功（声称修好" in md

@@ -133,6 +133,40 @@ def historical_avg_cost(results_root: Path) -> float | None:
     return sum(costs) / len(costs) if costs else None
 
 
+@dataclass(frozen=True)
+class UsageHistory:
+    """历史 live 结果的每任务平均用量（`tw eval estimate` 用；W1 校准值是没有历史时的先验）。"""
+
+    n: int
+    avg_input_tokens: int
+    avg_output_tokens: int
+    cache_hit_rate: float
+    avg_cost_cny: float
+
+
+def historical_usage(results_root: Path) -> UsageHistory | None:
+    rows: list[dict[str, Any]] = []
+    if results_root.is_dir():
+        for p in results_root.glob("*/*/*/*/result.json"):
+            try:
+                r = json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if r.get("agent") == "llm" and r.get("live") and r.get("tokens_in", 0) > 0:
+                rows.append(r)
+    if not rows:
+        return None
+    n = len(rows)
+    tin = sum(int(r["tokens_in"]) for r in rows)
+    return UsageHistory(
+        n=n,
+        avg_input_tokens=round(tin / n),
+        avg_output_tokens=round(sum(int(r.get("tokens_out", 0)) for r in rows) / n),
+        cache_hit_rate=round(sum(int(r.get("tokens_cached", 0)) for r in rows) / tin, 4),
+        avg_cost_cny=round(sum(float(r.get("cost_cny", 0.0)) for r in rows) / n, 4),
+    )
+
+
 def default_per_task_estimate() -> float:
     return estimate_run(tasks=1, avg_input_tokens=DEFAULT_AVG_INPUT, avg_output_tokens=DEFAULT_AVG_OUTPUT).off_peak_cny
 
@@ -313,7 +347,9 @@ __all__ = [
     "Job",
     "RunConfig",
     "RunSummary",
+    "UsageHistory",
     "default_per_task_estimate",
     "historical_avg_cost",
+    "historical_usage",
     "run_stamp",
 ]
