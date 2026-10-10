@@ -39,3 +39,12 @@ set -a; source deploy/langfuse/.env; set +a                             # 之后
 
 - compose 文件来自上游 langfuse/langfuse（MIT），改动：端口只绑 127.0.0.1、口令全部来自 .env、`LANGFUSE_INIT_*` 无头初始化（组织 / 项目 / 密钥 / 本地用户自动创建）。
 - 资源：Langfuse v4 = web + worker + Postgres + ClickHouse + Redis + MinIO，约 3–4 GB 内存。不用时 `docker compose ... down`（加 `-v` 清数据）。
+
+## 4. 验证结果（2026-10-10，Langfuse 4.56.0 自托管）
+
+![Langfuse trace tree](../images/langfuse-trace-tree.png)
+
+- `smoke`：golden 轨迹 → OTLP → Langfuse，13 个 observation：`tw.task`（SPAN）→ `invoke_agent executor`（AGENT）→ 5 × `chat deepseek-flash`（GENERATION，带 input/output tokens 与 model）+ 6 × 工具（TOOL）；失败的 `run_tests` 显示为 Error。树结构存于 `evals/fixtures/langfuse_trace_tree.json`。
+- v4 的差异：默认 events_only 模式，旧的 `/api/public/traces` 返回 404，只能用 `/api/public/v2/observations?traceId=…`；类型按 `gen_ai.operation.name` 映射，TOOL 的名字会去掉 `execute_tool ` 前缀。
+- 排障：web 报 `P1001: Can't reach database server at postgres:5432`（DNS 能解析但 TCP 超时）= 主机上残留的 iptables-legacy `FORWARD DROP` 把 compose 网桥的容器互访丢了。只放行该网桥内部流量即可：
+  `sudo iptables-legacy -I DOCKER-USER -i br-<网络 id 前 12 位> -o br-<同上> -j ACCEPT`（`docker network ls` 查 `tw-langfuse_default` 的 id）。

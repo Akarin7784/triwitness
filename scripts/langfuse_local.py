@@ -88,6 +88,7 @@ def cmd_smoke() -> None:
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     from triwitness.telemetry.otel import OtelBridge
     from triwitness.telemetry.trajectory import Trajectory
@@ -108,37 +109,36 @@ def cmd_smoke() -> None:
                                 headers={"Authorization": "Basic " + auth.decode()})  # fmt: skip
     provider = TracerProvider(resource=Resource.create({"service.name": "triwitness"}))
     provider.add_span_processor(SimpleSpanProcessor(exporter))
+    local = InMemorySpanExporter()  # 只为拿到本次 trace_id
+    provider.add_span_processor(SimpleSpanProcessor(local))
     bridge = OtelBridge(provider)
-    events = Trajectory.read_events(GOLDEN)
-    for ev in events:
+    for ev in Trajectory.read_events(GOLDEN):
         bridge.observe(ev)
     provider.shutdown()
-    trace_id = None
+    root_span = next(s for s in local.get_finished_spans() if s.name == "tw.task")
+    trace_id = format(root_span.context.trace_id, "032x")  # pyright: ignore[reportOptionalMemberAccess]
+    # Langfuse v4（events_only）只有 /api/public/v2/observations；摄入是异步的（worker → ClickHouse）
     obs: list[dict] = []
-    for _ in range(40):  # 摄入是异步的（worker → ClickHouse）
-        traces = api(env, "/api/public/traces?limit=20").get("data", [])
-        hit = [t for t in traces if t.get("name") == "tw.task"]
-        if hit:
-            trace_id = hit[0]["id"]
-            obs = api(env, f"/api/public/traces/{trace_id}").get("observations", [])
-            if len(obs) >= 10:
-                break
+    for _ in range(40):
+        obs = api(env, f"/api/public/v2/observations?limit=100&traceId={trace_id}").get("data", [])
+        if len(obs) >= 13:
+            break
         time.sleep(3)
-    if trace_id is None:
-        raise SystemExit("Langfuse 里没找到 tw.task trace")
+    if not obs:
+        raise SystemExit(f"Langfuse 里没找到 trace {trace_id}")
     by_id = {o["id"]: o for o in obs}
-    names = sorted(o["name"] for o in obs)
     agent = next(o for o in obs if o["name"] == "invoke_agent executor")
     root = by_id.get(agent.get("parentObservationId") or "")
     children = [o for o in obs if o.get("parentObservationId") == agent["id"]]
-    chats = [o for o in children if o["name"].startswith("chat ")]
-    tools = [o for o in children if o["name"].startswith("execute_tool ")]
+    # v4 按 gen_ai.operation.name 映射类型：chat → GENERATION、invoke_agent → AGENT、execute_tool → TOOL（名字去掉前缀）
+    chats = [o for o in children if o["type"] == "GENERATION"]
+    tools = [o for o in children if o["type"] == "TOOL"]
     print(f"trace {trace_id}：{len(obs)} 个 observation；root={root and root['name']}；"
-          f"agent 下 chat {len(chats)} 个、execute_tool {len(tools)} 个")  # fmt: skip
-    assert root is not None and root["name"] == "tw.task", names
-    assert len(chats) == 5 and len(tools) == 6, names
+          f"agent 下 GENERATION {len(chats)} 个、TOOL {len(tools)} 个")  # fmt: skip
+    assert root is not None and root["name"] == "tw.task" and agent["type"] == "AGENT", obs
+    assert len(chats) == 5 and len(tools) == 6, sorted((o["type"], o["name"]) for o in obs)
     out = ROOT / "evals" / "fixtures" / "langfuse_trace_tree.json"
-    tree = {"trace_name": "tw.task", "children": {"invoke_agent executor": sorted(o["name"] for o in children)}}
+    tree = {"root": "tw.task", "invoke_agent executor": sorted(f"{o['type']} {o['name']}" for o in children)}
     out.write_text(json.dumps(tree, ensure_ascii=False, indent=1) + "\n")
     (ROOT / "deploy" / "langfuse" / ".last_trace").write_text(trace_id)
     print("AC4 树结构校验通过：tw.task → invoke_agent executor → chat / execute_tool")

@@ -1,0 +1,16 @@
+{
+ "root": "tw.task",
+ "invoke_agent executor": [
+  "GENERATION chat deepseek-flash",
+  "GENERATION chat deepseek-flash",
+  "GENERATION chat deepseek-flash",
+  "GENERATION chat deepseek-flash",
+  "GENERATION chat deepseek-flash",
+  "TOOL edit_file",
+  "TOOL finish",
+  "TOOL list_files",
+  "TOOL read_file",
+  "TOOL run_tests",
+  "TOOL run_tests"
+ ]
+}
