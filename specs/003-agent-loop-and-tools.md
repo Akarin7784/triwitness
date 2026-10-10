@@ -164,13 +164,13 @@ while True:
 
 ## 6. 验收标准
 
-- [ ] AC1：用"脚本化假模型"（按预设顺序返回工具调用）跑通 read → edit → run_tests → finish，产生 `finished`，步数正确。
-- [ ] AC2：`ToolRegistry.schemas()` 输出稳定（两次调用逐字节相同）；每个工具的 schema 都通过 JSON Schema 校验。
-- [ ] AC3：参数类型错误时返回 `ok=False` 且 content 中包含字段名和期望类型。
-- [ ] AC4：`edit_file` 在 0 次 / 2 次匹配时都返回可操作的错误提示。
-- [ ] AC5：假模型连续 3 次相同 `bash` 调用 → 插入提醒；持续重复 → 最终 `stuck`。
-- [ ] AC6：`Budget()` 默认值与 ADR-0002 一致；`max_cost_cny=0.01` 时，第一次模型调用后即 `budget_exhausted`。
-- [ ] AC7：`finish(tests_passed=True)` 而最近一次 `run_tests` 失败 → 被拒绝。
+- [x] AC1：用"脚本化假模型"（按预设顺序返回工具调用）跑通 read → edit → run_tests → finish，产生 `finished`，步数正确。
+- [x] AC2：`ToolRegistry.schemas()` 输出稳定（两次调用逐字节相同）；每个工具的 schema 都通过 JSON Schema 校验。
+- [x] AC3：参数类型错误时返回 `ok=False` 且 content 中包含字段名和期望类型。
+- [x] AC4：`edit_file` 在 0 次 / 2 次匹配时都返回可操作的错误提示。
+- [x] AC5：假模型连续 3 次相同 `bash` 调用 → 插入提醒；持续重复 → 最终 `stuck`。
+- [x] AC6：`Budget()` 默认值与 ADR-0002 一致；`max_cost_cny=0.01` 时，第一次模型调用后即 `budget_exhausted`。
+- [x] AC7：`finish(tests_passed=True)` 而最近一次 `run_tests` 失败 → 被拒绝。
 - [ ] AC8：（集成 + 真实模型）只在 DeepSeek 空闲时段，在 `evals/tasks/dev/001-*` 上用 deepseek-flash 跑通并通过隐藏测试（允许重试 3 次中至少 1 次成功）。
 
 ## 7. 测试计划

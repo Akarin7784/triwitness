@@ -114,11 +114,11 @@ class CostReport(BaseModel):
 
 - [x] AC1：用 FakeRouter 跑一个 5 步任务，JSONL 中事件 `seq` 连续、种类正确，能用 `Trajectory.load` 重建出相同的消息列表。
 - [x] AC2：进程在第 3 步被杀，JSONL 至少包含前 2 步的完整事件（每行都是合法 JSON）。
-- [ ] AC3：`CostReport` 的总额等于各 `model_call` 事件 `cost_cny` 之和（误差 < 0.0001）；缓存命中率计算正确。
+- [x] AC3：`CostReport` 的总额等于各 `model_call` 事件 `cost_cny` 之和（误差 < 0.0001）；缓存命中率计算正确。
 - [ ] AC4：配置 Langfuse 后，一个任务在 Langfuse 中显示为一棵 trace 树：task → agent → chat / execute_tool（手动验证，截图放进 docs）。
 - [ ] AC5：未配置 OTel 端点时，运行不报错、不阻塞。
 - [ ] AC6：导出文件中不包含任何 `sk-`、`ghp_` 前缀的字符串和宿主机 home 路径（单测用注入的假密钥验证）。
-- [ ] AC7：PR 账单 Markdown 渲染快照测试通过。
+- [x] AC7：PR 账单 Markdown 渲染快照测试通过。
 
 ## 7. 测试计划
 

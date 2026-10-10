@@ -191,6 +191,39 @@ def eval_report(run_dir: Annotated[Path, typer.Argument(help="evals/results/<时
     typer.echo(render_markdown(write_report(run_dir)))
 
 
+budget_app = typer.Typer(add_completion=False, help="预算看板（本地账本）")
+app.add_typer(budget_app, name="budget")
+
+
+@budget_app.callback(invoke_without_command=True)
+def budget_show(
+    ctx: typer.Context,
+    md: Annotated[bool, typer.Option("--md", help="输出 Markdown（每周预算检查用）")] = False,
+) -> None:
+    """已花 / 信封 / 剩余、燃烧速度与耗尽日期、缓存命中率。只读本地账本，不联网。"""
+    if ctx.invoked_subcommand is not None:
+        return
+    from triwitness.cost.dashboard import budget_view, render_budget_markdown
+    from triwitness.cost.ledger import GlobalLedger
+
+    text = render_budget_markdown(budget_view(GlobalLedger()))
+    typer.echo(text if md else text.replace("**", ""))
+
+
+@budget_app.command("sync")
+def budget_sync() -> None:
+    """调 DeepSeek /user/balance 与本地账本对账（不调模型、不花钱；key 只放请求头，不打印）。"""
+    import asyncio
+
+    from triwitness.cost.dashboard import fetch_balance, parse_balance
+    from triwitness.cost.ledger import GlobalLedger
+
+    led = GlobalLedger()
+    b = parse_balance(asyncio.run(fetch_balance()), led.spent())
+    typer.echo(f"DeepSeek 余额 {b.currency} {b.total_balance:.2f}（赠送 {b.granted:.2f}｜充值 {b.topped_up:.2f}）")
+    typer.echo(f"本地账本累计已花 ¥{b.ledger_spent:.4f}；余额变化与账本不符时请检查是否有账本外的调用")
+
+
 sandbox_app = typer.Typer(add_completion=False, no_args_is_help=True, help="沙箱")
 app.add_typer(sandbox_app, name="sandbox")
 
