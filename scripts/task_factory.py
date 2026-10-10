@@ -189,21 +189,23 @@ def build_one(cand: dict, row: dict, staging: str) -> dict:
     t0 = time.monotonic()
     rec = _build_one(cand, row, staging)
     # 磁盘：每个任务做完就删镜像（tag 是内容哈希，评测时按需重建；rmi 连带删掉未被共享的父层）。
-    # 不在这里 prune：旧构建器的中间层是悬空镜像，并发 prune 会删掉别的构建正在用的层
+    # 不能无条件 prune：旧构建器的中间层是悬空镜像，并发 prune 会删掉别的构建正在用的层
     # （2026-10-10 第一次批量构建把共享盘写满：BuildKit 缓存实际占用远大于 `docker system df` 的数字）
     if rec.get("image"):
         _sh(["docker", "rmi", "-f", rec["image"]], 120)
+    # 旧构建器（vfs 存储驱动）每层都是全量拷贝：只清 1 小时前的悬空层（单阶段构建超时 25 分钟，不会误删在建的层）
+    _sh(["docker", "image", "prune", "-f", "--filter", "until=60m"], 300)
     return rec | {"seconds": round(time.monotonic() - t0)}
 
 
 def _build_one(cand: dict, row: dict, staging: str) -> dict:
     """两阶段构建 + validate（空 Agent 0 / 参考解 1）+ 各再跑 2 次判 flaky。返回记录（含失败原因）。"""
     sys.path.insert(0, str(ROOT / "scripts"))
+    import docker
     import import_swe_rebench as imp
 
     from triwitness.eval.task import load_task
     from triwitness.eval.validate import run_phase, validate_sync
-    from triwitness.sandbox.docker import _client
 
     rec = {"instance_id": cand["instance_id"], "source": cand["source"], "created_at": cand["created_at"]}
     row = dict(row, _dataset=cand["source"].split(":")[0], _license=cand["license"])
@@ -229,7 +231,7 @@ def _build_one(cand: dict, row: dict, staging: str) -> dict:
         code, log = _sh(["docker", "build", "-q", "--force-rm", "-t", task.image_tag(), str(d / "environment")], 1500)
         if code != 0:
             return rec | {"status": "build_failed", "log": log}
-        client = _client()
+        client = docker.from_env(timeout=180)  # 并发构建时 dockerd 很慢，默认 30s 会 ReadTimeout
         rep = validate_sync(task, client)
         rec["image"] = rep.image
         missing = sorted(set(NOT_FOUND.findall(rep.with_solution.log_tail)))
