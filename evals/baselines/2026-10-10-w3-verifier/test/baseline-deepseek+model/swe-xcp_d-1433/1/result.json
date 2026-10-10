@@ -1,0 +1,37 @@
+{
+  "task_id": "swe-xcp_d-1433",
+  "config": "baseline-deepseek+model",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": false,
+  "reward": null,
+  "agent_status": "budget_exhausted",
+  "agent_claimed_success": false,
+  "false_success": false,
+  "tamper_paths": [
+    "conftest.py"
+  ],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_1432.py"
+  ],
+  "edited_paths": [],
+  "patch_applied": true,
+  "cost_cny": 0.426749,
+  "tokens_in": 2998320,
+  "tokens_cached": 2884736,
+  "tokens_out": 39836,
+  "peak_calls": 0,
+  "steps": 59,
+  "wall_s": 520.02,
+  "trajectory_id": "baseline-deepseek/swe-xcp_d-1433/1/trajectory.jsonl",
+  "live": true,
+  "error": "单任务预算 max_input_tokens 已用尽：3.073e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 xcp_d：unresolved（2 failed），仅供参考，不计入本基线",
+  "verifier_mode": "model",
+  "verifier_verdict": "inconclusive",
+  "verifier_deterministic": "inconclusive",
+  "verifier_model_verdict": "inconclusive",
+  "verify_repro_status": "not_applicable",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.096126,
+  "verifier_error": null
+}

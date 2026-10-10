@@ -1,0 +1,72 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.45,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 45,
+  "risk_level": "L2",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：没有与 Issue 示例（带别名 + 开括号行注释 + 换行）对应的复现测试，repro_status = not_applicable，无法直接验证修复行为",
+    "Verifier 缺口：缺少 isort 对该输入的修复前/修复后实际输出对比（检查说明只声称“证据改为行为对比/静态论证”，但未提供任何实际渲染结果）",
+    "Verifier 缺口：full 测试为 通过 0 / 失败 0 / 错误 1，测试套件本身报错，缺少可用于确认无回归的通过证据"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.359,
+      "log_ref": "a312fef870f1:full"
+    }
+  ],
+  "cost_cny": 0.056923,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.4,
+      "path": "tool_call",
+      "cost_cny": 0.01341924,
+      "gaps": [
+        "没有与 Issue 示例（带别名 + 开括号行注释 + 换行）对应的复现测试，repro_status = not_applicable，无法直接验证修复行为",
+        "缺少 isort 对该输入的修复前/修复后实际输出对比（检查说明只声称“证据改为行为对比/静态论证”，但未提供任何实际渲染结果）",
+        "full 测试为 通过 0 / 失败 0 / 错误 1，测试套件本身报错，缺少可用于确认无回归的通过证据"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.01200196,
+      "gaps": [
+        "No reproduction test exists (repro_status = not_applicable), so there is zero executed evidence that the patched isort actually reproduces the Issue's input → expected output (comment kept on the opening line).",
+        "No behavioral-comparison / before-after output artifact was supplied, despite the checks saying evidence was replaced by 行为对比/静态论证; only the diff itself is available.",
+        "The full run shows 0 passed / 0 failed / 1 error, i.e. no test actually verified behavior; a pre-existing baseline error (per the note) means non-regression cannot be confirmed."
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.45,
+      "path": "tool_call",
+      "cost_cny": 0.03150196,
+      "gaps": [
+        "完全没有复现测试（repro_status=not_applicable），缺少把 Issue 给定输入映射到修复后输出的可核对行为证据",
+        "full 运行结果 0 通过 / 1 错误：无任何通过的回归证据，无法确认该 error 仅为基线预存、以及测试是否真正被执行（可能是收集/环境错误）",
+        "无静态检查结果（静态检查：无）"
+      ]
+    }
+  ]
+}

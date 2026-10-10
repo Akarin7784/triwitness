@@ -1,0 +1,60 @@
+{
+  "mode": "deterministic",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 30,
+  "risk_level": "L3",
+  "anticheat_flags": [
+    "existing_test_modified",
+    "skip_or_xfail_added"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "防作弊阻断：skip_or_xfail_added"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_81.py",
+      "passed": 5,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.737,
+      "log_ref": "a26ac565e525:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_81.py",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.665,
+      "log_ref": "cd840a8b47be:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 706,
+      "failed": 0,
+      "skipped": 1,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.759,
+      "log_ref": "5d9307c64a87:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

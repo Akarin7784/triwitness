@@ -1,0 +1,57 @@
+{
+  "mode": "deterministic",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "1 个失败在基线上就存在，不计回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_mi_claims.py",
+      "passed": 0,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.704,
+      "log_ref": "9e21139dc8a5:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_mi_claims.py",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.573,
+      "log_ref": "1d8480802ca0:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 1,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.765,
+      "log_ref": "1ab2b16fca7a:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

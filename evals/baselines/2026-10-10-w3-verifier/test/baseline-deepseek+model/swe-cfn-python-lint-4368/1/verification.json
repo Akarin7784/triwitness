@@ -1,0 +1,72 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.4167,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：缺少与 Issue 描述模板/行为对应的复现测试（repro_status = not_applicable），无法证明 E3009 在该模板上已消失",
+    "Verifier 缺口：缺少打补丁后对 Issue 模板 lint 的行为/快照输出（repro_patched 未提供有效结果）",
+    "Verifier 缺口：full 中 1 个失败用例未具名，也未附证据证明其与本次改动无关（仅凭说明认定基线失败）"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 11,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 15.949,
+      "log_ref": "eea269fcd60d:full"
+    }
+  ],
+  "cost_cny": 0.018527,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.45,
+      "path": "tool_call",
+      "cost_cny": 0.00753124,
+      "gaps": [
+        "缺少与 Issue 描述模板/行为对应的复现测试（repro_status = not_applicable），无法证明 E3009 在该模板上已消失",
+        "缺少打补丁后对 Issue 模板 lint 的行为/快照输出（repro_patched 未提供有效结果）",
+        "full 中 1 个失败用例未具名，也未附证据证明其与本次改动无关（仅凭说明认定基线失败）"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.45,
+      "path": "tool_call",
+      "cost_cny": 0.00559172,
+      "gaps": [
+        "缺少复现/行为对比证据：没有在修复后对 Issue 的复现模板运行 cfn-lint 并展示 E3009 消失的输出",
+        "复现状态为 not_applicable，无针对 Issue 行为与名字的复现测试",
+        "静态检查：无，未提供任何静态论证或代码级验证输出"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.35,
+      "path": "tool_call",
+      "cost_cny": 0.00540372,
+      "gaps": [
+        "缺少针对 Issue 原模板（AWS::CloudFormation::Init metadata 内 Fn::Transform）的复现/回归测试：repro_status = not_applicable，无法确认 E3009 是否真的消失",
+        "没有给出 patch 前后对同一模板的行为对比结果（修复前报 E3009、修复后通过）",
+        "未新增覆盖该场景的测试用例（full 中未见相关测试通过项）"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "pass",
+  "model_confidence": 0.7467,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 20,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "声明审计：",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：full 套件整体出现 1 个错误（疑似 bokeh 缺失导致的收集/导入错误），未能得到整套测试绿灯，因此除复现测试外缺少广覆盖的回归证据；仅依赖『基线同样失败』的说明判定为非回归。",
+    "Verifier 缺口：无静态检查（type/lint）结果。",
+    "Verifier 缺口：Issue 未规定错误信息确切措辞，测试以 match=\"add intervals\" 自定，属可接受的实现假设，但无法排除下游对精确字符串的匹配需求。"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_empty_calendar.py",
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 3.197,
+      "log_ref": "ad32e9d376af:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_empty_calendar.py",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.587,
+      "log_ref": "ba79509e34cc:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.625,
+      "log_ref": "04faf7dc8000:full"
+    }
+  ],
+  "cost_cny": 0.044403,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.8,
+      "path": "tool_call",
+      "cost_cny": 0.01080824,
+      "gaps": [
+        "full 套件整体出现 1 个错误（疑似 bokeh 缺失导致的收集/导入错误），未能得到整套测试绿灯，因此除复现测试外缺少广覆盖的回归证据；仅依赖『基线同样失败』的说明判定为非回归。",
+        "无静态检查（type/lint）结果。",
+        "Issue 未规定错误信息确切措辞，测试以 match=\"add intervals\" 自定，属可接受的实现假设，但无法排除下游对精确字符串的匹配需求。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.72,
+      "path": "tool_call",
+      "cost_cny": 0.0223292,
+      "gaps": [
+        "The Issue does not specify an exact error-message wording; only the substring \"add intervals\" is verified by the repro test, so a downstream test matching a different exact string would not be confirmed.",
+        "`full` ran 0 passed / 0 failed / 1 error, so the existing test suite did not actually execute and provides no regression coverage beyond the 2 repro tests; the harness attributes the single error to a pre-existing baseline failure (not counted as regression).",
+        "Discrepancy: the executor's open_risks lists 4 pre-existing failures (bokeh import, Timestamp repr, pandas 'ME', warnings.warn tuple) while `full` reports only 1 error — the true full-suite status is unverified."
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.72,
+      "path": "tool_call",
+      "cost_cny": 0.0112652,
+      "gaps": [
+        "full 回归运行结果为 0 通过 / 1 错误（疑似收集期导入失败，如 bokeh 缺失），缺少一次干净的整套回归结果，无法完全确认改动未影响其他调用 get_smallest_calendar_freq 的路径",
+        "Issue 未规定精确错误措辞，若下游/外部测试对确切字符串做匹配可能不满足（Executor 自述亦承认）",
+        "Issue 复现使用 xr.load_dataset（xarray Dataset），而 tw_repro 仅用 pd.Series 驱动；虽错误在类型分支之前触发、路径相同，但未直接覆盖 xarray 输入"
+      ]
+    }
+  ]
+}

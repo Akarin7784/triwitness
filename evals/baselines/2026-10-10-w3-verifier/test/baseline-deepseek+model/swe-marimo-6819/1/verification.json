@@ -1,0 +1,74 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "inconclusive",
+  "model_verdict": "fail",
+  "model_confidence": 0.85,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 15,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "exception_swallowed"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：缺少对生产代码（marimo/_ast/transformers.py 或 marimo/_save/save.py）的实际修复改动；当前 diff 只有 wip_repro/ 下的复现与探针脚本",
+    "Verifier 缺口：缺少针对 Issue 行为的复现/回归测试（Issue 代码：persistent_cache 所在 cell 中再放 [1,2,3] 后 app.run()），repro_status=not_applicable",
+    "Verifier 缺口：缺少脚本模式下能体现修复前后行为差异的确定性证据（复现日志/断言），现有探针仅打印、不构成验证"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 176,
+      "failed": 1,
+      "skipped": 35,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 21.441,
+      "log_ref": "758a9027231e:full"
+    }
+  ],
+  "cost_cny": 0.029499,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.88,
+      "path": "tool_call",
+      "cost_cny": 0.01013524,
+      "gaps": [
+        "缺少对生产代码（marimo/_ast/transformers.py 或 marimo/_save/save.py）的实际修复改动；当前 diff 只有 wip_repro/ 下的复现与探针脚本",
+        "缺少针对 Issue 行为的复现/回归测试（Issue 代码：persistent_cache 所在 cell 中再放 [1,2,3] 后 app.run()），repro_status=not_applicable",
+        "缺少脚本模式下能体现修复前后行为差异的确定性证据（复现日志/断言），现有探针仅打印、不构成验证"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.82,
+      "path": "tool_call",
+      "cost_cny": 0.0106658,
+      "gaps": [
+        "缺少对 marimo 源码（transformers.py / save.py）的修复性 diff",
+        "缺少与 Issue 行为对齐、名字匹配的复现/回归测试（repro_status=not_applicable）",
+        "未断言错误消息内容是否包含“move the block within/into its own cell”类提示"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.0086978,
+      "gaps": [
+        "缺少对 marimo/_ast/transformers.py（BlockException 抛出/消息）或 marimo/_save/save.py（trace/__exit__）的实际修改 diff",
+        "缺少针对 Issue 场景的复现测试：以 `python wip/cache_stuff.py` 运行含其他代码的 cell，断言不再抛出误导性 BlockException 或错误信息为“请将 cache 块移到独立 cell”",
+        "缺少 baseline vs patched 的行为对比输出（repro_patched），证明失败信息确实改变"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "mode": "deterministic",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q test/test_ash.py::test_ashratt_two_decimal_timestamp",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.431,
+      "log_ref": "a099259ab930:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q test/test_ash.py::test_ashratt_two_decimal_timestamp",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.43,
+      "log_ref": "2d066c065b73:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 68,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.656,
+      "log_ref": "7820e322c0bc:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

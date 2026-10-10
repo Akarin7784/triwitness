@@ -1,0 +1,58 @@
+{
+  "mode": "deterministic",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 30,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended",
+    "existing_test_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_obj_or_str.py -q",
+      "passed": 4,
+      "failed": 10,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.25,
+      "log_ref": "8fc1cd949a5a:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_obj_or_str.py -q",
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.927,
+      "log_ref": "ff8c018f6791:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1139,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 8.466,
+      "log_ref": "ea1e57463755:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

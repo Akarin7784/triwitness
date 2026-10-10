@@ -1,0 +1,95 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.84,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：未断言与 2.5.0 输出的精确行/列（如 test.py:3:1、test.py:7:5）完全一致——harness 只比对消息类型与顺序，Issue 中给的是带行列的文本",
+    "Verifier 缺口：tests/tw_repro 中的另外两个用例属于 Agent 自设场景：test_annotation_used_in_module_scope 断言 print(test) → UndefinedName、以及无 load 场景，Issue 未描述这些行为（Agent 在 open_risks 中也承认 print 场景为额外假设），不构成本 Issue 的核心证据",
+    "Verifier 缺口：复现文件命名 test_issue_760.py 系按上游 issue 编号推断，Issue 正文未给编号；仅影响命名，不影响修复判定"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_760.py -q",
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.597,
+      "log_ref": "95801a050d82:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_760.py -q",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.484,
+      "log_ref": "62fe6507c01b:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 702,
+      "failed": 0,
+      "skipped": 23,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.903,
+      "log_ref": "04d69b06542e:full"
+    }
+  ],
+  "cost_cny": 0.087724,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.02946724,
+      "gaps": [
+        "未断言与 2.5.0 输出的精确行/列（如 test.py:3:1、test.py:7:5）完全一致——harness 只比对消息类型与顺序，Issue 中给的是带行列的文本",
+        "tests/tw_repro 中的另外两个用例属于 Agent 自设场景：test_annotation_used_in_module_scope 断言 print(test) → UndefinedName、以及无 load 场景，Issue 未描述这些行为（Agent 在 open_risks 中也承认 print 场景为额外假设），不构成本 Issue 的核心证据",
+        "复现文件命名 test_issue_760.py 系按上游 issue 编号推断，Issue 正文未给编号；仅影响命名，不影响修复判定"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.82,
+      "path": "tool_call",
+      "cost_cny": 0.01487462,
+      "gaps": [
+        "Issue 未给出测试名/编号，复现文件命名 test_issue_760.py 系 Executor 据上游 issue 号推断（open_risks 亦声明），仅文件名受影响，验证的行为与 Issue 片段一致，但名称对应性未被独立证实",
+        "新增测试只断言消息类型（m.UndefinedName / m.UnusedVariable），未校验 Issue 中给出的具体位置（test.py:3:1 与 test.py:7:5），位置一致性未验证",
+        "附加测试 test_annotation_used_in_module_scope 断言 print(test) 报 UndefinedName，属 Executor 关于 2.5.0 行为的假设，Issue 未对该场景作说明，该断言正确性无独立证据"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.04338262,
+      "gaps": [
+        "未实际运行 2.5.0 做逐字输出对比；仅凭 Issue 引用的 2.5.0 输出与断言的消息类型一致，且测试未断言精确位置 3:1 / 7:5（pyflakes harness 只校验消息类型与数量）。",
+        "`(self.scope, node)` 与其他加载路径 used 赋值形状的一致性只由 traceback 间接佐证，提供的证据未列出其它 `used = (...)` 使用点做交叉比对（full 套件通过降低了风险）。",
+        "复现测试为 Agent 自建（tests/tw_repro/test_issue_760.py），文件编号 760 系推断；若编号不符仅影响文件名，测试内容与 Issue 片段一致。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": "fail",
+  "model_confidence": 0.8167,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "新增失败 1 个：tests/test_send_pull_request.py::test_send_pull_request_git_push_failure",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "Verifier 缺口：缺少针对 get_unique_branch_name 的行为测试：验证已存在 openhands-fix-issue-N 时返回 openhands-fix-issue-N-try2，已存在 -try2 时返回 -try3 等",
+    "Verifier 缺口：缺少 find_existing_branches 对该场景的测试：远端（remotes/origin/...）分支是否被正确识别为已存在，因为失败尝试的分支通常只在远端存在",
+    "Verifier 缺口：新增失败的 tests/test_send_pull_request.py::test_send_pull_request_git_push_failure 未被更新/修复，无法确认该回归是否只是 mock 计数问题还是真实功能问题"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 15,
+      "failed": 1,
+      "skipped": 2,
+      "errors": 0,
+      "new_failures": [
+        "tests/test_send_pull_request.py::test_send_pull_request_git_push_failure"
+      ],
+      "flaky": [],
+      "duration_s": 5.323,
+      "log_ref": "ef75df39aa1d:full"
+    }
+  ],
+  "cost_cny": 0.044174,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.01198824,
+      "gaps": [
+        "缺少针对 get_unique_branch_name 的行为测试：验证已存在 openhands-fix-issue-N 时返回 openhands-fix-issue-N-try2，已存在 -try2 时返回 -try3 等",
+        "缺少 find_existing_branches 对该场景的测试：远端（remotes/origin/...）分支是否被正确识别为已存在，因为失败尝试的分支通常只在远端存在",
+        "新增失败的 tests/test_send_pull_request.py::test_send_pull_request_git_push_failure 未被更新/修复，无法确认该回归是否只是 mock 计数问题还是真实功能问题"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.8,
+      "path": "tool_call",
+      "cost_cny": 0.01751096,
+      "gaps": [
+        "复现状态 not_applicable：没有任何针对 Issue 行为的复现测试，核心新行为（-try2/-try3 追加）无运行时验证，仅静态论证（风险 L1）",
+        "无 get_unique_branch_name / find_existing_branches 的单元测试覆盖分支碰撞场景（已存在 openhands-fix-issue-N 时返回 -try2/-try3）",
+        "tests/test_send_pull_request.py::test_send_pull_request_git_push_failure 未随新增的 git branch -a 调用同步更新，mock side_effect 错位导致新增失败——需修复并确认是纯 mock 错位而非真实行为回归"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.8,
+      "path": "tool_call",
+      "cost_cny": 0.01467496,
+      "gaps": [
+        "缺少针对 Issue 场景的复现测试（repro_status=not_applicable）——“分支已存在时应改用 -try2/-try3”未被任何测试实际执行，仅现有单测 mock 了 git branch -a 返回空 stdout",
+        "需要修复/说明新增失败的 tests/test_send_pull_request.py::test_send_pull_request_git_push_failure：新增的 `git branch -a` subprocess 调用改变了 mock subprocess.run 的调用次数/次序，破坏了既有的失败路径测试（回归）",
+        "需要证据说明 find_existing_branches 只查本地 `git branch -a` 能否可靠发现“上一次尝试已推送到 GitHub 的远端分支”（是否需要 fetch / 走 GitHub API 查询远端分支）"
+      ]
+    }
+  ]
+}

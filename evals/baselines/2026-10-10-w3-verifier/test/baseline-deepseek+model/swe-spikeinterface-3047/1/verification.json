@@ -1,0 +1,75 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": "fail",
+  "model_confidence": 0.6067,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 15,
+  "risk_level": "L3",
+  "anticheat_flags": [
+    "test_infra_modified",
+    "skip_or_xfail_added"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "防作弊阻断：skip_or_xfail_added",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：缺少针对 Issue MRE 的复现测试成功执行记录（repro_status=not_applicable），无法确认 load_sorting_analyzer + select_units 的运行时行为",
+    "Verifier 缺口：full 套件 0 通过 / 1 错误，未提供任何通过的验证信号",
+    "Verifier 缺口：zarr 分支未被有效覆盖（测试中相关跳过分支），无法确认该格式下同一修复成立"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.081,
+      "log_ref": "7f5458c64a58:full"
+    }
+  ],
+  "cost_cny": 0.060986,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.6,
+      "path": "tool_call",
+      "cost_cny": 0.02028224,
+      "gaps": [
+        "缺少针对 Issue MRE 的复现测试成功执行记录（repro_status=not_applicable），无法确认 load_sorting_analyzer + select_units 的运行时行为",
+        "full 套件 0 通过 / 1 错误，未提供任何通过的验证信号",
+        "zarr 分支未被有效覆盖（测试中相关跳过分支），无法确认该格式下同一修复成立"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.6,
+      "path": "tool_call",
+      "cost_cny": 0.024608,
+      "gaps": [
+        "复现测试未被识别/执行（repro_status = not_applicable），full 中 0 通过，缺少任何证明修复生效的通过结果",
+        "防作弊阻断：skip_or_xfail_added（tests/tw_repro/test_issue_2864.py 内含 pytest.skip）与 test_infra_modified（修改了 conftest.py），确定性检查未给出干净通过",
+        "缺少干净环境下直接运行 Issue MRE（save→load→select_units）的通过记录"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.62,
+      "path": "tool_call",
+      "cost_cny": 0.016096,
+      "gaps": [
+        "缺少在干净环境复跑 Issue 原始 MRE 的行结果：无法证明 load_sorting_analyzer 后 select_units([1]) 确实不再抛 TypeError",
+        "full 结果为 0 通过 / 1 错误，没有任何通过用例证明修复生效",
+        "防作弊阻断 skip_or_xfail_added 与 test_infra_modified（conftest.py 被改）：需确认新增 skip 与测试基础设施改动是否掩盖真实失败或规避收集错误"
+      ]
+    }
+  ]
+}

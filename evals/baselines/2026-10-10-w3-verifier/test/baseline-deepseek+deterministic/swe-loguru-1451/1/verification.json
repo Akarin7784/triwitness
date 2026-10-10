@@ -1,0 +1,55 @@
+{
+  "mode": "deterministic",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_invalid_format_key.py -q",
+      "passed": 2,
+      "failed": 4,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.35,
+      "log_ref": "1f5c3af1af4d:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_invalid_format_key.py -q",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.12,
+      "log_ref": "ce34b36cc50b:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1634,
+      "failed": 0,
+      "skipped": 28,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 118.042,
+      "log_ref": "bc623c8748cc:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

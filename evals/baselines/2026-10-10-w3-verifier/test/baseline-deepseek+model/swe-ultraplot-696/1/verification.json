@@ -1,0 +1,72 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.4333,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：没有可用的复现测试执行（repro_status = not_applicable）；新增的 tests/tw_repro/test_issue_600.py 从未报告运行结果，无法确认其在打补丁后通过、在基线上失败。",
+    "Verifier 缺口：full 检查为 通过 0 / 失败 0 / 错误 1 —— 整套测试零通过且出现错误，全部测试证据缺失（且该“错误在基线上就存在”未给出可核对记录）。",
+    "Verifier 缺口：没有任何的基线 vs 补丁行为/渲染对比（例如通过 canvas.draw 后检查 axs[1].yaxis labelleft 可见性）来直接验证 Issue 描述的现象。"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.065,
+      "log_ref": "69c059df5cc9:full"
+    }
+  ],
+  "cost_cny": 0.047486,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.4,
+      "path": "tool_call",
+      "cost_cny": 0.01175264,
+      "gaps": [
+        "没有可用的复现测试执行（repro_status = not_applicable）；新增的 tests/tw_repro/test_issue_600.py 从未报告运行结果，无法确认其在打补丁后通过、在基线上失败。",
+        "full 检查为 通过 0 / 失败 0 / 错误 1 —— 整套测试零通过且出现错误，全部测试证据缺失（且该“错误在基线上就存在”未给出可核对记录）。",
+        "没有任何的基线 vs 补丁行为/渲染对比（例如通过 canvas.draw 后检查 axs[1].yaxis labelleft 可见性）来直接验证 Issue 描述的现象。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02132864,
+      "gaps": [
+        "没有任何被实际执行的复现测试结果（repro_status = not_applicable）；新增的 tests/tw_repro/test_issue_600.py 未被确定性检查运行，无法确认其通过/失败",
+        "full 运行 0 通过 / 1 错误：整个回归套件未成功执行，既不能证明修复生效，也不能证明无回归；“该错误在基线即存在”只是说明文字，未提供基线 vs 补丁的实际行为对比数据",
+        "缺少补丁前后（patched vs baseline）在同一复现脚本上的行为对比（tick label 可见性 / _is_ticklabel_on('labelleft') / get_yticklabels 非空）"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.4,
+      "path": "tool_call",
+      "cost_cny": 0.01440464,
+      "gaps": [
+        "没有任何已执行的复现/回归测试（repro_status=not_applicable），Issue 描述的运行时行为完全未被验证",
+        "full 结果为 0 通过 / 1 错误，虽称错误为基线已有，但无法确认新增的 4 个回归用例是否运行并通过",
+        "缺少补丁前 vs 补丁后的行为对比数据（如 tick label 可见性、sharing level 的实测值）"
+      ]
+    }
+  ]
+}

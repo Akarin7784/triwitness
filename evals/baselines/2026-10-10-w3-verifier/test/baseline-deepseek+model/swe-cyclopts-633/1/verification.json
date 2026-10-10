@@ -1,0 +1,97 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "pass",
+  "model_confidence": 0.8,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "repro_not_tied_to_issue"
+  ],
+  "reasons": [
+    "声明审计：repro_not_tied_to_issue",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：Repro file is named tests/tw_repro/test_issue_0000.py (placeholder); declaration audit flagged `repro_not_tied_to_issue`. Tie to the issue is by behavior (verbatim minimal example) only, since the Issue carries no number.",
+    "Verifier 缺口：Executor's finish claims 14 sphinx-related failures in the full run, but the recorded full run shows only 1 failure — reporting discrepancy; sphinx tests cannot be independently confirmed as unrelated in this environment.",
+    "Verifier 缺口：No external/real-issue-linked reproduction; correctness rests on the local repro test + baseline regression check."
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_0000.py",
+      "passed": 3,
+      "failed": 6,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.978,
+      "log_ref": "f9a6d7d236d7:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_0000.py",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.873,
+      "log_ref": "e381c742fa25:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1376,
+      "failed": 1,
+      "skipped": 69,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 12.506,
+      "log_ref": "84010ea07403:full"
+    }
+  ],
+  "cost_cny": 0.053586,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.8,
+      "path": "tool_call",
+      "cost_cny": 0.01794724,
+      "gaps": [
+        "Repro file is named tests/tw_repro/test_issue_0000.py (placeholder); declaration audit flagged `repro_not_tied_to_issue`. Tie to the issue is by behavior (verbatim minimal example) only, since the Issue carries no number.",
+        "Executor's finish claims 14 sphinx-related failures in the full run, but the recorded full run shows only 1 failure — reporting discrepancy; sphinx tests cannot be independently confirmed as unrelated in this environment.",
+        "No external/real-issue-linked reproduction; correctness rests on the local repro test + baseline regression check."
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.78,
+      "path": "tool_call",
+      "cost_cny": 0.02489534,
+      "gaps": [
+        "复现测试未与 Issue 绑定：声明审计标记 repro_not_tied_to_issue；Issue 无编号，复现文件用占位名 tests/tw_repro/test_issue_0000.py，无法核对是否为 Issue 指定的复现用例。",
+        "复现文件含 Issue 未描述的假设行为断言：negative=\"no-\"（非连字符前缀）、bool | list[bool] 同名 flag 去重、默认 negative 去重；这些是 Agent 依根因外推的场景，Issue 只描述 bool | None + 自定义 negative 的帮助页重复。",
+        "全量结果与自述不一致且无法核对：自述称 test_sphinx_ext 14 failed/5 passed、非 sphinx 1577 passed，而确定性 full 为 1376 passed/1 failed/69 skipped；环境无 sphinx（无网络不可安装），sphinx 相关用例无法验证。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.82,
+      "path": "tool_call",
+      "cost_cny": 0.01074334,
+      "gaps": [
+        "声明审计标记 repro_not_tied_to_issue：Issue 未给编号，复现文件命名为占位名 tests/tw_repro/test_issue_0000.py，无法把复现测试与可追踪的 Issue ID 绑定（但测试内容确实是 Issue 的最小示例，行为对应关系成立）。",
+        "全量结果口径不一致：Executor 自述称 sphinx 相关 14 failed（未安装 sphinx）、非 sphinx 1577 passed；确定性 full 却报 通过 1376 / 失败 1。两者数量未对齐，无法确认那 1 个失败确实落在 tests/test_sphinx_ext.py 且与本改动无关（仅由检查侧\"基线同样失败\"的说明支撑）。",
+        "Issue 原文使用的是排版长破折号 `—negative`，测试按 ASCII `--negative` 编写；属合理归一化，但未在证据中显式给出等价的字符串级核对。"
+      ]
+    }
+  ]
+}

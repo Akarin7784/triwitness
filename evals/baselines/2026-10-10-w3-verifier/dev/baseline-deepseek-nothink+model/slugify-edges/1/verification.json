@@ -1,0 +1,92 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.8933,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：仅有通过/失败计数，未见原始用例输出文本，无法逐字核对断言内容",
+    "Verifier 缺口：无静态检查证据（静态检查：无），未做 lint/类型校验",
+    "Verifier 缺口：Issue 未规定空串或纯符号输入行为；executor 自述 slugify(\"!!!\") == \"\" 属推断行为，无测试覆盖（但非 Issue 所需）"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_slug.py -q",
+      "passed": 1,
+      "failed": 2,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.348,
+      "log_ref": "8d037a726b81:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_slug.py -q",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.37,
+      "log_ref": "f685c966feba:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.419,
+      "log_ref": "a5736c4098b4:full"
+    }
+  ],
+  "cost_cny": 0.01743,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.00690924,
+      "gaps": [
+        "仅有通过/失败计数，未见原始用例输出文本，无法逐字核对断言内容",
+        "无静态检查证据（静态检查：无），未做 lint/类型校验",
+        "Issue 未规定空串或纯符号输入行为；executor 自述 slugify(\"!!!\") == \"\" 属推断行为，无测试覆盖（但非 Issue 所需）"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.88,
+      "path": "tool_call",
+      "cost_cny": 0.0062486,
+      "gaps": [
+        "未给出整个仓库的既有 slugify 测试清单；full 仅 4 条用例，无法确认对空字符串、纯符号、超长输入等边界是否覆盖（Issue 未规定这些行为）",
+        "无静态检查结果（lint/类型检查），无法确认改动无其他副作用",
+        "复现测试由修复方新增，未提供独立第三方复现；但用例名与断言严格对应 Issue 给出的两个示例字符串与首尾 \"-\" 规则，无自造行为"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.0042726,
+      "gaps": [
+        "Issue 未定义空串或纯符号输入（如 slugify(\"!!!\")）的期望值；strip 后返回 \"\"，属推断行为，未被 Issue 与测试覆盖（但不在验收标准范围内）",
+        "无静态检查与防作弊证据，但确定性检查未标记异常，不影响本次判读"
+      ]
+    }
+  ]
+}

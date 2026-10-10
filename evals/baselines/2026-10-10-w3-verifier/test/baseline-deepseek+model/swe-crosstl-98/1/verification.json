@@ -1,0 +1,95 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.7967,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 10,
+  "risk_level": "L0",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：仓库无 git 元数据，复现文件只能命名为 tests/tw_repro/test_issue_1.py，无法核对其与真实 Issue 编号的对应关系（Executor 已自述此风险）",
+    "Verifier 缺口：复现用例中多数断言仅为“未抛 SyntaxError”，对表达式路径的 AST op 值未做强校验；仅语句路径显式断言 op==\"&=\"",
+    "Verifier 缺口：codegen 端到端（GLSL/Metal/HLSL 对 `a &= 1;` 与 for update 的输出）仅为 Executor 手述，确定性证据（repro/full）未覆盖，且静态检查为空"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_1.py -q",
+      "passed": 1,
+      "failed": 3,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.552,
+      "log_ref": "867a5a11f54e:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_1.py -q",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.427,
+      "log_ref": "54f4e816fd51:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 99,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.907,
+      "log_ref": "d2f72569b157:full"
+    }
+  ],
+  "cost_cny": 0.05198,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.01381524,
+      "gaps": [
+        "仓库无 git 元数据，复现文件只能命名为 tests/tw_repro/test_issue_1.py，无法核对其与真实 Issue 编号的对应关系（Executor 已自述此风险）",
+        "复现用例中多数断言仅为“未抛 SyntaxError”，对表达式路径的 AST op 值未做强校验；仅语句路径显式断言 op==\"&=\"",
+        "codegen 端到端（GLSL/Metal/HLSL 对 `a &= 1;` 与 for update 的输出）仅为 Executor 手述，确定性证据（repro/full）未覆盖，且静态检查为空"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.74,
+      "path": "tool_call",
+      "cost_cny": 0.0147066,
+      "gaps": [
+        "Issue 未给出明确验收标准/Plan，验收项是按 Issue 文字推断的；无独立的需求侧对照。",
+        "复现测试文件名为 tests/tw_repro/test_issue_1.py，Issue 编号为占位（仓库无 git 元数据），无法核对与真实 Issue 的对应关系。",
+        "codegen 输出（GLSL/Metal/HLSL 中 `a &= 1;`、for update `i &= 3`）无自动化测试覆盖，仅 Executor 手工验证声明；这部分代码改动不在 Issue 要求范围内。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.8,
+      "path": "tool_call",
+      "cost_cny": 0.0234586,
+      "gaps": [
+        "代码生成（opengl/metal/directx map_operator）对 `&=` 改写仅由 Executor 手工验证，repro/full 均无自动断言覆盖；Issue 只要求解析，故不构成 unmet，但该声明缺少可复现证据。",
+        "防作弊标记 existing_test_extended：diff 显示仅向 tests/test_translator/test_parser.py 新增两个测试函数（纯新增，未见删除/削弱既有断言），判为良性，但确定性地修改了同族测试文件，需人工留意。",
+        "仓库无 git 元数据，真实 Issue 编号不可考，复现测试自命名为 tests/tw_repro/test_issue_1.py（Executor 已在 open_risks 说明）。"
+      ]
+    }
+  ]
+}

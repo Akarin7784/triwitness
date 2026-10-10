@@ -1,0 +1,96 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.525,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "claim_contradicts_open_risks"
+  ],
+  "reasons": [
+    "声明审计：claim_contradicts_open_risks",
+    "Verifier 缺口：Issue 未提供编号，复现测试文件名 tests/tw_repro/test_issue_445.py 中的“445”为 Agent 假定，非 Issue 给定（行为对应，命名不可核）；无法据此确认与上游 Issue 的一一对应。",
+    "Verifier 缺口：元组条目与 app 目录匹配分支的组合未被任何测试覆盖（executor 自述的 open risk 亦承认），只能推断其正确性。",
+    "Verifier 缺口：声明审计标记 claim_contradicts_open_risks 未澄清：executor 声称修复“与 Django staticfiles.finders 处理方式一致”，但其 open risk 又说“未对长度非 2 的元组做额外校验（Django 自身也会报错）”——实现用 component_dir[1] 索引，对长度≠2 的元组不会报错，与 Django prefix, root = root 的解包语义不一致，故“一致”这一声明不成立。"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_445.py -q",
+      "passed": 1,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.042,
+      "log_ref": "9e78cea055de:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_445.py -q",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.759,
+      "log_ref": "c502ea7eca2a:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 207,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.312,
+      "log_ref": "e6c7db4c51d2:full"
+    }
+  ],
+  "cost_cny": 0.112379,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.04981224,
+      "gaps": [
+        "Issue 未提供编号，复现测试文件名 tests/tw_repro/test_issue_445.py 中的“445”为 Agent 假定，非 Issue 给定（行为对应，命名不可核）；无法据此确认与上游 Issue 的一一对应。",
+        "元组条目与 app 目录匹配分支的组合未被任何测试覆盖（executor 自述的 open risk 亦承认），只能推断其正确性。",
+        "声明审计标记 claim_contradicts_open_risks 未澄清：executor 声称修复“与 Django staticfiles.finders 处理方式一致”，但其 open risk 又说“未对长度非 2 的元组做额外校验（Django 自身也会报错）”——实现用 component_dir[1] 索引，对长度≠2 的元组不会报错，与 Django prefix, root = root 的解包语义不一致，故“一致”这一声明不成立。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.75,
+      "path": "tool_call",
+      "cost_cny": 0.0143932,
+      "gaps": [
+        "声明审计结果为 claim_contradicts_open_risks：Finish 自述称修复完整且“后续逻辑（app 目录匹配、BASE_DIR、SETTINGS_MODULE 解析）无需改动、已一并受益”，但 open_risks 自承 app 目录匹配分支未被任何测试覆盖、未对长度非 2 的元组做校验——下游 component.py 受益的断言无测试支撑。",
+        "无直接断言 component.py / search().searched_dirs 下游路径在元组条目下可用的测试，仅在 Loader.get_dirs() 层验证。",
+        "复现测试文件名假定为 test_issue_445.py（Issue 未给编号）；行为与 Issue 描述一致，命名假设本身不影响结论，但原始 Issue 编号未核对。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.0481732,
+      "gaps": [
+        "声明审计标记 claim_contradicts_open_risks：executor 声称变更『已一并受益/无需改动』覆盖 app 目录匹配分支，但其 open risks 承认该分支无任何测试覆盖，缺少能证明该分支仍正常的证据。",
+        "复现测试文件名 tests/tw_repro/test_issue_445.py 假定 Issue 编号 445，Issue 正文并未提供编号。",
+        "复现测试在 settings.configure() 环境、并通过 override_settings(BASE_DIR=...) 走 BASE_DIR 分支；未覆盖 app 目录匹配（STATICFILES_MODULE）分支，也未做端到端模板加载验证。"
+      ]
+    }
+  ]
+}

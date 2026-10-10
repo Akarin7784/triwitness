@@ -1,0 +1,85 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.8933,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_1.py -q",
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.449,
+      "log_ref": "164228ac94e0:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_1.py -q",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.39,
+      "log_ref": "4b212b2270ab:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.343,
+      "log_ref": "28c3acb373ad:full"
+    }
+  ],
+  "cost_cny": 0.022823,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.006874,
+      "gaps": []
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.88,
+      "path": "tool_call",
+      "cost_cny": 0.00908872,
+      "gaps": [
+        "Issue 未规定 get() 未命中是否影响淘汰顺序；第二个复现测覆盖的是 Agent 自述中的假设行为（miss 不改序），属超出 Issue 的补充断言，非 Issue 明示验收点。",
+        "Diff 仅展示 get() 的修改，未展示 put()/popitem 的实现，淘汰端语义（popitem(last=False) 从 LRU 端弹出）只能通过复现测试间接确认。",
+        "静态检查为『无』，无独立静态检查输出可佐证不存在其他回归；full 仅 3 个用例，覆盖面有限。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.00686072,
+      "gaps": [
+        "Second repro test (test_get_missing_does_not_change_eviction_order) verifies an Agent-assumed miss semantics not written in the Issue — cannot be judged met by the Issue text.",
+        "No static-analysis output provided (静态检查: 无); style/lint/type correctness of the one-line change is unverified.",
+        "Only the single bug scenario is asserted; no evidence about interactions with other LRUCache methods if any exist beyond get/put (codebase claimed small, not independently confirmed)."
+      ]
+    }
+  ]
+}

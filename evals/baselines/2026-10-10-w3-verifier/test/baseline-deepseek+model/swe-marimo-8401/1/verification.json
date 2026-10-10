@@ -1,0 +1,72 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "inconclusive",
+  "model_verdict": "fail",
+  "model_confidence": 0.7967,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 15,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：缺少能触发并断言 Issue 现象的复现测试（repro_status = not_applicable）",
+    "Verifier 缺口：探针测试（test_probe_norm.py / test_repro_probe*.py）只有 print，没有 assert，不能判定 met",
+    "Verifier 缺口：Diff 中没有任何 marimo 源码改动，无法证明警告消失或缓存生效"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 8,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 10.686,
+      "log_ref": "11f97d4aa061:full"
+    }
+  ],
+  "cost_cny": 0.024651,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.82,
+      "path": "tool_call",
+      "cost_cny": 0.00972324,
+      "gaps": [
+        "缺少能触发并断言 Issue 现象的复现测试（repro_status = not_applicable）",
+        "探针测试（test_probe_norm.py / test_repro_probe*.py）只有 print，没有 assert，不能判定 met",
+        "Diff 中没有任何 marimo 源码改动，无法证明警告消失或缓存生效"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.72,
+      "path": "tool_call",
+      "cost_cny": 0.00814564,
+      "gaps": [
+        "没有任何 marimo 源码层的修复补丁（diff 只含测试/探针与空占位文件），无法支撑“问题已修复”",
+        "缺少复现测试结果：repro_status=not_applicable，Issue 中 @mo.cache 单元格场景未被成功执行并判读",
+        "full 套件实质未跑通（0 通过 / 1 错误 / 8 跳过），无修复前后行为对比输出"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.00678164,
+      "gaps": [
+        "缺少 marimo 产品源码的修复补丁（diff 中只有 tests/tw_repro 探针与空文件），无法表明问题已被修复",
+        "缺少带断言的复现测试：需断言 mo.cache 第二次调用不触发函数体（如 calls == [1]）且无 'scope does not contain a valid app instance' 警告",
+        "缺少探针实际运行输出/日志（CAUTH、CALLS、OUT 等 print 结果均未记录），无法判断警告是否仍出现"
+      ]
+    }
+  ]
+}

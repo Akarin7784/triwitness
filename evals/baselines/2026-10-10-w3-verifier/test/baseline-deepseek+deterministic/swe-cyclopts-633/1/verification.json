@@ -1,0 +1,60 @@
+{
+  "mode": "deterministic",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "repro_not_tied_to_issue"
+  ],
+  "reasons": [
+    "声明审计：repro_not_tied_to_issue",
+    "1 个失败在基线上就存在，不计回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_0000.py",
+      "passed": 3,
+      "failed": 6,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.978,
+      "log_ref": "f9a6d7d236d7:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_0000.py",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.873,
+      "log_ref": "e381c742fa25:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1376,
+      "failed": 1,
+      "skipped": 69,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 12.506,
+      "log_ref": "84010ea07403:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

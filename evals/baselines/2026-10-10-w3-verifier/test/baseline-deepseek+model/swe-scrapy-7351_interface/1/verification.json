@@ -1,0 +1,97 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.5333,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "repro_not_tied_to_issue"
+  ],
+  "reasons": [
+    "声明审计：repro_not_tied_to_issue",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：声明审计标记 repro_not_tied_to_issue：复现测试的 issue 编号 (7246) 为 Agent 自选，Issue 未给编号，无法确认该复现测试与实际 Issue 记录绑定；因此 repro_patched 的 4/4 通过只证明自造测试通过，不能完全等同“Issue 已修复”的独立证据",
+    "Verifier 缺口：旋转次序未由 Issue 规定：Issue 仅要求“fair round-robin”，未规定按 slot 名字序还是插入/push 序轮转；所有测试用例中 push 顺序恰好等于字典序 (slot-a, slot-b, slot-c)，两种解释结果一致，无法区分，因此对“与旧 min(stats) 首选取字典序最小一致”这一实现选择缺乏区分性证据（open_risks 已自述）",
+    "Verifier 缺口：full 报告 通过 22 / 失败 1 / 跳过 1，失败被说明为基线已存在的 pre-existing 失败，但未提供该失败的具体测试名与基线复现细节，无法独立核对"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_7246.py",
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.914,
+      "log_ref": "44af18a191d5:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_7246.py",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.825,
+      "log_ref": "386b57ac9bc5:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 22,
+      "failed": 1,
+      "skipped": 1,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 7.54,
+      "log_ref": "3f00f868f8b7:full"
+    }
+  ],
+  "cost_cny": 0.123424,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.03109824,
+      "gaps": [
+        "声明审计标记 repro_not_tied_to_issue：复现测试的 issue 编号 (7246) 为 Agent 自选，Issue 未给编号，无法确认该复现测试与实际 Issue 记录绑定；因此 repro_patched 的 4/4 通过只证明自造测试通过，不能完全等同“Issue 已修复”的独立证据",
+        "旋转次序未由 Issue 规定：Issue 仅要求“fair round-robin”，未规定按 slot 名字序还是插入/push 序轮转；所有测试用例中 push 顺序恰好等于字典序 (slot-a, slot-b, slot-c)，两种解释结果一致，无法区分，因此对“与旧 min(stats) 首选取字典序最小一致”这一实现选择缺乏区分性证据（open_risks 已自述）",
+        "full 报告 通过 22 / 失败 1 / 跳过 1，失败被说明为基线已存在的 pre-existing 失败，但未提供该失败的具体测试名与基线复现细节，无法独立核对"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.04953312,
+      "gaps": [
+        "声明审计标记 repro_not_tied_to_issue：复现测试文件名为 tests/tw_repro/test_issue_7246.py，7246 为 executor 自选编号（Issue 未给编号），审计未能确认复现与 Issue 的绑定；据规则复现测试的名字/行为须对应 Issue，此处‘名字’层面存在缺口。",
+        "Issue 未规定轮转次序（字典序 vs 插入/push 序）。实现按 slot 名字排序轮转（diff scrapy/pqueues.py:378-386），executor 自述此为 open risk；若隐藏验收假定按插入序轮转且槽位名非字典序，期望序列会不同，当前复现测试无法覆盖该分支。",
+        "三 slot 轮转与‘移除后续转’的断言仅由新增的 tests/tw_repro/test_issue_7246.py 覆盖，无独立/官方测试佐证；且该复现被审计标记为与 Issue 未绑定，削弱其作为唯一证据的效力。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.04279312,
+      "gaps": [
+        "声明审计结论为 repro_not_tied_to_issue：确定性检查指出复现与 Issue 的绑定存疑，削弱了证据充分性",
+        "轮转次序未定义：Issue 只要求“round-robin”/“rotation order”，未规定按字典序还是按 push/插入顺序；实现选择按 slot 名字排序轮转，而复现用例的 slot-a/b/c 恰好使字典序与插入序一致，无法区分两种解释，无法确认隐藏测试期望的序列（executor 自述 open_risks 亦承认）",
+        "复现文件名 tests/tw_repro/test_issue_7246.py 的编号 7246 为自选，Issue 未给编号，可能被审计视为“测的是 Agent 自设名字”"
+      ]
+    }
+  ]
+}

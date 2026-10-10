@@ -1,0 +1,60 @@
+{
+  "mode": "deterministic",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 40,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "声明审计：",
+    "1 个失败在基线上就存在，不计回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_birkhoff_poly_control.py",
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 5.296,
+      "log_ref": "58a9c488ab68:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_birkhoff_poly_control.py",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.473,
+      "log_ref": "e3b52ea89f25:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 6.631,
+      "log_ref": "91150aabc30c:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

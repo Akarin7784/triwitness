@@ -1,0 +1,97 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": "fail",
+  "model_confidence": 0.66,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 30,
+  "risk_level": "L3",
+  "anticheat_flags": [
+    "existing_test_modified",
+    "skip_or_xfail_added"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "防作弊阻断：skip_or_xfail_added",
+    "Verifier 缺口：无真实容器（Docker/K8s/Podman）端到端验证：复现测试全部通过 mock / 注入 _execute_with_timeout 单元级验证，未证明真实执行确实不再于 30 秒终止",
+    "Verifier 缺口：防作弊阻断 skip_or_xfail_added：tests/test_mcp_server.py 通过 importorskip 使整模块被跳过，回归覆盖被缩小，需确认是否有真实回归被掩盖",
+    "Verifier 缺口：existing_test_modified：tests/test_session.py 两处既有断言被改写为 timeout=None，需确认这对应可接受的契约变更而非回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_81.py",
+      "passed": 5,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.737,
+      "log_ref": "a26ac565e525:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_81.py",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.665,
+      "log_ref": "cd840a8b47be:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 706,
+      "failed": 0,
+      "skipped": 1,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.759,
+      "log_ref": "5d9307c64a87:full"
+    }
+  ],
+  "cost_cny": 0.081068,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.7,
+      "path": "tool_call",
+      "cost_cny": 0.02468824,
+      "gaps": [
+        "无真实容器（Docker/K8s/Podman）端到端验证：复现测试全部通过 mock / 注入 _execute_with_timeout 单元级验证，未证明真实执行确实不再于 30 秒终止",
+        "防作弊阻断 skip_or_xfail_added：tests/test_mcp_server.py 通过 importorskip 使整模块被跳过，回归覆盖被缩小，需确认是否有真实回归被掩盖",
+        "existing_test_modified：tests/test_session.py 两处既有断言被改写为 timeout=None，需确认这对应可接受的契约变更而非回归"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.03453608,
+      "gaps": [
+        "Issue 未给编号，复现文件 tests/tw_repro/test_issue_81.py 的编号为猜测，名称未与 Issue 严格对应",
+        "tests/test_mcp_server.py 整模块被 pytest.importorskip 跳过（full 中 1 skipped），未验证默认超时由 30 变为 config 默认（60）是否影响 MCP 相关行为",
+        "既有测试 tests/test_session.py:224,258 的两处断言被从 timeout=30 改为 timeout=None，原断言已不复存在，无法用原始断言独立确认行为差异仅来源于本次修复"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.62,
+      "path": "tool_call",
+      "cost_cny": 0.02184408,
+      "gaps": [
+        "未做真实容器（Docker/K8s/Podman）端到端验证：复现用例通过 mock/injection of _execute_with_timeout 观测解析出的 timeout，未证实运行时确实不会在 30s 被截断（executor open_risks 亦承认）。",
+        "复现文件名 tests/tw_repro/test_issue_81.py 中的编号 81 是猜测（Issue 未给编号）；行为与 Issue 描述一致，但名字无来源依据。",
+        "防作弊阻断项 skip_or_xfail_added 源于对测试套件的 skip 注入（tests/test_mcp_server.py importorskip），与本次 bug 无直接关系，需要在真实/完整环境中确认该模块仍能真正执行而非被隐藏失败。"
+      ]
+    }
+  ]
+}

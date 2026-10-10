@@ -1,0 +1,74 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.45,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 45,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：复现状态为 not_applicable：diff 中新增的 tests/tw_repro/test_issue_tqdm_class_disable.py 未被执行，因此没有『修复前失败、修复后通过』的前后对照证据",
+    "Verifier 缺口：full 结果为通过 0 / 失败 0 / 错误 1，没有任何通过用例；且『错误在基线已存在』仅来自说明文字，缺少可核验的基线运行结果",
+    "Verifier 缺口：无静态检查结果（静态检查：无），无法确认是否还有其他调用点仍把 tqdm_class 与 is_tqdm_disabled() 组合（可能存在未覆盖的调用路径）"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.499,
+      "log_ref": "46f8b149395f:full"
+    }
+  ],
+  "cost_cny": 0.065644,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.4,
+      "path": "tool_call",
+      "cost_cny": 0.01727024,
+      "gaps": [
+        "复现状态为 not_applicable：diff 中新增的 tests/tw_repro/test_issue_tqdm_class_disable.py 未被执行，因此没有『修复前失败、修复后通过』的前后对照证据",
+        "full 结果为通过 0 / 失败 0 / 错误 1，没有任何通过用例；且『错误在基线已存在』仅来自说明文字，缺少可核验的基线运行结果",
+        "无静态检查结果（静态检查：无），无法确认是否还有其他调用点仍把 tqdm_class 与 is_tqdm_disabled() 组合（可能存在未覆盖的调用路径）"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.03613904,
+      "gaps": [
+        "缺少被执行且通过的复现测试：repro_status=not_applicable，tests/tw_repro/test_issue_tqdm_class_disable.py 未被确认运行",
+        "full 运行结果为 通过 0 / 失败 0 / 错误 1 / 跳过 0，无任何正向测试证据，无法确认新增/修改测试真的执行并通过",
+        "静态检查为空（无 lint/类型/未用变量等结果），无法交叉确认改动完整性"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.45,
+      "path": "tool_call",
+      "cost_cny": 0.01223504,
+      "gaps": [
+        "复现测试未执行（repro_status=not_applicable）：tests/tw_repro/test_issue_tqdm_class_disable.py 与 tests/test_utils_tqdm.py 新增用例均无通过/失败记录，无法证明修复在非 TTY 下确实生效",
+        "full 结果为 0 通过 / 0 失败 / 1 错误：没有任何测试通过证据；需说明该 error 是哪个用例、并确认修复相关用例确实运行且通过",
+        "缺少基线（patched 前）与 patched 后的行为对比输出（例如非 TTY 下 disable/n 的实测差异）"
+      ]
+    }
+  ]
+}

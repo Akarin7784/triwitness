@@ -1,0 +1,75 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": "fail",
+  "model_confidence": 0.6233,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 25,
+  "risk_level": "L3",
+  "anticheat_flags": [
+    "exception_swallowed",
+    "skip_or_xfail_added"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "防作弊阻断：skip_or_xfail_added",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "2 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：没有有效复现测试：repro_status=not_applicable，新增的 tests/tw_repro/test_issue_2612.py 未被执行/识别，无法确定性验证修复行为",
+    "Verifier 缺口：防作弊阻断（anticheat）：skip_or_xfail_added —— test_sigterm_during_update_removes_temp_dirs 使用 @pytest.mark.skipif，关键信号场景可能被跳过",
+    "Verifier 缺口：防作弊阻断（anticheat）：exception_swallowed —— copier/_tools.py 的 _remove_temp_dir 用 suppress(OSError) 静默吞掉删除失败，恰好可能掩盖本 Issue 要解决的“删除失败”"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 453,
+      "failed": 2,
+      "skipped": 2,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 169.449,
+      "log_ref": "acf7de79dfc8:full"
+    }
+  ],
+  "cost_cny": 0.074621,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.65,
+      "path": "tool_call",
+      "cost_cny": 0.02280224,
+      "gaps": [
+        "没有有效复现测试：repro_status=not_applicable，新增的 tests/tw_repro/test_issue_2612.py 未被执行/识别，无法确定性验证修复行为",
+        "防作弊阻断（anticheat）：skip_or_xfail_added —— test_sigterm_during_update_removes_temp_dirs 使用 @pytest.mark.skipif，关键信号场景可能被跳过",
+        "防作弊阻断（anticheat）：exception_swallowed —— copier/_tools.py 的 _remove_temp_dir 用 suppress(OSError) 静默吞掉删除失败，恰好可能掩盖本 Issue 要解决的“删除失败”"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.62,
+      "path": "tool_call",
+      "cost_cny": 0.02036544,
+      "gaps": [
+        "没有可执行的复现证据：repro_status=not_applicable，且防作弊以 skip_or_xfail_added 阻断，新增的 tests/tw_repro/test_issue_2612.py 未被视为已验证通过",
+        "复现测的是 Agent 自行假设的行为（SIGTERM + monkeypatch tempfile.tempdir），Issue 原文只写 'kill it'，未定义具体信号或中断方式，属于证据缺口",
+        "SIGKILL（不可捕获）与子进程/线程内被杀的场景完全未覆盖，无法支撑 'tmp directories are always deleted'"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.6,
+      "path": "tool_call",
+      "cost_cny": 0.03145344,
+      "gaps": [
+        "没有可采信的复现测试运行证据：repro_status = not_applicable，新增 tests/tw_repro/test_issue_2612.py 未被验证执行；full（453 通过 / 2 失败 / 2 跳过，失败为基线已有）未证明覆盖 Issue 行为。",
+        "防作弊阻断未澄清：skip_or_xfail_added（新增 @pytest.mark.skipif win32）与 exception_swallowed（suppress(OSError)）未给出解释或替代证据。",
+        "新增测试多为无效应答：test_temp_dir_signal_signature 仅断言函数存在、test_tempfile_module_still_isolated 仅断言 tempfile.gettempdir() 为真，test_temp_dir_cleaned_on_normal_exit 含死代码（`... if False else \"\"`），不能证明 Issue 描述的泄漏被修复。"
+      ]
+    }
+  ]
+}

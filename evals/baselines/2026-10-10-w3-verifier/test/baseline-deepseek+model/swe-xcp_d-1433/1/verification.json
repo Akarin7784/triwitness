@@ -1,0 +1,74 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.5167,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 45,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "test_infra_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：repro_status = not_applicable: the added tests/tw_repro/test_issue_1432.py was never executed/recognized, so there is no dynamic evidence that the patched collect_data returns t2w=None in the issue scenario; only a static reading of the diff supports it.",
+    "Verifier 缺口：Only a single diff hunk of collect_data is shown; the downstream effect of restricting queries['t2w']['space'] to 'T1w' on the returned subj_data dict cannot be confirmed from the diff alone.",
+    "Verifier 缺口：Anti-cheat flagged test_infra_modified (new conftest.py added to the test session), an integrity concern for the test environment; no statement that the flag is benign."
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 77,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 10.592,
+      "log_ref": "7c5fb5e27557:full"
+    }
+  ],
+  "cost_cny": 0.096126,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02163324,
+      "gaps": [
+        "repro_status = not_applicable: the added tests/tw_repro/test_issue_1432.py was never executed/recognized, so there is no dynamic evidence that the patched collect_data returns t2w=None in the issue scenario; only a static reading of the diff supports it.",
+        "Only a single diff hunk of collect_data is shown; the downstream effect of restricting queries['t2w']['space'] to 'T1w' on the returned subj_data dict cannot be confirmed from the diff alone.",
+        "Anti-cheat flagged test_infra_modified (new conftest.py added to the test session), an integrity concern for the test environment; no statement that the flag is benign."
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.04218636,
+      "gaps": [
+        "无独立复现测试（repro_status = not_applicable）：缺少补丁前失败、补丁后通过的复现证据。",
+        "验证性测试为 Agent 自建、使用合成 fixture（tests/tw_repro/test_issue_1432.py），非官方数据集；且无法从 full 汇总（77/1）确认这些新测试是否实际执行并通过。",
+        "Issue 明确提到的 executive summary 图像/变换症状没有任何端到端或下游测试覆盖。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.03230636,
+      "gaps": [
+        "repro_status = not_applicable：新增的 tests/tw_repro/test_issue_1432.py 未作为复现被执行，没有 repro_patched/失败前-通过后 的执行证据来证明 `queries['t2w']['space']='T1w'` 真的使 subj_data['t2w'] 变为 None。",
+        "防作弊标记 test_infra_modified：新增了仓库根级 conftest.py（会全局影响测试会话）并新增自编测试目录，存在可信度隐患，需人工确认 conftest.py 未掩盖/绕过既有测试。",
+        "full 的 77 个通过项是否包含新增的 6 个测试不明确；若未包含，则唯一的行为证据完全未被确定性检查执行。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.7767,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：full 报告仅 4 个用例，与 repro 集合同为 4 个，疑似只收集了 tests/ 而未运行仓库根目录原有的 tests.py 回归套件；因此对改动是否破坏原有解析行为的“全量回归”缺乏证据（Executor 自述跑过 tests.py，但证据链中未见）。",
+    "Verifier 缺口：长括号字符串/长注释的边界行为（如 decode('[==[a--b]==]')）据自述为既有缺陷且未修复；Issue 未涉及，未纳入验收，但若回归套件覆盖该行为则需确认未被改变。",
+    "Verifier 缺口：无静态检查、无防作弊标记可供交叉验证，仅有夹具测试结果。"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_dashdash_string.py -q",
+      "passed": 1,
+      "failed": 3,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.491,
+      "log_ref": "fc7f8be2ff35:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_dashdash_string.py -q",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.466,
+      "log_ref": "967c5ae4ce6d:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.458,
+      "log_ref": "96b1c6c4be7d:full"
+    }
+  ],
+  "cost_cny": 0.07039,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.78,
+      "path": "tool_call",
+      "cost_cny": 0.01369724,
+      "gaps": [
+        "full 报告仅 4 个用例，与 repro 集合同为 4 个，疑似只收集了 tests/ 而未运行仓库根目录原有的 tests.py 回归套件；因此对改动是否破坏原有解析行为的“全量回归”缺乏证据（Executor 自述跑过 tests.py，但证据链中未见）。",
+        "长括号字符串/长注释的边界行为（如 decode('[==[a--b]==]')）据自述为既有缺陷且未修复；Issue 未涉及，未纳入验收，但若回归套件覆盖该行为则需确认未被改变。",
+        "无静态检查、无防作弊标记可供交叉验证，仅有夹具测试结果。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.7,
+      "path": "tool_call",
+      "cost_cny": 0.04197852,
+      "gaps": [
+        "确定性 full 仅运行 4 个新增用例；据 Executor 自述仓库原有套件在根目录 tests.py（pytest 默认不收集），该套件未纳入本次 full 运行，因此对 decode 入口改动的跨套件回归未被验证。",
+        "Executor 声称‘正确识别长注释 --[[...]]’，但按代码顺序 -- 会先被短注释分支消费、使其长注释识别分支难以到达；声明与实现不符（不影响本 Issue，因原实现同样只处理短注释）。",
+        "长括号字符串解析的既有缺陷（decode('[==[a--b]==]') 返回 '='）无测试覆盖，属既有问题、非本次引入。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.01471452,
+      "gaps": [
+        "full 运行统计显示 4 通过/4 总数，与 repro_patched 完全相同，未见原仓库根目录 tests.py 等既有测试的回归证据；无法确认注释剥离重写对更广解析场景无副作用（Executor 自述其单独跑了 tests.py，但确定性检查未体现）。",
+        "Executor 自述的既有缺陷 decode('[==[a--b]==]') 返回 '=' 未被确定性检查独立验证，且本 changeset 未处理长括号内容中嵌套 -- 的情形（FIXME 仍保留）。",
+        "无静态检查/防作弊/声明审计标记，缺少对改动代码风格与潜在新缺陷的独立信号。"
+      ]
+    }
+  ]
+}

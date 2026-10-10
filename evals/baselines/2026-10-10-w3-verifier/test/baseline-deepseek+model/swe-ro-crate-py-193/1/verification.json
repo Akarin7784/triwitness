@@ -1,0 +1,74 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.5167,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 65,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：无已执行的复现测试：repro_status = not_applicable。diff 中的 tests/tw_repro/test_issue_190.py 共 10 个用例未经确定性执行确认，全部结论只能依赖 diff 静态阅读（L1 风险）。",
+    "Verifier 缺口：防作弊标记 existing_test_modified：test/test_model.py::test_entity_as_mapping 的断言由 `with pytest.raises(ValueError): correction[\"badProp\"]` 改为 `assert correction[\"badProp\"] == {\"k\": \"v\"}`。Issue 对“访问更宽容”仅表述为 “might make sense / could even be considered”，需确认该改动是行为变更的必要结果而非放宽测试；同时需确认 badProp 是通过构造器（非校验路径）注入，否则该测试会在赋值处抛错。",
+    "Verifier 缺口：构造器路径未校验：Entity.__init__ 绕过校验，仍可通过 ContextEntity(crate, ..., properties={\"license\": {...}}) 写出含内联对象的非扁平化 JSON-LD；Issue 建议的“检查 @id 是否对应 crate 中实体”也未实现（只是访问端变宽容，写入端仍可产生不合规范元数据）。"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 124,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.46,
+      "log_ref": "b6795214629e:full"
+    }
+  ],
+  "cost_cny": 0.120921,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.04161224,
+      "gaps": [
+        "无已执行的复现测试：repro_status = not_applicable。diff 中的 tests/tw_repro/test_issue_190.py 共 10 个用例未经确定性执行确认，全部结论只能依赖 diff 静态阅读（L1 风险）。",
+        "防作弊标记 existing_test_modified：test/test_model.py::test_entity_as_mapping 的断言由 `with pytest.raises(ValueError): correction[\"badProp\"]` 改为 `assert correction[\"badProp\"] == {\"k\": \"v\"}`。Issue 对“访问更宽容”仅表述为 “might make sense / could even be considered”，需确认该改动是行为变更的必要结果而非放宽测试；同时需确认 badProp 是通过构造器（非校验路径）注入，否则该测试会在赋值处抛错。",
+        "构造器路径未校验：Entity.__init__ 绕过校验，仍可通过 ContextEntity(crate, ..., properties={\"license\": {...}}) 写出含内联对象的非扁平化 JSON-LD；Issue 建议的“检查 @id 是否对应 crate 中实体”也未实现（只是访问端变宽容，写入端仍可产生不合规范元数据）。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.03927848,
+      "gaps": [
+        "repro_status = not_applicable：无 repro_patched / 行为对比的运行证据；新增的 tests/tw_repro/test_issue_190.py 是否被 full 收集并通过未确认，因此上述 met 判定全部基于 diff 静态论证，缺少实际执行确认。",
+        "防作弊标记 existing_test_modified：test/test_model.py::test_entity_as_mapping 由期望 ValueError 改为断言返回内联字典，需独立确认这是对 Issue 规范变更的正当同步，而非掩盖回归。",
+        "executor 自述（finish）为空，无任何可审计的声明或验证说明。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.04003048,
+      "gaps": [
+        "无 repro_patched：复现状态为 not_applicable，核心修复（赋值报错、访问宽容）未被实际运行验证；仅有静态 diff 与新增测试文件，行为确认缺失",
+        "防作弊标记 existing_test_modified：test/test_model.py::test_entity_as_mapping 的断言被从 pytest.raises(ValueError) 改为 assert（test/test_model.py:414 附近）。该改动与 issue 的『访问宽容』一致，可视为合理更新，但缺少独立证据，不能排除遮蔽风险",
+        "full 结果 124 通过/1 失败，但失败为基线既有失败、不计回归；无法确认新增的 tests/tw_repro/test_issue_190.py 是否被收录并通过"
+      ]
+    }
+  ]
+}

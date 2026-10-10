@@ -1,0 +1,93 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.8167,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：静态检查未运行（'静态检查：无'），无 lint/类型检查输出可引用。",
+    "Verifier 缺口：复现文件名 test_issue_kwargs.py 未包含 Issue 编号（环境中无 Issue 号），命名规范一致性无法确认。",
+    "Verifier 缺口：同时传入 context 与 kwargs 时抛出的 TypeError 类型/消息是否与潜在隐藏测试期望一致未经独立验证（executor 自述 open_risk）。"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_kwargs.py -q",
+      "passed": 6,
+      "failed": 4,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.194,
+      "log_ref": "b5126da9e9f0:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_kwargs.py -q",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 3.587,
+      "log_ref": "6e352ef37d75:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 259,
+      "failed": 0,
+      "skipped": 2,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 8.698,
+      "log_ref": "9bc28a40dc66:full"
+    }
+  ],
+  "cost_cny": 0.036474,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.01087124,
+      "gaps": [
+        "静态检查未运行（'静态检查：无'），无 lint/类型检查输出可引用。",
+        "复现文件名 test_issue_kwargs.py 未包含 Issue 编号（环境中无 Issue 号），命名规范一致性无法确认。",
+        "同时传入 context 与 kwargs 时抛出的 TypeError 类型/消息是否与潜在隐藏测试期望一致未经独立验证（executor 自述 open_risk）。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.78,
+      "path": "tool_call",
+      "cost_cny": 0.01242356,
+      "gaps": [
+        "环境中没有 Issue 编号，复现文件命名为 tests/tw_repro/test_issue_kwargs.py，而非约定的 test_issue_<n>.py，无法与官方 Issue 编号对应核验。",
+        "复现测试为 Executor 自行编写，用于确认新特性的 4 个用例在 base 失败、在 patched 通过；缺少仓库官方/隐藏验收测试作为独立交叉证据（repro_base 6/4 与逐项推演的失败集合一致，内部自洽但仍是同源自证）。",
+        "“同时传入 context 与 context kwargs”时的行为（抛 TypeError、消息 'Cannot pass both a context and context keyword arguments'）是 Executor 自选，Issue 未规定；若隐藏测试断言不同的异常类型/正则，可能不一致。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.82,
+      "path": "tool_call",
+      "cost_cny": 0.01317956,
+      "gaps": [
+        "复现文件名为 tests/tw_repro/test_issue_kwargs.py，未带 issue 编号（环境无 issue number），无法核对是否对应某个具体编号的 Issue（行为与 Issue 标题“pass kwargs”一致，故影响有限）",
+        "同时传 context 与 context kwargs 时抛 TypeError 及其消息由执行者自选（Issue 未规定），若隐藏测试期望不同异常类型/正则则可能不符",
+        "未展示具体 repro_base 失败的 4 个用例清单与逐条输出（仅为汇总计数），也未提供静态检查详情（“无”）"
+      ]
+    }
+  ]
+}

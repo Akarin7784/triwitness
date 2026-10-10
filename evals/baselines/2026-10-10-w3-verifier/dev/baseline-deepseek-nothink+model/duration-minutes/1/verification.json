@@ -1,0 +1,88 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.9133,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：test_invalid（parse_duration(\"abc\") 抛 ValueError）属 Issue 未描述的附加假定行为，但该断言与 Issue 语义不冲突，不影响结论"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_1.py -q",
+      "passed": 3,
+      "failed": 4,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.463,
+      "log_ref": "fe7bc4d5a3a5:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_1.py -q",
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.392,
+      "log_ref": "1e704f74ad19:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q",
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.39,
+      "log_ref": "88972ba1bd93:full"
+    }
+  ],
+  "cost_cny": 0.020565,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.92,
+      "path": "tool_call",
+      "cost_cny": 0.006975,
+      "gaps": [
+        "test_invalid（parse_duration(\"abc\") 抛 ValueError）属 Issue 未描述的附加假定行为，但该断言与 Issue 语义不冲突，不影响结论"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.92,
+      "path": "tool_call",
+      "cost_cny": 0.00742716,
+      "gaps": [
+        "repro 中的 test_invalid（parse_duration(\"abc\") 抛 ValueError）对应 Issue 未描述的行为，属于 Agent 自行假设；该项在 repro_base 即通过，不能作为本次修复的证据（亦说明未引入回归）",
+        "未覆盖 Issue 未要求的边界（复数单位 '1hrs'、大小写/空白、零值 '0m' 等），因此这些行为是否受影响未知，但不属验收范围"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.00616316,
+      "gaps": [
+        "测试 test_invalid 断言 parse_duration(\"abc\") 抛 ValueError 属 Issue 未描述的行为，属 Agent 自行假设的额外断言；不过该断言在 repro_base 与 patched 均通过，且与修复无关，不影响本 Issue 结论",
+        "未运行静态检查（说明：无），无 lint/类型证据",
+        "未覆盖 Issue 未要求的边界（如复数单位、空白、大小写、零值、\"1h30m\" 顺序/重复单位等），但这些均超出 Issue 范围"
+      ]
+    }
+  ]
+}

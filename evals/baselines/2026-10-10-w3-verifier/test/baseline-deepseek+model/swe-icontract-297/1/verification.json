@@ -1,0 +1,75 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.4833,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 65,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended",
+    "existing_test_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：repro_status = not_applicable: the reproduction test that matches the issue (tests/tw_repro/test_issue_295.py::test_base_class_is_not_affected, verbatim issue example) was NOT executed/confirmed — no repro_patched evidence, so the core behavioral claim is only supported by static argumentation.",
+    "Verifier 缺口：The single failing test in `full` (44 passed / 1 failed) is unidentified; its relation to invariant inheritance cannot be checked, so we cannot rule out an inheritance-related regression even though the note claims it is pre-existing baseline.",
+    "Verifier 缺口：Static analysis step was skipped (静态检查：无), so no independent confirmation of the decorator logic change."
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 44,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.636,
+      "log_ref": "ce6c488f8fac:full"
+    }
+  ],
+  "cost_cny": 0.087836,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02155424,
+      "gaps": [
+        "repro_status = not_applicable: the reproduction test that matches the issue (tests/tw_repro/test_issue_295.py::test_base_class_is_not_affected, verbatim issue example) was NOT executed/confirmed — no repro_patched evidence, so the core behavioral claim is only supported by static argumentation.",
+        "The single failing test in `full` (44 passed / 1 failed) is unidentified; its relation to invariant inheritance cannot be checked, so we cannot rule out an inheritance-related regression even though the note claims it is pre-existing baseline.",
+        "Static analysis step was skipped (静态检查：无), so no independent confirmation of the decorator logic change."
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02990096,
+      "gaps": [
+        "未执行复现测试（repro_status=not_applicable）：Issue 原始示例的运行时结果未被确认，仅有静态论证",
+        "full 仅 44 个测试，无法确认是否包含新增的 tests/tw_repro/test_issue_295.py 与改写的 test_invariant.py/test_inheritance_invariant.py，也无法确认其执行结果",
+        "唯一失败用例的身份与失败原因未知（虽声明基线既有，但未核对确与本次改动无关）"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.45,
+      "path": "tool_call",
+      "cost_cny": 0.03638096,
+      "gaps": [
+        "repro_status=not_applicable：Issue 的核心复现（Base() 不再抛 ViolationError）没有任何已执行的复现证据，仅依赖 diff 中的静态代码论证与非执行性看护测试。",
+        "无法确认 tests/tw_repro/test_issue_295.py（含 test_base_class_with_metaclass_is_not_affected 这一带 DBCMeta 的用例）是否被纳入 full 运行并全部通过。",
+        "full 运行的 1 个失败用例名未知，无法独立核实其为基线已存在且与本改动无关；也未提供通过/失败用例清单。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.7133,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 20,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended",
+    "existing_test_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：tests_integ/memory/integrations/test_session_manager.py 仅同步了断言文本，未真实运行（需真实 AWS）；自定义 tag 的端到端集成行为未验证",
+    "Verifier 缺口：确定性检查中 full 仅报告 通过 1 / 失败 1，与 Executor 自述的 938 passed 严重不一致，无法据此确认全量套件无回归；Executor 声称的 3 个改动前既有失败未被独立复核",
+    "Verifier 缺口：无静态检查结果（静态检查：无）"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_191.py",
+      "passed": 1,
+      "failed": 3,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.946,
+      "log_ref": "4cb083fd00c6:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_191.py",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.5,
+      "log_ref": "9c880f8607f0:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 3.152,
+      "log_ref": "340aa290dd84:full"
+    }
+  ],
+  "cost_cny": 0.063625,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.72,
+      "path": "tool_call",
+      "cost_cny": 0.01929624,
+      "gaps": [
+        "tests_integ/memory/integrations/test_session_manager.py 仅同步了断言文本，未真实运行（需真实 AWS）；自定义 tag 的端到端集成行为未验证",
+        "确定性检查中 full 仅报告 通过 1 / 失败 1，与 Executor 自述的 938 passed 严重不一致，无法据此确认全量套件无回归；Executor 声称的 3 个改动前既有失败未被独立复核",
+        "无静态检查结果（静态检查：无）"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.7,
+      "path": "tool_call",
+      "cost_cny": 0.0117844,
+      "gaps": [
+        "确定性检查 full 只报告『通过 1 / 失败 1』，与 Executor 自述『938 passed / 1 skipped（deselect 3 个既有失败）』不符；全量回归覆盖面未被确定性检查确证，只能确认该 1 个失败在基线已存在（不计回归）",
+        "防作弊标记 existing_test_modified / existing_test_extended：仓库原有断言 <retrieved_memory> 的测试被改为 <user_context>。该改动与 Issue『rename 已回滚』一致，但缺少独立证据说明不是为迁就实现而放宽断言（已有 repro 测试独立覆盖默认/自定义两种标签，风险较低）",
+        "tests_integ/* 断言文本被同步但本环境未运行（需真实 AWS），集成层行为未被实证"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.72,
+      "path": "tool_call",
+      "cost_cny": 0.0325444,
+      "gaps": [
+        "tests_integ/memory/integrations/test_session_manager.py 需真实 AWS，未运行；端到端 <user_context> 行为仅做断言文本同步，未经执行验证",
+        "\"full\" 确定性检查仅报告 1 passed/1 failed，与 executor 自述的 938 passed/1 skipped 严重不符，全量回归是否真正覆盖存疑，无法据此确证无回归",
+        "防作弊标记 existing_test_modified/existing_test_extended：既有断言由 <retrieved_memory> 改为 <user_context>，虽与 Issue 意图一致，但属改动既有测试期望，需人工确认非为迁就实现"
+      ]
+    }
+  ]
+}

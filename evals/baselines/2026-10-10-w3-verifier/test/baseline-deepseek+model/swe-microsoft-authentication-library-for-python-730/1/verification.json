@@ -1,0 +1,94 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "pass",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.55,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 20,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：FIC/Managed-Identity Assertion Provider 的 claims 透传（Issue 方案第二条）无任何实现与测试；是否属本快照交付范围未定。",
+    "Verifier 缺口：full 确定性检查仅 通过 0 / 错误 1 / 跳过 1，不足以作为全量无回归证据；其余用例因沙箱 DNS 无法运行。",
+    "Verifier 缺口：参数命名（claims 为主、claims_challenge 为别名）为本实现假设；Issue 未指定名称，若隐藏测试使用其他名称则可能不匹配。"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_mi_claims.py",
+      "passed": 0,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.704,
+      "log_ref": "9e21139dc8a5:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_mi_claims.py",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.573,
+      "log_ref": "1d8480802ca0:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 1,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.765,
+      "log_ref": "1ab2b16fca7a:full"
+    }
+  ],
+  "cost_cny": 0.071163,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.01223524,
+      "gaps": [
+        "FIC/Managed-Identity Assertion Provider 的 claims 透传（Issue 方案第二条）无任何实现与测试；是否属本快照交付范围未定。",
+        "full 确定性检查仅 通过 0 / 错误 1 / 跳过 1，不足以作为全量无回归证据；其余用例因沙箱 DNS 无法运行。",
+        "参数命名（claims 为主、claims_challenge 为别名）为本实现假设；Issue 未指定名称，若隐藏测试使用其他名称则可能不匹配。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.0478458,
+      "gaps": [
+        "全量回归未在确定性层面完成：full 检查未真正执行测试（网络/DNS 导致收集失败），仅凭 Executor 自述的失败集合对比，无法独立确认无回归",
+        "API 参数名由 Agent 自设：Issue 只说“expose the claims API”未规定名称，复现测试使用 claims / claims_challenge；若隐藏测试使用其他命名（或仅认 claims_challenge）可能不匹配",
+        "claims_challenge 别名为防御性添加，无 Issue 依据，也未经隐藏测试/上游签名验证"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.6,
+      "path": "tool_call",
+      "cost_cny": 0.0110818,
+      "gaps": [
+        "Issue 第二条 'Expose Claims to MI Assertion Provider for FIC' 无任何落点证据：diff 未改动 msal/application.py 或 FIC/assertion provider，复现测试也未覆盖 CCA/FIC 路径；无法判断该子任务是否已完成或是否因代码不存在而不适用",
+        "参数命名假设：Issue 未指定 claims 参数名，复现测试以 Agent 自选的 `claims`/`claims_challenge` 为准；若隐藏验收测试使用其他命名或行为，当前证据无法覆盖",
+        "真实回归套件未运行：full 显示 0 passed / 1 error（收集失败），无法据此确认真实测试集无回归；Executor 的失败集合对比仅停留在自述"
+      ]
+    }
+  ]
+}

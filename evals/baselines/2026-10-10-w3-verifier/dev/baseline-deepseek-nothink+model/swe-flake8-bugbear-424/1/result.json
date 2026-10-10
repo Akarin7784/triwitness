@@ -1,0 +1,38 @@
+{
+  "task_id": "swe-flake8-bugbear-424",
+  "config": "baseline-deepseek-nothink+model",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_b017.py"
+  ],
+  "edited_paths": [
+    "tests/b017.py",
+    "tests/test_bugbear.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.189768,
+  "tokens_in": 1038627,
+  "tokens_cached": 1015296,
+  "tokens_out": 11353,
+  "peak_calls": 0,
+  "steps": 61,
+  "wall_s": 232.51,
+  "trajectory_id": "baseline-deepseek-nothink/swe-flake8-bugbear-424/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "verifier_mode": "model",
+  "verifier_verdict": "pass",
+  "verifier_deterministic": "pass",
+  "verifier_model_verdict": "pass",
+  "verify_repro_status": "reproduced",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.100719,
+  "verifier_error": null
+}

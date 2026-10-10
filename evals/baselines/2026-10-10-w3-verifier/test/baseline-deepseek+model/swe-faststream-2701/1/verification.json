@@ -1,0 +1,94 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.84,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：Issue 未给出编号，新增测试文件名/用例号为猜测的 2650（open_risks 已自陈），编号可能与真实 issue 不符——仅影响命名，不影响行为判定",
+    "Verifier 缺口：Issue 自述“可能有其他副作用我还没注意到”，除 Context 注入外（如 serializer/provider 合并等）未逐一断言",
+    "Verifier 缺口：无真实 Kafka/Rabbit/NATS broker 环境，全量测试中的 connected 用例失败属环境限制，非回归证据"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_2650.py -q",
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.477,
+      "log_ref": "095c146d7a6d:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_2650.py -q",
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.411,
+      "log_ref": "692d35c94c3d:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1557,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 73.613,
+      "log_ref": "da2552fb1d15:full"
+    }
+  ],
+  "cost_cny": 0.025407,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.00682624,
+      "gaps": [
+        "Issue 未给出编号，新增测试文件名/用例号为猜测的 2650（open_risks 已自陈），编号可能与真实 issue 不符——仅影响命名，不影响行为判定",
+        "Issue 自述“可能有其他副作用我还没注意到”，除 Context 注入外（如 serializer/provider 合并等）未逐一断言",
+        "无真实 Kafka/Rabbit/NATS broker 环境，全量测试中的 connected 用例失败属环境限制，非回归证据"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.82,
+      "path": "tool_call",
+      "cost_cny": 0.0090344,
+      "gaps": [
+        "Issue 未给出编号；复现测试文件按仓库 PR 号段猜测命名为 tests/tw_repro/test_issue_2650.py，无法确认与真实 issue 编号对应（行为对应，但编号为假设）",
+        "确定性 full 运行结果（1557 passed / 1 failed / 0 skipped）与 Executor 自述（排除 connected/slow 后 2915 passed, 8 skipped）数量差异较大，未说明各自选取的测试集，回归范围不透明",
+        "静态检查为“无”，未做 lint/类型检查，无法验证 _update_fd_config 调用签名与副作用在静态层面成立"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.85,
+      "path": "tool_call",
+      "cost_cny": 0.0095464,
+      "gaps": [
+        "Issue 未给出编号，复现测试文件命名为 tests/tw_repro/test_issue_2650.py，编号为按 release.md PR 号段猜测，真实 issue 编号映射未确认（不影响行为验证）。",
+        "Issue 提到‘可能还有其他未注意到的副作用’，仅验证了 Context 注入这一症状；serializer/provider 等其他配置合并行为未逐一断言，存在残余未覆盖面。",
+        "repro_base 仅提供失败计数（0 通过/2 失败），未展示基线失败的具体断言/错误信息。"
+      ]
+    }
+  ]
+}

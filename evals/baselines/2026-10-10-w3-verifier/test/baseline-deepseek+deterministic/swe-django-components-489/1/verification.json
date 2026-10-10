@@ -1,0 +1,59 @@
+{
+  "mode": "deterministic",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "claim_contradicts_open_risks"
+  ],
+  "reasons": [
+    "声明审计：claim_contradicts_open_risks"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_445.py -q",
+      "passed": 1,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.042,
+      "log_ref": "9e78cea055de:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_445.py -q",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.759,
+      "log_ref": "c502ea7eca2a:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 207,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.312,
+      "log_ref": "e6c7db4c51d2:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": []
+}

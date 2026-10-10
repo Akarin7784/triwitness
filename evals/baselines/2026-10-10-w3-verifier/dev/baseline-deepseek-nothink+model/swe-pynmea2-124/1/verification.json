@@ -1,0 +1,95 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.8733,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：Only 1 of the 6 Issue example sentences is explicitly tested; the remaining 5 are not directly exercised (though the uniform regex covers them).",
+    "Verifier 缺口：No static analysis was run (静态检查：无).",
+    "Verifier 缺口：Behavior for fractional-digit counts other than 2-3 (e.g. 1 or 4) is untested; the Issue only asked for 2-3, so this is out of scope but unverified."
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q test/test_ash.py::test_ashratt_two_decimal_timestamp",
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.431,
+      "log_ref": "a099259ab930:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q test/test_ash.py::test_ashratt_two_decimal_timestamp",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.43,
+      "log_ref": "2d066c065b73:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 68,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.656,
+      "log_ref": "7820e322c0bc:full"
+    }
+  ],
+  "cost_cny": 0.038374,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.87,
+      "path": "tool_call",
+      "cost_cny": 0.00976624,
+      "gaps": [
+        "Only 1 of the 6 Issue example sentences is explicitly tested; the remaining 5 are not directly exercised (though the uniform regex covers them).",
+        "No static analysis was run (静态检查：无).",
+        "Behavior for fractional-digit counts other than 2-3 (e.g. 1 or 4) is untested; the Issue only asked for 2-3, so this is out of scope but unverified."
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.88,
+      "path": "tool_call",
+      "cost_cny": 0.01769984,
+      "gaps": [
+        "仅对 Issue 示例 6 行中的第 1 行（*04）做了断言；其余 5 行未逐一验证（结构与校验和不同但字段布局相同，风险较低）",
+        "Issue 另外引用了 ash.py L24–L26 处的逻辑；diff 未体现该处是否也含同一时间戳正则、是否需要同步修改，无直接证据说明其是否受影响",
+        "未提供独立的静态检查输出（确定性检查：静态检查无）"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.87,
+      "path": "tool_call",
+      "cost_cny": 0.01090784,
+      "gaps": [
+        "The Issue links two code locations (lines ~24-26 and ~35-37); only the ASHRATT.match regex (line 37) was changed. No evidence shown that the other referenced location does not also gate parsing, though repro_patched passing implies the current path is sufficient.",
+        "Only 1 of the 6 example sentences is covered by the repro test; the other variants (e.g. checksum *06/*01) are not individually exercised.",
+        "No static-check output provided; correctness relies on the diff and test run only."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "run_dir": "2026-10-10-w3-verifier-test",
+  "rows": [
+    {
+      "config": "baseline-deepseek+deterministic",
+      "agent": "llm",
+      "tasks": 35,
+      "attempts": 35,
+      "resolved_at_1": 0.48484848484848486,
+      "solved": 16,
+      "total_cost_cny": 8.1596,
+      "avg_cost_per_task": 0.2331,
+      "cost_per_resolved": 0.51,
+      "avg_steps": 53.3,
+      "avg_wall_s": 520.1,
+      "false_success": 6,
+      "tampered": 3,
+      "cache_hit_rate": 0.972,
+      "live": true,
+      "ci95": [
+        0.3333,
+        0.6667
+      ],
+      "graded": 33,
+      "failure_categories": {
+        "resolved": 16,
+        "infra_error": 2,
+        "false_success": 6,
+        "agent_error": 11
+      },
+      "test_edited": 6,
+      "verifier_mode": "deterministic",
+      "verifier": {
+        "n": 33,
+        "verified_pass": 11,
+        "true_pass": 8,
+        "resolved": 16,
+        "precision": 0.7273,
+        "recall": 0.5,
+        "false_success_claimed": 6,
+        "false_success_verified": 3,
+        "by_risk": {
+          "L0": [
+            10,
+            0.6
+          ],
+          "L1": [
+            6,
+            0.3333
+          ],
+          "L2": [
+            14,
+            0.4286
+          ],
+          "L3": [
+            3,
+            0.6667
+          ]
+        }
+      }
+    },
+    {
+      "config": "baseline-deepseek+model",
+      "agent": "llm",
+      "tasks": 35,
+      "attempts": 35,
+      "resolved_at_1": 0.48484848484848486,
+      "solved": 16,
+      "total_cost_cny": 10.4131,
+      "avg_cost_per_task": 0.2975,
+      "cost_per_resolved": 0.6508,
+      "avg_steps": 53.3,
+      "avg_wall_s": 520.1,
+      "false_success": 6,
+      "tampered": 3,
+      "cache_hit_rate": 0.972,
+      "live": true,
+      "ci95": [
+        0.3333,
+        0.6667
+      ],
+      "graded": 33,
+      "failure_categories": {
+        "resolved": 16,
+        "infra_error": 2,
+        "false_success": 6,
+        "agent_error": 11
+      },
+      "test_edited": 6,
+      "verifier_mode": "model",
+      "verifier": {
+        "n": 33,
+        "verified_pass": 9,
+        "true_pass": 7,
+        "resolved": 16,
+        "precision": 0.7778,
+        "recall": 0.4375,
+        "false_success_claimed": 6,
+        "false_success_verified": 2,
+        "by_risk": {
+          "L0": [
+            9,
+            0.6667
+          ],
+          "L1": [
+            7,
+            0.2857
+          ],
+          "L2": [
+            14,
+            0.4286
+          ],
+          "L3": [
+            3,
+            0.6667
+          ]
+        }
+      }
+    },
+    {
+      "config": "baseline-deepseek+none",
+      "agent": "llm",
+      "tasks": 35,
+      "attempts": 35,
+      "resolved_at_1": 0.48484848484848486,
+      "solved": 16,
+      "total_cost_cny": 8.1596,
+      "avg_cost_per_task": 0.2331,
+      "cost_per_resolved": 0.51,
+      "avg_steps": 53.3,
+      "avg_wall_s": 520.1,
+      "false_success": 6,
+      "tampered": 3,
+      "cache_hit_rate": 0.972,
+      "live": true,
+      "ci95": [
+        0.3333,
+        0.6667
+      ],
+      "graded": 33,
+      "failure_categories": {
+        "resolved": 16,
+        "infra_error": 2,
+        "false_success": 6,
+        "agent_error": 11
+      },
+      "test_edited": 6,
+      "verifier_mode": null,
+      "verifier": null
+    }
+  ],
+  "missing": [],
+  "warnings": [
+    "baseline-deepseek+deterministic：6 次虚假成功（声称修好但隐藏测试不过）",
+    "baseline-deepseek+deterministic：3 次疑似篡改测试（基础设施 / 削弱已有测试；Grader 已忽略这些改动）",
+    "baseline-deepseek+deterministic：6 次改写已有测试期望（未应用、不算篡改，建议人审）",
+    "baseline-deepseek+model：6 次虚假成功（声称修好但隐藏测试不过）",
+    "baseline-deepseek+model：3 次疑似篡改测试（基础设施 / 削弱已有测试；Grader 已忽略这些改动）",
+    "baseline-deepseek+model：6 次改写已有测试期望（未应用、不算篡改，建议人审）",
+    "baseline-deepseek+none：6 次虚假成功（声称修好但隐藏测试不过）",
+    "baseline-deepseek+none：3 次疑似篡改测试（基础设施 / 削弱已有测试；Grader 已忽略这些改动）",
+    "baseline-deepseek+none：6 次改写已有测试期望（未应用、不算篡改，建议人审）",
+    "6 个基础设施错误，单独列出、不计入分母"
+  ],
+  "infra_errors": {
+    "baseline-deepseek+deterministic/swe-ultraplot-696/1": "单任务预算 max_input_tokens 已用尽：3.045e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 ultraplot：resolved，仅供参考，不计入本基线",
+    "baseline-deepseek+deterministic/swe-xcp_d-1433/1": "单任务预算 max_input_tokens 已用尽：3.073e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 xcp_d：unresolved（2 failed），仅供参考，不计入本基线",
+    "baseline-deepseek+model/swe-ultraplot-696/1": "单任务预算 max_input_tokens 已用尽：3.045e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 ultraplot：resolved，仅供参考，不计入本基线",
+    "baseline-deepseek+model/swe-xcp_d-1433/1": "单任务预算 max_input_tokens 已用尽：3.073e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 xcp_d：unresolved（2 failed），仅供参考，不计入本基线",
+    "baseline-deepseek+none/swe-ultraplot-696/1": "单任务预算 max_input_tokens 已用尽：3.045e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 ultraplot：resolved，仅供参考，不计入本基线",
+    "baseline-deepseek+none/swe-xcp_d-1433/1": "单任务预算 max_input_tokens 已用尽：3.073e+06 / 3e+06 | infra（W2-25 复核）：判分环境 uid 1000 的 HOME=/ 不可写，参考解在 Grader 条件下 reward=0（任务校验用 root 才通过）；44f9f41 修复后离线重判 xcp_d：unresolved（2 failed），仅供参考，不计入本基线"
+  }
+}

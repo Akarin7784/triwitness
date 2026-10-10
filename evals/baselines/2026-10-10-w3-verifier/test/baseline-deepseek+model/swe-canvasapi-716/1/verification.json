@@ -1,0 +1,96 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.72,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 30,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended",
+    "existing_test_modified"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：Issue 未给出编号，复现测试文件名为 tests/tw_repro/test_issue_obj_or_str.py，不符合 test_issue_<n>.py 约定；无法确认其与评测所用复现用例的对应关系。",
+    "Verifier 缺口：FeatureFlag.delete/set_feature_flag 传 str 时“父上下文”来源未在 Issue 中规定：实现新增非公开属性 `_parent` 并回退到 context_type/context_id；隐藏测试若以手工构造的 FeatureFlag（context_type 与 mock 端点不一致）验证，行为可能不同。无法联网核对上游参考实现。",
+    "Verifier 缺口：错误文案由 '... must be of type ...' 改为 '... must be of type ... or str.'；若隐藏测试用 assertRaisesRegex 匹配旧/特定文案，可能失败，现有证据无法判定。"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_obj_or_str.py -q",
+      "passed": 4,
+      "failed": 10,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.25,
+      "log_ref": "8fc1cd949a5a:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_obj_or_str.py -q",
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.927,
+      "log_ref": "ff8c018f6791:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1139,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 8.466,
+      "log_ref": "ea1e57463755:full"
+    }
+  ],
+  "cost_cny": 0.066175,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.78,
+      "path": "tool_call",
+      "cost_cny": 0.02066324,
+      "gaps": [
+        "Issue 未给出编号，复现测试文件名为 tests/tw_repro/test_issue_obj_or_str.py，不符合 test_issue_<n>.py 约定；无法确认其与评测所用复现用例的对应关系。",
+        "FeatureFlag.delete/set_feature_flag 传 str 时“父上下文”来源未在 Issue 中规定：实现新增非公开属性 `_parent` 并回退到 context_type/context_id；隐藏测试若以手工构造的 FeatureFlag（context_type 与 mock 端点不一致）验证，行为可能不同。无法联网核对上游参考实现。",
+        "错误文案由 '... must be of type ...' 改为 '... must be of type ... or str.'；若隐藏测试用 assertRaisesRegex 匹配旧/特定文案，可能失败，现有证据无法判定。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.65,
+      "path": "tool_call",
+      "cost_cny": 0.0227498,
+      "gaps": [
+        "无法核对上游参考实现/隐藏测试：obj_or_str 的 TypeError 文案由 'must be of type X.' 改为 'must be of type X or str.'，若隐藏测试用 assertRaisesRegex 匹配旧文案会失败（执行者自述亦承认）。",
+        "FeatureFlag.delete/set_feature_flag 传 str 时父上下文来源无明确规定：实现优先用创建时记录的 _parent、其次回退 context_type/context_id。若参考实现仅依赖 context_type/context_id 且隐藏测试用手工构造的、context 与 mock 端点不一致的 flag，行为可能不同。",
+        "Issue 未给出编号，复现测试命名为 tests/tw_repro/test_issue_obj_or_str.py 而非约定的 test_issue_<n>.py，命名规范无法对齐。"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.73,
+      "path": "tool_call",
+      "cost_cny": 0.0227618,
+      "gaps": [
+        "Issue 未给出编号，复现测试文件名无法满足 test_issue_<n>.py 约定，无法与官方复现测试对齐",
+        "diff 被截断，tests/tw_repro/test_issue_obj_or_str.py 中 set_feature_flag 的字符串用例内容不可见，只能依赖 repro_patched 的 14/0 计数",
+        "Issue 未规定 FeatureFlag.delete/set_feature_flag 在传入 str 时如何推断父上下文（account/course/user）；实现的 _parent 记录 + context_type 回退是自行设计，隐藏测试若以手工构造且 context_type 与 mock 端点不一致的 FeatureFlag 调用，行为可能不同（Executor 自述亦列为 open risk）"
+      ]
+    }
+  ]
+}

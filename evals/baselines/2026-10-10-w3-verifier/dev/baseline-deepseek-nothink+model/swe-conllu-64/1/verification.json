@@ -1,0 +1,90 @@
+{
+  "mode": "model",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": "pass",
+  "model_confidence": 0.89,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "Verifier 缺口：仓库未配置静态检查（静态检查：无），无法确认 lint/类型检查层面无新问题，但为空属性，非阻断项",
+    "Verifier 缺口：未独立查看测试运行原始输出，仅依据确定性检查汇总计数（repro_base/repro_patched/full）；如需完全确认可附运行日志"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_155.py",
+      "passed": 1,
+      "failed": 3,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.481,
+      "log_ref": "9bae70409aa2:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_155.py",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.407,
+      "log_ref": "3ce24fe73c73:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 122,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.585,
+      "log_ref": "c09a41f5631a:full"
+    }
+  ],
+  "cost_cny": 0.024006,
+  "model_judgments": [
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.00871724,
+      "gaps": [
+        "仓库未配置静态检查（静态检查：无），无法确认 lint/类型检查层面无新问题，但为空属性，非阻断项",
+        "未独立查看测试运行原始输出，仅依据确定性检查汇总计数（repro_base/repro_patched/full）；如需完全确认可附运行日志"
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.87,
+      "path": "tool_call",
+      "cost_cny": 0.00872428,
+      "gaps": [
+        "The repro test's `metadata_parsers={'__fallback__': ...}` key is not evidenced against the library's documented parser API; that the test passes (and asserts an int is stored) implies the fallback hook was actually invoked, but no external confirmation of this API contract is provided.",
+        "No static/lint check was run (静态检查：无), so f-string syntax correctness is only evidenced indirectly via the passing test suite.",
+        "No direct evidence of the original TypeError message being reproduced verbatim (only pass/fail counts for repro_base: 3 failed), so the exact pre-fix failure mode is inferred rather than shown."
+      ]
+    },
+    {
+      "verdict": "pass",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.00656428,
+      "gaps": [
+        "静态检查（lint/类型检查）未运行（确定性检查中“静态检查：无”），但本修复为局部字符串格式化改动，无阻塞性影响。",
+        "复现测试由 Agent 自撰；虽覆盖非字符串/空串/自定义 parser 场景且与 Issue 描述一致，但未直接复用 Issue 报告者的原始 metadata_parser 代码（属细节差异，不影响结论）。"
+      ]
+    }
+  ]
+}

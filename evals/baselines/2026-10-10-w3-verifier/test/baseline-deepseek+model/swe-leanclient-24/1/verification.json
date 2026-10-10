@@ -1,0 +1,77 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.5167,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 60,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [
+    "repro_missing"
+  ],
+  "reasons": [
+    "复现状态 not_applicable",
+    "声明审计：repro_missing",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：No reproduction test was executed: repro_status = not_applicable and audit says repro_missing; the full run shows 0 passed / 0 failed / 1 error / 2 skipped, so the fix is not confirmed by execution.",
+    "Verifier 缺口：Executor's claim 'temporarily reverting the helper made 4/7 repro tests fail' is an unverified self-report — no harness log accompanies it.",
+    "Verifier 缺口：Semantic decision unverified: implementation uses union of range+fullRange; Issue does not specify behavior when the two are disjoint. Union can produce false positives (e.g. range at line 0, fullRange at line 100, query line 50 -> kept). OR-overlap / 'prefer fullRange' semantics would differ. Hidden tests may expect different semantics."
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 2,
+      "errors": 1,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.968,
+      "log_ref": "dfbdbae6ef44:full"
+    }
+  ],
+  "cost_cny": 0.067939,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.02467524,
+      "gaps": [
+        "No reproduction test was executed: repro_status = not_applicable and audit says repro_missing; the full run shows 0 passed / 0 failed / 1 error / 2 skipped, so the fix is not confirmed by execution.",
+        "Executor's claim 'temporarily reverting the helper made 4/7 repro tests fail' is an unverified self-report — no harness log accompanies it.",
+        "Semantic decision unverified: implementation uses union of range+fullRange; Issue does not specify behavior when the two are disjoint. Union can produce false positives (e.g. range at line 0, fullRange at line 100, query line 50 -> kept). OR-overlap / 'prefer fullRange' semantics would differ. Hidden tests may expect different semantics."
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02484564,
+      "gaps": [
+        "没有可被 harness 识别/执行的复现测试（repro_status=not_applicable, repro_missing）；复现文件名 tests/tw_repro/test_issue_fullrange_line_filtering.py 非 test_issue_<n>.py 形式，无法确认其被复跑并锁定 Issue 行为",
+        "full 运行 0 passed / 1 error / 2 skipped，未证明修复后新增用例（6 个 helper 相关用例 + 2 个 utils 用例）实际通过；执行者自述的 '49 passed' 未在确定性结果中体现",
+        "无静态检查结果（静态检查：无）"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.01841764,
+      "gaps": [
+        "No executed reproduction: repro_status = not_applicable / 声明审计 repro_missing; the added tests/tw_repro/test_issue_fullrange_line_filtering.py was not recognized or run by the harness.",
+        "The clean-env `full` run produced 0 passed / 1 error / 2 skipped, so there is no passing execution evidence for the fix; the executor's claimed '49 passed' subset is not reproduced.",
+        "The repro test file name is non-standard (no issue number) and its behavior (union semantics) is executor-assumed rather than stated in the Issue."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.5167,
+  "verifier_path": "tool_call",
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 55,
+  "risk_level": "L2",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "repro_not_tied_to_issue"
+  ],
+  "reasons": [
+    "声明审计：repro_not_tied_to_issue",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：声明审计标记 repro_not_tied_to_issue：复现测试与 Issue 场景/行为名字的绑定关系未确证，需确认 repro 实际验证的就是 Issue 描述的“乘除可用”而非 Agent 自设语义",
+    "Verifier 缺口：返回类型推断规则（Diffusivity*Solubility→Permeability 等、sievert/henry law 保留、无匹配退回 ArrheniusProperty）在 Issue 中无规定，属 Agent 假设，缺少权威依据或验收标准佐证",
+    "Verifier 缺口：运算结果不继承 range/material/isotope/source 等元数据（executor 自述 open risk），既未被 Issue 要求也未被验证"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_0.py",
+      "passed": 1,
+      "failed": 12,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.549,
+      "log_ref": "b1332153e905:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_0.py",
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.309,
+      "log_ref": "902b5f54e830:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 115,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 5.932,
+      "log_ref": "2a1fe16cb36b:full"
+    }
+  ],
+  "cost_cny": 0.059087,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02496324,
+      "gaps": [
+        "声明审计标记 repro_not_tied_to_issue：复现测试与 Issue 场景/行为名字的绑定关系未确证，需确认 repro 实际验证的就是 Issue 描述的“乘除可用”而非 Agent 自设语义",
+        "返回类型推断规则（Diffusivity*Solubility→Permeability 等、sievert/henry law 保留、无匹配退回 ArrheniusProperty）在 Issue 中无规定，属 Agent 假设，缺少权威依据或验收标准佐证",
+        "运算结果不继承 range/material/isotope/source 等元数据（executor 自述 open risk），既未被 Issue 要求也未被验证"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.01683412,
+      "gaps": [
+        "复现用例被声明审计标为 repro_not_tied_to_issue：看不到断言内容，无法确认其测试的名字/行为与 Issue 描述（乘、除 ArrheniusProperty）一致，而非 Agent 自假设的语义（如返回类型推断、law 匹配）。",
+        "缺少与 Issue 直接对应的除法用例证据：repro_patched 通过数（13）未拆解，无法确认除法路径 diff*solubility 之外确有独立断言。",
+        "返回类型/law 推断规则（Diffusivity*Solubility→Permeability、无匹配回落通用 ArrheniusProperty）Issue 未规定，仅由文档 doctest 自证，缺独立验证。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.55,
+      "path": "tool_call",
+      "cost_cny": 0.01729012,
+      "gaps": [
+        "声明审计标记 repro_not_tied_to_issue：复现测试未与 Issue 绑定，无法确认其断言（尤其返回类型推断等扩展行为）即为 Issue 期望行为，而非 Executor 自行假设的行为/名字。",
+        "Issue 仅说明『应能乘除 ArrheniusProperty 对象』且未规定返回类型推断规则；Diffusivity*Solubility→Permeability 及 sol/perm 的 sievert/henry law 匹配均为 Executor 的假设，缺少需求侧证据。",
+        "运算结果不继承 range/material/isotope/source 等元数据（Executor 自述 open_risks 承认），Issue 未涉及但可能与用户预期相关，无法判定。"
+      ]
+    }
+  ]
+}

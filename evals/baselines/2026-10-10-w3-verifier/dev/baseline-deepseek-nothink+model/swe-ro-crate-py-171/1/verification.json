@@ -1,0 +1,72 @@
+{
+  "mode": "model",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": "inconclusive",
+  "model_confidence": 0.4833,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 45,
+  "risk_level": "L2",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "复现状态 not_applicable",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "1 个失败在基线上就存在，不计回归",
+    "Verifier 缺口：无复现测试被执行（repro_status = not_applicable），Issue 要求的 CLI 行为完全未经运行验证，仅有 diff 静态论证",
+    "Verifier 缺口：full 中 1 个失败测试未具名，无法核实其确为基线失败且与本次改动无关（'基线就存在'的结论未附证据）",
+    "Verifier 缺口：静态检查结果为空（静态检查：无）"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 118,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.422,
+      "log_ref": "0661d392bddd:full"
+    }
+  ],
+  "cost_cny": 0.065167,
+  "model_judgments": [
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.02163924,
+      "gaps": [
+        "无复现测试被执行（repro_status = not_applicable），Issue 要求的 CLI 行为完全未经运行验证，仅有 diff 静态论证",
+        "full 中 1 个失败测试未具名，无法核实其确为基线失败且与本次改动无关（'基线就存在'的结论未附证据）",
+        "静态检查结果为空（静态检查：无）"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.5,
+      "path": "tool_call",
+      "cost_cny": 0.03103604,
+      "gaps": [
+        "复现状态为 not_applicable：没有通过确定性复现测试验证 Issue 工作流（repro_patched 缺失），所有行为性结论仅有 diff 代码支撑，属静态论证。",
+        "未运行静态检查（静态检查：无）。",
+        "无法确认 full（118 通过 / 1 失败）是否包含 tests/tw_repro/test_issue_103.py；也未给出唯一失败用例的身份，无法判断新功能是否被真正执行。"
+      ]
+    },
+    {
+      "verdict": "inconclusive",
+      "confidence": 0.45,
+      "path": "tool_call",
+      "cost_cny": 0.01249204,
+      "gaps": [
+        "新增子命令与整条工作流均无执行证据：repro_status = not_applicable，tests/tw_repro/test_issue_103.py 虽在 diff 中但未被登记为已运行的复现测试，无法确认其通过",
+        "full 报告只有聚合数字（118 通过/1 失败），无法归属这 1 个失败到具体测试，也未给出基线测试清单来证实“基线即存在、不计回归”",
+        "静态检查：无（无 lint/类型检查结果）；防作弊：无标记；声明审计：无标记，均无独立证据交叉印证 diff 行为"
+      ]
+    }
+  ]
+}

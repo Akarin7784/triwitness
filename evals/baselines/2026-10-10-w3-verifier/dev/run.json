@@ -1,0 +1,33 @@
+{
+  "source": "evals/results/2026-10-10-w2-dev",
+  "modes": [
+    "model"
+  ],
+  "live": true,
+  "estimate_cny": 1.1435,
+  "model_repeats": 3,
+  "max_total_cny": 1.5,
+  "configs": [
+    {
+      "name": "baseline-deepseek-nothink+model",
+      "attempts": 1
+    }
+  ],
+  "tasks": [
+    "csv-blank-line",
+    "duration-minutes",
+    "lru-get-refresh",
+    "paginate-last-page",
+    "slugify-edges",
+    "swe-conllu-64",
+    "swe-crosstl-257",
+    "swe-dymos-1021",
+    "swe-flake8-bugbear-424",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58",
+    "swe-pyflakes-765",
+    "swe-pynmea2-124",
+    "swe-ro-crate-py-171",
+    "swe-slpp-32"
+  ]
+}

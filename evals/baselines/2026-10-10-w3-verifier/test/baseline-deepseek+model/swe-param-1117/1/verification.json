@@ -1,0 +1,73 @@
+{
+  "mode": "model",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": "fail",
+  "model_confidence": 0.82,
+  "verifier_path": "tool_call",
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 15,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "新增失败 1 个：tests/testreactive.py::test_reactive_clone_evaluates_once",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "Verifier 缺口：缺少与 Issue MRE 行为/名字对应的复现测试（repro_status = not_applicable），无法直接验证 expensive_compute 调用次数从 N 次降为 1 次",
+    "Verifier 缺口：新增失败 tests/testreactive.py::test_reactive_clone_evaluates_once 未解释，无法判断该失败是新代码语义改变导致的回归还是测试问题",
+    "Verifier 缺口：无静态检查结果，无法核实 _passthrough 改动是否会破坏既有的 clone/copy 语义"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest -q -x",
+      "passed": 1017,
+      "failed": 1,
+      "skipped": 95,
+      "errors": 0,
+      "new_failures": [
+        "tests/testreactive.py::test_reactive_clone_evaluates_once"
+      ],
+      "flaky": [],
+      "duration_s": 5.465,
+      "log_ref": "bb3faf79208b:full"
+    }
+  ],
+  "cost_cny": 0.037095,
+  "model_judgments": [
+    {
+      "verdict": "fail",
+      "confidence": 0.9,
+      "path": "tool_call",
+      "cost_cny": 0.00655824,
+      "gaps": [
+        "缺少与 Issue MRE 行为/名字对应的复现测试（repro_status = not_applicable），无法直接验证 expensive_compute 调用次数从 N 次降为 1 次",
+        "新增失败 tests/testreactive.py::test_reactive_clone_evaluates_once 未解释，无法判断该失败是新代码语义改变导致的回归还是测试问题",
+        "无静态检查结果，无法核实 _passthrough 改动是否会破坏既有的 clone/copy 语义"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.78,
+      "path": "tool_call",
+      "cost_cny": 0.02107632,
+      "gaps": [
+        "缺少对应 Issue 行为的复现测试（repro_status = not_applicable），MRE 中 expensive_compute 的调用次数没有任何确定性测量（before/after 对比）。",
+        "未提供 tests/testreactive.py::test_reactive_clone_evaluates_once 的测试内容，无法判断它断言的是什么、为何在补丁后失败（是回归还是补丁未达标）。",
+        "没有基准基线：无法确认该测试是补丁前通过、补丁后才失败（新增回归），还是补丁新增的测试。"
+      ]
+    },
+    {
+      "verdict": "fail",
+      "confidence": 0.78,
+      "path": "tool_call",
+      "cost_cny": 0.00946032,
+      "gaps": [
+        "缺少对应 Issue 描述行为的复现测试（repro_status=not_applicable）：无运行时证据证明 expensive_compute 调用次数由 4×（或 N×）降为 1×。",
+        "缺少对新增失败测试 tests/testreactive.py::test_reactive_clone_evaluates_once 的分析与说明——无法判断它是修复目标未被满足还是引入的回归。",
+        "缺少 pipe 输出正确性验证（确认 N 个消费者仍各自拿到正确切片，而非因缓存/透传共享导致结果串味）。"
+      ]
+    }
+  ]
+}
