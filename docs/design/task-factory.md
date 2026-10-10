@@ -6,7 +6,7 @@
 
 1. **mine**：SWE-rebench leaderboard（2025-10～2026-03 月度拆分，污染风险最低）+ filtered 拆分（较旧）。过滤：pytest、无系统包 / conda、Python 3.9–3.13、改动 ≤3 个 .py 且 ≤80 行、测试补丁只改测试、F2P 1–10、P2P 3–400、Issue 150–6000 字、宽松许可证（MIT / Apache-2.0 / BSD / ISC / PSF / Unlicense…）、同仓库最多 2 个。结果：`evals/factory/candidates.json`（1161 行 → 138 个候选）。
 2. **build**：两阶段构建——先按数据集的安装命令装一遍，`pip freeze` 得到钉死版本，再用钉死版本构建最终镜像（可复现）；validate：空 Agent reward 0、参考解 reward 1，各再跑 2 次去抖（6 次全对才算 ok）；数据集里仓库已不存在的 P2P 用例（pytest `not found`）自动剔除后重验。日志：`evals/factory/build_log*.json`。
-3. **split**：test = 最新的 leaderboard 任务（`--allow-test` 才能跑，只出报告）；dev = W1 的 10 个 + filtered 较新 5 个；dev-smoke = dev 中固定 5 个。`evals/suites/*.yaml` 记录内容 digest，任务内容一变 `check_suite` 就报错（冻结）。
+3. **split**：test = 最新的 leaderboard 任务（`--allow-test` 才能跑，只出报告）；dev = W1 的 10 个 + filtered 最旧 5 个（污染风险最高，只用来调参）；dev-smoke = dev 中固定 5 个。`evals/suites/*.yaml` 记录内容 digest，任务内容一变 `check_suite` 就报错（冻结）。
 
 ## 2. 磁盘与 Docker（2026-10-10 两次写满 126G 共享盘的教训）
 
