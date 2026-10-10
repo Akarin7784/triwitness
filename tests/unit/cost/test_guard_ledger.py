@@ -74,6 +74,19 @@ def test_ledger_total_envelope_and_record(tmp_path: Path) -> None:
     assert s.cache_hit_rate == pytest.approx(0.9) and lg.warn
 
 
+def test_breakdown(tmp_path: Path) -> None:
+    from datetime import UTC, datetime
+
+    lg = _ledger(tmp_path)
+    at = datetime(2026, 10, 11, 15, 30, tzinfo=UTC)  # 北京时间 10-11 23:30（周日，W41）
+    lg.record(category="dev", model="deepseek-flash", usage=U, cost_cny=0.1, peak=False, pricing_version="v", at=at)
+    lg.record(category="smoke", model="deepseek-flash", usage=U, cost_cny=0.2, peak=True, pricing_version="v", at=at)
+    assert lg.breakdown("category") == {"dev": 0.1, "smoke": 0.2}
+    assert lg.breakdown("model") == {"deepseek-flash": pytest.approx(0.3)}
+    assert lg.breakdown("week") == {"2026-W41": pytest.approx(0.3)}
+    assert lg.breakdown("peak") == {"off_peak": 0.1, "peak": 0.2}
+
+
 def test_kill_switch_file_and_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     lg = _ledger(tmp_path)
     (tmp_path / "STOP").touch()

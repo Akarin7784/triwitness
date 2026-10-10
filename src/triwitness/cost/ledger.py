@@ -102,6 +102,25 @@ class GlobalLedger:
             float(row[0]), self.total_cny, int(row[1]), int(row[2]), int(row[3]), int(row[4]), int(row[5])
         )
 
+    def breakdown(self, by: str) -> dict[str, float]:
+        """按 category / model / week（北京时间 ISO 周，如 2026-W41）/ peak 汇总花费。"""
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo
+
+        if by not in ("category", "model", "week", "peak"):
+            raise ValueError("by 只能是 category / model / week / peak")
+        out: dict[str, float] = {}
+        with self._db() as db:
+            rows = db.execute("SELECT ts, category, model, peak, cost_cny FROM calls").fetchall()
+        for ts, category, model, peak, cost in rows:
+            if by == "week":
+                y, w, _ = _dt.fromisoformat(ts).astimezone(ZoneInfo("Asia/Shanghai")).isocalendar()
+                key = f"{y}-W{w:02d}"
+            else:
+                key = {"category": category, "model": model, "peak": "peak" if peak else "off_peak"}[by]
+            out[key] = round(out.get(key, 0.0) + float(cost), 8)
+        return out
+
     # ------------------------------------------------------------ 熔断
 
     def kill_switch_engaged(self) -> bool:
