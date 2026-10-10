@@ -98,6 +98,10 @@ function fallbackText(e: TwEvent): string {
       return e.payload.question
     case 'hitl_response':
       return e.payload.answer
+    case 'approval_requested':
+      return `? ${e.payload.tool} ${e.payload.action}`
+    case 'approval_resolved':
+      return e.payload.decision === 'allow' ? '已允许' : '已拒绝'
     case 'verification':
       return `复验 ${e.payload.verdict}`
     case 'review':
@@ -120,6 +124,7 @@ function toneOf(e: TwEvent): StreamTone {
     case 'model_call':
       return e.payload.peak ? 'warn' : 'normal'
     case 'loop_warning':
+    case 'approval_requested':
       return 'warn'
     case 'verification':
       return e.payload.verdict === 'pass' ? 'normal' : e.payload.verdict === 'fail' ? 'error' : 'warn'

@@ -1,5 +1,440 @@
 {
   "$defs": {
+    "ApprovalRequestedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "approval_requested",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ApprovalRequestedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ApprovalRequestedEvent",
+      "type": "object"
+    },
+    "ApprovalRequestedPayload": {
+      "additionalProperties": true,
+      "description": "权限引擎判为 ask 时发出（spec 006 §7、ADR-0005）。\n\neval / 非交互模式不发此事件，直接写 approval_resolved(by=policy)。",
+      "properties": {
+        "action": {
+          "title": "Action",
+          "type": "string"
+        },
+        "backend": {
+          "default": "none",
+          "enum": [
+            "none",
+            "docker",
+            "wsl2",
+            "remote"
+          ],
+          "title": "Backend",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "options": {
+          "items": {
+            "enum": [
+              "allow_once",
+              "allow_session",
+              "allow_always",
+              "deny"
+            ],
+            "type": "string"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "risk": {
+          "default": "L1",
+          "enum": [
+            "L0",
+            "L1",
+            "L2",
+            "L3"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule"
+        },
+        "rule_source": {
+          "anyOf": [
+            {
+              "enum": [
+                "default",
+                "user",
+                "project",
+                "local",
+                "session",
+                "managed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Source"
+        },
+        "suggested_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suggested Rule"
+        },
+        "timeout_s": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout S"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "tool",
+        "action",
+        "reason"
+      ],
+      "title": "ApprovalRequestedPayload",
+      "type": "object"
+    },
+    "ApprovalResolvedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "approval_resolved",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ApprovalResolvedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ApprovalResolvedEvent",
+      "type": "object"
+    },
+    "ApprovalResolvedPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "by": {
+          "enum": [
+            "user",
+            "policy",
+            "timeout",
+            "cancelled"
+          ],
+          "title": "By",
+          "type": "string"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        },
+        "decision": {
+          "enum": [
+            "allow",
+            "deny"
+          ],
+          "title": "Decision",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "saved_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Saved Rule"
+        },
+        "scope": {
+          "default": "once",
+          "enum": [
+            "once",
+            "session",
+            "always"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "decision",
+        "by"
+      ],
+      "title": "ApprovalResolvedPayload",
+      "type": "object"
+    },
     "CheckpointEvent": {
       "additionalProperties": false,
       "properties": {
@@ -2052,6 +2487,35 @@
           "default": null,
           "title": "Output Ref"
         },
+        "permission": {
+          "anyOf": [
+            {
+              "enum": [
+                "allow",
+                "ask",
+                "deny"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Permission"
+        },
+        "permission_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Permission Rule"
+        },
         "role_hint": {
           "anyOf": [
             {
@@ -2227,6 +2691,23 @@
     "VerificationPayload": {
       "additionalProperties": true,
       "properties": {
+        "clean_env": {
+          "anyOf": [
+            {
+              "enum": [
+                "verified",
+                "failed",
+                "unverified"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clean Env"
+        },
         "display": {
           "anyOf": [
             {
@@ -2301,6 +2782,23 @@
           "default": null,
           "title": "Tests Passed"
         },
+        "unverified_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "no_sandbox",
+                "backend_unavailable",
+                "skipped"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unverified Reason"
+        },
         "verdict": {
           "enum": [
             "pass",
@@ -2323,6 +2821,8 @@
   "description": "TriWitness 轨迹事件（一行一个 JSON 对象）。读取方遇到未知 kind 必须忽略。",
   "discriminator": {
     "mapping": {
+      "approval_requested": "#/$defs/ApprovalRequestedEvent",
+      "approval_resolved": "#/$defs/ApprovalResolvedEvent",
       "checkpoint": "#/$defs/CheckpointEvent",
       "error": "#/$defs/ErrorEvent",
       "hitl_request": "#/$defs/HitlRequestEvent",
@@ -2362,6 +2862,12 @@
     },
     {
       "$ref": "#/$defs/HitlResponseEvent"
+    },
+    {
+      "$ref": "#/$defs/ApprovalRequestedEvent"
+    },
+    {
+      "$ref": "#/$defs/ApprovalResolvedEvent"
     },
     {
       "$ref": "#/$defs/VerificationEvent"

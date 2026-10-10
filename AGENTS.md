@@ -9,7 +9,7 @@ TriWitness 是一个验证优先的后台 Coding Agent：Issue → 计划 → �
 
 **v0.1 只用 DeepSeek `deepseek-flash`**（思考 / 非思考），**永不**用 `deepseek-v4-pro`；评审是同厂商异构评审，Qwen / GLM 与跨厂商互审推迟（ADR-0002）。
 
-设计文档：`docs/architecture.md`。**动手前先读对应的 `specs/NNN-*.md` 和 `docs/adr/`**（ADR-0001 接口与路径、ADR-0002 预算与模型策略，均已采纳）。
+设计文档：`docs/architecture.md`。**动手前先读对应的 `specs/NNN-*.md` 和 `docs/adr/`**（ADR-0001 接口与路径、ADR-0002 预算与模型策略，均已采纳；ADR-0005 权限与沙箱模式：终端用户默认无沙箱 + 权限引擎，开发 / CI / 评测用 Docker，见 spec 002、spec 006）。
 
 ## 2. 常用命令
 

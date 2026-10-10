@@ -8,3 +8,4 @@
 - 2026-10-10｜W1-36｜AI 冻结 tw-events/1：每个 kind 一个 payload 模型（允许额外字段），导出判别式 JSON Schema；3 份 fixture 由脚本确定性生成（贴近桌面端 mock 的 Issue #87），测试检查 seq 连续、无密钥样式、只出现 deepseek-flash、空闲时段。
 - 2026-10-10｜W1-07/08/11/12｜AI 实现 llm 层与成本护栏；空闲时段真调 6 次录 fixture，共 ¥0.0054（账本记录），稳定前缀命中率 94%。发现：今天 10-10 是调休上班的周六，DeepSeek 定义的高峰只算周一至周五，因此按空闲处理。
 - 2026-10-10｜W1-13/W1-14｜AI 实现 Router 与批量层空闲闸门，无真实调用（¥0）。沙箱（W1-15+）按 Eva 指示暂停：她在重新考虑终端用户是否必须装 Docker。
+- 2026-10-10｜ADR-0005 / spec 002 重写 / spec 006｜Eva 拍板“默认无沙箱 + 一键装 WSL2/Docker + 抄成熟权限设计”；AI 调研 Claude Code、Codex、Gemini CLI、Cline/Roo、Cursor 官方文档后起草（只借鉴概念；Claude Code、Cursor 为专有许可）。tw-events/1 加审批事件桩。无真实调用（¥0）。

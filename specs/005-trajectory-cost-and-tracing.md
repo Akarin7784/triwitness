@@ -145,3 +145,4 @@ class CostReport(BaseModel):
 
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：Usage 拆命中/未命中、CostLine 嵌套 usage；轨迹路径；事件格式 = tw-events/1（v、display、role_hint）。
+- 2026-10-10：按 ADR-0005 修订：tw-events/1 新增 `approval_requested` / `approval_resolved`；`tool_call` 增加 `permission`、`permission_rule`；`verification` 增加 `clean_env`、`unverified_reason`（均可选，只增不改）；权限审计日志见 spec 006 §10。

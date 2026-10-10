@@ -27,12 +27,16 @@ EventKind = Literal[
     "loop_warning",
     "hitl_request",
     "hitl_response",
+    "approval_requested",
+    "approval_resolved",
     "verification",
     "review",
     "task_finished",
     "error",
 ]
 RoleHint = Literal["planner", "executor", "verifier", "reviewer", "system"]
+PermissionDecision = Literal["allow", "ask", "deny"]
+SandboxBackendName = Literal["none", "docker", "wsl2", "remote"]
 
 
 # ---------------------------------------------------------------- payloads
@@ -79,6 +83,9 @@ class ToolCallPayload(Payload):
     output_ref: str | None = None  # 只放引用，不内联工具原文
     truncated: bool = False
     error_type: str | None = None
+    # 权限判定（spec 006）：allow 由哪条规则放行，便于审计；ask 时另有 approval_* 事件
+    permission: PermissionDecision | None = None
+    permission_rule: str | None = None
 
 
 class CheckpointPayload(Payload):
@@ -105,11 +112,44 @@ class HitlResponsePayload(Payload):
     by: str
 
 
+class ApprovalRequestedPayload(Payload):
+    """权限引擎判为 ask 时发出（spec 006 §7、ADR-0005）。
+
+    eval / 非交互模式不发此事件，直接写 approval_resolved(by=policy)。
+    """
+
+    request_id: str
+    tool: str  # 规则里的工具类别：Bash / PowerShell / Read / Edit / Fetch / Mcp
+    action: str  # 已脱敏、已规范化的命令或路径（≤ 2000 字）
+    reason: str  # 为什么要问：命中的 ask 规则、出工作区、网络、不可解析……
+    rule: str | None = None  # 命中的规则原文，如 "Bash(git push *)"
+    rule_source: Literal["default", "user", "project", "local", "session", "managed"] | None = None
+    risk: Literal["L0", "L1", "L2", "L3"] = "L1"
+    options: list[Literal["allow_once", "allow_session", "allow_always", "deny"]] = Field(
+        default_factory=lambda: ["allow_once", "allow_session", "allow_always", "deny"]
+    )
+    suggested_rule: str | None = None  # “总是允许”时将写入 local 的规则
+    backend: SandboxBackendName = "none"
+    timeout_s: int | None = None  # None = 一直等（后台任务进入 needs_human）
+
+
+class ApprovalResolvedPayload(Payload):
+    request_id: str
+    decision: Literal["allow", "deny"]
+    scope: Literal["once", "session", "always"] = "once"
+    by: Literal["user", "policy", "timeout", "cancelled"]
+    saved_rule: str | None = None  # scope=always 时写入的规则
+    comment: str | None = None  # 用户附言（拒绝理由会回传给模型）
+
+
 class VerificationPayload(Payload):
     verdict: Literal["pass", "fail", "inconclusive"]
     evidence_ref: str | None = None
     tests_passed: bool | None = None
     risk_level: Literal["L0", "L1", "L2", "L3"] | None = None
+    # 干净环境复跑证人（spec 002 §8 / ADR-0005）：无沙箱时为 unverified，不得自动合并
+    clean_env: Literal["verified", "failed", "unverified"] | None = None
+    unverified_reason: Literal["no_sandbox", "backend_unavailable", "skipped"] | None = None
 
 
 class ReviewPayload(Payload):
@@ -139,6 +179,8 @@ PAYLOADS: dict[str, type[Payload]] = {
     "loop_warning": LoopWarningPayload,
     "hitl_request": HitlRequestPayload,
     "hitl_response": HitlResponsePayload,
+    "approval_requested": ApprovalRequestedPayload,
+    "approval_resolved": ApprovalResolvedPayload,
     "verification": VerificationPayload,
     "review": ReviewPayload,
     "task_finished": TaskFinishedPayload,

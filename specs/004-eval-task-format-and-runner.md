@@ -17,7 +17,7 @@
 
 ## 3. 非目标
 
-- 任务自动采集工厂（spec 006）。
+- 任务自动采集工厂（spec 016，原规划编号 006 让给权限 spec，见 ADR-0005）。
 - 统计检验与消融矩阵（W5）。
 - Leaderboard 网页（W8）。
 
@@ -173,3 +173,4 @@ tw task validate evals/tasks/dev/dev-001-*      # 校验任务有效性
 
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：结果目录 evals/results/、--config 指向 configs/runs/*.yaml、--max-total-cny 默认 10 + 空闲闸门、AC6 只要求 DeepSeek。
+- 2026-10-10：按 ADR-0005 修订：评测强制 docker 后端、非交互（权限 ask 视为 deny）、只用 default 层 + 运行配置中的权限规则，规则集哈希计入 config_hash；none 后端运行不进入报告。

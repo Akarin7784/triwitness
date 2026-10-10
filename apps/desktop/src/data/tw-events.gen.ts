@@ -14,6 +14,8 @@ export type TwEvents1 =
   | LoopWarningEvent
   | HitlRequestEvent
   | HitlResponseEvent
+  | ApprovalRequestedEvent
+  | ApprovalResolvedEvent
   | VerificationEvent
   | ReviewEvent
   | TaskFinishedEvent
@@ -93,6 +95,8 @@ export type ErrorType = string | null
 export type ExitCode = number | null
 export type Ok = boolean
 export type OutputRef = string | null
+export type Permission = ('allow' | 'ask' | 'deny') | null
+export type PermissionRule = string | null
 export type RoleHint3 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Tool = string
 export type Truncated = boolean
@@ -160,13 +164,20 @@ export type TaskId7 = string
 export type TraceId7 = string | null
 export type Ts7 = string
 export type V7 = 1
-export type Kind8 = 'verification'
+export type Kind8 = 'approval_requested'
+export type Action = string
+export type Backend = 'none' | 'docker' | 'wsl2' | 'remote'
 export type Display8 = string | null
-export type EvidenceRef = string | null
-export type RiskLevel = ('L0' | 'L1' | 'L2' | 'L3') | null
+export type Options1 = ('allow_once' | 'allow_session' | 'allow_always' | 'deny')[]
+export type Reason = string
+export type RequestId2 = string
+export type Risk = 'L0' | 'L1' | 'L2' | 'L3'
 export type RoleHint8 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type TestsPassed = boolean | null
-export type Verdict = 'pass' | 'fail' | 'inconclusive'
+export type Rule = string | null
+export type RuleSource = ('default' | 'user' | 'project' | 'local' | 'session' | 'managed') | null
+export type SuggestedRule = string | null
+export type TimeoutS = number | null
+export type Tool1 = string
 export type Role8 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
 export type RunId8 = string
 export type Seq8 = number
@@ -175,19 +186,15 @@ export type TaskId8 = string
 export type TraceId8 = string | null
 export type Ts8 = string
 export type V8 = 1
-export type Kind9 = 'review'
+export type Kind9 = 'approval_resolved'
+export type By1 = 'user' | 'policy' | 'timeout' | 'cancelled'
+export type Comment = string | null
+export type Decision = 'allow' | 'deny'
 export type Display9 = string | null
-export type File = string | null
-export type Line = number | null
-export type Message = string
-export type Severity = 'blocker' | 'major' | 'minor' | 'nit'
-export type Status = 'open' | 'fixed' | 'wontfix'
-export type Suggestion = string | null
-export type Findings = Finding[]
-export type Model1 = string
+export type RequestId3 = string
 export type RoleHint9 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type Variant = string
-export type VendorPolicy = 'single_vendor' | 'cross_vendor'
+export type SavedRule = string | null
+export type Scope = 'once' | 'session' | 'always'
 export type Role9 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
 export type RunId9 = string
 export type Seq9 = number
@@ -196,7 +203,45 @@ export type TaskId9 = string
 export type TraceId9 = string | null
 export type Ts9 = string
 export type V9 = 1
-export type Kind10 = 'task_finished'
+export type Kind10 = 'verification'
+export type CleanEnv = ('verified' | 'failed' | 'unverified') | null
+export type Display10 = string | null
+export type EvidenceRef = string | null
+export type RiskLevel = ('L0' | 'L1' | 'L2' | 'L3') | null
+export type RoleHint10 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type TestsPassed = boolean | null
+export type UnverifiedReason = ('no_sandbox' | 'backend_unavailable' | 'skipped') | null
+export type Verdict = 'pass' | 'fail' | 'inconclusive'
+export type Role10 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId10 = string
+export type Seq10 = number
+export type SpanId10 = string | null
+export type TaskId10 = string
+export type TraceId10 = string | null
+export type Ts10 = string
+export type V10 = 1
+export type Kind11 = 'review'
+export type Display11 = string | null
+export type File = string | null
+export type Line = number | null
+export type Message = string
+export type Severity = 'blocker' | 'major' | 'minor' | 'nit'
+export type Status = 'open' | 'fixed' | 'wontfix'
+export type Suggestion = string | null
+export type Findings = Finding[]
+export type Model1 = string
+export type RoleHint11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type Variant = string
+export type VendorPolicy = 'single_vendor' | 'cross_vendor'
+export type Role11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId11 = string
+export type Seq11 = number
+export type SpanId11 = string | null
+export type TaskId11 = string
+export type TraceId11 = string | null
+export type Ts11 = string
+export type V11 = 1
+export type Kind12 = 'task_finished'
 export type BudgetCny = number
 export type CacheHitRate = number
 export type Estimated = boolean
@@ -204,15 +249,15 @@ export type Calls = number
 export type CostCny1 = number
 export type Model2 = string
 export type PeakCalls = number
-export type Role10 = 'planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier'
+export type Role12 = 'planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier'
 export type Vendor = 'deepseek' | 'qwen' | 'zhipu'
 export type Lines = CostLine[]
 export type PricingVersion = string
 export type SandboxCostCny = number
-export type TaskId10 = string
+export type TaskId12 = string
 export type TotalCny = number
-export type Display10 = string | null
-export type Kind11 = 'added' | 'modified' | 'deleted'
+export type Display12 = string | null
+export type Kind13 = 'added' | 'modified' | 'deleted'
 export type Note = string
 export type Path = string
 export type Changes = FileChange[]
@@ -223,29 +268,29 @@ export type Path1 = string
 export type Summary = string
 export type TestsPassed1 = boolean
 export type TestsRun = string[]
-export type RoleHint10 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type RoleHint12 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Status1 = 'done' | 'failed' | 'budget_exceeded' | 'stuck' | 'needs_human' | 'cancelled'
-export type Role11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
-export type RunId10 = string
-export type Seq10 = number
-export type SpanId10 = string | null
-export type TaskId11 = string
-export type TraceId10 = string | null
-export type Ts10 = string
-export type V10 = 1
-export type Kind12 = 'error'
-export type Display11 = string | null
+export type Role13 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId12 = string
+export type Seq12 = number
+export type SpanId12 = string | null
+export type TaskId13 = string
+export type TraceId12 = string | null
+export type Ts12 = string
+export type V12 = 1
+export type Kind14 = 'error'
+export type Display13 = string | null
 export type Message1 = string
-export type RoleHint11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type RoleHint13 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Type = string
-export type Role12 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
-export type RunId11 = string
-export type Seq11 = number
-export type SpanId11 = string | null
-export type TaskId12 = string
-export type TraceId11 = string | null
-export type Ts11 = string
-export type V11 = 1
+export type Role14 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId13 = string
+export type Seq13 = number
+export type SpanId13 = string | null
+export type TaskId14 = string
+export type TraceId13 = string | null
+export type Ts13 = string
+export type V13 = 1
 
 export interface TaskStartedEvent {
   kind: Kind
@@ -339,6 +384,8 @@ export interface ToolCallPayload {
   exit_code?: ExitCode
   ok: Ok
   output_ref?: OutputRef
+  permission?: Permission
+  permission_rule?: PermissionRule
   role_hint?: RoleHint3
   tool: Tool
   truncated?: Truncated
@@ -424,9 +471,9 @@ export interface HitlResponsePayload {
   role_hint?: RoleHint7
   [k: string]: unknown
 }
-export interface VerificationEvent {
+export interface ApprovalRequestedEvent {
   kind: Kind8
-  payload: VerificationPayload
+  payload: ApprovalRequestedPayload
   role?: Role8
   run_id: RunId8
   seq: Seq8
@@ -436,18 +483,30 @@ export interface VerificationEvent {
   ts: Ts8
   v?: V8
 }
-export interface VerificationPayload {
+/**
+ * 权限引擎判为 ask 时发出（spec 006 §7、ADR-0005）。
+ *
+ * eval / 非交互模式不发此事件，直接写 approval_resolved(by=policy)。
+ */
+export interface ApprovalRequestedPayload {
+  action: Action
+  backend?: Backend
   display?: Display8
-  evidence_ref?: EvidenceRef
-  risk_level?: RiskLevel
+  options?: Options1
+  reason: Reason
+  request_id: RequestId2
+  risk?: Risk
   role_hint?: RoleHint8
-  tests_passed?: TestsPassed
-  verdict: Verdict
+  rule?: Rule
+  rule_source?: RuleSource
+  suggested_rule?: SuggestedRule
+  timeout_s?: TimeoutS
+  tool: Tool1
   [k: string]: unknown
 }
-export interface ReviewEvent {
+export interface ApprovalResolvedEvent {
   kind: Kind9
-  payload: ReviewPayload
+  payload: ApprovalResolvedPayload
   role?: Role9
   run_id: RunId9
   seq: Seq9
@@ -457,11 +516,57 @@ export interface ReviewEvent {
   ts: Ts9
   v?: V9
 }
-export interface ReviewPayload {
+export interface ApprovalResolvedPayload {
+  by: By1
+  comment?: Comment
+  decision: Decision
   display?: Display9
+  request_id: RequestId3
+  role_hint?: RoleHint9
+  saved_rule?: SavedRule
+  scope?: Scope
+  [k: string]: unknown
+}
+export interface VerificationEvent {
+  kind: Kind10
+  payload: VerificationPayload
+  role?: Role10
+  run_id: RunId10
+  seq: Seq10
+  span_id?: SpanId10
+  task_id: TaskId10
+  trace_id?: TraceId10
+  ts: Ts10
+  v?: V10
+}
+export interface VerificationPayload {
+  clean_env?: CleanEnv
+  display?: Display10
+  evidence_ref?: EvidenceRef
+  risk_level?: RiskLevel
+  role_hint?: RoleHint10
+  tests_passed?: TestsPassed
+  unverified_reason?: UnverifiedReason
+  verdict: Verdict
+  [k: string]: unknown
+}
+export interface ReviewEvent {
+  kind: Kind11
+  payload: ReviewPayload
+  role?: Role11
+  run_id: RunId11
+  seq: Seq11
+  span_id?: SpanId11
+  task_id: TaskId11
+  trace_id?: TraceId11
+  ts: Ts11
+  v?: V11
+}
+export interface ReviewPayload {
+  display?: Display11
   findings?: Findings
   model: Model1
-  role_hint?: RoleHint9
+  role_hint?: RoleHint11
   variant: Variant
   vendor_policy?: VendorPolicy
   [k: string]: unknown
@@ -475,22 +580,22 @@ export interface Finding {
   suggestion?: Suggestion
 }
 export interface TaskFinishedEvent {
-  kind: Kind10
+  kind: Kind12
   payload: TaskFinishedPayload
-  role?: Role11
-  run_id: RunId10
-  seq: Seq10
-  span_id?: SpanId10
-  task_id: TaskId11
-  trace_id?: TraceId10
-  ts: Ts10
-  v?: V10
+  role?: Role13
+  run_id: RunId12
+  seq: Seq12
+  span_id?: SpanId12
+  task_id: TaskId13
+  trace_id?: TraceId12
+  ts: Ts12
+  v?: V12
 }
 export interface TaskFinishedPayload {
   cost_report?: CostReport | null
-  display?: Display10
+  display?: Display12
   finish_report?: FinishReport | null
-  role_hint?: RoleHint10
+  role_hint?: RoleHint12
   status: Status1
   [k: string]: unknown
 }
@@ -501,7 +606,7 @@ export interface CostReport {
   lines: Lines
   pricing_version: PricingVersion
   sandbox_cost_cny?: SandboxCostCny
-  task_id: TaskId10
+  task_id: TaskId12
   total_cny: TotalCny
 }
 export interface CostLine {
@@ -509,7 +614,7 @@ export interface CostLine {
   cost_cny: CostCny1
   model: Model2
   peak_calls?: PeakCalls
-  role: Role10
+  role: Role12
   usage: Usage
   vendor: Vendor
 }
@@ -523,7 +628,7 @@ export interface FinishReport {
   tests_run?: TestsRun
 }
 export interface FileChange {
-  kind: Kind11
+  kind: Kind13
   note?: Note
   path: Path
 }
@@ -532,21 +637,21 @@ export interface ReproRef {
   path: Path1
 }
 export interface ErrorEvent {
-  kind: Kind12
+  kind: Kind14
   payload: ErrorPayload
-  role?: Role12
-  run_id: RunId11
-  seq: Seq11
-  span_id?: SpanId11
-  task_id: TaskId12
-  trace_id?: TraceId11
-  ts: Ts11
-  v?: V11
+  role?: Role14
+  run_id: RunId13
+  seq: Seq13
+  span_id?: SpanId13
+  task_id: TaskId14
+  trace_id?: TraceId13
+  ts: Ts13
+  v?: V13
 }
 export interface ErrorPayload {
-  display?: Display11
+  display?: Display13
   message: Message1
-  role_hint?: RoleHint11
+  role_hint?: RoleHint13
   type: Type
   [k: string]: unknown
 }

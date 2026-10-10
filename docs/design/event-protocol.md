@@ -34,12 +34,14 @@
 | `task_started` | `issue_title`、`repo`、`config_hash`（`issue_number`、`mode`） | 侧栏新会话；对话首条 |
 | `state_change` | `from`、`to`（TaskState） | 推流状态点颜色与角色点亮；标题栏状态 |
 | `model_call` | `model`、`thinking`、`usage{input_tokens,cache_hit_tokens,cache_miss_tokens,output_tokens,reasoning_tokens}`、`cost_cny`、`latency_ms`（`served_model`、`peak`、`finish_reason`） | 推流一行；状态栏累计 ¥ 与命中率；`peak=true` 标红 |
-| `tool_call` | `tool`、`ok`、`duration_ms`（`exit_code`、`output_ref`、`truncated`、`error_type`） | 推流 `$ tool …`；失败用赭红 |
+| `tool_call` | `tool`、`ok`、`duration_ms`（`exit_code`、`output_ref`、`truncated`、`error_type`、`permission`、`permission_rule`） | 推流 `$ tool …`；失败用赭红 |
 | `checkpoint` | `label`（`ref`） | 推流细分隔线 |
 | `loop_warning` | `signal`（repeat_action / consecutive_failures / no_progress）、`level`（1–3）（`detail`） | 推流警示行 |
 | `hitl_request` | `request_id`、`question`、`options`（`blocking`） | 审批卡片（UI-13，W4 以后） |
 | `hitl_response` | `request_id`、`answer`、`by` | 卡片结案 |
-| `verification` | `verdict`（pass / fail / inconclusive）（`evidence_ref`、`tests_passed`、`risk_level`） | 证据包卡片（UI-12） |
+| `approval_requested` | `request_id`、`tool`（类别 Bash/PowerShell/Read/Edit/Fetch/Mcp）、`action`（已脱敏）、`reason`（`rule`、`rule_source`、`risk`、`options`、`suggested_rule`、`backend`、`timeout_s`） | 权限审批卡片：允许一次 / 本次任务内允许 / 总是允许 / 拒绝（spec 006 §7） |
+| `approval_resolved` | `request_id`、`decision`（allow / deny）、`by`（user / policy / timeout / cancelled）（`scope`、`saved_rule`、`comment`） | 卡片结案；`by=policy` 显示为“策略拒绝” |
+| `verification` | `verdict`（pass / fail / inconclusive）（`evidence_ref`、`tests_passed`、`risk_level`、`clean_env`、`unverified_reason`） | 证据包卡片（UI-12）；`clean_env=unverified` 标“未在干净环境验证” |
 | `review` | `model`、`variant`（`vendor_policy`，默认 single_vendor；`findings[]`） | 评审行，标“同厂商·变体” |
 | `task_finished` | `status`（done / failed / budget_exceeded / stuck / needs_human / cancelled）（`finish_report`、`cost_report`） | 对话末条：summary、置信度、¥ |
 | `error` | `type`、`message` | 红色行 |
@@ -59,3 +61,5 @@ v1 是**行级**事件；书写动画由 UI 的 WritingStream 自己生成。逐
 ## 5. 维护
 - 改模型 → `uv run python scripts/export_schema.py`；改 fixture 内容 → `uv run python scripts/make_event_fixtures.py`。测试会检查二者是否过期。
 - W1-24（TrajectoryRecorder）完成后，用 FakeRouter 真实跑出 3 条轨迹替换手写 fixture，diff 只允许时间戳与 ID 不同。
+
+变更：2026-10-10 新增 `approval_requested` / `approval_resolved`，`tool_call`、`verification` 增加可选字段（ADR-0005，只增不改）。

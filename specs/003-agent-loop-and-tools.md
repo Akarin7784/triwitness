@@ -197,3 +197,4 @@ while True:
 
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：工具名（list_files/grep/bash）、Tool 协议（side_effects/refetchable/terminal）、finish 契约（04）、Budget 默认（0.8 等）。
+- 2026-10-10：按 ADR-0005 修订：工具调用前经权限引擎判定（spec 006）；Windows 无沙箱且无 Git Bash 时以 `powershell` 工具替代 `bash`（工具列表随平台变化仅此一处）；被拒绝的调用以工具结果返回拒绝原因。
