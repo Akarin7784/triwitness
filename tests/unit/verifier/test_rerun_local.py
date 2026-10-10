@@ -35,7 +35,7 @@ def make_repo(tmp: Path, files: dict[str, str]) -> Path:
     repo.mkdir()
     for k, v in files.items():
         (repo / k).parent.mkdir(parents=True, exist_ok=True)
-        (repo / k).write_text(v)
+        (repo / k).write_text(v, newline="\n")
     subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
     git(repo, "config", "core.autocrlf", "false")
     git(repo, "add", "-A")
@@ -47,7 +47,7 @@ def make_patch(repo: Path, files: dict[str, str]) -> str:
     """在仓库里写入改动 → 取 diff → 还原（模拟 Executor 交出来的补丁）。"""
     for k, v in files.items():
         (repo / k).parent.mkdir(parents=True, exist_ok=True)
-        (repo / k).write_text(v)
+        (repo / k).write_text(v, newline="\n")
     git(repo, "add", "-A")
     patch = git(repo, "diff", "--cached", "--binary")
     git(repo, "reset", "-q", "--hard")

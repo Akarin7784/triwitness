@@ -40,7 +40,7 @@ def snapshot(name: str, text: str) -> None:
     path = SNAP / name
     if os.environ.get("UPDATE_SNAPSHOTS") or not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="\n")
     assert text == path.read_text(encoding="utf-8")
 
 
