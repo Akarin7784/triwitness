@@ -29,6 +29,45 @@ def doctor() -> None:
     typer.echo("tw doctor：尚未实现（W2-02）")
 
 
+@app.command("run")
+def run_cmd(
+    repo: Annotated[Path, typer.Option(help="本地 git 仓库路径")],
+    issue: Annotated[str, typer.Option(help="问题描述（Issue 正文）")],
+    title: Annotated[str | None, typer.Option(help="标题（默认取描述第一行）")] = None,
+    backend: Annotated[str, typer.Option(help="auto / docker / none")] = "auto",
+    test_cmd: Annotated[str | None, typer.Option(help="run_tests 使用的测试命令")] = None,
+    live: Annotated[bool, typer.Option("--live", help="真实调用模型（录制到回放缓存）；默认只回放")] = False,
+    allow_peak: Annotated[bool, typer.Option("--allow-peak", help="允许高峰时段（2× 价）")] = False,
+) -> None:
+    """以 Executor 单角色修复本地仓库中的一个问题，输出 diff、FinishReport 与成本账单。"""
+    import asyncio
+    import os
+
+    from triwitness.core.errors import TriWitnessError
+    from triwitness.harness.local_run import run_local
+    from triwitness.llm.router import Router
+
+    if backend not in ("auto", "docker", "none"):
+        raise typer.BadParameter("只能是 auto / docker / none")
+    if live:
+        os.environ["TW_LLM_MODE"] = "record"
+    elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
+        raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
+    try:
+        out = asyncio.run(run_local(repo, issue, router=Router.deepseek_default(allow_peak=allow_peak), title=title,
+                                    backend=backend, test_command=test_cmd))  # type: ignore[arg-type]  # fmt: skip
+    except TriWitnessError as e:
+        typer.echo(f"未完成：{e}", err=True)
+        raise typer.Exit(2) from None
+    r = out.result
+    typer.echo(f"状态 {r.status}｜后端 {out.backend}｜{r.outcome.steps} 步｜¥{r.cost.total_cny:.4f}")
+    if r.outcome.reason:
+        typer.echo(f"原因：{r.outcome.reason}")
+    if out.branch:
+        typer.echo(f"改动在分支 {out.branch}（工作区未动）")
+    typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl）")
+
+
 eval_app = typer.Typer(add_completion=False, no_args_is_help=True, help="评测")
 app.add_typer(eval_app, name="eval")
 

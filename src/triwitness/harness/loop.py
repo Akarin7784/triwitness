@@ -66,6 +66,16 @@ class LoopOutcome(BaseModel):
     reason: str | None = None
 
 
+def prefix_hash(req: LLMRequest) -> str:
+    """稳定前缀（system 消息 + 工具定义）的规范化哈希：同一配置下不同任务、不同次运行必须相同（W1-22）。"""
+    import hashlib
+    import json
+
+    head = [m.model_dump(mode="json") for m in req.messages if m.role == "system"]
+    blob = json.dumps({"system": head, "tools": req.tools or []}, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
 def build_system_prompt(role_prompt: str, *, agents_md: str | None = None, tool_names: list[str] | None = None) -> str:
     """稳定前缀：角色提示 + AGENTS.md 摘要 + 工具清单（不含任何随任务变化的内容）。"""
     parts = [role_prompt.strip()]

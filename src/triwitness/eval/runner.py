@@ -240,8 +240,8 @@ class EvalRunner:
                 except asyncio.CancelledError:
                     raise
                 except Exception as e:  # 基础设施错误：不写 result.json，续跑时重试
-                    log.exception("attempt 失败：%s", job.rel())
-                    summary.infra_errors[str(job.rel())] = f"{type(e).__name__}: {e}"[:500]
+                    log.exception("attempt 失败：%s", job.rel().as_posix())
+                    summary.infra_errors[job.rel().as_posix()] = f"{type(e).__name__}: {e}"[:500]
                     return
                 summary.done.append(res)
 
