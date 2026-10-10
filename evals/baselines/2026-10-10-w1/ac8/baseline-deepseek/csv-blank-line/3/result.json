@@ -1,0 +1,28 @@
+{
+  "task_id": "csv-blank-line",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 3,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/__pycache__/test_basic.cpython-312-pytest-8.3.3.pyc",
+    "tests/tw_repro/__pycache__/test_issue_blank_line.cpython-312-pytest-8.3.3.pyc",
+    "tests/tw_repro/test_issue_blank_line.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.007789,
+  "tokens_in": 12349,
+  "tokens_cached": 9600,
+  "tokens_out": 1212,
+  "peak_calls": 0,
+  "steps": 5,
+  "wall_s": 15.52,
+  "trajectory_id": "baseline-deepseek/csv-blank-line/3/trajectory.jsonl",
+  "live": true,
+  "error": null
+}

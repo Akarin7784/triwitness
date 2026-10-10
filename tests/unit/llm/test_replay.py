@@ -90,10 +90,11 @@ async def test_record_mode_writes_then_reuses(tmp_path) -> None:
     assert len(list((tmp_path / "cache").glob("*.json"))) == 1
 
 
-async def test_live_mode_bypasses_cache(tmp_path) -> None:
+async def test_live_mode_bypasses_cache_but_records(tmp_path) -> None:
     raw = json.loads((FIXTURES / "text_nonthinking.json").read_text(encoding="utf-8"))["response"]
     inner = CannedTransport(raw)
     c, _ = client_with(inner, "live", tmp_path)
     await c.complete(cases.text_nonthinking(), cases.MODEL)
     await c.complete(cases.text_nonthinking(), cases.MODEL)
-    assert inner.calls == 2 and not (tmp_path / "cache").exists()
+    assert inner.calls == 2  # 不读缓存：重复尝试各自真采样
+    assert len(list((tmp_path / "cache").glob("*.json"))) == 1  # 但会录下来，之后可离线回放

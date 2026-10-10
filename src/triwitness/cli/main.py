@@ -77,8 +77,8 @@ def eval_estimate(
     tasks: int = typer.Option(10, help="任务数"),
     configs: int = typer.Option(1, help="配置数"),
     attempts: int = typer.Option(1, help="每配置尝试次数"),
-    avg_input: int = typer.Option(2_000_000, help="每任务平均输入 token（含缓存命中）"),
-    avg_output: int = typer.Option(30_000, help="每任务平均输出 token"),
+    avg_input: int = typer.Option(800_000, help="每任务平均输入 token（含缓存命中）"),
+    avg_output: int = typer.Option(20_000, help="每任务平均输出 token"),
     hit_rate: float = typer.Option(0.9, help="缓存命中率"),
 ) -> None:
     """估算一次评测的花费（空闲价 / 高峰价），并显示当前闸门状态。不调用 API。"""
@@ -141,7 +141,7 @@ def eval_run(
     if not tasks:
         raise typer.BadParameter(f"evals/tasks/{suite} 下没有任务")
     if live:
-        os.environ["TW_LLM_MODE"] = "record"  # 真调并写入回放缓存，之后可离线复现
+        os.environ["TW_LLM_MODE"] = "live"  # 每次都真调（尝试之间互不回放），同时写入回放缓存，之后可离线复现
 
     def llm_factory(cfg: RunConfig) -> LLMAgent:
         from triwitness.llm.router import Router
@@ -214,14 +214,16 @@ def budget_show(
 def budget_sync() -> None:
     """调 DeepSeek /user/balance 与本地账本对账（不调模型、不花钱；key 只放请求头，不打印）。"""
     import asyncio
+    from datetime import UTC, datetime
 
-    from triwitness.cost.dashboard import fetch_balance, parse_balance
+    from triwitness.cost.dashboard import fetch_balance, parse_balance, reconcile
     from triwitness.cost.ledger import GlobalLedger
 
     led = GlobalLedger()
     b = parse_balance(asyncio.run(fetch_balance()), led.spent())
     typer.echo(f"DeepSeek 余额 {b.currency} {b.total_balance:.2f}（赠送 {b.granted:.2f}｜充值 {b.topped_up:.2f}）")
-    typer.echo(f"本地账本累计已花 ¥{b.ledger_spent:.4f}；余额变化与账本不符时请检查是否有账本外的调用")
+    typer.echo(f"本地账本累计已花 ¥{b.ledger_spent:.4f}")
+    typer.echo(reconcile(led.path.parent / "balance_snapshots.jsonl", b, datetime.now(UTC)))
 
 
 sandbox_app = typer.Typer(add_completion=False, no_args_is_help=True, help="沙箱")

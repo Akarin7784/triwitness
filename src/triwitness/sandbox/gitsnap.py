@@ -19,7 +19,13 @@ from pathlib import Path
 from triwitness.core.errors import SandboxError
 from triwitness.sandbox.base import scrub_host_env
 
-EXCLUDES = (":(exclude).tw", ":(exclude,glob)**/.tw/**")
+# 不进快照 / diff：工作目录元数据 .tw，以及跑测试产生的字节码（W1-34 真跑发现 .pyc 混进补丁）。
+EXCLUDES = (
+    ":(exclude).tw",
+    ":(exclude,glob)**/.tw/**",
+    ":(exclude,glob)**/__pycache__/**",
+    ":(exclude,glob)**/*.pyc",
+)
 _LABEL_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 _IDENT = {
     "GIT_AUTHOR_NAME": "TriWitness",

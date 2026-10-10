@@ -1,0 +1,34 @@
+{
+  "started_at": "2026-10-10T13:07:38.257301+08:00",
+  "live": true,
+  "estimate_cny": 3.56,
+  "max_total_cny": 5.0,
+  "configs": [
+    {
+      "name": "baseline-deepseek",
+      "agent": "llm",
+      "executor": {
+        "model": "deepseek-flash",
+        "thinking": true,
+        "effort": "high"
+      },
+      "attempts": 1,
+      "budget_profile": "eval",
+      "harness": "configs/harness/baseline.yaml",
+      "category": "baseline"
+    }
+  ],
+  "tasks": [
+    "csv-blank-line",
+    "duration-minutes",
+    "lru-get-refresh",
+    "paginate-last-page",
+    "slugify-edges",
+    "swe-conllu-64",
+    "swe-crosstl-257",
+    "swe-pyflakes-765",
+    "swe-pynmea2-124",
+    "swe-slpp-32"
+  ],
+  "peak_flag": null
+}

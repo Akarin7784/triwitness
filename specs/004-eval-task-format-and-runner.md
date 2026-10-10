@@ -151,7 +151,7 @@ tw task validate evals/tasks/dev/dev-001-*      # 校验任务有效性
 - [x] AC3：用"什么都不改"的空 Agent 跑 dev 套件，Resolved = 0；用"直接执行 solve.sh"的作弊 Agent，Resolved = 10（验证判分管线）。
 - [x] AC4：中途 Ctrl-C 后重跑，已完成的任务不再执行。
 - [x] AC5：报告 Markdown 包含第 6.8 节所列所有列，数值与 result.json 汇总一致（单测）。
-- [ ] AC6：`configs/runs/baseline-deepseek.yaml` 齐全，在空闲时段至少跑通 1 个任务（三家版本 ⏸）。
+- [x] AC6：`configs/runs/baseline-deepseek.yaml` 齐全，在空闲时段至少跑通 1 个任务（三家版本 ⏸）。
 - [x] AC7：成本预估超过上限时不开始运行。
 
 ## 8. 测试计划
@@ -182,3 +182,4 @@ tw task validate evals/tasks/dev/dev-001-*      # 校验任务有效性
 - 2026-10-10：按 ADR-0005 修订：评测强制 docker 后端、非交互（权限 ask 视为 deny）、只用 default 层 + 运行配置中的权限规则，规则集哈希计入 config_hash；none 后端运行不进入报告。
 - 2026-10-10（W1-26 实现）：对照 Harbor 官方文档（docs.harborframework.com/tasks/configuration）改字段：`version` → `schema_version`（1.x）；任务 id 从 `[metadata] id` 移到 `[task] name = "org/<id>"`（id = 目录名）；`network = "none"` → `[environment] network_mode = "no-network"`（Harbor 默认 public，所以 TriWitness 要求显式写）；新增可选 `workdir`、`docker_image`；`created_at` 必填；`[tw]` 未知键报错，其余表允许 Harbor 未来新增字段。`tw task validate` 实现：镜像 tag = `tw-task/<id>:<environment/ 内容哈希，换行无关>`，已存在则复用；验证容器 `network_mode=none`、带 `tw.managed` 标签、跑完即删；`--static` 只查格式（不需要 Docker）。第一个示例任务 `evals/tasks/dev/csv-blank-line`。
 - 2026-10-10（W1-28～W1-32 实现）：① test.sh 约定改为**把隐藏测试复制进仓库再跑**（与 SWE-bench 相同；合成任务放 `tests/test_*_hidden.py`，导入任务放 `tests/files/<原路径>`），这样仓库自己的 conftest / 配置会生效，防作弊必须靠 Grader；`load_task` 静态检查 F2P/P2P 每个 id 都在 test.sh 里、对应文件存在。② Grader 应用 diff 前**丢弃测试基础设施改动**（conftest.py、pytest.ini、tox.ini、setup.cfg、pyproject.toml、sitecustomize/usercustomize、*.pth、已有测试文件；新增测试文件忽略但不算篡改），结果记 `tamper_paths` / `ignored_paths`；任务可用 `[tw] protected` 追加 glob。Grader 以 uid 1000 跑 test.sh（沙箱 cap_drop ALL）。③ 除 §11 的空 Agent / 作弊 Agent（执行 solve.sh）外新增**篡改 Agent**（只放让所有测试“通过”的 conftest.py 并声称成功）：必须判 0、计入虚假成功；集成测试同时证明不过滤时该攻击确实能拿到 reward 1。④ CLI 为 `tw eval run --suite dev --config … | --agent null|oracle|tamper [--live] [--allow-peak] [--max-total-cny 50] [--out 目录续跑]` 与 `tw eval report <dir>`；默认离线（llm Agent 走回放缓存，未录制则该 attempt 记 ReplayMiss，不联网）；TW_LLM_MODE 非 replay 而未加 --live 拒绝启动；--live = record 模式。⑤ 费用护栏只在 live 生效：高峰拒绝启动、预估（历史平均每任务成本，无历史时按 2M 输入 / 3 万输出估）> 上限不开始、全局账本与类别信封（默认 baseline）预检、跨入高峰停止派发（未跑的留给续跑）。⑥ 基础设施错误（Docker 等）不写 result.json，续跑时重试，记录在 errors.json。⑦ 报告 v0 另加缓存命中率（<90% 告警）与篡改列。⑧ dev 套件 10 个：5 个合成 + 5 个 SWE-rebench（`scripts/import_swe_rebench.py` 可复现：GitHub tarball @ base_commit、依赖按数据集 pip freeze 固定、镜像无 .git）。AC1–AC5、AC7 通过；AC6 需真实调用，待 Eva 确认。
+- 2026-10-10（W1-34 真跑）：AC6 通过：dev 10 题 9/10（¥0.33，命中 95%），结果见 evals/baselines/2026-10-10-w1。据此修订：① `--live` 改用 live 模式（每次真调、仍写入回放缓存），因为 record 模式会让同一任务的多次尝试互相回放首轮请求；② Grader 把“已有测试文件只追加行”记为无害忽略，删改原有测试行或动测试基础设施才记篡改（真跑中 2 次补回归测试被误记）；③ 快照 / diff 排除 `__pycache__` 与 `*.pyc`；④ 无历史时的预估默认值改为 800k 输入 / 2 万输出。

@@ -1,0 +1,26 @@
+{
+  "task_id": "swe-pynmea2-124",
+  "config": "baseline-deepseek",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_pashr.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.02523,
+  "tokens_in": 98658,
+  "tokens_cached": 89600,
+  "tokens_out": 3595,
+  "peak_calls": 0,
+  "steps": 12,
+  "wall_s": 48.75,
+  "trajectory_id": "baseline-deepseek/swe-pynmea2-124/1/trajectory.jsonl",
+  "live": true,
+  "error": null
+}

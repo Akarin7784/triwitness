@@ -31,7 +31,7 @@ from triwitness.sandbox.base import (
     scrub_host_env,
     validate_sandbox_env,
 )
-from triwitness.sandbox.gitsnap import GitSnapshotter, git
+from triwitness.sandbox.gitsnap import EXCLUDES, GitSnapshotter, git
 from triwitness.sandbox.proc import pid_alive, run_tree
 
 ShellKind = Literal["bash", "powershell"]
@@ -246,7 +246,7 @@ class LocalSandbox:
                 await git("apply", "--whitespace=nowarn", "-", cwd=self.repo, input=patch.encode())
             result = patch
         elif action == "keep":
-            await git("add", "-A", "--", ".", ":(exclude).tw", cwd=self.worktree)
+            await git("add", "-A", "--", ".", *EXCLUDES, cwd=self.worktree)
             code, _, _ = await git("diff", "--cached", "--quiet", cwd=self.worktree, check=False)
             if code != 0:
                 await git("commit", "-q", "--no-verify", "-m", f"tw: run {self.run_id}", cwd=self.worktree)

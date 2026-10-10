@@ -4,7 +4,9 @@
 - Agent 的沙箱里从来没有 tests/、solution/（镜像构建上下文只有 environment/）；Grader 永远不复用 Agent 的沙箱。
 - diff 里改测试基础设施的部分**不应用**：conftest.py、pytest.ini、tox.ini、setup.cfg、pyproject.toml、
   sitecustomize / usercustomize、*.pth，以及已有测试文件。新加的测试文件同样不应用（判分只看隐藏测试），但不算篡改。
-- 被丢弃的路径写进结果：`tamper_paths`（疑似篡改）/ `ignored_paths`（新增测试等无害忽略）。
+- 被丢弃的路径写进结果：`tamper_paths`（疑似篡改）/ `ignored_paths`（无害忽略）。
+- 已有测试文件只“加行”（补回归测试，不删不改原有行）算无害；删改原有测试行、动测试基础设施才算篡改
+  （W1-34 真跑：pyflakes / slpp 两次只是补测试却被记成篡改）。改动一律不应用，所以分类只影响标记，不影响判分。
 """
 
 from __future__ import annotations
@@ -36,6 +38,16 @@ class FilePatch(BaseModel):
     text: str
     new_file: bool
     deleted: bool
+
+
+def additions_only(fp: FilePatch) -> bool:
+    """该文件的改动只新增行（不删、不改原有行，不删除文件、不改名）。"""
+    if fp.deleted or fp.old_path != fp.path or "GIT binary patch" in fp.text:
+        return False
+    body = fp.text.split("\n@@", 1)
+    if len(body) < 2:
+        return False  # 只有模式变更等，没有内容
+    return not any(ln.startswith("-") and not ln.startswith("---") for ln in body[1].splitlines())
 
 
 class GradeResult(BaseModel):
@@ -99,7 +111,7 @@ def filter_patch(patch: str, *, extra_protected: list[str] | None = None) -> tup
         if infra:
             tamper.append(infra[0])
         elif tests:
-            (ignored if fp.new_file else tamper).append(tests[0])
+            (ignored if fp.new_file or additions_only(fp) else tamper).append(tests[0])
         else:
             keep.append(fp.text)
     return "".join(keep), tamper, ignored

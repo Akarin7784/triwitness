@@ -38,8 +38,10 @@ from triwitness.telemetry.trajectory import TrajectoryRecorder
 log = logging.getLogger(__name__)
 
 DEFAULT_RESULTS = Path("evals/results")
-DEFAULT_AVG_INPUT = 2_000_000
-DEFAULT_AVG_OUTPUT = 30_000
+# W1-34 首跑校准（2026-10-10，dev 10 × 1，思考 high）：平均输入 198k（SWE 379k，最高 1.09M）、输出 4.8k（SWE 8.6k），
+# 命中 95%，¥0.033/任务。默认值取 SWE 实测的约 2 倍，给 test 集更难的任务留余量；有历史结果时优先用历史均值。
+DEFAULT_AVG_INPUT = 800_000
+DEFAULT_AVG_OUTPUT = 20_000
 
 
 class EstimateTooHigh(TriWitnessError):

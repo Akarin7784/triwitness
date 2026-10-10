@@ -237,9 +237,13 @@ async def test_ac13_snapshot_restore_diff(backend: LocalSandboxBackend, repo: Pa
         assert sh(sb.worktree, "diff", "--cached", "--name-only") == ""  # 真实索引仍是 HEAD
         (sb.worktree / ".tw").mkdir()
         (sb.worktree / ".tw" / "NOTES.md").write_text("notes\n")
+        (sb.worktree / "pkg" / "__pycache__").mkdir(parents=True)
+        (sb.worktree / "pkg" / "__pycache__" / "m.cpython-312.pyc").write_bytes(b"\x00pyc")
+        (sb.worktree / "stray.pyc").write_bytes(b"\x00pyc")
         d = await sb.diff()
         assert "added.txt" in d and "a.py" in d
         assert ".tw/NOTES.md" not in d and ".venv" not in d
+        assert ".pyc" not in d and "__pycache__" not in d  # W1-34：字节码不进补丁
         assert "later.txt" not in d
         d2 = await sb.diff("s1")
         assert d2.strip() == ""

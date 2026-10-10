@@ -7,10 +7,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -151,4 +153,31 @@ def parse_balance(data: dict[str, Any], ledger_spent: float) -> BalanceCheck:
     )
 
 
-__all__ = ["BalanceCheck", "BudgetView", "budget_view", "fetch_balance", "parse_balance", "render_budget_markdown"]
+def reconcile(snapshots: Path, cur: BalanceCheck, now: datetime) -> str:
+    """与上一次 sync 的快照对比：余额下降 vs 账本增量；然后追加本次快照（JSONL，只含金额与时间）。"""
+    prev: dict[str, Any] | None = None
+    if snapshots.exists():
+        lines = [ln for ln in snapshots.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        prev = json.loads(lines[-1]) if lines else None
+    snapshots.parent.mkdir(parents=True, exist_ok=True)
+    with snapshots.open("a", encoding="utf-8") as f:
+        rec = {"ts": now.isoformat(timespec="seconds"), "balance": cur.total_balance, "ledger_spent": cur.ledger_spent}
+        f.write(json.dumps(rec) + "\n")
+    if prev is None:
+        return "首次对账：已记下基线，下次 sync 起比较余额变化与账本增量"
+    drop = float(prev["balance"]) - cur.total_balance
+    led = cur.ledger_spent - float(prev["ledger_spent"])
+    gap = drop - led
+    verdict = "一致" if abs(gap) <= max(0.01, 0.05 * led) else "不符：检查账本外调用或充值"
+    return f"自 {prev['ts']}：余额下降 ¥{drop:.4f}｜账本增加 ¥{led:.4f}｜差 ¥{gap:+.4f}（{verdict}）"
+
+
+__all__ = [
+    "BalanceCheck",
+    "BudgetView",
+    "budget_view",
+    "fetch_balance",
+    "parse_balance",
+    "reconcile",
+    "render_budget_markdown",
+]

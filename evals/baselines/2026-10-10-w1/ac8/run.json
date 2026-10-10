@@ -1,0 +1,25 @@
+{
+  "started_at": "2026-10-10T13:10:16.633832+08:00",
+  "live": true,
+  "estimate_cny": 0.098,
+  "max_total_cny": 4.6,
+  "configs": [
+    {
+      "name": "baseline-deepseek",
+      "agent": "llm",
+      "executor": {
+        "model": "deepseek-flash",
+        "thinking": true,
+        "effort": "high"
+      },
+      "attempts": 1,
+      "budget_profile": "eval",
+      "harness": "configs/harness/baseline.yaml",
+      "category": "baseline"
+    }
+  ],
+  "tasks": [
+    "csv-blank-line"
+  ],
+  "peak_flag": null
+}

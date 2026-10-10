@@ -101,3 +101,19 @@ def test_classifiers() -> None:
 
 def test_empty_patch() -> None:
     assert filter_patch("") == ("", [], [])
+
+
+def test_appending_regression_test_is_not_tamper(tmp_path: Path) -> None:
+    """W1-34 真跑：模型给已有测试文件补回归测试 → 无害忽略（仍不应用），不记篡改。"""
+    after = "def test_x():\n    assert True\n\n\ndef test_regression():\n    assert 2\n"
+    d = _diff(tmp_path, BEFORE, {"tests/test_core.py": after, "pkg/core.py": "x = 2\n"})
+    keep, tamper, ignored = filter_patch(d)
+    assert tamper == [] and ignored == ["tests/test_core.py"]
+    assert [f.path for f in split_patch(keep)] == ["pkg/core.py"]
+
+
+def test_appending_to_conftest_is_still_tamper(tmp_path: Path) -> None:
+    before = {**BEFORE, "tests/conftest.py": "import pytest\n"}
+    hack = "import pytest\n\n\ndef pytest_runtest_call(item):\n    pass\n"
+    _, tamper, _ = filter_patch(_diff(tmp_path, before, {"tests/conftest.py": hack}))
+    assert tamper == ["tests/conftest.py"]

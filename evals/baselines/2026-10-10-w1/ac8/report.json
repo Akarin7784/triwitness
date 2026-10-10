@@ -1,0 +1,26 @@
+{
+  "run_dir": "evals/results/2026-10-10T13-10-16",
+  "rows": [
+    {
+      "config": "baseline-deepseek",
+      "agent": "llm",
+      "tasks": 1,
+      "attempts": 3,
+      "resolved_at_1": 1.0,
+      "solved": 1,
+      "total_cost_cny": 0.0234,
+      "avg_cost_per_task": 0.0078,
+      "cost_per_resolved": 0.0234,
+      "avg_steps": 6.0,
+      "avg_wall_s": 16.1,
+      "false_success": 0,
+      "tampered": 0,
+      "cache_hit_rate": 0.8122,
+      "live": true
+    }
+  ],
+  "missing": [],
+  "warnings": [
+    "baseline-deepseek：缓存命中率 81% < 90%（检查前缀稳定性）"
+  ]
+}

@@ -85,3 +85,20 @@ async def test_balance_requires_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
     with pytest.raises(ConfigError):
         await fetch_balance(httpx.AsyncClient())
+
+
+def test_reconcile_snapshots(tmp_path: Path) -> None:
+    from datetime import UTC, datetime
+
+    from triwitness.cost.dashboard import BalanceCheck, reconcile
+
+    snap = tmp_path / "s" / "balance_snapshots.jsonl"
+    t = datetime(2026, 10, 10, 5, tzinfo=UTC)
+    first = reconcile(snap, BalanceCheck("CNY", 59.27, 0, 59.27, 0.35), t)
+    assert "基线" in first
+    ok = reconcile(snap, BalanceCheck("CNY", 58.27, 0, 58.27, 1.35), t)
+    assert "一致" in ok and "¥1.0000" in ok
+    bad = reconcile(snap, BalanceCheck("CNY", 56.27, 0, 56.27, 1.45), t)
+    assert "不符" in bad
+    assert len(snap.read_text(encoding="utf-8").splitlines()) == 3
+    assert "sk-" not in snap.read_text(encoding="utf-8")

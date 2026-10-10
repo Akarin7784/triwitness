@@ -1,0 +1,27 @@
+{
+  "run_dir": "evals/results/2026-10-10T13-07-38",
+  "rows": [
+    {
+      "config": "baseline-deepseek",
+      "agent": "llm",
+      "tasks": 10,
+      "attempts": 10,
+      "resolved_at_1": 0.9,
+      "solved": 9,
+      "total_cost_cny": 0.3268,
+      "avg_cost_per_task": 0.0327,
+      "cost_per_resolved": 0.0363,
+      "avg_steps": 14.5,
+      "avg_wall_s": 61.0,
+      "false_success": 1,
+      "tampered": 2,
+      "cache_hit_rate": 0.9518,
+      "live": true
+    }
+  ],
+  "missing": [],
+  "warnings": [
+    "baseline-deepseek：1 次虚假成功（声称修好但隐藏测试不过）",
+    "baseline-deepseek：2 次改动测试基础设施（Grader 已忽略这些改动）"
+  ]
+}

@@ -3,7 +3,8 @@
 模式（环境变量 TW_LLM_MODE，默认 replay）：
 - replay：只查缓存；找不到就抛 ReplayMiss，绝不联网。
 - record：先查缓存，未命中才真调并写入缓存（受空闲闸门与预算约束）。
-- live：直接真调，不读不写缓存。
+- live：直接真调，不读缓存，但写入缓存（最新一次覆盖），之后可离线复现。`tw eval run --live` 用它：
+  多次尝试必须各自真采样（W1-34 发现 record 模式下同一任务各尝试的首轮请求相同，会互相回放）。
 
 键 = 规范化请求 JSON 的 sha256（模型、消息、工具 schema、关键参数；不含任何密钥 / 请求头）。
 缓存文件：tests/fixtures/llm/<vendor>/*.json（仓库内，命名用例）与 ~/.triwitness/llm-cache/<vendor>/<key>.json。
@@ -159,7 +160,7 @@ class RecordReplayTransport:
         self.network_calls += 1
         resp = await self.inner.post(path, payload)
         self.last_source = "live"
-        if self.mode == "record":
+        if self.mode in ("record", "live"):
             self.store.put(key, payload, resp, name=self.next_name)
             self.next_name = None
         return resp
