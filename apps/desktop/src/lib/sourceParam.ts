@@ -1,6 +1,6 @@
 import { FIXTURE_NAMES, type FixtureName } from '../data/sources/fixture'
 
-/** ?source=fixture:success | fixture:failure | fixture:budget_exceeded | mock；默认 fixture:success */
+/** ?source=fixture:success | fixture:failure | fixture:budget_exceeded | fixture:recorded | mock；默认 fixture:success */
 export type SourceKey = `fixture:${FixtureName}` | 'mock' | `local:${string}`
 
 export function parseSourceParam(search: string): SourceKey {

@@ -178,3 +178,26 @@ def test_system_prompt_stable() -> None:
 @pytest.mark.parametrize("key", ["no_tool", "wrap_up", "repeat", "failures"])
 def test_config_reminders(key: str) -> None:
     assert HarnessConfig.load().reminder(key, detail="d")
+
+
+async def test_no_progress_signal() -> None:
+    tests = [say(call("run_tests", selector=f"tests/test_{i}.py")) for i in range(30)]
+    loop, ctx, em, _ = make(tests)
+    out = await loop.run("x", ctx)
+    assert out.status == "stuck"
+    warns = [e for e in em.events if e.kind == "loop_warning"]
+    assert [w.payload["signal"] for w in warns] == ["no_progress"] * 3
+    assert warns[0].payload["display"] == "⚠ 无进展"
+    assert out.steps == 18  # 每 6 步一次警告，第 3 次 stuck
+    assert any("没有修改文件" in (m.content or "") for m in loop.messages if m.role == "user")
+
+
+async def test_edits_and_new_reads_reset_no_progress() -> None:
+    rt = [say(call("run_tests", selector=f"t{i}")) for i in range(5)]
+    rt2 = [say(call("run_tests", selector=f"u{i}")) for i in range(5)]
+    reads = [say(call("read_file", path="calc.py", start_line=1))]
+    edit = [say(call("edit_file", path="calc.py", old_str="a - b", new_str="a + b"))]
+    fin = [say(call("finish", **{**FINISH, "tests_passed": False}))]
+    loop, ctx, em, _ = make(rt + edit + rt2 + reads + rt + fin)
+    out = await loop.run("x", ctx)
+    assert out.status == "finished" and "loop_warning" not in em.kinds()

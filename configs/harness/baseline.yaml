@@ -7,9 +7,11 @@ loop_detection:
   window: 8
   repeat_threshold: 3             # 窗口内相同工具 + 相同参数 ≥ N 次
   failure_threshold: 5            # 连续失败 N 次
+  no_progress_threshold: 6        # 连续 N 次工具调用没有修改文件、也没有新的读取目标
   max_warnings: 3                 # 第 3 次 → stuck
 reminders:
   no_tool: "请调用工具继续，或调用 finish 结束。"
   wrap_up: "预算已用到警戒线，请尽快收尾：运行测试并调用 finish。"
   repeat: "你在重复同样的动作（{detail}）。换个思路：先读相关代码或运行测试定位问题。"
   failures: "连续多次工具调用失败（{detail}）。停下来检查错误信息，换一种做法。"
+  no_progress: "已经 {detail}。请动手修改代码、运行测试，或调用 finish 说明卡在哪里。"

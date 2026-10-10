@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-export const FIXTURE_FILES = ['success', 'failure', 'budget_exceeded'] as const
+export const FIXTURE_FILES = ['success', 'failure', 'budget_exceeded', 'recorded'] as const
 export type FixtureFile = (typeof FIXTURE_FILES)[number]
 
 export function readFixture(name: FixtureFile): string {

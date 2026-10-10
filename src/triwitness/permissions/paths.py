@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -103,6 +104,35 @@ def normalize_path(
             else:
                 flags.add("short_name")
     return NormPath(path=p, windows=windows, flags=frozenset(flags))
+
+
+def windows_long_name(p: str) -> str | None:
+    """真实 Windows 上把 8.3 短名展开（`/c/Users/RUNNER~1/x` → `C:\\Users\\runneradmin\\x`）。
+
+    逐级向上找到存在的前缀再展开，不存在的尾部原样接回；其他平台返回 None。"""
+    if sys.platform != "win32":
+        return None
+    import ctypes
+
+    m = re.match(r"^/([a-zA-Z])(/.*)?$", p)
+    if not m:
+        return None
+    cur = m.group(1).upper() + ":" + (m.group(2) or "/").replace("/", "\\")
+    tail: list[str] = []
+    fn = ctypes.windll.kernel32.GetLongPathNameW
+    fn.restype = ctypes.c_uint
+    fn.argtypes = [ctypes.c_wchar_p, ctypes.c_wchar_p, ctypes.c_uint]
+    while True:
+        buf = ctypes.create_unicode_buffer(32768)
+        n = fn(cur, buf, 32768)
+        if 0 < n < 32768:
+            out = buf.value
+            return out.rstrip("\\") + "\\" + "\\".join(reversed(tail)) if tail else out
+        head, _, leaf = cur.rpartition("\\")
+        if not leaf:  # 已到盘符根仍不存在
+            return None
+        tail.append(leaf)
+        cur = head + "\\" if head.endswith(":") else head
 
 
 def to_posix_root(p: str, *, windows: bool) -> str:

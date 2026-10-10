@@ -19,8 +19,8 @@ def _events(path: Path) -> list[TrajectoryEvent]:
     return [parse_event_line(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
-def test_three_fixtures_exist() -> None:
-    assert {p.stem for p in FIXTURES} == {"success", "failure", "budget_exceeded"}
+def test_fixtures_exist() -> None:
+    assert {p.stem for p in FIXTURES} == {"success", "failure", "budget_exceeded", "recorded"}
 
 
 @pytest.mark.parametrize("path", FIXTURES, ids=lambda p: p.stem)

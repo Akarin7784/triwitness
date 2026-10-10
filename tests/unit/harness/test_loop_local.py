@@ -16,7 +16,6 @@ from triwitness.sandbox.base import SandboxSpec
 from triwitness.sandbox.local import LocalSandboxBackend
 from triwitness.tools import ToolContext, ToolRegistry, default_tools
 
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX；Windows 在 W2-33")
 SECRET = "sk-live-0123456789abcdef0123456789abcdef"
 
 
@@ -31,13 +30,15 @@ async def test_loop_on_local_worktree_unrestricted(tmp_path: Path, monkeypatch: 
     monkeypatch.setenv("MY_ALIAS", SECRET)
     repo = tmp_path / "repo"
     repo.mkdir()
-    (repo / "calc.py").write_text("def add(a, b):\n    return a - b\n")
-    (repo / "test_calc.py").write_text("from calc import add\n\ndef test_add():\n    assert add(1, 2) == 3\n")
+    (repo / "calc.py").write_bytes(b"def add(a, b):\n    return a - b\n")
+    (repo / "test_calc.py").write_bytes(b"from calc import add\n\ndef test_add():\n    assert add(1, 2) == 3\n")
     subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
+    git(repo, "config", "core.autocrlf", "false")
     git(repo, "add", "-A")
     git(repo, "commit", "-qm", "init")
     sb = await LocalSandboxBackend(home=tmp_path / "home").create(SandboxSpec(repo=repo, run_id="r_e2e"))
-    test_cmd = f"{sys.executable} -m pytest -q -p no:cacheprovider"
+    test_cmd = f'"{Path(sys.executable).as_posix()}" -m pytest -q -p no:cacheprovider'
+
     fin = {
         "summary": "修复 add",
         "changes": [{"path": "calc.py", "kind": "modified"}],

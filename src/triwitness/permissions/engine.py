@@ -16,7 +16,13 @@ from typing import Literal
 from triwitness.permissions.audit import AuditLog
 from triwitness.permissions.config import EffectivePolicy
 from triwitness.permissions.mode import ModeController
-from triwitness.permissions.paths import NormPath, compile_path_pattern, escape_glob, normalize_path, to_posix_root
+from triwitness.permissions.paths import (
+    NormPath,
+    compile_path_pattern,
+    escape_glob,
+    normalize_path,
+    windows_long_name,
+)
 from triwitness.permissions.rules import (
     Category,
     Decision,
@@ -108,13 +114,16 @@ class PermissionEngine:
     ) -> None:
         self.policy = policy
         self.windows = os.name == "nt" if windows is None else windows
-        self.home = to_posix_root(home or str(Path.home()), windows=self.windows)
-        self.workspace = to_posix_root(workspace or str(policy.workspace), windows=self.windows)
+        # 真实 Windows 上默认展开 8.3 短名（如 TEMP=C:\Users\RUNNER~1\...），否则工作区本身会被判为“短名路径”
+        if long_name is None and self.windows and os.name == "nt":
+            long_name = windows_long_name
+        self.long_name = long_name
+        self.home = self._root(home or str(Path.home()))
+        self.workspace = self._root(workspace or str(policy.workspace))
         self.roots = [NormPath(self.workspace, self.windows)] + [
             self._norm(d, self.workspace) for d in policy.additional_directories
         ]
         self.resolve = resolve
-        self.long_name = long_name
         self.audit = audit
         self.context = dict(context or {})
         self.controller = controller
@@ -240,6 +249,9 @@ class PermissionEngine:
         return Verdict("ask", f"{what} 需要确认")
 
     # ------------------------------------------------------------ 路径
+    def _root(self, p: str) -> str:
+        return normalize_path(p, cwd="/", home="/", windows=self.windows, long_name=self.long_name).path
+
     def _norm(self, raw: str, cwd: str) -> NormPath:
         return normalize_path(raw, cwd=cwd, home=self.home, windows=self.windows, long_name=self.long_name)
 

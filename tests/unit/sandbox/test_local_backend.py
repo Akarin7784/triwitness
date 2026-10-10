@@ -1,9 +1,11 @@
-"""none 后端（本机）：spec 002 AC10–AC14 + 硬底线（密钥不下传、超时杀进程树）。只需要 git，默认跑。"""
+"""none 后端（本机）：spec 002 AC10–AC14 + 硬底线（密钥不下传、超时杀进程树）。只需要 git，默认跑。
+
+Linux CI 与 Windows CI（W2-33，Git Bash + Job Object）都跑同一套用例；进程树用 Python 子进程验证
+（Windows 上 Git Bash 的 `$!` 是 MSYS pid，不能直接拿来查进程）。"""
 
 from __future__ import annotations
 
 import asyncio
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +16,14 @@ from triwitness.core.errors import SandboxError
 from triwitness.sandbox.base import SandboxBackend, SandboxSpec
 from triwitness.sandbox.local import LocalSandbox, LocalSandboxBackend
 
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX 用例；Windows 用例见 W2-33")
+WIN = sys.platform == "win32"
+PY = Path(sys.executable).as_posix()  # Git Bash 里用正斜杠路径
+SPAWN = b"""import os, subprocess, sys, time
+open(sys.argv[1], "w").write(str(os.getpid()))
+if len(sys.argv) > 2:
+    subprocess.Popen([sys.executable, __file__, sys.argv[2]])
+time.sleep(300)
+"""
 
 FAKE_KEY = "sk-fakefakefakefakefake000000"
 
@@ -28,8 +37,9 @@ def repo(tmp_path: Path) -> Path:
     r = tmp_path / "user-repo"
     r.mkdir()
     sh(r, "init", "-q", "-b", "main")
-    (r / "a.py").write_text("print('a')\n")
-    (r / ".gitignore").write_text(".venv/\n")
+    sh(r, "config", "core.autocrlf", "false")  # Windows runner 默认 autocrlf=true
+    (r / "a.py").write_bytes(b"print('a')\n")
+    (r / ".gitignore").write_bytes(b".venv/\n")
     sh(r, "add", "-A")
     sh(r, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
     (r / "dirty.txt").write_text("用户未提交的改动\n")
@@ -56,15 +66,17 @@ async def test_probe(backend: LocalSandboxBackend) -> None:
 async def test_ac10_user_repo_untouched(backend: LocalSandboxBackend, repo: Path, tmp_path: Path) -> None:
     before = (sh(repo, "status", "--porcelain"), sh(repo, "branch", "--show-current"), sh(repo, "rev-parse", "HEAD"))
     sb = await make(backend, repo)
-    assert sb.worktree == tmp_path / "twhome" / "worktrees" / "r1"
+    assert sb.worktree.resolve() == (tmp_path / "twhome" / "worktrees" / "r1").resolve()
     assert sh(sb.worktree, "branch", "--show-current") == "tw/r1"
     assert not (sb.worktree / "dirty.txt").exists()  # 只带提交过的内容
     r = await sb.exec("echo hi > new.txt && pwd")
-    assert r.exit_code == 0 and r.stdout.strip() == str(sb.worktree)
+    assert r.exit_code == 0 and (sb.worktree / "new.txt").exists()
+    if not WIN:  # Git Bash 的 pwd 是 /c/... 形式
+        assert r.stdout.strip() == str(sb.worktree)
     after = (sh(repo, "status", "--porcelain"), sh(repo, "branch", "--show-current"), sh(repo, "rev-parse", "HEAD"))
     assert before == after
     assert not (repo / "new.txt").exists()
-    assert sb.tw_dir == tmp_path / "twhome" / "runs" / "r1" / ".tw"
+    assert sb.tw_dir.resolve() == (tmp_path / "twhome" / "runs" / "r1" / ".tw").resolve()
     await sb.finish("discard")
 
 
@@ -101,30 +113,33 @@ async def test_ac11_secrets_never_reach_subprocess(
 
 
 def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    # 僵尸进程也算已死
-    try:
-        with open(f"/proc/{pid}/stat") as f:
-            return f.read().split()[2] != "Z"
-    except OSError:
-        return False
+    from triwitness.sandbox.proc import pid_alive
+
+    return pid_alive(pid)
+
+
+async def _pid(path: Path, timeout: float = 10) -> int:
+    loop = asyncio.get_running_loop()
+    end = loop.time() + timeout
+    while loop.time() < end:
+        try:
+            return int(path.read_text())
+        except (OSError, ValueError):
+            await asyncio.sleep(0.05)
+    raise AssertionError(f"{path.name} 没写出来")
 
 
 async def test_ac12_timeout_kills_whole_tree(backend: LocalSandboxBackend, repo: Path) -> None:
     sb = await make(backend, repo)
     try:
+        await sb.write_file("spawn.py", SPAWN)
         t0 = asyncio.get_running_loop().time()
-        r = await sb.exec(
-            "sleep 300 & echo $! > child.pid; bash -c 'sleep 300 & echo $! > grand.pid; wait' & wait", timeout_s=1
-        )
-        assert asyncio.get_running_loop().time() - t0 < 5
+        r = await sb.exec(f'"{PY}" spawn.py child.pid grand.pid & sleep 300 & wait', timeout_s=4)
+        assert asyncio.get_running_loop().time() - t0 < 10
         assert r.timed_out and r.exit_code == 124
-        await asyncio.sleep(0.3)
-        for f in ("child.pid", "grand.pid"):
-            pid = int((sb.worktree / f).read_text())
+        pids = [await _pid(sb.worktree / f) for f in ("child.pid", "grand.pid")]
+        await asyncio.sleep(0.5)
+        for f, pid in zip(("child", "grand"), pids, strict=True):
             assert not _alive(pid), f
     finally:
         await sb.finish("discard")
@@ -133,10 +148,15 @@ async def test_ac12_timeout_kills_whole_tree(backend: LocalSandboxBackend, repo:
 async def test_background_leftovers_killed_after_exit(backend: LocalSandboxBackend, repo: Path) -> None:
     sb = await make(backend, repo)
     try:
-        r = await sb.exec("sleep 300 >/dev/null 2>&1 & echo $!")
-        assert r.exit_code == 0 and not r.timed_out
-        await asyncio.sleep(0.3)
-        assert not _alive(int(r.stdout.strip()))
+        await sb.write_file("spawn.py", SPAWN)
+        # 后台起一个进程，等它写出 pid 后正常退出；退出时后台残留也应被清掉
+        r = await sb.exec(
+            f'"{PY}" spawn.py bg.pid >/dev/null 2>&1 & while [ ! -s bg.pid ]; do sleep 0.1; done; echo ok'
+        )
+        assert r.exit_code == 0 and not r.timed_out and "ok" in r.stdout
+        pid = await _pid(sb.worktree / "bg.pid")
+        await asyncio.sleep(0.5)
+        assert not _alive(pid)
     finally:
         await sb.finish("discard")
 
@@ -162,9 +182,15 @@ async def test_path_safety(backend: LocalSandboxBackend, repo: Path, tmp_path: P
             await sb.read_file("../../user-repo/a.py")
         with pytest.raises(SandboxError, match="越界"):
             await sb.read_file("/etc/passwd")
-        (sb.worktree / "evil").symlink_to("/etc/passwd")
-        with pytest.raises(SandboxError, match="符号链接"):
-            await sb.read_file("evil")
+        outside = tmp_path / "outside.txt"
+        outside.write_text("secret")
+        try:
+            (sb.worktree / "evil").symlink_to(outside)
+        except OSError:  # Windows 无创建符号链接权限时跳过这一项
+            pass
+        else:
+            with pytest.raises(SandboxError, match="符号链接"):
+                await sb.read_file("evil")
         with pytest.raises(SandboxError):
             await sb.exec("true", cwd="../..")
     finally:

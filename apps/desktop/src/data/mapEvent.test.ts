@@ -90,6 +90,20 @@ describe('foldRun · golden fixtures', () => {
     expect(v.messages.at(-1)?.content).toMatch(/预算耗尽/)
   })
 
+  it('recorded（core 真实写出）：完成、标题、费用、执行者消息与流水', () => {
+    const events = parseJsonl(readFixture('recorded'))
+    const v = foldRun(events)
+    expect(v.phase).toBe('done')
+    expect(v.title).toBe('#12 parse_rows 遇到空列表时 IndexError')
+    expect(v.repo).toBe('example/rows-demo')
+    expect(v.costCny).toBeCloseTo(0.0151, 3)
+    expect(cacheHitRate(v)).toBeCloseTo(0.9, 2)
+    expect(v.messages.map((m) => m.role)).toEqual(['user', 'assistant'])
+    expect(v.messages[1].content).toMatch(/空列表/)
+    const lines = events.map(toStreamLine).filter((l) => l !== null)
+    expect(lines.some((l) => l!.text.includes('run_tests → 1 failed'))).toBe(true)
+  })
+
   it('只折叠到已写出的 seq：规划阶段点亮 planner', () => {
     const events = parseJsonl(readFixture('success'))
     const planning = events.find((e) => e.kind === 'state_change' && e.payload.to === 'planning')!

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
 from pathlib import Path
 
 import jsonschema
@@ -201,11 +200,12 @@ async def test_internal_errors_wrapped() -> None:
 async def local_ctx(tmp_path: Path):  # type: ignore[no-untyped-def]
     repo = tmp_path / "repo"
     (repo / "src" / "pkg").mkdir(parents=True)
-    (repo / "src" / "pkg" / "a.py").write_text("def alpha():\n    return 'TODO'\n")
-    (repo / "src" / "b.txt").write_text("todo lower\n")
+    (repo / "src" / "pkg" / "a.py").write_bytes(b"def alpha():\n    return 'TODO'\n")
+    (repo / "src" / "b.txt").write_bytes(b"todo lower\n")
     (repo / "node_modules").mkdir()
     (repo / "node_modules" / "x.js").write_text("TODO")
     subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "core.autocrlf", "false"], check=True)
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
     subprocess.run(
         ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "i"], check=True
@@ -215,7 +215,6 @@ async def local_ctx(tmp_path: Path):  # type: ignore[no-untyped-def]
     await sb.finish("discard")  # type: ignore[attr-defined]
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="POSIX")
 async def test_list_and_grep_host(local_ctx: ToolContext) -> None:
     r = reg()
     ls = await run(r, local_ctx, "list_files")
@@ -246,3 +245,11 @@ async def test_list_and_grep_exec_path() -> None:
     g = await run(reg(), c, "grep", pattern="it's", path="src")
     assert g.content == "src/a.py:3:hit"
     assert "'it'\"'\"'s'" in seen[-1]  # 参数经 shlex.quote
+
+
+async def test_edit_file_crlf() -> None:
+    sb = FakeSandbox({"w.py": b"def f():\r\n    return 1\r\n"})
+    ok = await run(
+        reg(), ctx(sb), "edit_file", path="w.py", old_str="def f():\n    return 1", new_str="def f():\n    return 2"
+    )
+    assert ok.ok and sb.files["w.py"] == b"def f():\r\n    return 2\r\n"

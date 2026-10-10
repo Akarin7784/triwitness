@@ -2,7 +2,9 @@
 
 确定性输出：固定时间、固定 ID；价格按 deepseek-flash 空闲价（configs/pricing.yaml）。
 用法：uv run python scripts/make_event_fixtures.py [--check]
-W1-24 完成后改用 FakeRouter 真实跑出的轨迹重新生成，diff 只允许时间戳与 ID 不同。
+success / failure / budget_exceeded 为手写（覆盖三角色，W3 编排器完成后改为真实跑出）；
+recorded 由 W1-24 的 TrajectoryRecorder 真实跑出：run_task + AgentLoop + FakeRouter + FakeSandbox，
+固定时钟与 ID，保证 core 写出的事件与桌面端读取的 golden fixture 完全同形。
 """
 
 from __future__ import annotations
@@ -355,8 +357,107 @@ def budget_exceeded() -> list[TrajectoryEvent]:
     return r.events
 
 
+class StepClock:
+    """确定性时钟：每写一条事件前进 1.5 秒；工具耗时按 monotonic 两次读数之差（固定 0.3 秒）。"""
+
+    def __init__(self, start: datetime) -> None:
+        self.t = start
+        self._mono = 0.0
+
+    def now(self) -> datetime:
+        self.t += timedelta(seconds=1.5)
+        return self.t
+
+    def monotonic(self) -> float:
+        self._mono += 0.15
+        return self._mono
+
+
+ROWS_BUG = "def parse_rows(rows):\n    header = rows[0]\n    return [dict(zip(header, r)) for r in rows[1:]]\n"
+ROWS_TEST = "from rows import parse_rows\n\n\ndef test_empty():\n    assert parse_rows([]) == []\n"
+TEST_FAIL = (
+    "F.\nFAILED tests/test_rows.py::test_empty - IndexError: list index out of range\n1 failed, 1 passed in 0.03s\n"
+)
+TEST_PASS = "..\n2 passed in 0.02s\n"
+
+
+def recorded() -> list[TrajectoryEvent]:
+    import asyncio
+    import tempfile
+
+    from triwitness.core.models import Budget
+    from triwitness.harness.run import run_task
+    from triwitness.harness.testing import FakeRouter, FakeSandbox, say
+    from triwitness.llm.types import ToolCallSpec
+    from triwitness.sandbox.base import ExecResult
+    from triwitness.telemetry.trajectory import TrajectoryRecorder
+    from triwitness.tools import ToolRegistry, default_tools
+
+    def call(i: int, name: str, **args: object) -> ToolCallSpec:
+        import json
+
+        return ToolCallSpec(id=f"call_{i}", name=name, arguments=json.dumps(args, ensure_ascii=False))
+
+    runs = iter([TEST_FAIL, TEST_PASS])
+
+    def handler(cmd: str, sb: FakeSandbox) -> ExecResult:
+        if cmd.startswith("find"):
+            return ExecResult(exit_code=0, stdout="src/rows.py\ntests/test_rows.py\n", stderr="", duration_ms=5,
+                              timed_out=False)  # fmt: skip
+        out = next(runs)
+        return ExecResult(exit_code=0 if out is TEST_PASS else 1, stdout=out, stderr="", duration_ms=900,
+                          timed_out=False)  # fmt: skip
+
+    script = [
+        say(call(1, "list_files"), text="先看仓库结构"),
+        say(call(2, "read_file", path="src/rows.py"), call(3, "run_tests"), text="读 parse_rows 并跑测试复现"),
+        say(
+            call(
+                4,
+                "edit_file",
+                path="src/rows.py",
+                old_str="    header = rows[0]",
+                new_str="    if not rows:\n        return []\n    header = rows[0]",
+            ),
+            text="空列表直接返回 []",
+        ),
+        say(call(5, "run_tests"), text="再跑测试"),
+        say(
+            call(
+                6,
+                "finish",
+                summary="parse_rows 遇到空列表直接返回 []，不再 IndexError。",
+                changes=[{"path": "src/rows.py", "kind": "modified", "note": "空列表保护"}],
+                tests_run=["pytest -q"],
+                tests_passed=True,
+                confidence=0.9,
+            ),
+            text="测试全部通过，结束",
+        ),
+    ]
+    u = usage(12_000, 0.9, 400)
+    start = datetime(2026, 10, 10, 13, 40, tzinfo=UTC)  # 北京时间 10-10 21:40（空闲）
+    base_ms = int(start.timestamp() * 1000)
+    clock = StepClock(start)
+    with tempfile.TemporaryDirectory() as tmp:
+        task_id = "t_" + new_ulid(base_ms, b"recorded\0\0")
+        run_id = "r_" + new_ulid(base_ms + 1, b"\1\1recorded")
+        rec = TrajectoryRecorder(task_id, run_id, run_dir=Path(tmp), clock=clock.now, monotonic=clock.monotonic)
+        sandbox = FakeSandbox({"src/rows.py": ROWS_BUG, "tests/test_rows.py": ROWS_TEST}, exec_handler=handler)
+        asyncio.run(run_task(
+            recorder=rec,
+            router=FakeRouter(script, usage=u, cost_cny=price(u), served_model=SERVED, latency_ms=2400),
+            registry=ToolRegistry(default_tools()), sandbox=sandbox, repo="example/rows-demo",
+            issue_title="parse_rows 遇到空列表时 IndexError", issue_number=12,
+            task_prompt="parse_rows([]) 抛 IndexError，期望返回 []。", budget=Budget(), config_hash="cfg_baseline",
+            test_command="pytest -q",
+        ))  # fmt: skip
+        return list(rec.events)
+
+
 def render() -> Iterator[tuple[Path, str]]:
-    for name, fn in (("success", success), ("failure", failure), ("budget_exceeded", budget_exceeded)):
+    fns = (("success", success), ("failure", failure), ("budget_exceeded", budget_exceeded), ("recorded", recorded))
+    for name, fn in fns:
         yield OUT / f"{name}.jsonl", "".join(ev.to_json_line() + "\n" for ev in fn())
 
 

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-
 import pytest
 
 from triwitness.core.errors import SandboxError
@@ -69,13 +67,4 @@ def test_posix() -> None:
     assert find_shell(windows=False, which=which(sh="/bin/sh")).exe == "/bin/sh"
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="Job Object 只在 Windows 上测（W2-33 Windows CI）")
-async def test_windows_job_object_kills_tree(tmp_path) -> None:  # type: ignore[no-untyped-def]  # pragma: no cover
-    from triwitness.sandbox.proc import run_tree
-
-    r = await run_tree(
-        ["powershell", "-NoProfile", "-Command",
-         "Start-Process -NoNewWindow ping -ArgumentList '-n','300','127.0.0.1'; Start-Sleep 300"],
-        cwd=str(tmp_path), env=dict(__import__("os").environ), timeout_s=2, max_output_bytes=10000,
-    )  # fmt: skip
-    assert r.timed_out
+# 真实 Windows 上的 Job Object / Git Bash / PowerShell 用例见 tests/unit/windows/test_windows_real.py（W2-33）

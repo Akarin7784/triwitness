@@ -116,7 +116,11 @@ class EditFile(BaseTool):
             text = _decode(await ctx.sandbox.read_file(params.path))
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="not_found" if "不存在" in str(e) else "sandbox")
-        count = text.count(params.old_str)
+        old_str, new_str = params.old_str, params.new_str
+        if "\r\n" in text and "\r" not in old_str and old_str not in text:
+            # CRLF 文件（Windows 常见）：模型给的是 \n，按文件的换行风格匹配与写回
+            old_str, new_str = old_str.replace("\n", "\r\n"), new_str.replace("\r\n", "\n").replace("\n", "\r\n")
+        count = text.count(old_str)
         if count == 0:
             hint = ""
             first = params.old_str.strip().splitlines()[0] if params.old_str.strip() else ""
@@ -137,7 +141,7 @@ class EditFile(BaseTool):
                 error_code="no_match",
             )
         if count > 1:
-            starts = [m.start() for m in re.finditer(re.escape(params.old_str), text)]
+            starts = [m.start() for m in re.finditer(re.escape(old_str), text)]
             lines = ", ".join(str(_line_of(text, s)) for s in starts[:10])
             return ToolResult(
                 ok=False,
@@ -147,12 +151,12 @@ class EditFile(BaseTool):
                 ),
                 error_code="multiple_matches",
             )
-        new = text.replace(params.old_str, params.new_str, 1)
+        new = text.replace(old_str, new_str, 1)
         try:
             await ctx.sandbox.write_file(params.path, new.encode())
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="sandbox")
-        line = _line_of(text, text.index(params.old_str))
+        line = _line_of(text, text.index(old_str))
         return ToolResult(ok=True, content=f"已修改 {params.path}（第 {line} 行附近）",
                           data={"path": params.path, "kind": "modified", "line": line})  # fmt: skip
 

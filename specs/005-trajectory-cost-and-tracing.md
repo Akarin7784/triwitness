@@ -112,8 +112,8 @@ class CostReport(BaseModel):
 
 ## 6. 验收标准
 
-- [ ] AC1：用 FakeRouter 跑一个 5 步任务，JSONL 中事件 `seq` 连续、种类正确，能用 `Trajectory.load` 重建出相同的消息列表。
-- [ ] AC2：进程在第 3 步被杀，JSONL 至少包含前 2 步的完整事件（每行都是合法 JSON）。
+- [x] AC1：用 FakeRouter 跑一个 5 步任务，JSONL 中事件 `seq` 连续、种类正确，能用 `Trajectory.load` 重建出相同的消息列表。
+- [x] AC2：进程在第 3 步被杀，JSONL 至少包含前 2 步的完整事件（每行都是合法 JSON）。
 - [ ] AC3：`CostReport` 的总额等于各 `model_call` 事件 `cost_cny` 之和（误差 < 0.0001）；缓存命中率计算正确。
 - [ ] AC4：配置 Langfuse 后，一个任务在 Langfuse 中显示为一棵 trace 树：task → agent → chat / execute_tool（手动验证，截图放进 docs）。
 - [ ] AC5：未配置 OTel 端点时，运行不报错、不阻塞。
@@ -146,3 +146,4 @@ class CostReport(BaseModel):
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：Usage 拆命中/未命中、CostLine 嵌套 usage；轨迹路径；事件格式 = tw-events/1（v、display、role_hint）。
 - 2026-10-10：按 ADR-0005 修订：tw-events/1 新增 `approval_requested` / `approval_resolved`；`tool_call` 增加 `permission`、`permission_rule`；`verification` 增加 `clean_env`、`unverified_reason`（均可选，只增不改）；权限审计日志见 spec 006 §10。
+- 2026-10-10：W1-24 实现 `telemetry/trajectory.py`（TrajectoryRecorder、Trajectory.load）与 `harness/run.py`（单角色任务驱动，产出 task_started → … → task_finished）。tw-events/1 只增不改：`model_call` 加 `request_ref` / `response_ref`，`tool_call` 加 `message_ref`（回放用）；display 与所有产物写盘前脱敏。新增 golden fixture `recorded.jsonl` 由真实代码路径（FakeRouter + FakeSandbox、固定时钟）生成，桌面端测试同时读取。CostReport 先由 `cost/report.py` 从事件汇总（W1-25 再做实时账本与 PR 账单）。

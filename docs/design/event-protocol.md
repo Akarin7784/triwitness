@@ -33,8 +33,8 @@
 |---|---|---|
 | `task_started` | `issue_title`、`repo`、`config_hash`（`issue_number`、`mode`） | 侧栏新会话；对话首条 |
 | `state_change` | `from`、`to`（TaskState） | 推流状态点颜色与角色点亮；标题栏状态 |
-| `model_call` | `model`、`thinking`、`usage{input_tokens,cache_hit_tokens,cache_miss_tokens,output_tokens,reasoning_tokens}`、`cost_cny`、`latency_ms`（`served_model`、`peak`、`finish_reason`） | 推流一行；状态栏累计 ¥ 与命中率；`peak=true` 标红 |
-| `tool_call` | `tool`、`ok`、`duration_ms`（`exit_code`、`output_ref`、`truncated`、`error_type`、`permission`、`permission_rule`） | 推流 `$ tool …`；失败用赭红 |
+| `model_call` | `model`、`thinking`、`usage{input_tokens,cache_hit_tokens,cache_miss_tokens,output_tokens,reasoning_tokens}`、`cost_cny`、`latency_ms`（`served_model`、`peak`、`finish_reason`、`request_ref`、`response_ref`） | 推流一行；状态栏累计 ¥ 与命中率；`peak=true` 标红 |
+| `tool_call` | `tool`、`ok`、`duration_ms`（`exit_code`、`output_ref`、`truncated`、`error_type`、`permission`、`permission_rule`、`message_ref`） | 推流 `$ tool …`；失败用赭红 |
 | `checkpoint` | `label`（`ref`） | 推流细分隔线 |
 | `loop_warning` | `signal`（repeat_action / consecutive_failures / no_progress）、`level`（1–3）（`detail`） | 推流警示行 |
 | `hitl_request` | `request_id`、`question`、`options`（`blocking`） | 审批卡片（UI-13，W4 以后） |
@@ -63,4 +63,4 @@ v1 是**行级**事件；书写动画由 UI 的 WritingStream 自己生成。逐
 - 改模型 → `uv run python scripts/export_schema.py`；改 fixture 内容 → `uv run python scripts/make_event_fixtures.py`。测试会检查二者是否过期。
 - W1-24（TrajectoryRecorder）完成后，用 FakeRouter 真实跑出 3 条轨迹替换手写 fixture，diff 只允许时间戳与 ID 不同。
 
-变更：2026-10-10 新增 `mode_changed`（勇士模式，ADR-0005 §3.6）。2026-10-10 新增 `approval_requested` / `approval_resolved`，`tool_call`、`verification` 增加可选字段（ADR-0005，只增不改）。
+变更：2026-10-10 新增 `mode_changed`（勇士模式，ADR-0005 §3.6）。2026-10-10 新增 `approval_requested` / `approval_resolved`，`tool_call`、`verification` 增加可选字段（ADR-0005，只增不改）。2026-10-10 `model_call` 增加 `request_ref` / `response_ref`、`tool_call` 增加 `message_ref`（W1-24 轨迹回放，只增不改）。

@@ -75,6 +75,8 @@ class ModelCallPayload(Payload):
     peak: bool | None = None
     latency_ms: int = Field(ge=0)
     finish_reason: str | None = None
+    request_ref: str | None = None  # artifacts/<seq>-request.json（完整请求，不内联）
+    response_ref: str | None = None  # artifacts/<seq>-response.json
 
 
 class ToolCallPayload(Payload):
@@ -83,6 +85,7 @@ class ToolCallPayload(Payload):
     exit_code: int | None = None
     duration_ms: int = Field(ge=0)
     output_ref: str | None = None  # 只放引用，不内联工具原文
+    message_ref: str | None = None  # artifacts/<seq>-tool.json：回给模型的工具消息（用于重建历史）
     truncated: bool = False
     error_type: str | None = None
     # 权限判定（spec 006）：allow 由哪条规则放行，便于审计；ask 时另有 approval_* 事件

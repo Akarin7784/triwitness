@@ -36,6 +36,31 @@ jobs:
           docker pull -q python:3.12-slim
           uv run pytest -m integration tests/integration/sandbox
 
+  windows:
+    name: windows (pytest; real Job Object / Git Bash / paths)
+    runs-on: windows-latest
+    env:
+      TW_LLM_MODE: replay
+      PYTHONUTF8: "1"       # 测试代码里有中文 write_text；src 自身全部显式 utf-8
+    defaults:
+      run:
+        shell: bash          # Git Bash；pipefail 默认开启
+    steps:
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Pytest (full unit suite)
+        run: uv run pytest -rs
+      - name: Windows-specific tests ran for real (none skipped)
+        run: |
+          uv run pytest -v -rs tests/unit/windows tests/unit/sandbox/test_local_backend.py tests/unit/harness/test_loop_local.py | tee win.txt
+          ! grep -E "SKIPPED|skipped" win.txt
+
   desktop:
     name: desktop (oxlint / vitest / tsc / vite build, no installer)
     runs-on: ubuntu-24.04

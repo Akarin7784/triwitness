@@ -1820,6 +1820,30 @@
           "default": null,
           "title": "Peak"
         },
+        "request_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Ref"
+        },
+        "response_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Response Ref"
+        },
         "role_hint": {
           "anyOf": [
             {
@@ -2680,6 +2704,18 @@
           ],
           "default": null,
           "title": "Exit Code"
+        },
+        "message_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message Ref"
         },
         "ok": {
           "title": "Ok",

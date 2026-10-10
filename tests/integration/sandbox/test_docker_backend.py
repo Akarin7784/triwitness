@@ -182,3 +182,19 @@ async def test_ac5_ac6_snapshot_restore_diff(backend: DockerSandboxBackend, repo
         assert repo.joinpath("hello.py").read_text() == "print('hi')\n"  # 宿主仓库不变
     finally:
         await sb.close()
+
+
+async def test_ac9_pool_bounded(backend: DockerSandboxBackend) -> None:
+    from triwitness.sandbox.pool import SandboxPool
+
+    pool = SandboxPool(backend, size=3)
+
+    async def job() -> str:
+        async with pool.acquire(SandboxSpec()) as sb:
+            r = await sb.exec("python -c 'import sys; print(sys.version_info[:2])'")
+            return r.stdout.strip()
+
+    outs = await asyncio.gather(*[job() for _ in range(8)])
+    assert outs == ["(3, 12)"] * 8 and pool.peak <= 3 and pool.active == 0
+    left = backend.client().containers.list(all=True, filters={"label": f"{LABEL}=true"})
+    assert not left

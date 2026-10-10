@@ -60,3 +60,24 @@ def eval_estimate(
         typer.echo(f"现在（{to_shanghai(now):%m-%d %H:%M}）是高峰：默认拒绝启动，下一个空闲 {next_off_peak(now):%H:%M}")
     else:
         typer.echo(f"现在（{to_shanghai(now):%m-%d %H:%M}）是空闲时段")
+
+
+sandbox_app = typer.Typer(add_completion=False, no_args_is_help=True, help="沙箱")
+app.add_typer(sandbox_app, name="sandbox")
+
+
+@sandbox_app.command("gc")
+def sandbox_gc(
+    backend: str = typer.Option("all", help="all / docker / none"),
+) -> None:
+    """清理崩溃残留的沙箱：docker 容器（tw.managed=true）与本机 worktree（所属进程已退出）。"""
+    import asyncio
+
+    from triwitness.sandbox.pool import gc_all
+
+    if backend not in ("all", "docker", "none"):
+        raise typer.BadParameter("只能是 all / docker / none")
+    rep = asyncio.run(gc_all(docker=backend in ("all", "docker"), local=backend in ("all", "none")))
+    typer.echo(rep.summary())
+    for run_id in rep.worktrees:
+        typer.echo(f"  - worktree {run_id}")

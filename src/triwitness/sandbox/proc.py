@@ -1,8 +1,9 @@
 """宿主进程树管控（spec 002 §5.3-5，硬底线：超时杀整棵进程树）。
 
 - POSIX：`start_new_session=True`，超时 / 结束后 `killpg(SIGKILL)` 整个进程组（顺带清掉后台残留）；
-- Windows：每次 exec 建一个 Job Object（`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`），进程启动后立刻加入；
-  超时 `TerminateJobObject`，结束时关闭句柄 → 作业内所有进程被系统杀掉。
+- Windows：每次 exec 建一个 Job Object（`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`）；进程以 CREATE_SUSPENDED 启动，
+  加入作业后才恢复运行（没有“先派生子进程再入作业”的竞态）；超时 / 结束时 `TerminateJobObject`，
+  关闭句柄 → 作业内所有进程被系统杀掉。
 """
 
 from __future__ import annotations
@@ -29,6 +30,31 @@ class ProcResult:
     truncated: bool
 
 
+def _kernel32():  # type: ignore[no-untyped-def]  # pragma: no cover - 仅 Windows
+    """带正确 restype / argtypes 的 kernel32（HANDLE 是指针宽度，默认 c_int 会截断）。"""
+    if sys.platform != "win32":
+        raise OSError("kernel32 只在 Windows 上可用")
+    import ctypes
+    from ctypes import wintypes
+
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    H, D, B = wintypes.HANDLE, wintypes.DWORD, wintypes.BOOL
+    sigs = {
+        "CreateJobObjectW": (H, [ctypes.c_void_p, wintypes.LPCWSTR]),
+        "SetInformationJobObject": (B, [H, ctypes.c_int, ctypes.c_void_p, D]),
+        "AssignProcessToJobObject": (B, [H, H]),
+        "TerminateJobObject": (B, [H, ctypes.c_uint]),
+        "OpenProcess": (H, [D, B, D]),
+        "TerminateProcess": (B, [H, ctypes.c_uint]),
+        "GetExitCodeProcess": (B, [H, ctypes.POINTER(D)]),
+        "CloseHandle": (B, [H]),
+    }
+    for name, (res, args) in sigs.items():
+        fn = getattr(k32, name)
+        fn.restype, fn.argtypes = res, args
+    return k32
+
+
 class _Job:
     """Windows Job Object 的最小封装；非 Windows 上为空操作。"""
 
@@ -38,7 +64,7 @@ class _Job:
             import ctypes
             from ctypes import wintypes
 
-            k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            k32 = _kernel32()
 
             class IoCounters(ctypes.Structure):
                 _fields_ = [(n, ctypes.c_ulonglong) for n in (
@@ -79,15 +105,30 @@ class _Job:
             self.handle = job
             self._k32 = k32
 
-    def assign(self, pid: int) -> None:
-        if sys.platform == "win32" and self.handle is not None:
-            k32 = self._k32
-            ph = k32.OpenProcess(0x0001 | 0x0100, False, pid)  # PROCESS_TERMINATE | PROCESS_SET_QUOTA
-            if ph:
-                try:
-                    k32.AssignProcessToJobObject(self.handle, ph)
-                finally:
-                    k32.CloseHandle(ph)
+    def assign_and_resume(self, pid: int) -> None:
+        """把（挂起中的）进程加入作业，然后恢复运行。加入失败时直接杀掉进程，不放任它在作业外跑。"""
+        if sys.platform != "win32" or self.handle is None:
+            return
+        import ctypes
+
+        k32 = self._k32
+        # PROCESS_TERMINATE | PROCESS_SET_QUOTA | PROCESS_SUSPEND_RESUME
+        ph = k32.OpenProcess(0x0001 | 0x0100 | 0x0800, False, pid)
+        if not ph:
+            raise OSError(ctypes.get_last_error(), "OpenProcess 失败")
+        try:
+            if not k32.AssignProcessToJobObject(self.handle, ph):
+                err = ctypes.get_last_error()
+                k32.TerminateProcess(ph, 1)
+                raise OSError(err, "AssignProcessToJobObject 失败")
+            ntdll = ctypes.WinDLL("ntdll")
+            ntdll.NtResumeProcess.restype = ctypes.c_long
+            ntdll.NtResumeProcess.argtypes = [ctypes.c_void_p]
+            if ntdll.NtResumeProcess(ph) != 0:
+                k32.TerminateProcess(ph, 1)
+                raise OSError(0, "NtResumeProcess 失败")
+        finally:
+            k32.CloseHandle(ph)
 
     def kill(self) -> None:
         if sys.platform == "win32" and self.handle is not None:
@@ -97,6 +138,38 @@ class _Job:
         if sys.platform == "win32" and self.handle is not None:
             self._k32.CloseHandle(self.handle)  # KILL_ON_JOB_CLOSE：剩余进程一并结束
             self.handle = None
+
+
+def pid_alive(pid: int) -> bool:
+    """进程是否还活着（POSIX：信号 0 + 排除僵尸；Windows：OpenProcess + GetExitCodeProcess）。"""
+    if pid <= 0:
+        return False
+    if sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+
+        k32 = _kernel32()
+        h = k32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return ctypes.get_last_error() == 5  # 拒绝访问 = 存在但属于别人
+        try:
+            code = wintypes.DWORD()
+            if not k32.GetExitCodeProcess(h, ctypes.byref(code)):
+                return False
+            return code.value == 259  # STILL_ACTIVE
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    try:
+        with open(f"/proc/{pid}/stat", encoding="ascii") as f:
+            return f.read().rsplit(")", 1)[-1].split()[0] != "Z"
+    except OSError:
+        return True  # 没有 /proc（macOS）：信号 0 成功即视为活着
 
 
 def _kill_tree(proc: asyncio.subprocess.Process, job: _Job) -> None:
@@ -122,7 +195,7 @@ async def run_tree(
     job = _Job()
     kwargs: dict[str, object] = {}
     if sys.platform == "win32":
-        kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
+        kwargs["creationflags"] = 0x00000200 | 0x00000004  # CREATE_NEW_PROCESS_GROUP | CREATE_SUSPENDED
     else:
         kwargs["start_new_session"] = True
     proc = await asyncio.create_subprocess_exec(
@@ -134,7 +207,13 @@ async def run_tree(
         stderr=asyncio.subprocess.PIPE,
         **kwargs,  # type: ignore[arg-type]
     )
-    job.assign(proc.pid)
+    try:
+        job.assign_and_resume(proc.pid)
+    except OSError:
+        with contextlib.suppress(ProcessLookupError):
+            proc.kill()
+        job.close()
+        raise
     out, err = OutputCollector(max_output_bytes), OutputCollector(max_output_bytes)
 
     async def pump(stream: asyncio.StreamReader | None, col: OutputCollector) -> None:

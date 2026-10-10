@@ -32,7 +32,7 @@ from triwitness.sandbox.base import (
     validate_sandbox_env,
 )
 from triwitness.sandbox.gitsnap import GitSnapshotter, git
-from triwitness.sandbox.proc import run_tree
+from triwitness.sandbox.proc import pid_alive, run_tree
 
 ShellKind = Literal["bash", "powershell"]
 FinishAction = Literal["apply", "keep", "discard"]
@@ -374,14 +374,4 @@ def _owner_alive(pidfile: Path) -> bool:
         pid = int(pidfile.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
         return False
-    if pid == os.getpid():
-        return True
-    if sys.platform == "win32":
-        return False  # 保守：Windows 上不探测，交给用户确认后的 gc
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
+    return pid == os.getpid() or pid_alive(pid)

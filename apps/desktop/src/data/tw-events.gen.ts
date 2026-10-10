@@ -73,6 +73,8 @@ export type FinishReason = string | null
 export type LatencyMs = number
 export type Model = string
 export type Peak = boolean | null
+export type RequestRef = string | null
+export type ResponseRef = string | null
 export type RoleHint2 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type ServedModel = string | null
 export type Thinking = boolean
@@ -94,6 +96,7 @@ export type Display3 = string | null
 export type DurationMs = number
 export type ErrorType = string | null
 export type ExitCode = number | null
+export type MessageRef = string | null
 export type Ok = boolean
 export type OutputRef = string | null
 export type Permission = ('allow' | 'ask' | 'deny') | null
@@ -371,6 +374,8 @@ export interface ModelCallPayload {
   latency_ms: LatencyMs
   model: Model
   peak?: Peak
+  request_ref?: RequestRef
+  response_ref?: ResponseRef
   role_hint?: RoleHint2
   served_model?: ServedModel
   thinking: Thinking
@@ -401,6 +406,7 @@ export interface ToolCallPayload {
   duration_ms: DurationMs
   error_type?: ErrorType
   exit_code?: ExitCode
+  message_ref?: MessageRef
   ok: Ok
   output_ref?: OutputRef
   permission?: Permission

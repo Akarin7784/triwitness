@@ -95,6 +95,8 @@ export const FIXTURES = {
   failure: () => import('../../../../../evals/fixtures/events/failure.jsonl?raw').then((m) => m.default),
   budget_exceeded: () =>
     import('../../../../../evals/fixtures/events/budget_exceeded.jsonl?raw').then((m) => m.default),
+  /** core 的 TrajectoryRecorder 真实写出（W1-24），保证 core 与 UI 同形 */
+  recorded: () => import('../../../../../evals/fixtures/events/recorded.jsonl?raw').then((m) => m.default),
 } as const
 
 export type FixtureName = keyof typeof FIXTURES
