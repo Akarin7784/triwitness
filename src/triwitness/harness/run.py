@@ -174,7 +174,7 @@ async def run_task(
         status, final, label = _classify(outcome)
     if outcome.status in ("budget_exhausted", "error", "stuck"):
         etype = {"budget_exhausted": "BudgetExceeded", "stuck": "Stuck", "error": "Error"}[outcome.status]
-        rec.emit(ErrorPayload(type=etype, message=outcome.reason or etype, display=outcome.reason or label))
+        rec.emit(ErrorPayload(type=etype, message=outcome.reason or etype, display=_clip(outcome.reason or label)))
     await _checkpoint(rec, sandbox, "final")
     diff = await _diff(sandbox, base_ref)
     if status == "done":
@@ -250,3 +250,8 @@ async def _checkpoint(rec: TrajectoryRecorder, sandbox: Sandbox, label: str) -> 
 
 
 __all__ = ["EXECUTOR_PROMPT", "TaskResult", "run_task"]
+
+
+def _clip(text: str, n: int = 200) -> str:
+    """事件 display 上限 200 字（tw-events/1）；完整原因在 message 里。"""
+    return text if len(text) <= n else text[: n - 1] + "…"

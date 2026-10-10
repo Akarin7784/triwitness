@@ -105,6 +105,21 @@ async def test_ac5_repeat_reminder_then_stuck() -> None:
     assert out.steps == 9
 
 
+async def test_reminder_after_all_parallel_tool_results() -> None:
+    """W2-25 真跑发现：并行 tool_calls 中途触发警告时，提醒插在两条 tool 消息之间 → DeepSeek HTTP 400。"""
+    first = say(call("bash", command="ls"), call("bash", command="ls"))
+    loop, ctx, em, _ = make(
+        [first, say(call("bash", command="ls"), call("bash", command="ls")), say(call("finish", **FINISH))]
+    )
+    out = await loop.run("x", ctx)
+    assert out.status == "finished"
+    assert any(e.kind == "loop_warning" for e in em.events)
+    for i, m in enumerate(loop.messages):
+        if m.role == "assistant" and m.tool_calls:
+            n = len(m.tool_calls)
+            assert [x.role for x in loop.messages[i + 1 : i + 1 + n]] == ["tool"] * n
+
+
 async def test_consecutive_failures() -> None:
     loop, ctx, em, _ = make([say(call("read_file", path=f"missing{i}.py")) for i in range(30)])
     out = await loop.run("x", ctx)

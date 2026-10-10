@@ -205,6 +205,7 @@ class AgentLoop:
                 self.messages.append(Message(role="user", content=cfg.reminder("no_tool")))
                 continue
             no_tool = 0
+            pending: list[Message] = []  # 提醒放到本轮全部 tool 消息之后（并行 tool_calls 中间插 user 消息会 HTTP 400）
             for call in calls:
                 ctx.step_index = rec.next_seq
                 t0 = rec.monotonic()
@@ -272,8 +273,9 @@ class AgentLoop:
                                                 display=_WARN_DISPLAY[signal.kind]), role=self.role)  # fmt: skip
                     if warnings >= cfg.max_warnings:
                         return LoopOutcome(status="stuck", steps=steps, reason=f"死循环：{signal.detail}")
-                    self.messages.append(Message(role="user", content=cfg.reminder(signal.reminder,
-                                                                                   detail=signal.detail)))  # fmt: skip
+                    pending.append(Message(role="user", content=cfg.reminder(signal.reminder,
+                                                                             detail=signal.detail)))  # fmt: skip
+            self.messages.extend(pending)
             if self.guard.should_wrap_up and not wrapped:
                 wrapped = True
                 self.messages.append(Message(role="user", content=cfg.reminder("wrap_up")))
