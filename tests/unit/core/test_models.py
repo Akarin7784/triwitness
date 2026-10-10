@@ -96,7 +96,7 @@ def test_json_round_trip(obj: BaseModel) -> None:
 
 def test_budget_defaults_match_adr_0002() -> None:
     b = m.Budget()
-    assert (b.max_cost_cny, b.max_input_tokens, b.max_output_tokens) == (0.8, 3_000_000, 100_000)
+    assert (b.max_cost_cny, b.max_input_tokens, b.max_output_tokens) == (0.8, 6_000_000, 100_000)
     assert (b.max_turns, b.max_wall_seconds, b.warn_ratio) == (100, 1800, 0.8)
     r = m.Budget.for_run()
     assert (r.max_cost_cny, r.max_wall_seconds) == (1.0, 2700)

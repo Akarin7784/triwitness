@@ -10,3 +10,7 @@
 5. **测试不花钱**：单测与 CI 强制 `TW_LLM_MODE=replay`；`live` 测试只手动运行。
 6. **密钥**：`DEEPSEEK_API_KEY` 只从环境变量读取；不打印、不写入文件 / fixture / 事件 / 日志。
 7. **节奏**：W1–W8 是按进度推进的相对阶段，不锁日历；W1+W2 为地基块。
+
+## 修订 2026-10-10（W2-26）
+
+W2-25 里 `max_input_tokens=3M`（含缓存命中）在真实 SWE 题上总是先触发（35 题中 12 题撞线，撞线时只花 ¥0.2–0.4，未命中仅约 10 万）。改为：总输入 6M 作兜底 + 新增 `max_uncached_input_tokens=400K`（按真正计价的未命中输入），`max_cost_cny` 仍是真正的闸门。同时 Executor 流程默认 harness 改为 repro-first（`HarnessConfig.default()`）；显式指定 `configs/harness/baseline.yaml` 的 RunConfig（W2-25 基线）不变，新增 `configs/runs/w2-26-deepseek{,-nothink}.yaml`。

@@ -47,7 +47,10 @@ class Budget(_Model):
     """单任务预算。默认值为 eval 档；`tw run` / dogfooding 用 `Budget.for_run()`。"""
 
     max_cost_cny: float = Field(default=0.8, gt=0)
-    max_input_tokens: int = Field(default=3_000_000, gt=0)  # 含缓存命中
+    # W2-26：W2-25 里 3M 总输入（含缓存命中）总是先于 ¥ 上限触发（触发时才花 ¥0.2–0.4，未命中仅 ~10 万）。
+    # 总量放到 6M 作兜底，另按未命中（真正计价的输入）设上限；¥ 上限才是真正的闸门。
+    max_input_tokens: int = Field(default=6_000_000, gt=0)  # 含缓存命中，兜底
+    max_uncached_input_tokens: int = Field(default=400_000, gt=0)  # 缓存未命中
     max_output_tokens: int = Field(default=100_000, gt=0)
     max_turns: int = Field(default=100, gt=0)
     max_wall_seconds: int = Field(default=1800, gt=0)

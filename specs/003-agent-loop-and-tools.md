@@ -60,7 +60,8 @@ class ToolRegistry:
 
 class Budget(BaseModel):  # ADR-0002（eval 模式默认值）
     max_cost_cny: float = 0.8
-    max_input_tokens: int = 3_000_000  # 含缓存命中
+    max_input_tokens: int = 6_000_000  # 含缓存命中，兜底（W2-26：原 3M）
+    max_uncached_input_tokens: int = 400_000  # 缓存未命中（W2-26）
     max_output_tokens: int = 100_000
     max_turns: int = 100
     max_wall_seconds: int = 1800
@@ -201,3 +202,4 @@ while True:
 - 2026-10-10：W1-18～W1-21 实现（工具注册表、文件/命令工具、finish 契约、AgentLoop）。偏差：list_files / grep 在宿主机后端用 Python 遍历，其他后端用 find / grep，不依赖 ripgrep；死循环检测只实现“重复动作”和“连续失败”，“无进展”待 W1-23、二级回滚待 W2-12；轨迹先用最小 EventEmitter（W1-24 TrajectoryRecorder 未做）。AC1–AC7 用 FakeRouter / FakeSandbox 离线覆盖；finish 在最近一次 run_tests 失败后拒绝 `tests_passed=true`。
 - 2026-10-10：W1-23 补上信号 3“无进展”：连续 6 次工具调用既没有成功的修改（有副作用的工具，run_tests 除外），也没有第一次出现的读取目标（read_file / list_files / grep 的规范化参数），阈值 `loop_detection.no_progress_threshold`。edit_file 遇 CRLF 文件时按文件换行风格匹配。AgentLoop 改用 TrajectoryRecorder（W1-24），model_call / tool_call 带 display 与 artifacts 引用。
 - 2026-10-10（W1-34 真跑）：AC8 通过。仓库里没有 `001-*` 命名，dev 首个任务按字母序为 csv-blank-line；deepseek-flash 思考 high 3/3 解决，每次约 ¥0.008，结果见 evals/baselines/2026-10-10-w1/ac8。
+- 2026-10-10：W2-26：单任务预算总输入 3M→6M（兜底）+ 新增 `max_uncached_input_tokens=400K`（守卫按 cache_miss 计）；Executor 默认 harness 改为 repro-first（`HarnessConfig.default()`，`run_task` / `tw run` / eval LLMAgent 未指定时使用），基线 RunConfig 显式指定 baseline.yaml 不受影响。

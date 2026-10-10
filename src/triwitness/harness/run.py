@@ -93,7 +93,7 @@ async def run_task(
     prepare: PrepareOptions | None = None,
 ) -> TaskResult:
     rec = recorder
-    cfg = config or HarnessConfig.load()
+    cfg = config or HarnessConfig.default()
     ledger = CostLedger(task_id=rec.task_id, budget_cny=budget.max_cost_cny, pricing_version=pricing_version())
     rec.subscribe(ledger.observe)
     bridge = bridge_from_env()  # 没配置 OTLP 端点时为 None（spec 005 AC5）

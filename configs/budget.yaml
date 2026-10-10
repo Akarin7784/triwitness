@@ -2,9 +2,9 @@
 total_cny: 100
 warn_ratio: 0.8
 per_eval_invocation_default_cny: 10
-per_task:
-  eval: {max_cost_cny: 0.8, max_input_tokens: 3000000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 1800, warn_ratio: 0.8}
-  run:  {max_cost_cny: 1.0, max_input_tokens: 3000000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 2700, warn_ratio: 0.8}
+per_task:                   # W2-26：总输入 3M→6M（兜底），新增未命中上限 400K；¥ 才是真闸门
+  eval: {max_cost_cny: 0.8, max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 1800, warn_ratio: 0.8}
+  run:  {max_cost_cny: 1.0, max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 2700, warn_ratio: 0.8}
 envelopes_cny:              # 类别信封
   dev: 6
   smoke: 7

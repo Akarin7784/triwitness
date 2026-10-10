@@ -386,6 +386,7 @@ def recorded() -> list[TrajectoryEvent]:
     import tempfile
 
     from triwitness.core.models import Budget
+    from triwitness.harness.config import HarnessConfig
     from triwitness.harness.run import run_task
     from triwitness.harness.testing import FakeRouter, FakeSandbox, say
     from triwitness.llm.types import ToolCallSpec
@@ -450,7 +451,7 @@ def recorded() -> list[TrajectoryEvent]:
             registry=ToolRegistry(default_tools()), sandbox=sandbox, repo="example/rows-demo",
             issue_title="parse_rows 遇到空列表时 IndexError", issue_number=12,
             task_prompt="parse_rows([]) 抛 IndexError，期望返回 []。", budget=Budget(), config_hash="cfg_baseline",
-            test_command="pytest -q",
+            test_command="pytest -q", config=HarnessConfig.load(),  # 固定基线 harness（W2-26 起默认 repro-first）
         ))  # fmt: skip
         return list(rec.events)
 

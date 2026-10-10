@@ -1,0 +1,8 @@
+# RunConfig（W2-26 dev 对照）：flash 非思考 + repro-first；未经 Eva 批准不跑 live
+name: w2-26-deepseek-nothink
+harness: configs/harness/repro-first.yaml
+executor: {model: deepseek-flash, thinking: false}
+attempts: 1
+budget_profile: eval
+category: baseline
+verifier: deterministic

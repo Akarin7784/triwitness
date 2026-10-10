@@ -78,7 +78,7 @@ async def run_local(
         engine = PermissionEngine(policy, workspace=sb.spec.workdir)
         gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo)
         shell = getattr(getattr(sb, "shell", None), "kind", "bash")
-        registry = ToolRegistry(default_tools(shell=shell, names=(harness or HarnessConfig.load()).tools), gate=gate)
+        registry = ToolRegistry(default_tools(shell=shell, names=(harness or HarnessConfig.default()).tools), gate=gate)
         tw_dir = str(getattr(sb, "tw_dir", "/workspace/.tw"))
         agents_md = repo / "AGENTS.md"
         opts = None

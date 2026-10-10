@@ -32,6 +32,7 @@ class TaskBudgetGuard:
         checks = (
             ("max_cost_cny", self.cost_cny + extra_cost, b.max_cost_cny),
             ("max_input_tokens", self.usage.input_tokens, b.max_input_tokens),
+            ("max_uncached_input_tokens", self.usage.cache_miss_tokens, b.max_uncached_input_tokens),
             ("max_output_tokens", self.usage.output_tokens, b.max_output_tokens),
             ("max_turns", self.turns, b.max_turns),
             ("max_wall_seconds", self.clock() - self.started, b.max_wall_seconds),

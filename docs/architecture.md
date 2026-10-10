@@ -844,7 +844,8 @@ class TaskState(StrEnum):
 
 class Budget(BaseModel):
     max_cost_cny: float = 5.0
-    max_input_tokens: int = 3_000_000
+    max_input_tokens: int = 6_000_000  # W2-26：原 3M
+    max_uncached_input_tokens: int = 400_000
     max_output_tokens: int = 200_000
     max_turns: int = 150
     max_wall_seconds: int = 45 * 60

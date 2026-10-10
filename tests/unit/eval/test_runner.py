@@ -22,6 +22,7 @@ from triwitness.eval.grade import GradeResult, filter_patch
 from triwitness.eval.report import build_report, render_markdown, write_report
 from triwitness.eval.runner import EstimateTooHigh, EvalRunner, RunConfig, historical_avg_cost
 from triwitness.eval.task import EvalTask, discover, load_task
+from triwitness.harness.config import HarnessConfig
 from triwitness.harness.testing import FakeRouter, FakeSandbox, call, say
 from triwitness.sandbox.base import ExecResult
 from triwitness.telemetry.trajectory import Trajectory, TrajectoryRecorder
@@ -77,7 +78,7 @@ def scripted_llm(cfg: RunConfig) -> LLMAgent:
         return FakeRouter([say(call("write_file", path="FIX.py", content="FIXED = True\n")),
                            say(call("finish", **FINISH))], cost_cny=0.002, usage=usage)  # fmt: skip
 
-    return LLMAgent(router, category=cfg.category, config_hash=cfg.name)
+    return LLMAgent(router, category=cfg.category, config_hash=cfg.name, harness=HarnessConfig.load())
 
 
 def runner(tmp_path: Path, **kw: Any) -> tuple[EvalRunner, FakeGrader]:

@@ -17,6 +17,7 @@ from triwitness.eval.report import write_report
 from triwitness.eval.runner import EvalRunner, RunConfig
 from triwitness.eval.task import EvalTask, discover, load_task
 from triwitness.eval.validate import run_verifier
+from triwitness.harness.config import HarnessConfig
 from triwitness.harness.testing import FakeRouter, call, say
 from triwitness.sandbox.docker import LABEL, DockerSandboxBackend, _client
 
@@ -115,7 +116,7 @@ async def test_scripted_llm_agent_resolves_in_docker(tasks: list[EvalTask], grad
         say(call("run_tests")),
         say(call("finish", **finish)),
     ]
-    agent = LLMAgent(lambda: FakeRouter(list(script)))
+    agent = LLMAgent(lambda: FakeRouter(list(script)), harness=HarnessConfig.load())
     r = EvalRunner(grader=grader, llm_agent_factory=lambda cfg: agent, results_root=tmp_path / "results")
     s = await r.run([task], [RunConfig(name="scripted", agent="llm")], out_dir=tmp_path / "run")
     assert not s.infra_errors, s.infra_errors

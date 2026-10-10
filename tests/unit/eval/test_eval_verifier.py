@@ -11,6 +11,7 @@ from triwitness.eval.report import build_report, render_markdown
 from triwitness.eval.runner import EvalRunner, RunConfig
 from triwitness.eval.task import EvalTask, discover, load_task
 from triwitness.eval.verification import verifier_metrics
+from triwitness.harness.config import HarnessConfig
 from triwitness.harness.testing import FakeRouter, FakeSandbox, call, say
 from triwitness.sandbox.base import ExecResult
 
@@ -61,7 +62,7 @@ def scripted(cfg: RunConfig) -> LLMAgent:
                                call("write_file", path="FIX.py", content="FIXED = True\n")),
                            say(call("finish", **FINISH))])  # fmt: skip
 
-    return LLMAgent(router, category=cfg.category, config_hash=cfg.name)
+    return LLMAgent(router, category=cfg.category, config_hash=cfg.name, harness=HarnessConfig.load())
 
 
 def verdict_router() -> FakeRouter:

@@ -141,7 +141,7 @@ class LLMAgent:
 
     async def solve(self, task: EvalTask, sandbox: Sandbox, rec: TrajectoryRecorder) -> AgentRun:
         budget = self.budget.model_copy(update={"max_cost_cny": min(self.budget.max_cost_cny, task.tw.max_cost_cny)})
-        harness = self.harness or HarnessConfig.load()
+        harness = self.harness or HarnessConfig.default()
         res = await run_task(
             recorder=rec,
             router=self.router_factory(),

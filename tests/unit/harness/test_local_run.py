@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from triwitness.harness.config import HarnessConfig
 from triwitness.harness.local_run import run_local
 from triwitness.harness.testing import FakeRouter, call, say
 from triwitness.sandbox.local import LocalSandboxBackend
@@ -59,6 +60,7 @@ async def test_tw_run_fixes_toy_repo(toy: Path, tmp_path: Path) -> None:
         toy,
         "parse_rows 遇到空行抛 IndexError",
         router=FakeRouter(script),
+        harness=HarnessConfig.load(),  # 脚本按基线 8 工具写；默认 repro-first 另测
         backend="none",
         backends=[LocalSandboxBackend(home=home)],
         home=home,
@@ -92,7 +94,7 @@ async def test_tw_run_permission_denies_outside_workspace(toy: Path, tmp_path: P
     outside.write_text("nope")
     script = [say(call("read_file", path=str(outside))), say(call("finish", **{**FIN, "tests_passed": False}))]
     home = tmp_path / "home"
-    out = await run_local(toy, "x", router=FakeRouter(script), backend="none",
+    out = await run_local(toy, "x", router=FakeRouter(script), harness=HarnessConfig.load(), backend="none",
                           backends=[LocalSandboxBackend(home=home)], home=home)  # fmt: skip
     traj = (out.run_dir / "trajectory.jsonl").read_text(encoding="utf-8")
     assert "nope" not in traj

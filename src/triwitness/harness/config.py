@@ -67,6 +67,11 @@ class ContextConfig(BaseModel):
         return int(tokens * self.chars_per_token)
 
 
+# W2-26：Executor 流程默认先复现（submit_repro + finish 校验）。`baseline.yaml` 仍是 W2-25 基线与消融的父配置，
+# 显式写 `harness: configs/harness/baseline.yaml` 的 RunConfig（W2-25 基线复跑）不受影响。
+DEFAULT_HARNESS = "harness/repro-first.yaml"
+
+
 class HarnessConfig(BaseModel):
     name: str = "baseline"
     # loop
@@ -85,6 +90,11 @@ class HarnessConfig(BaseModel):
     context: ContextConfig = Field(default_factory=ContextConfig)
     tools: list[str] = Field(default_factory=lambda: list(DEFAULT_TOOLS))
     prompts: dict[str, str] = Field(default_factory=lambda: {"executor": "executor", "summarizer": "summarizer"})
+
+    @classmethod
+    def default(cls) -> HarnessConfig:
+        """Executor 流程的默认 harness（W2-26 起为 repro-first：先复现、后修复）。"""
+        return cls.load(DEFAULT_HARNESS)
 
     @classmethod
     def load(cls, name: str = "harness/baseline.yaml") -> HarnessConfig:
