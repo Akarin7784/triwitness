@@ -37,7 +37,7 @@ def test_example_validates() -> None:
     assert rep.ok, rep.problems
     assert rep.without_solution.reward == 0
     assert rep.with_solution.reward == 1
-    assert "1 failed" in rep.without_solution.log_tail
+    assert " failed" in rep.without_solution.log_tail
     _no_leftovers()
 
 
@@ -55,7 +55,8 @@ def test_noop_solution_rejected(tmp_path: Path) -> None:
 def test_test_sh_without_reward_rejected(tmp_path: Path) -> None:
     d = tmp_path / "csv-blank-line"
     shutil.copytree(EXAMPLE, d)
-    (d / "tests" / "test.sh").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    sh = d / "tests" / "test.sh"
+    sh.write_text(sh.read_text(encoding="utf-8").replace("/logs/verifier/reward.txt", "/dev/null"), encoding="utf-8")
     rep = validate_sync(load_task(d))
     assert rep.without_solution.reward is None
     assert any("reward" in p for p in rep.problems)

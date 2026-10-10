@@ -35,7 +35,7 @@ def test_example_parses() -> None:
     assert t.id == "csv-blank-line"
     assert t.config.schema_version == "1.3"
     assert t.config.environment.network_mode == "no-network"
-    assert t.tw.fail_to_pass == ["tests/test_parse.py::test_blank_line_skipped"]
+    assert t.tw.fail_to_pass[0] == "tests/test_parse_hidden.py::test_blank_line_skipped"
     assert t.meta.created_at == "2026-10-10"
     assert t.agent_timeout_sec == 900
     assert t.verifier_timeout_sec == 120
@@ -63,7 +63,8 @@ def test_unknown_harbor_fields_tolerated(task_dir: Path) -> None:
         ('network_mode = "no-network"', 'network_mode = "public"', "no-network"),
         ('network_mode = "no-network"', 'network_mode = "none"', "network_mode"),
         ('name = "triwitness/csv-blank-line"', 'name = "triwitness/other"', "目录名"),
-        ('fail_to_pass = ["tests/test_parse.py::test_blank_line_skipped"]', "fail_to_pass = []", "fail_to_pass"),
+        ("fail_to_pass = [", "fail_to_pass = [] #", "fail_to_pass"),
+        ("test_blank_line_skipped", "test_not_in_script", "test.sh 没有运行"),
         ('created_at = "2026-10-10"\n', "", "created_at"),
         ("max_cost_cny = 0.3", 'max_cost_cny = 0.3\nunknown = "x"', "unknown"),
     ],
@@ -90,6 +91,31 @@ def test_reports_all_problems_at_once(task_dir: Path) -> None:
     with pytest.raises(TaskFormatError) as e:
         load_task(task_dir)
     assert "test.sh" in str(e.value) and "instruction.md" in str(e.value)
+
+
+def test_hidden_test_file_must_exist(task_dir: Path) -> None:
+    (task_dir / "tests" / "test_parse_hidden.py").unlink()
+    with pytest.raises(TaskFormatError, match=r"缺少 test_parse_hidden\.py"):
+        load_task(task_dir)
+
+
+def test_ac1_dev_suite_has_ten_distinct_tasks() -> None:
+    tasks = [load_task(d) for d in discover(DEV)]
+    assert len(tasks) == 10
+    assert len({t.image_tag() for t in tasks}) == len(tasks)
+    kinds = {t.meta.source for t in tasks}
+    assert kinds == {"synthetic", "swe-rebench"}
+    for t in tasks:
+        assert t.tw.fail_to_pass and not set(t.tw.fail_to_pass) & set(t.tw.pass_to_pass)
+        assert t.meta.license and t.meta.created_at
+        hidden = [p for p in t.tests_dir.rglob("*") if p.is_file() and p.name != "test.sh"]
+        assert hidden
+        # 隐藏测试不进镜像构建上下文（同名文件内容也不同）
+        env_files = {p.name: p.read_bytes() for p in t.environment_dir.rglob("*") if p.is_file()}
+        assert all(env_files.get(h.name) != h.read_bytes() for h in hidden)
+        if t.meta.source == "swe-rebench":
+            assert t.meta.base_commit and t.meta.repo and "CC-BY-4.0" in (t.meta.license or "")
+            assert t.meta.base_commit in (t.environment_dir / "Dockerfile").read_text(encoding="utf-8")
 
 
 def test_bad_toml(task_dir: Path) -> None:

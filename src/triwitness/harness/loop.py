@@ -21,7 +21,15 @@ from triwitness.tools.base import ToolContext, ToolRegistry
 
 
 class RouterLike(Protocol):
-    async def complete(self, req: LLMRequest, **kw: Any) -> LLMResponse: ...
+    async def complete(
+        self,
+        req: LLMRequest,
+        *,
+        guard: TaskBudgetGuard | None = ...,
+        task_id: str | None = ...,
+        mode: Any = ...,
+        category: str = ...,
+    ) -> LLMResponse: ...
 
 
 class HarnessConfig(BaseModel):
@@ -98,8 +106,10 @@ class AgentLoop:
         config: HarnessConfig | None = None,
         mode: Literal["background", "eval"] = "background",
         guard: TaskBudgetGuard | None = None,
+        category: str = "dev",
     ) -> None:
         self.router = router
+        self.category = category  # 全局账本的类别信封（eval 用 baseline 等）
         self.registry = registry
         self.system_prompt = system_prompt
         self.budget = budget
@@ -127,7 +137,9 @@ class AgentLoop:
         while True:
             req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools)
             try:
-                resp = await self.router.complete(req, guard=self.guard, task_id=ctx.task_id, mode=self.mode)
+                resp = await self.router.complete(
+                    req, guard=self.guard, task_id=ctx.task_id, mode=self.mode, category=self.category
+                )
             except BudgetExceeded as e:
                 return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
             except TriWitnessError as e:

@@ -8,7 +8,6 @@ from __future__ import annotations
 import asyncio
 import io
 import json
-import shlex
 import tarfile
 import uuid
 from pathlib import Path
@@ -94,8 +93,32 @@ def _read_reward(container: Any) -> float | None:
     return None
 
 
+def run_verifier(
+    task: EvalTask, container: Any, *, user: str = "root", solution: bool = False, workdir: str | None = None
+) -> Phase:
+    """在给定容器里放入 /tests（及可选 /solution），可选先跑 solve.sh，再跑 test.sh 并读 reward。"""
+    workdir = workdir or task.config.environment.workdir
+    entries = [("logs", None, 0o777), ("logs/verifier", None, 0o777), ("logs/agent", None, 0o777)]
+    entries += _dir_entries(task.tests_dir, "tests")
+    if solution:
+        entries += _dir_entries(task.solution_dir, "solution")
+    container.put_archive("/", _tar_bytes(entries, uid=0))
+    logs: list[str] = []
+    if solution:
+        t = int(task.agent_timeout_sec)
+        code, out = container.exec_run(["timeout", str(t), "bash", "/solution/solve.sh"], workdir=workdir, user=user)
+        logs.append(f"$ bash /solution/solve.sh → {code}\n{out.decode('utf-8', 'replace')}")
+    t = int(task.verifier_timeout_sec)
+    env = {k: str(v) for k, v in (getattr(task.config.verifier, "env", None) or {}).items()}
+    code, out = container.exec_run(
+        ["timeout", str(t), "bash", "/tests/test.sh"], workdir=workdir, environment=env, user=user
+    )
+    logs.append(f"$ bash /tests/test.sh → {code}\n{out.decode('utf-8', 'replace')}")
+    log = "\n".join(logs)
+    return Phase(reward=_read_reward(container), exit_code=code, log_tail=log[-LOG_TAIL:])
+
+
 def run_phase(task: EvalTask, client: Any, image: str, *, apply_solution: bool) -> Phase:
-    workdir = task.config.environment.workdir
     c = client.containers.run(
         image,
         ["sleep", "infinity"],
@@ -103,26 +126,11 @@ def run_phase(task: EvalTask, client: Any, image: str, *, apply_solution: bool) 
         network_mode="none",
         labels={LABEL: "true", "tw.kind": "task-validate"},
         name=f"tw-validate-{task.id}-{uuid.uuid4().hex[:6]}",
-        working_dir=workdir,
+        working_dir=task.config.environment.workdir,
         user="root",
     )
     try:
-        entries = [("logs", None, 0o777), ("logs/verifier", None, 0o777), ("logs/agent", None, 0o777)]
-        entries += _dir_entries(task.tests_dir, "tests")
-        if apply_solution:
-            entries += _dir_entries(task.solution_dir, "solution")
-        c.put_archive("/", _tar_bytes(entries, uid=0))
-        logs: list[str] = []
-        if apply_solution:
-            t = int(task.agent_timeout_sec)
-            code, out = c.exec_run(["timeout", str(t), "bash", "/solution/solve.sh"], workdir=workdir)
-            logs.append(f"$ solve.sh → {code}\n{out.decode('utf-8', 'replace')}")
-        t = int(task.verifier_timeout_sec)
-        env = {k: str(v) for k, v in (getattr(task.config.verifier, "env", None) or {}).items()}
-        code, out = c.exec_run(["timeout", str(t), "bash", "/tests/test.sh"], workdir=workdir, environment=env)
-        logs.append(f"$ {shlex.join(['bash', '/tests/test.sh'])} → {code}\n{out.decode('utf-8', 'replace')}")
-        log = "\n".join(logs)
-        return Phase(reward=_read_reward(c), exit_code=code, log_tail=log[-LOG_TAIL:])
+        return run_verifier(task, c, solution=apply_solution)
     finally:
         c.remove(force=True)
 
@@ -155,4 +163,4 @@ async def validate(task: EvalTask) -> ValidationReport:
     return await asyncio.to_thread(validate_sync, task)
 
 
-__all__ = ["Phase", "ValidationReport", "ensure_image", "run_phase", "validate", "validate_sync"]
+__all__ = ["Phase", "ValidationReport", "ensure_image", "run_phase", "run_verifier", "validate", "validate_sync"]

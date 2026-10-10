@@ -310,6 +310,17 @@ class DockerSandbox:
         await self._pull()
         return await snap.diff(base)
 
+    async def apply_patch(self, patch: str) -> None:
+        """在宿主镜像目录上 `git apply`，再推回容器（Grader 用：镜像里不需要 git）。"""
+        self._snap()
+        if not patch.strip():
+            return
+        await self._pull()
+        env = {"GIT_DIR": str(self.mirror_git), "GIT_WORK_TREE": str(self.mirror)}
+        data = patch.encode("utf-8") if patch.endswith("\n") else (patch + "\n").encode("utf-8")
+        await git("apply", "--whitespace=nowarn", "-", cwd=self.mirror, env=env, input=data)
+        await self._push()
+
     async def close(self) -> None:
         if self._closed:
             return

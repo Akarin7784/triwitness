@@ -1,0 +1,52 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-crosstl-257"
+description = "SWE-rebench CrossGL__crosstl-257"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/CrossGL/crosstl"
+base_commit = "bf894dbc90466d1ed9ae942f44396fbd04f18298"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2025-01-06"
+license = "Apache License 2.0\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "CrossGL__crosstl-257"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_translator/test_lexer.py::test_data_types_tokenization",
+]
+pass_to_pass = [
+  "tests/test_translator/test_lexer.py::test_struct_tokenization",
+  "tests/test_translator/test_lexer.py::test_if_statement_tokenization",
+  "tests/test_translator/test_lexer.py::test_for_statement_tokenization",
+  "tests/test_translator/test_lexer.py::test_else_statement_tokenization",
+  "tests/test_translator/test_lexer.py::test_else_if_statement_tokenization",
+  "tests/test_translator/test_lexer.py::test_function_call_tokenization",
+  "tests/test_translator/test_lexer.py::test_bitwise_operator_tokenization",
+  "tests/test_translator/test_lexer.py::test_operators_tokenization",
+  "tests/test_translator/test_lexer.py::test_logical_operators_tokenization",
+  "tests/test_translator/test_lexer.py::test_assignment_shift_operators",
+  "tests/test_translator/test_lexer.py::test_assignment_operators_tokenization",
+  "tests/test_translator/test_lexer.py::test_const_tokenization",
+  "tests/test_translator/test_lexer.py::test_illegal_character",
+  "tests/test_translator/test_lexer.py::test_bitwise_not_tokenization",
+]
+max_cost_cny = 0.5

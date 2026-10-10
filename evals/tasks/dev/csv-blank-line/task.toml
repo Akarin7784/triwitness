@@ -10,7 +10,7 @@ source = "synthetic"
 difficulty = "easy"
 tags = ["python", "indexerror"]
 created_at = "2026-10-10"
-license = "MIT"
+license = "Apache-2.0"
 
 [agent]
 timeout_sec = 900
@@ -26,6 +26,6 @@ workdir = "/workspace/repo"
 
 [tw]
 test_cmd = "python -m pytest -q"
-fail_to_pass = ["tests/test_parse.py::test_blank_line_skipped"]
-pass_to_pass = ["tests/test_parse.py::test_basic"]
+fail_to_pass = ["tests/test_parse_hidden.py::test_blank_line_skipped", "tests/test_parse_hidden.py::test_whitespace_only_line_skipped"]
+pass_to_pass = ["tests/test_parse_hidden.py::test_basic"]
 max_cost_cny = 0.3

@@ -73,6 +73,7 @@ class TwExt(BaseModel):
     fail_to_pass: list[str] = Field(default_factory=list)
     pass_to_pass: list[str] = Field(default_factory=list)
     max_cost_cny: float = Field(default=0.8, gt=0)
+    protected: list[str] = Field(default_factory=list)  # Grader 额外保护的路径 glob（默认已含测试基础设施）
 
 
 class TaskToml(BaseModel):
@@ -183,9 +184,27 @@ def load_task(path: Path) -> EvalTask:
         problems.append('TriWitness 评测任务要求 [environment] network_mode = "no-network"（依赖在构建镜像时装好）')
     if not cfg.tw.fail_to_pass:
         problems.append("[tw] fail_to_pass 不能为空")
+    problems += _check_test_ids(path, cfg.tw)
     if problems:
         raise TaskFormatError(f"{path}：" + "；".join(problems))
     return EvalTask(id=tid, path=path, config=cfg, instruction=instr.read_text(encoding="utf-8"))
+
+
+def _check_test_ids(path: Path, tw: TwExt) -> list[str]:
+    """F2P / P2P 与 test.sh 一致：每个 id 都出现在 test.sh 里，且对应的隐藏测试文件存在于 tests/。"""
+    test_sh = path / "tests" / "test.sh"
+    if not test_sh.is_file():
+        return []
+    script = test_sh.read_text(encoding="utf-8")
+    names = {p.name for p in (path / "tests").rglob("*") if p.is_file()}
+    out: list[str] = []
+    for tid in [*tw.fail_to_pass, *tw.pass_to_pass]:
+        if tid not in script:
+            out.append(f"test.sh 没有运行 {tid}")
+        fname = tid.split("::", 1)[0].rsplit("/", 1)[-1]
+        if "::" in tid and fname not in names:
+            out.append(f"tests/ 下缺少 {fname}（{tid}）")
+    return out
 
 
 def discover(root: Path) -> list[Path]:

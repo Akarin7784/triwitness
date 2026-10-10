@@ -7,3 +7,7 @@ def test_basic():
 
 def test_blank_line_skipped():
     assert parse_rows("a,1\n\nb,2\n") == [("a", 1), ("b", 2)]
+
+
+def test_whitespace_only_line_skipped():
+    assert parse_rows("a,1\n   \nb,2") == [("a", 1), ("b", 2)]

@@ -1,0 +1,31 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/slugify-edges"
+description = "slugify leaves leading/trailing and repeated dashes"
+keywords = ["python", "bugfix", "synthetic"]
+
+[metadata]
+source = "synthetic"
+difficulty = "easy"
+tags = ["python", "strings"]
+created_at = "2026-10-10"
+license = "Apache-2.0"
+
+[agent]
+timeout_sec = 900
+
+[verifier]
+timeout_sec = 120
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 1024
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q"
+fail_to_pass = ["tests/test_slug_hidden.py::test_strip_edges", "tests/test_slug_hidden.py::test_collapse_separators", "tests/test_slug_hidden.py::test_only_symbols"]
+pass_to_pass = ["tests/test_slug_hidden.py::test_simple", "tests/test_slug_hidden.py::test_digits_kept"]
+max_cost_cny = 0.3

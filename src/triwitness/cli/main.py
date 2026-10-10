@@ -29,7 +29,7 @@ def doctor() -> None:
     typer.echo("tw doctor：尚未实现（W2-02）")
 
 
-eval_app = typer.Typer(add_completion=False, no_args_is_help=True, help="评测（W1-31 起完善）")
+eval_app = typer.Typer(add_completion=False, no_args_is_help=True, help="评测")
 app.add_typer(eval_app, name="eval")
 
 
@@ -63,6 +63,93 @@ def eval_estimate(
         typer.echo(f"现在（{to_shanghai(now):%m-%d %H:%M}）是高峰：默认拒绝启动，下一个空闲 {next_off_peak(now):%H:%M}")
     else:
         typer.echo(f"现在（{to_shanghai(now):%m-%d %H:%M}）是空闲时段")
+
+
+@eval_app.command("run")
+def eval_run(
+    suite: Annotated[str, typer.Option(help="evals/tasks/<suite>")] = "dev",
+    config: Annotated[list[Path] | None, typer.Option(help="RunConfig YAML（llm Agent），可多次")] = None,
+    agent: Annotated[list[str] | None, typer.Option(help="免费假 Agent：null / oracle / tamper，可多次")] = None,
+    attempts: Annotated[int | None, typer.Option(help="覆盖配置里的 attempts")] = None,
+    concurrency: Annotated[int, typer.Option(help="并发 attempt 数")] = 4,
+    limit: Annotated[int | None, typer.Option(help="只跑前 N 个任务")] = None,
+    out: Annotated[Path | None, typer.Option(help="结果目录；指定已有目录即续跑")] = None,
+    live: Annotated[bool, typer.Option("--live", help="真实调用模型（录制到回放缓存）；默认只回放、不联网")] = False,
+    allow_peak: Annotated[bool, typer.Option("--allow-peak", help="允许高峰时段（2× 价，报告标注）")] = False,
+    max_total_cny: Annotated[float, typer.Option(help="预估总额上限，超过不开始")] = 50.0,
+) -> None:
+    """跑评测：任务 × 配置 × 尝试 → Grader 判分 → report.md。默认离线（回放 / 假 Agent）。"""
+    import asyncio
+    import os
+
+    from triwitness.core.errors import TriWitnessError
+    from triwitness.eval.agents import LLMAgent
+    from triwitness.eval.grade import Grader
+    from triwitness.eval.report import render_markdown, write_report
+    from triwitness.eval.runner import DEFAULT_RESULTS, EvalRunner, RunConfig, run_stamp
+    from triwitness.eval.task import discover, load_task
+    from triwitness.harness.loop import HarnessConfig
+    from triwitness.llm.gate import PeakGate
+
+    configs = [RunConfig.load(p) for p in config or []]
+    for a in agent or []:
+        if a not in ("null", "oracle", "tamper"):
+            raise typer.BadParameter("--agent 只能是 null / oracle / tamper（llm 用 --config）")
+        configs.append(RunConfig.fake(a))  # type: ignore[arg-type]
+    if not configs:
+        raise typer.BadParameter("至少给一个 --config 或 --agent")
+    tasks = [load_task(d) for d in discover(Path("evals/tasks") / suite)]
+    if not tasks:
+        raise typer.BadParameter(f"evals/tasks/{suite} 下没有任务")
+    if live:
+        os.environ["TW_LLM_MODE"] = "record"  # 真调并写入回放缓存，之后可离线复现
+
+    def llm_factory(cfg: RunConfig) -> LLMAgent:
+        from triwitness.llm.router import Router
+
+        harness = HarnessConfig.load(cfg.harness.removeprefix("configs/")) if cfg.harness else None
+        return LLMAgent(lambda: Router.deepseek_default(allow_peak=allow_peak), harness=harness,
+                        category=cfg.category, config_hash=cfg.name)  # fmt: skip
+
+    ledger = None
+    if live:
+        from triwitness.cost.ledger import GlobalLedger
+
+        ledger = GlobalLedger()
+    from datetime import UTC, datetime
+
+    out_dir = out or DEFAULT_RESULTS / run_stamp(datetime.now(UTC))
+    runner = EvalRunner(grader=Grader(), llm_agent_factory=llm_factory, live=live,
+                        gate=PeakGate(allow_peak=allow_peak), ledger=ledger, max_total_cny=max_total_cny)  # fmt: skip
+    try:
+        summary = asyncio.run(runner.run(tasks, configs, attempts=attempts, concurrency=concurrency, limit=limit,
+                                         out_dir=out_dir))  # fmt: skip
+    except KeyboardInterrupt:
+        typer.echo(f"已中断。续跑：tw eval run ... --out {out_dir}")
+        raise typer.Exit(130) from None
+    except TriWitnessError as e:  # 高峰闸门 / 预估超限 / 预算预检 / 模式不符：什么都没运行
+        typer.echo(f"未开始：{e}", err=True)
+        raise typer.Exit(2) from None
+    rep = write_report(summary.out_dir)
+    typer.echo(render_markdown(rep))
+    extra = []
+    if summary.skipped_existing:
+        extra.append(f"跳过已完成 {summary.skipped_existing}")
+    if summary.deferred_peak:
+        extra.append(f"高峰暂停 {summary.deferred_peak}（空闲后续跑）")
+    if summary.infra_errors:
+        extra.append(f"基础设施错误 {len(summary.infra_errors)}（见 errors.json）")
+    if summary.estimate_cny:
+        extra.append(f"预估 ¥{summary.estimate_cny:.2f}")
+    typer.echo(f"结果：{summary.out_dir}" + (f"｜{'｜'.join(extra)}" if extra else ""))
+
+
+@eval_app.command("report")
+def eval_report(run_dir: Annotated[Path, typer.Argument(help="evals/results/<时间戳>")]) -> None:
+    """从 result.json 重新生成 report.json / report.md。"""
+    from triwitness.eval.report import render_markdown, write_report
+
+    typer.echo(render_markdown(write_report(run_dir)))
 
 
 sandbox_app = typer.Typer(add_completion=False, no_args_is_help=True, help="沙箱")

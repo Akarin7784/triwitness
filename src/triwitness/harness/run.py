@@ -77,6 +77,7 @@ async def run_task(
     agents_md: str | None = None,
     config: HarnessConfig | None = None,
     tw_dir: str = "/workspace/.tw",
+    category: str = "dev",
 ) -> TaskResult:
     rec = recorder
     ledger = CostLedger(task_id=rec.task_id, budget_cny=budget.max_cost_cny, pricing_version=pricing_version())
@@ -88,7 +89,7 @@ async def run_task(
     st.go(TaskState.PREPARING, "准备沙箱")
     base_ref = await _checkpoint(rec, sandbox, "start")
     st.go(TaskState.EXECUTING, "修复")
-    loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=config,
+    loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=config, category=category,
                      system_prompt=build_system_prompt(EXECUTOR_PROMPT, agents_md=agents_md,
                                                        tool_names=registry.names))  # fmt: skip
     ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
