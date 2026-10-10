@@ -49,6 +49,7 @@ class TaskResult:
     diff: str
     cost: CostReport
     finish: FinishReport | None
+    repro_status: str | None = None  # repro-first：reproduced / not_applicable / missing；未启用为 None
 
 
 class _States:
@@ -94,7 +95,11 @@ async def run_task(
     st = _States(rec)
     st.go(TaskState.PREPARING, "准备沙箱")
     base_ref = await _checkpoint(rec, sandbox, "start")
-    st.go(TaskState.EXECUTING, "修复")
+    repro_first = "submit_repro" in registry.names
+    if repro_first:
+        st.go(TaskState.REPRODUCING, "复现")
+    else:
+        st.go(TaskState.EXECUTING, "修复")
     role_prompt = load_prompt(cfg.prompts.get("executor", "executor")).text
     # token 分配：AGENTS.md 摘要只能用 prefix 预算里扣掉提示与工具 schema 后的余量
     room = (
@@ -107,7 +112,14 @@ async def run_task(
                                                        agents_md_max_chars=min(4000, max(0, room))))  # fmt: skip
     ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
                       tw_dir=tw_dir)  # fmt: skip
+    if repro_first:
+        ctx.state["repro_first"] = True
+        ctx.state["on_repro_accepted"] = lambda check: st.go(
+            TaskState.EXECUTING, "修复" if check.get("status") == "reproduced" else "修复（无法复现，已降级）"
+        )
     outcome = await loop.run(task_prompt, ctx)
+    check = ctx.state.get("repro_check")
+    repro_status = check.get("status") if check else ("missing" if repro_first else None)
     status, final, label = _STATUS[outcome.status]
     if outcome.status == "finished" and outcome.finish is not None and not outcome.finish.tests_passed:
         status, final, label = "failed", TaskState.FAILED, "失败"
@@ -127,7 +139,8 @@ async def run_task(
     if cost.cache_hit_rate:
         shown += f" · 命中 {cost.cache_hit_rate:.0%}"
     rec.emit(TaskFinishedPayload(status=status, finish_report=outcome.finish, cost_report=cost, display=shown))
-    return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish)
+    return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish,
+                      repro_status=repro_status)  # fmt: skip
 
 
 async def _checkpoint(rec: TrajectoryRecorder, sandbox: Sandbox, label: str) -> str | None:

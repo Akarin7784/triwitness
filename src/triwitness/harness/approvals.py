@@ -94,6 +94,9 @@ def action_for(tool: Tool, params: BaseModel, ctx: ToolContext, *, shell_categor
     if tool.name == "run_tests":
         cmd = RunTests.command(ctx, p)
         return Action(shell_category, cmd, tool="run_tests") if cmd else None  # type: ignore[arg-type]
+    if tool.name == "submit_repro":  # 跑模型给的复现命令：与 run_tests 同类审批
+        cmd = getattr(p, "cmd", None) if not getattr(p, "not_applicable", False) else None
+        return Action(shell_category, cmd, tool="submit_repro") if cmd else None  # type: ignore[arg-type]
     return None  # finish、notes（只写 .tw/，不进 diff）等
 
 

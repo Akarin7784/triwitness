@@ -344,6 +344,13 @@ def tool_display(name: str, arguments: str, result: Any) -> str:
     if name == "run_tests":
         parts = [f"{data[k]} {k}" for k in ("failed", "passed", "skipped") if data.get(k)]
         return "$ run_tests → " + (", ".join(parts) if parts else ("通过" if result.ok else "失败"))
+    if name == "submit_repro":
+        st = (data or {}).get("status")
+        if st == "reproduced":
+            return f"$ submit_repro {args.get('path', '')} → 复现成立（原始代码上失败）"
+        if st == "not_applicable":
+            return "$ submit_repro → 无法复现（not_applicable）"
+        return f"$ submit_repro {args.get('path', '')}".rstrip()
     if name == "finish":
         rep = data.get("finish_report") or {}
         return f"finish · 置信度 {rep.get('confidence', 0):.2f}"

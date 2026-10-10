@@ -220,6 +220,19 @@ class Finish(BaseTool):
             return ToolResult(ok=False, content=f"不能声明 tests_passed=true：最近一次 run_tests 失败（{fails}）。"
                               "先修复或如实填写。",
                               error_code="tests_failed")  # fmt: skip
+        if ctx.state.get("repro_first"):
+            check = ctx.state.get("repro_check")
+            if check is None:
+                msg = (
+                    "repro-first：还没有提交复现。先调用 submit_repro（复现须在原始代码上失败），"
+                    "确实无法复现时用 not_applicable=true 并写明原因。"
+                )
+                return ToolResult(ok=False, content=msg, error_code="repro_missing")
+            if check.get("status") == "reproduced":
+                params = params.model_copy(update={"repro": ReproRef(path=check["path"], cmd=check["cmd"])})
+            elif params.repro is None:
+                risks = [*params.open_risks, f"无法复现（not_applicable）：{check.get('reason', '')}"]
+                params = params.model_copy(update={"open_risks": risks})
         try:
             report = FinishReport.model_validate(params.model_dump())
         except ValidationError as e:  # pragma: no cover - Params 已校验

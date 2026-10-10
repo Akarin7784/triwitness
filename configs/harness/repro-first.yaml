@@ -1,0 +1,4 @@
+# W3-04：先复现、后修复（submit_repro + finish 校验）。单独成配置，基线（W2-25）提示与缓存前缀不变，便于对比。
+extends: baseline.yaml
+prompts: {executor: executor-repro-first, summarizer: summarizer}
+tools: [bash, edit_file, finish, git, grep, list_files, notes, read_file, run_tests, submit_repro, write_file]
