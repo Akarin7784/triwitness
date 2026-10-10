@@ -22,6 +22,7 @@ from typing import Any, Literal, Protocol
 
 from triwitness.config import tw_home
 from triwitness.core.errors import TriWitnessError
+from triwitness.llm.stream import Sink
 
 Mode = Literal["replay", "record", "live"]
 FIXTURE_FORMAT = "tw-llm-fixture/1"
@@ -142,7 +143,8 @@ class RecordReplayTransport:
         rec = self.store.get(request_key(self.store.vendor, payload))
         return rec["response"] if rec else None
 
-    async def post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def post(self, path: str, payload: dict[str, Any], *, sink: Sink | None = None) -> dict[str, Any]:
+        """sink 非空且内层支持流式时走 SSE；缓存 key 与录制内容始终按非流式请求，不受影响。"""
         key = request_key(self.store.vendor, payload)
         self.last_key = key
         if self.mode != "live":
@@ -158,7 +160,11 @@ class RecordReplayTransport:
         if self.inner is None:
             raise TriWitnessError("record / live 模式需要真实传输")
         self.network_calls += 1
-        resp = await self.inner.post(path, payload)
+        post_stream = getattr(self.inner, "post_stream", None)
+        if sink is not None and post_stream is not None:
+            resp = await post_stream(path, payload, sink)
+        else:
+            resp = await self.inner.post(path, payload)
         self.last_source = "live"
         if self.mode in ("record", "live"):
             self.store.put(key, payload, resp, name=self.next_name)

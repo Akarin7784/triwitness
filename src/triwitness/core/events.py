@@ -17,6 +17,8 @@ from triwitness.core.models import CostReport, Finding, FinishReport, Role, Task
 PROTOCOL = "tw-events/1"
 PROTOCOL_VERSION = 1
 DISPLAY_MAX = 200
+PREVIEW_MAX = 2000
+DELTA_MAX = 4000
 
 EventKind = Literal[
     "task_started",
@@ -36,6 +38,8 @@ EventKind = Literal[
     "task_finished",
     "error",
     "environment_prepared",
+    "model_delta",
+    "reasoning_delta",
 ]
 RoleHint = Literal["planner", "executor", "verifier", "reviewer", "system"]
 PermissionDecision = Literal["allow", "ask", "deny"]
@@ -72,6 +76,7 @@ class StateChangePayload(Payload):
 
 
 class ModelCallPayload(Payload):
+    call_id: str | None = None  # 与本次调用的 model_delta / reasoning_delta、后续 tool_call 对应
     model: str
     served_model: str | None = None
     thinking: bool
@@ -96,6 +101,10 @@ class ToolCallPayload(Payload):
     # 权限判定（spec 006）：allow 由哪条规则放行，便于审计；ask 时另有 approval_* 事件
     permission: PermissionDecision | None = None
     permission_rule: str | None = None
+    # 对话流里的工具行（UI 可展开）：发起它的模型调用、参数与输出预览（均已脱敏、截断）
+    call_id: str | None = None
+    args_preview: str | None = Field(default=None, max_length=PREVIEW_MAX)
+    output_preview: str | None = Field(default=None, max_length=PREVIEW_MAX)
 
 
 class CheckpointPayload(Payload):
@@ -220,6 +229,25 @@ class ErrorPayload(Payload):
     message: str
 
 
+class DeltaPayload(Payload):
+    """流式增量（tw-events/1 增补，v 仍为 1）：一次模型调用的回复正文 / 推理片段，按 index 顺序拼接。
+
+    只在交互运行（`tw run --jsonl`）里写；片段已按约 50ms 合并。调用结束后照常有 model_call 事件。
+    """
+
+    call_id: str
+    index: int = Field(ge=0)
+    text: str = Field(max_length=DELTA_MAX)
+
+
+class ModelDeltaPayload(DeltaPayload):
+    pass
+
+
+class ReasoningDeltaPayload(DeltaPayload):
+    pass
+
+
 PAYLOADS: dict[str, type[Payload]] = {
     "task_started": TaskStartedPayload,
     "state_change": StateChangePayload,
@@ -238,6 +266,8 @@ PAYLOADS: dict[str, type[Payload]] = {
     "task_finished": TaskFinishedPayload,
     "error": ErrorPayload,
     "environment_prepared": EnvironmentPreparedPayload,
+    "model_delta": ModelDeltaPayload,
+    "reasoning_delta": ReasoningDeltaPayload,
 }
 
 

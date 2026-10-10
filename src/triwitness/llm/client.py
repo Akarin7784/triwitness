@@ -18,6 +18,7 @@ from triwitness.llm.deepseek import BASE_URL, DeepSeekAdapter
 from triwitness.llm.http import HttpTransport
 from triwitness.llm.pricing import estimate_cost, is_peak, next_off_peak, price_call
 from triwitness.llm.replay import RecordReplayTransport, ReplayStore
+from triwitness.llm.stream import current_sink, replay_deltas
 from triwitness.llm.types import LLMRequest, LLMResponse
 
 CHAT_PATH = "/chat/completions"
@@ -97,10 +98,13 @@ class LLMClient:
                 guard.precheck(est)
         elif guard is not None:
             guard.precheck(0.0)
+        sink = current_sink()
         t0 = time.monotonic()
-        raw = cached if cached is not None else await self.transport.post(CHAT_PATH, payload)
+        raw = cached if cached is not None else await self.transport.post(CHAT_PATH, payload, sink=sink)
         latency = int((time.monotonic() - t0) * 1000)
         resp = self.adapter.parse_response(raw)
+        if sink is not None and cached is not None:  # 回放命中：把完整回复切片送出，界面照样“流”
+            replay_deltas(resp.message.reasoning_content, resp.message.content, sink)
         cost, peak = price_call(self.adapter.vendor, name, resp.usage, at)
         resp.model = name
         resp.cost_cny = cost

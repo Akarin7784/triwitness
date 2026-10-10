@@ -30,6 +30,8 @@ export const KNOWN_KINDS: ReadonlySet<string> = new Set<TwKind>([
   'approval_requested',
   'approval_resolved',
   'mode_changed',
+  'model_delta',
+  'reasoning_delta',
   'verification',
   'review',
   'task_finished',

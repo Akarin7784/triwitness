@@ -24,7 +24,7 @@ describe('parseEvent', () => {
   })
 
   it('未知 kind 保留为 UnknownEvent', () => {
-    const e = parseEvent(JSON.stringify({ ...base, kind: 'model_delta', payload: { text: 'hi' } }))
+    const e = parseEvent(JSON.stringify({ ...base, kind: 'future_kind', payload: { text: 'hi' } }))
     expect(e).not.toBeNull()
     expect(isKnown(e!)).toBe(false)
     expect(e!.seq).toBe(3)

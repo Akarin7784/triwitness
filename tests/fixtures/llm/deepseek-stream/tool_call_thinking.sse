@@ -1,0 +1,25 @@
+: 合成样例，按 DeepSeek OpenAI 兼容流式格式（stream=true + stream_options.include_usage）；不是真实录制
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"role":"assistant","content":null,"reasoning_content":""},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"reasoning_content":"用户问北京天气，"},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"reasoning_content":"需要调 get_weather。"},"finish_reason":null}]}
+
+: keep-alive
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"content":"我查一下"},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"content":"。"},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_0","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"city\":"}}]},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"北京\"}"}}]},"finish_reason":null}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: {"id":"s1","object":"chat.completion.chunk","created":1760000000,"model":"deepseek-v4.1-flash","choices":[],"usage":{"prompt_tokens":300,"completion_tokens":40,"total_tokens":340,"prompt_cache_hit_tokens":256,"prompt_cache_miss_tokens":44,"completion_tokens_details":{"reasoning_tokens":12}}}
+
+data: [DONE]
+

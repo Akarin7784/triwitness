@@ -105,6 +105,7 @@ async def run_local(
             tw_dir=tw_dir,
             category="dogfood",
             verify=opts,
+            stream=on_event is not None,  # 桌面端：写流式增量（model_delta / reasoning_delta）
         )
     finally:
         finish = getattr(sb, "finish", None)

@@ -45,6 +45,10 @@ def run_cmd(
         bool, typer.Option("--jsonl", help="桌面端桥接：stdout 逐行输出 tw-bridge/1，stdin 收审批 / 取消")
     ] = False,
     demo: Annotated[bool, typer.Option("--demo", help="演示适配器：脚本化模型 + 演示仓库，¥0、不联网")] = False,
+    model: Annotated[str, typer.Option(help="Executor 模型（只允许 deepseek-flash）")] = "deepseek-flash",
+    thinking: Annotated[
+        str | None, typer.Option(help="思考强度 off / low / medium / high（默认按 configs/models.yaml）")
+    ] = None,
 ) -> None:
     """以 Executor 单角色修复本地仓库中的一个问题，输出 diff、FinishReport 与成本账单。"""
     import asyncio
@@ -59,6 +63,12 @@ def run_cmd(
     if verify not in ("off", "deterministic", "model"):
         raise typer.BadParameter("--verify 只能是 off / deterministic / model")
     repo = repo.expanduser()  # 桌面端可能传 ~/...（Windows 下 shell 不展开）
+    from triwitness.llm.router import executor_override
+
+    try:
+        override = executor_override(model, thinking)
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from None
     if demo:
         from triwitness.bridge import demo as demo_mod
 
@@ -67,7 +77,9 @@ def run_cmd(
         repo = demo_mod.ensure_repo(repo)
         issue = issue.strip() or demo_mod.ISSUE
         backend, test_cmd = "none", test_cmd or demo_mod.test_command()
-        router = demo_mod.DemoRouter(delay_s=float(os.environ.get("TW_DEMO_DELAY_S", "0.9")))
+        delay = float(os.environ.get("TW_DEMO_DELAY_S", "0.9"))
+        router = demo_mod.DemoRouter(delay_s=delay, thinking=override.get("thinking", True),
+                                     effort=override.get("effort"))  # fmt: skip
         if verify == "model":
             verify = "deterministic"  # 演示不调 Verifier 模型
     else:
@@ -79,7 +91,7 @@ def run_cmd(
             os.environ["TW_LLM_MODE"] = "record"
         elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
             raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
-        router = Router.deepseek_default(allow_peak=allow_peak)
+        router = Router.deepseek_default(allow_peak=allow_peak, executor=override or None)
     mode = "demo" if demo else "live" if live else "replay"
 
     if jsonl:

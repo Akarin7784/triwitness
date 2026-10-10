@@ -50,6 +50,30 @@ class RoleRoute(BaseModel):
     fallback: list[str] = Field(default_factory=list)
 
 
+# 界面上的思考强度 → DeepSeek（thinking 开关 + reasoning_effort low / high / max）
+THINKING_LEVELS: dict[str, dict[str, Any]] = {
+    "off": {"thinking": False},
+    "low": {"thinking": True, "effort": "low"},
+    "medium": {"thinking": True, "effort": "high"},
+    "high": {"thinking": True, "effort": "max"},
+}
+SELECTABLE_MODELS = ("deepseek-flash", "deepseek/deepseek-flash")
+
+
+def executor_override(model: str | None, thinking: str | None) -> dict[str, Any]:
+    """桌面端选择（模型 + 思考强度）→ RunConfig.executor 覆盖；不允许的模型直接拒绝（ADR-0002）。"""
+    out: dict[str, Any] = {}
+    if model and model not in SELECTABLE_MODELS:
+        raise ValueError(f"模型只允许 deepseek-flash，收到 {model}")
+    if model:
+        out["model"] = "deepseek/deepseek-flash"
+    if thinking is not None:
+        if thinking not in THINKING_LEVELS:
+            raise ValueError(f"思考强度只能是 {' / '.join(THINKING_LEVELS)}，收到 {thinking}")
+        out.update(THINKING_LEVELS[thinking])
+    return out
+
+
 def vendor_of(model: str) -> Vendor:
     vendor, _ = split_model_id(model)
     if vendor not in ("deepseek", "qwen", "zhipu"):

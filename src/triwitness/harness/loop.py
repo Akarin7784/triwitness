@@ -12,10 +12,13 @@ from pydantic import BaseModel
 from triwitness.core.errors import BudgetExceeded, SandboxError, TriWitnessError
 from triwitness.core.events import LoopWarningPayload, ModelCallPayload, ToolCallPayload
 from triwitness.core.models import Budget, FinishReport, Role
+from triwitness.core.redact import redact_text
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.harness.approvals import NeedsHuman
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.context import ContextManager
+from triwitness.harness.deltas import DeltaWriter
+from triwitness.llm.stream import streaming
 from triwitness.llm.types import LLMRequest, LLMResponse, Message
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools.base import ToolContext, ToolRegistry
@@ -98,6 +101,7 @@ class AgentLoop:
         mode: Literal["background", "eval"] = "background",
         guard: TaskBudgetGuard | None = None,
         category: str = "dev",
+        stream: bool = False,
     ) -> None:
         self.router = router
         self.category = category  # 全局账本的类别信封（eval 用 baseline 等）
@@ -111,6 +115,8 @@ class AgentLoop:
         self.guard = guard or TaskBudgetGuard(budget=budget)
         self.messages: list[Message] = []
         self.context: ContextManager | None = None
+        # 交互运行（tw run --jsonl）：写流式增量与工具行预览；eval / 批量运行不写，轨迹保持精简
+        self.stream = stream
 
     async def _summarize(self, req: LLMRequest, task_id: str) -> LLMResponse:
         """压缩用的 summarizer 调用：同一个预算守卫与类别信封，并照常写 model_call 事件（role=summarizer）。"""
@@ -163,14 +169,20 @@ class AgentLoop:
                     self.messages, payload = compacted
                     rec.emit(payload, role=self.role)
             req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools)
+            call_id = f"c{rec.next_seq}"
+            writer = DeltaWriter(rec, self.role, call_id) if self.stream else None
             try:
-                resp = await self.router.complete(
-                    req, guard=self.guard, task_id=ctx.task_id, mode=self.mode, category=self.category
-                )
+                with streaming(writer):
+                    resp = await self.router.complete(
+                        req, guard=self.guard, task_id=ctx.task_id, mode=self.mode, category=self.category
+                    )
             except BudgetExceeded as e:
                 return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
             except TriWitnessError as e:
                 return LoopOutcome(status="error", steps=steps, reason=f"{type(e).__name__}: {e}")
+            finally:
+                if writer is not None:
+                    writer.flush()
             steps += 1
             cm.observe(len(req.messages), resp.usage)
             seq = rec.next_seq
@@ -184,7 +196,8 @@ class AgentLoop:
                 "finish_reason": resp.finish_reason, "degraded": resp.degraded,
             })  # fmt: skip
             rec.emit(
-                ModelCallPayload(model=_bare_model(resp.model or resp.served_model or "?"),
+                ModelCallPayload(call_id=call_id if self.stream else None,
+                                 model=_bare_model(resp.model or resp.served_model or "?"),
                                  served_model=resp.served_model, thinking=req.thinking, usage=resp.usage,
                                  cost_cny=resp.cost_cny, peak=resp.peak, latency_ms=resp.latency_ms,
                                  finish_reason=resp.finish_reason, request_ref=req_ref, response_ref=resp_ref,
@@ -239,7 +252,8 @@ class AgentLoop:
                                     truncated=cut or result.truncated, error_type=result.error_code,
                                     permission=outcome.permission if outcome else None,
                                     permission_rule=outcome.rule if outcome else None,
-                                    display=tool_display(call.name, call.arguments, result)),
+                                    display=tool_display(call.name, call.arguments, result),
+                                    **(_previews(call_id, call.arguments, result.content) if self.stream else {})),
                     role=self.role,
                 )  # fmt: skip
                 self.messages.append(tool_msg)
@@ -311,9 +325,19 @@ def _short(text: str, n: int = 120) -> str:
     return one if len(one) <= n else one[: n - 1] + "…"
 
 
+def _previews(call_id: str, arguments: str, output: str | None) -> dict[str, Any]:
+    """对话流工具行展开时看的内容：参数与输出各截一段（已脱敏）。"""
+    return {
+        "call_id": call_id,
+        "args_preview": redact_text(arguments or "{}", max_len=600),
+        "output_preview": redact_text(output or "", max_len=1200) or None,
+    }
+
+
 def model_display(msg: Message) -> str | None:
     if msg.content and msg.content.strip():
-        return _short(msg.content.strip().splitlines()[0])
+        first = msg.content.strip().splitlines()[0].replace("**", "").replace("`", "")
+        return _short(first.rstrip("：:") or first)
     if msg.tool_calls:
         return "→ " + "、".join(c.name for c in msg.tool_calls)
     return None

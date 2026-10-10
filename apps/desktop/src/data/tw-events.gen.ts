@@ -23,6 +23,8 @@ export type TwEvents1 =
   | TaskFinishedEvent
   | ErrorEvent
   | EnvironmentPreparedEvent
+  | ModelDeltaEvent
+  | ReasoningDeltaEvent
 export type Kind = 'task_started'
 export type ConfigHash = string
 export type Display = string | null
@@ -74,6 +76,7 @@ export type TraceId1 = string | null
 export type Ts1 = string
 export type V1 = 1
 export type Kind2 = 'model_call'
+export type CallId = string | null
 export type CostCny = number
 export type Display2 = string | null
 export type FinishReason = string | null
@@ -99,12 +102,15 @@ export type TraceId2 = string | null
 export type Ts2 = string
 export type V2 = 1
 export type Kind3 = 'tool_call'
+export type ArgsPreview = string | null
+export type CallId1 = string | null
 export type Display3 = string | null
 export type DurationMs = number
 export type ErrorType = string | null
 export type ExitCode = number | null
 export type MessageRef = string | null
 export type Ok = boolean
+export type OutputPreview = string | null
 export type OutputRef = string | null
 export type Permission = ('allow' | 'ask' | 'deny') | null
 export type PermissionRule = string | null
@@ -360,6 +366,34 @@ export type TaskId17 = string
 export type TraceId16 = string | null
 export type Ts16 = string
 export type V16 = 1
+export type Kind18 = 'model_delta'
+export type CallId2 = string
+export type Display17 = string | null
+export type Index = number
+export type RoleHint17 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type Text = string
+export type Role18 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId17 = string
+export type Seq17 = number
+export type SpanId17 = string | null
+export type TaskId18 = string
+export type TraceId17 = string | null
+export type Ts17 = string
+export type V17 = 1
+export type Kind19 = 'reasoning_delta'
+export type CallId3 = string
+export type Display18 = string | null
+export type Index1 = number
+export type RoleHint18 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type Text1 = string
+export type Role19 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId18 = string
+export type Seq18 = number
+export type SpanId18 = string | null
+export type TaskId19 = string
+export type TraceId18 = string | null
+export type Ts18 = string
+export type V18 = 1
 
 export interface TaskStartedEvent {
   kind: Kind
@@ -418,6 +452,7 @@ export interface ModelCallEvent {
   v?: V2
 }
 export interface ModelCallPayload {
+  call_id?: CallId
   cost_cny: CostCny
   display?: Display2
   finish_reason?: FinishReason
@@ -452,12 +487,15 @@ export interface ToolCallEvent {
   v?: V3
 }
 export interface ToolCallPayload {
+  args_preview?: ArgsPreview
+  call_id?: CallId1
   display?: Display3
   duration_ms: DurationMs
   error_type?: ErrorType
   exit_code?: ExitCode
   message_ref?: MessageRef
   ok: Ok
+  output_preview?: OutputPreview
   output_ref?: OutputRef
   permission?: Permission
   permission_rule?: PermissionRule
@@ -813,5 +851,45 @@ export interface EnvironmentPreparedPayload {
   role_hint?: RoleHint16
   setup_source: SetupSource
   test_command?: TestCommand
+  [k: string]: unknown
+}
+export interface ModelDeltaEvent {
+  kind: Kind18
+  payload: ModelDeltaPayload
+  role?: Role18
+  run_id: RunId17
+  seq: Seq17
+  span_id?: SpanId17
+  task_id: TaskId18
+  trace_id?: TraceId17
+  ts: Ts17
+  v?: V17
+}
+export interface ModelDeltaPayload {
+  call_id: CallId2
+  display?: Display17
+  index: Index
+  role_hint?: RoleHint17
+  text: Text
+  [k: string]: unknown
+}
+export interface ReasoningDeltaEvent {
+  kind: Kind19
+  payload: ReasoningDeltaPayload
+  role?: Role19
+  run_id: RunId18
+  seq: Seq18
+  span_id?: SpanId18
+  task_id: TaskId19
+  trace_id?: TraceId18
+  ts: Ts18
+  v?: V18
+}
+export interface ReasoningDeltaPayload {
+  call_id: CallId3
+  display?: Display18
+  index: Index1
+  role_hint?: RoleHint18
+  text: Text1
   [k: string]: unknown
 }

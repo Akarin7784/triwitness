@@ -118,6 +118,9 @@ function fallbackText(e: TwEvent): string {
       return e.payload.ok
         ? `环境就绪 · 基线失败 ${e.payload.baseline_failure_count ?? 0}`
         : '环境构建失败'
+    case 'model_delta':
+    case 'reasoning_delta':
+      return e.payload.text
   }
 }
 
@@ -152,6 +155,8 @@ function toneOf(e: TwEvent): StreamTone {
 /** 事件 → 推流行；未知 kind 返回 null（忽略） */
 export function toStreamLine(e: AnyEvent): StreamLine | null {
   if (!isKnown(e)) return null
+  // 流式增量只进对话流；书写推流仍是一事件一行
+  if (e.kind === 'model_delta' || e.kind === 'reasoning_delta') return null
   const text = (e.payload.display ?? '').trim() || fallbackText(e)
   return { id: `e-${e.run_id}-${e.seq}`, seq: e.seq, role: uiRole(e), text, tone: toneOf(e) }
 }

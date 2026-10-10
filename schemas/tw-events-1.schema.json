@@ -2193,6 +2193,18 @@
     "ModelCallPayload": {
       "additionalProperties": true,
       "properties": {
+        "call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Call Id"
+        },
         "cost_cny": {
           "minimum": 0,
           "title": "Cost Cny",
@@ -2315,6 +2327,304 @@
         "latency_ms"
       ],
       "title": "ModelCallPayload",
+      "type": "object"
+    },
+    "ModelDeltaEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "model_delta",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ModelDeltaPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ModelDeltaEvent",
+      "type": "object"
+    },
+    "ModelDeltaPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "text": {
+          "maxLength": 4000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id",
+        "index",
+        "text"
+      ],
+      "title": "ModelDeltaPayload",
+      "type": "object"
+    },
+    "ReasoningDeltaEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "reasoning_delta",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ReasoningDeltaPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ReasoningDeltaEvent",
+      "type": "object"
+    },
+    "ReasoningDeltaPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "call_id": {
+          "title": "Call Id",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "text": {
+          "maxLength": 4000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "call_id",
+        "index",
+        "text"
+      ],
+      "title": "ReasoningDeltaPayload",
       "type": "object"
     },
     "ReproRef": {
@@ -3126,6 +3436,31 @@
     "ToolCallPayload": {
       "additionalProperties": true,
       "properties": {
+        "args_preview": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Args Preview"
+        },
+        "call_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Call Id"
+        },
         "display": {
           "anyOf": [
             {
@@ -3183,6 +3518,19 @@
         "ok": {
           "title": "Ok",
           "type": "boolean"
+        },
+        "output_preview": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Preview"
         },
         "output_ref": {
           "anyOf": [
@@ -3541,6 +3889,8 @@
       "loop_warning": "#/$defs/LoopWarningEvent",
       "mode_changed": "#/$defs/ModeChangedEvent",
       "model_call": "#/$defs/ModelCallEvent",
+      "model_delta": "#/$defs/ModelDeltaEvent",
+      "reasoning_delta": "#/$defs/ReasoningDeltaEvent",
       "review": "#/$defs/ReviewEvent",
       "state_change": "#/$defs/StateChangeEvent",
       "task_finished": "#/$defs/TaskFinishedEvent",
@@ -3601,6 +3951,12 @@
     },
     {
       "$ref": "#/$defs/EnvironmentPreparedEvent"
+    },
+    {
+      "$ref": "#/$defs/ModelDeltaEvent"
+    },
+    {
+      "$ref": "#/$defs/ReasoningDeltaEvent"
     }
   ],
   "title": "tw-events/1"

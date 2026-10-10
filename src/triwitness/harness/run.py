@@ -93,6 +93,7 @@ async def run_task(
     category: str = "dev",
     verify: VerifyOptions | None = None,
     prepare: PrepareOptions | None = None,
+    stream: bool = False,
 ) -> TaskResult:
     rec = recorder
     cfg = config or HarnessConfig.default()
@@ -130,6 +131,7 @@ async def run_task(
             - len(json.dumps(registry.schemas(), ensure_ascii=False))
         )
         loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=cfg, category=category,
+                         stream=stream,
                          system_prompt=build_system_prompt(role_prompt, agents_md=agents_md, tool_names=registry.names,
                                                            agents_md_max_chars=min(4000, max(0, room))))  # fmt: skip
         ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,

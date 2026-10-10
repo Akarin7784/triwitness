@@ -49,9 +49,9 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     return {"repo": demo.ensure_repo(tmp_path / "verses"), "tw_home": tw_home}
 
 
-async def drive(env: dict[str, Path], h: Harness) -> int:
+async def drive(env: dict[str, Path], h: Harness, router: demo.DemoRouter | None = None) -> int:
     def start(approver, on_event):  # type: ignore[no-untyped-def]
-        return run_local(env["repo"], demo.ISSUE, router=demo.DemoRouter(delay_s=0), backend="none",
+        return run_local(env["repo"], demo.ISSUE, router=router or demo.DemoRouter(delay_s=0), backend="none",
                          backends=[LocalSandboxBackend(home=env["tw_home"])], home=env["tw_home"],
                          test_command=demo.test_command(), verify="deterministic", approver=approver,
                          on_event=on_event)  # fmt: skip
@@ -122,3 +122,31 @@ def test_demo_repo_refuses_nonempty_non_git(tmp_path: Path) -> None:
         demo.ensure_repo(tmp_path)
     repo = demo.ensure_repo(tmp_path / "fresh")
     assert (repo / ".git").exists() and demo.ensure_repo(repo) == repo  # 已是仓库：原样使用
+
+
+async def test_stream_deltas_reasoning_and_tool_rows(env: dict[str, Path]) -> None:
+    """UI-20：交互运行写 model_delta / reasoning_delta；同一次调用的 call_id 贯穿增量、model_call、tool_call。"""
+    h = Harness(reply={"decision": "allow", "scope": "session"})
+    assert await drive(env, h, demo.DemoRouter(delay_s=0, effort="max")) == 0
+    ev = [x for x in h.lines if "kind" in x]
+    calls = [x for x in ev if x["kind"] == "model_call"]
+    assert len(calls) == len(demo.script())
+    first = calls[1]["payload"]["call_id"]
+    text = "".join(x["payload"]["text"] for x in ev if x["kind"] == "model_delta" and x["payload"]["call_id"] == first)
+    assert text == demo.script()[1].content
+    think = "".join(x["payload"]["text"] for x in ev
+                    if x["kind"] == "reasoning_delta" and x["payload"]["call_id"] == first)  # fmt: skip
+    assert think == demo.reasoning_for(1, "max") and think
+    deltas = [x for x in ev if x["kind"] in ("model_delta", "reasoning_delta") and x["payload"]["call_id"] == first]
+    assert [d["payload"]["index"] for d in deltas] == list(range(len(deltas)))
+    assert max(d["seq"] for d in deltas) < calls[1]["seq"]  # 增量都在 model_call 之前
+    tool = next(x["payload"] for x in ev if x["kind"] == "tool_call" and x["payload"].get("call_id") == first)
+    assert tool["tool"] == "read_file" and "test_verses.py" in tool["args_preview"]
+    assert "unittest" in (tool.get("output_preview") or "")
+
+
+async def test_thinking_off_streams_no_reasoning(env: dict[str, Path]) -> None:
+    h = Harness(reply={"decision": "allow", "scope": "session"})
+    assert await drive(env, h, demo.DemoRouter(delay_s=0, thinking=False)) == 0
+    kinds = h.kinds()
+    assert "model_delta" in kinds and "reasoning_delta" not in kinds
