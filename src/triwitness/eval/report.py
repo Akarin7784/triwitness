@@ -75,6 +75,7 @@ class ConfigRow(BaseModel):
     ci95: tuple[float, float] | None = None  # Resolved@1 的 bootstrap 95% 置信区间
     graded: int = 0  # 计入分母的 attempt 1 数（去掉 infra_error）
     failure_categories: dict[str, int] = Field(default_factory=dict)
+    test_edited: int = 0  # 改写已有测试（无削弱信号，未应用，不算篡改）的 attempt 数
     verifier_mode: str | None = None
     verifier: VerifierMetrics | None = None  # W3-13：精确率 / 召回率 / 验证后假成功 / 风险等级 vs 通过率
 
@@ -135,6 +136,7 @@ def build_report(run_dir: Path) -> EvalReport:
             avg_wall_s=round(sum(r.wall_s for r in rs) / len(rs), 1),
             false_success=sum(r.false_success for r in rs),
             tampered=sum(bool(r.tamper_paths) for r in rs),
+            test_edited=sum(bool(r.edited_paths) and not r.tamper_paths for r in rs),
             cache_hit_rate=round(hit, 4) if hit is not None else None,
             live=any(r.live for r in rs),
             ci95=bootstrap_ci(outcomes),
@@ -155,7 +157,9 @@ def build_report(run_dir: Path) -> EvalReport:
         if row.false_success:
             warnings.append(f"{cfg}：{row.false_success} 次虚假成功（声称修好但隐藏测试不过）")
         if row.tampered:
-            warnings.append(f"{cfg}：{row.tampered} 次改动测试基础设施（Grader 已忽略这些改动）")
+            warnings.append(f"{cfg}：{row.tampered} 次疑似篡改测试（基础设施 / 削弱已有测试；Grader 已忽略这些改动）")
+        if row.test_edited:
+            warnings.append(f"{cfg}：{row.test_edited} 次改写已有测试期望（未应用、不算篡改，建议人审）")
     done = {f"{r.config}/{r.task_id}/{r.attempt}" for r in results}
     missing = [p for p in _planned(run_dir) if p not in done]
     if missing:
@@ -177,7 +181,10 @@ def _errors(run_dir: Path) -> dict[str, str]:
         data = json.loads(p.read_text(encoding="utf-8"))
     except ValueError:
         return {}
-    return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    # 续跑重试成功的 attempt 已有 result.json：不再算基础设施错误（W2-25 opensandbox-816）
+    return {str(k): str(v) for k, v in data.items() if not (run_dir / str(k) / "result.json").exists()}
 
 
 def _cny(x: float | None) -> str:

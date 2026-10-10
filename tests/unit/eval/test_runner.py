@@ -60,7 +60,7 @@ class FakeGrader:
 
     async def grade(self, task: EvalTask, patch: str) -> GradeResult:
         self.graded.append(task.id)
-        keep, tamper, ignored = filter_patch(patch)
+        keep, tamper, ignored, _ = filter_patch(patch)
         ok = "FIXED" in keep
         return GradeResult(resolved=ok, reward=1.0 if ok else 0.0, patch_applied=True, tamper_paths=tamper,
                            ignored_paths=ignored, log_tail="ok" if ok else "1 failed")  # fmt: skip
@@ -280,3 +280,15 @@ async def test_oracle_and_tamper_agents_on_fake_sandbox(tasks: list[EvalTask]) -
 def test_markdown_render_empty(tmp_path: Path) -> None:
     rep = build_report(tmp_path)
     assert "Resolved@1" in render_markdown(rep)
+
+
+async def test_resume_success_clears_stale_infra_error(tmp_path: Path, tasks: list[EvalTask]) -> None:
+    """W2-25 opensandbox-816：首次 BuildError，续跑成功后 errors.json 不应残留旧条目。"""
+    out = tmp_path / "run"
+    r, g = runner(tmp_path)
+    g.fail_on = tasks[1].id
+    await r.run(tasks, [RunConfig.fake("null")], out_dir=out)
+    assert (out / "errors.json").exists()
+    r2, _ = runner(tmp_path)
+    s = await r2.run(tasks, [RunConfig.fake("null")], out_dir=out)
+    assert s.infra_errors == {} and not (out / "errors.json").exists()

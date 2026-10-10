@@ -86,6 +86,7 @@ class AttemptResult(BaseModel):
     false_success: bool  # 声称修好但判分不过
     tamper_paths: list[str] = Field(default_factory=list)
     ignored_paths: list[str] = Field(default_factory=list)
+    edited_paths: list[str] = Field(default_factory=list)  # 改写已有测试（未应用，不算篡改，需人审）
     patch_applied: bool = True
     cost_cny: float = 0.0
     tokens_in: int = 0
@@ -297,8 +298,7 @@ class EvalRunner:
                 summary.done.append(res)
 
         await asyncio.gather(*(one(j) for j in jobs))
-        if summary.infra_errors:
-            _write_json_atomic(out / "errors.json", summary.infra_errors)
+        _merge_errors(out, summary.infra_errors)
         return summary
 
     async def _verify(self, job: Job, run: AgentRun, d: Path) -> tuple[VerificationOutcome | None, str | None]:
@@ -359,6 +359,7 @@ class EvalRunner:
             false_success=run.claimed_success and not grade.resolved,
             tamper_paths=grade.tamper_paths,
             ignored_paths=grade.ignored_paths,
+            edited_paths=grade.edited_paths,
             patch_applied=grade.patch_applied,
             cost_cny=(run.cost.total_cny if run.cost else 0.0) + (ver.cost_cny if ver else 0.0),
             tokens_in=tin,
@@ -396,3 +397,24 @@ __all__ = [
     "historical_usage",
     "run_stamp",
 ]
+
+
+def _merge_errors(out: Path, new: dict[str, str]) -> None:
+    """续跑时合并 errors.json：保留旧条目，去掉已经写出 result.json 的（重试成功），加上本次的。
+
+    W2-25：swe-opensandbox-816 首次 apt BuildError，续跑成功后 errors.json 仍留着旧条目，报告把它同时算进
+    分母和基础设施错误。
+    """
+    p = out / "errors.json"
+    old: dict[str, str] = {}
+    if p.exists():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            old = {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+        except ValueError:
+            old = {}
+    merged = {k: v for k, v in {**old, **new}.items() if not (out / k / "result.json").exists()}
+    if merged:
+        _write_json_atomic(p, merged)
+    elif p.exists():
+        p.unlink()

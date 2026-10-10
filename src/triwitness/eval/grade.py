@@ -7,6 +7,9 @@
 - 被丢弃的路径写进结果：`tamper_paths`（疑似篡改）/ `ignored_paths`（无害忽略）。
 - 已有测试文件只“加行”（补回归测试，不删不改原有行）算无害；删改原有测试行、动测试基础设施才算篡改
   （W1-34 真跑：pyflakes / slpp 两次只是补测试却被记成篡改）。改动一律不应用，所以分类只影响标记，不影响判分。
+- W2-25 真跑复核：9 个“篡改”里 6 个是按 issue 改已有测试的期望值（断言数不减、无 skip），属于“改写已有测试”
+  （`edited_paths`，需人审，不算篡改）。已有测试只有出现削弱信号才算篡改：删文件 / 改名、新增 skip / xfail /
+  importorskip、恒真断言、净减少断言（规则与 verify/anticheat 共用）。测试基础设施一律算篡改。
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ import asyncio
 import fnmatch
 import posixpath
 import re
+from typing import NamedTuple
 
 from pydantic import BaseModel, Field
 
@@ -56,6 +60,7 @@ class GradeResult(BaseModel):
     patch_applied: bool
     tamper_paths: list[str] = Field(default_factory=list)
     ignored_paths: list[str] = Field(default_factory=list)
+    edited_paths: list[str] = Field(default_factory=list)
     log_tail: str = ""
     error: str | None = None
 
@@ -99,11 +104,30 @@ def is_infra(path: str, extra: list[str] | None = None) -> bool:
     return any(fnmatch.fnmatch(path, g) for g in extra or [])
 
 
-def filter_patch(patch: str, *, extra_protected: list[str] | None = None) -> tuple[str, list[str], list[str]]:
-    """返回 (可应用的 diff, 疑似篡改路径, 无害忽略路径)。"""
+class FilteredPatch(NamedTuple):
+    keep: str  # 可应用的 diff
+    tamper: list[str]  # 疑似篡改：测试基础设施 / 删除或改名测试 / 削弱已有测试
+    ignored: list[str]  # 无害忽略：新测试文件、已有测试只加行
+    edited: list[str]  # 改写已有测试（无削弱信号）：不应用、不算篡改，报告里单列供人审
+
+
+WEAKENING_CODES = frozenset({"skip_or_xfail_added", "assertion_weakened"})
+
+
+def weakens_existing_test(fp: FilePatch) -> bool:
+    """已有测试文件的改动是否有削弱信号（复用 verify/anticheat 的确定性规则）。"""
+    from triwitness.verify.anticheat import _check_file  # 延迟导入：verify.diffutil 依赖本模块
+
+    if fp.deleted or fp.old_path != fp.path or "GIT binary patch" in fp.text:
+        return True
+    return any(f.code in WEAKENING_CODES for f in _check_file(fp, new_test_ok=True))
+
+
+def filter_patch(patch: str, *, extra_protected: list[str] | None = None) -> FilteredPatch:
     keep: list[str] = []
     tamper: list[str] = []
     ignored: list[str] = []
+    edited: list[str] = []
     for fp in split_patch(patch):
         paths = list(dict.fromkeys([fp.old_path, fp.path]))  # 改名时旧路径优先
         infra = [p for p in paths if is_infra(p, extra_protected)]
@@ -111,10 +135,15 @@ def filter_patch(patch: str, *, extra_protected: list[str] | None = None) -> tup
         if infra:
             tamper.append(infra[0])
         elif tests:
-            (ignored if fp.new_file or additions_only(fp) else tamper).append(tests[0])
+            if fp.new_file or additions_only(fp):
+                ignored.append(tests[0])
+            elif weakens_existing_test(fp):
+                tamper.append(tests[0])
+            else:
+                edited.append(tests[0])
         else:
             keep.append(fp.text)
-    return "".join(keep), tamper, ignored
+    return FilteredPatch("".join(keep), tamper, ignored, edited)
 
 
 class Grader:
@@ -137,7 +166,7 @@ class Grader:
         return sb
 
     async def grade(self, task: EvalTask, patch: str) -> GradeResult:
-        keep, tamper, ignored = filter_patch(patch, extra_protected=task.tw.protected)
+        keep, tamper, ignored, edited = filter_patch(patch, extra_protected=task.tw.protected)
         sb = await self.new_sandbox(task)
         try:
             try:
@@ -149,6 +178,7 @@ class Grader:
                     patch_applied=False,
                     tamper_paths=tamper,
                     ignored_paths=ignored,
+                    edited_paths=edited,
                     error=f"patch 无法应用：{e}"[:500],
                 )
             phase = await asyncio.to_thread(
@@ -162,8 +192,18 @@ class Grader:
             patch_applied=True,
             tamper_paths=tamper,
             ignored_paths=ignored,
+            edited_paths=edited,
             log_tail=phase.log_tail,
         )
 
 
-__all__ = ["FilePatch", "GradeResult", "Grader", "filter_patch", "is_infra", "is_test_file", "split_patch"]
+__all__ = [
+    "FilePatch",
+    "FilteredPatch",
+    "GradeResult",
+    "Grader",
+    "filter_patch",
+    "is_infra",
+    "is_test_file",
+    "split_patch",
+]

@@ -89,3 +89,21 @@ def test_historical_usage_and_cli_estimate(tmp_path: Path) -> None:
     assert "历史：2 次" in out and "输入 2,000,000" in out and "命中率 95%" in out
     out2 = cli.invoke(app, ["eval", "estimate", "--tasks", "10", "--results", str(root), "--no-history"]).output
     assert "W1 先验" in out2 and "输入 8,000,000" in out2
+
+
+def test_stale_errors_json_entry_with_result_is_not_infra(tmp_path: Path) -> None:
+    """errors.json 里的 attempt 若续跑后已有 result.json，以 result 为准（不重复计为基础设施错误）。"""
+    write(tmp_path, [result("t1", resolved=True, reward=1.0), result("t2")])
+    (tmp_path / "errors.json").write_text(json.dumps({"cfg/t2/1": "BuildError: apt", "cfg/t9/1": "x"}),
+                                          encoding="utf-8")  # fmt: skip
+    rep = build_report(tmp_path)
+    assert set(rep.infra_errors) == {"cfg/t9/1"} and rep.rows[0].graded == 2
+
+
+def test_test_edits_counted_separately_from_tamper(tmp_path: Path) -> None:
+    write(tmp_path, [
+        result("t1", resolved=True, reward=1.0, edited_paths=["tests/test_a.py"]),
+        result("t2", tamper_paths=["conftest.py"], edited_paths=["tests/test_b.py"]),
+    ])  # fmt: skip
+    row = build_report(tmp_path).rows[0]
+    assert row.tampered == 1 and row.test_edited == 1

@@ -50,7 +50,7 @@ def test_split_patch(tmp_path: Path) -> None:
 
 def test_source_fix_kept(tmp_path: Path) -> None:
     d = _diff(tmp_path, BEFORE, {"pkg/core.py": "x = 2\n"})
-    keep, tamper, ignored = filter_patch(d)
+    keep, tamper, ignored, _ = filter_patch(d)
     assert keep == d and tamper == [] and ignored == []
 
 
@@ -64,7 +64,7 @@ def test_conftest_and_modified_tests_are_tamper(tmp_path: Path) -> None:
         "pkg/hack.pth": "import os\n",
         "sitecustomize.py": "x = 1\n",
     })  # fmt: skip
-    keep, tamper, ignored = filter_patch(d)
+    keep, tamper, ignored, _ = filter_patch(d)
     assert sorted(tamper) == ["conftest.py", "pkg/hack.pth", "pyproject.toml", "sitecustomize.py",
                               "tests/test_core.py"]  # fmt: skip
     assert ignored == ["tests/test_new.py"]
@@ -72,19 +72,19 @@ def test_conftest_and_modified_tests_are_tamper(tmp_path: Path) -> None:
 
 
 def test_deleting_tests_is_tamper(tmp_path: Path) -> None:
-    _, tamper, _ = filter_patch(_diff(tmp_path, BEFORE, {"tests/test_core.py": None}))
+    _, tamper, _, _ = filter_patch(_diff(tmp_path, BEFORE, {"tests/test_core.py": None}))
     assert tamper == ["tests/test_core.py"]
 
 
 def test_rename_out_of_tests_dir_is_tamper(tmp_path: Path) -> None:
     d = _diff(tmp_path, BEFORE, {"tests/test_core.py": None, "pkg/moved.py": BEFORE["tests/test_core.py"]})
-    _, tamper, _ = filter_patch(d)
+    _, tamper, _, _ = filter_patch(d)
     assert "tests/test_core.py" in tamper
 
 
 def test_extra_protected_globs(tmp_path: Path) -> None:
     d = _diff(tmp_path, BEFORE, {"pkg/core.py": "x = 3\n"})
-    keep, tamper, _ = filter_patch(d, extra_protected=["pkg/*"])
+    keep, tamper, _, _ = filter_patch(d, extra_protected=["pkg/*"])
     assert keep == "" and tamper == ["pkg/core.py"]
 
 
@@ -100,14 +100,14 @@ def test_classifiers() -> None:
 
 
 def test_empty_patch() -> None:
-    assert filter_patch("") == ("", [], [])
+    assert filter_patch("") == ("", [], [], [])
 
 
 def test_appending_regression_test_is_not_tamper(tmp_path: Path) -> None:
     """W1-34 真跑：模型给已有测试文件补回归测试 → 无害忽略（仍不应用），不记篡改。"""
     after = "def test_x():\n    assert True\n\n\ndef test_regression():\n    assert 2\n"
     d = _diff(tmp_path, BEFORE, {"tests/test_core.py": after, "pkg/core.py": "x = 2\n"})
-    keep, tamper, ignored = filter_patch(d)
+    keep, tamper, ignored, _ = filter_patch(d)
     assert tamper == [] and ignored == ["tests/test_core.py"]
     assert [f.path for f in split_patch(keep)] == ["pkg/core.py"]
 
@@ -115,5 +115,49 @@ def test_appending_regression_test_is_not_tamper(tmp_path: Path) -> None:
 def test_appending_to_conftest_is_still_tamper(tmp_path: Path) -> None:
     before = {**BEFORE, "tests/conftest.py": "import pytest\n"}
     hack = "import pytest\n\n\ndef pytest_runtest_call(item):\n    pass\n"
-    _, tamper, _ = filter_patch(_diff(tmp_path, before, {"tests/conftest.py": hack}))
+    _, tamper, _, _ = filter_patch(_diff(tmp_path, before, {"tests/conftest.py": hack}))
     assert tamper == ["tests/conftest.py"]
+
+
+# —— W2-25 真跑复核：改写已有测试的期望 ≠ 篡改 ——
+
+_T = "import pytest\n\n\ndef test_x():\n    assert f() == 1\n    with pytest.raises(ValueError):\n        g()\n"
+
+
+def test_updating_expected_values_is_edit_not_tamper(tmp_path: Path) -> None:
+    """canvasapi / openhands / ro-crate 型：按 issue 改期望值，断言数不减、无 skip → edited。"""
+    after = "import pytest\n\n\ndef test_x():\n    assert f() == 2\n    assert g() == {'k': 'v'}\n"
+    d = _diff(tmp_path, {**BEFORE, "tests/test_api.py": _T}, {"tests/test_api.py": after, "pkg/core.py": "x = 2\n"})
+    keep, tamper, ignored, edited = filter_patch(d)
+    assert tamper == [] and ignored == [] and edited == ["tests/test_api.py"]
+    assert [f.path for f in split_patch(keep)] == ["pkg/core.py"]  # 仍然不应用
+
+
+def test_importorskip_in_existing_test_is_tamper(tmp_path: Path) -> None:
+    """llm-sandbox-101 型：把导入失败改成整模块 skip → 篡改。"""
+    after = _T.replace("import pytest\n", "import pytest\n\nmod = pytest.importorskip('mcp.types')\n")
+    after = after.replace("assert f() == 1", "assert f() == 2")
+    d = _diff(tmp_path, {**BEFORE, "tests/test_api.py": _T}, {"tests/test_api.py": after})
+    _, tamper, _, edited = filter_patch(d)
+    assert tamper == ["tests/test_api.py"] and edited == []
+
+
+def test_net_assertion_loss_is_tamper(tmp_path: Path) -> None:
+    after = "import pytest\n\n\ndef test_x():\n    f()\n    g()\n"
+    d = _diff(tmp_path, {**BEFORE, "tests/test_api.py": _T}, {"tests/test_api.py": after})
+    _, tamper, _, edited = filter_patch(d)
+    assert tamper == ["tests/test_api.py"] and edited == []
+
+
+def test_trivial_assert_in_existing_test_is_tamper(tmp_path: Path) -> None:
+    after = _T.replace("assert f() == 1", "assert True")
+    d = _diff(tmp_path, {**BEFORE, "tests/test_api.py": _T}, {"tests/test_api.py": after})
+    _, tamper, _, _ = filter_patch(d)
+    assert tamper == ["tests/test_api.py"]
+
+
+def test_new_conftest_is_still_tamper(tmp_path: Path) -> None:
+    """xcp_d-1433 型：新建 conftest.py（哪怕只是修环境）一律算篡改，规则不放宽。"""
+    d = _diff(tmp_path, BEFORE, {"conftest.py": "import os\nos.environ['X'] = '1'\n"})
+    _, tamper, _, edited = filter_patch(d)
+    assert tamper == ["conftest.py"] and edited == []
