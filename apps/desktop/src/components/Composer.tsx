@@ -1,5 +1,10 @@
-import { useState } from 'react'
-import { ArrowUp, FolderGit2, Paperclip, Square } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { ArrowUp, FolderGit2, Mic, Square } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { getDraft, setDraft } from '../lib/prefs'
+import { notYet } from '../lib/toast'
+import { ModelPicker } from './ModelPicker'
+import { PlusMenu } from './PlusMenu'
 import { Tip } from './Tip'
 
 export interface ComposerRepo {
@@ -10,107 +15,165 @@ export interface ComposerRepo {
 
 interface ComposerProps {
   onSend: (text: string) => void
-  /** 新会话里显示仓库路径签 */
+  /** 新会话里显示仓库签 */
   repo?: ComposerRepo
   /** 任务进行中：发送键变成停止键 */
   running?: boolean
   onStop?: () => void
   /** 可以不写任务就发送（演示模式） */
   allowEmpty?: boolean
+  /** 草稿按会话保存 */
+  draftKey?: string
 }
 
-export function Composer({ onSend, repo, running, onStop, allowEmpty }: ComposerProps) {
-  const [value, setValue] = useState('')
-  const [editingRepo, setEditingRepo] = useState(false)
+const MAX_H = 240
 
-  const canSend = !!value.trim() || !!allowEmpty
+/**
+ * Claude 式输入框：上面是自动增高的文本区；下面一行左边 +、仓库签，右边模型选择与发送 / 停止。
+ * Enter 发送、Shift+Enter 换行、Esc 停止；草稿按会话保存。
+ */
+export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey = 'default' }: ComposerProps) {
+  const [value, setValue] = useState(() => getDraft(draftKey))
+  const [menu, setMenu] = useState<'plus' | 'model' | null>(null)
+  const [editingRepo, setEditingRepo] = useState(false)
+  const ta = useRef<HTMLTextAreaElement>(null)
+
+  useLayoutEffect(() => {
+    const el = ta.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(MAX_H, el.scrollHeight)}px`
+    el.style.overflowY = el.scrollHeight > MAX_H ? 'auto' : 'hidden'
+  }, [value])
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDraft(draftKey, value), 200)
+    return () => window.clearTimeout(t)
+  }, [value, draftKey])
+
+  useEffect(() => {
+    const focus = () => ta.current?.focus()
+    window.addEventListener('tw:focus-composer', focus)
+    return () => window.removeEventListener('tw:focus-composer', focus)
+  }, [])
+
+  const canSend = !running && (!!value.trim() || !!allowEmpty)
   const submit = () => {
-    if (running || !canSend) return
+    if (!canSend) return
     onSend(value.trim())
     setValue('')
+    setDraft(draftKey, '')
   }
 
   return (
     <div className="px-8 pb-6 pt-2">
-      {repo && (
-        <div className="mx-auto mb-2 flex max-w-[760px] px-1">
-          {editingRepo ? (
-            <input
-              autoFocus
-              data-testid="repo-input"
-              value={repo.value}
-              onChange={(e) => repo.onChange(e.target.value)}
-              onBlur={() => setEditingRepo(false)}
-              onKeyDown={(e) => e.key === 'Enter' && setEditingRepo(false)}
-              placeholder={repo.placeholder}
-              spellCheck={false}
-              className="chip w-full max-w-[460px] bg-transparent font-mono text-[11.5px] outline-none placeholder:text-sepia-muted/70"
-            />
-          ) : (
-            <Tip label="仓库路径" side="top-start">
-              <button
-                type="button"
-                data-testid="repo-chip"
-                onClick={() => setEditingRepo(true)}
-                className="chip max-w-[460px] truncate transition-colors duration-300 hover:text-amber"
-              >
-                <FolderGit2 size={11} strokeWidth={1.7} />
-                <span className="truncate font-mono text-[11.5px]">{repo.value || repo.placeholder}</span>
-              </button>
-            </Tip>
-          )}
-        </div>
-      )}
-      <div className="paper-card mx-auto flex max-w-[760px] items-end gap-2 rounded-2xl p-2.5 pl-3">
-        <Tip label="附件">
-          <button
-            type="button"
-            aria-label="附件"
-            className="mb-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-sepia-muted transition-colors duration-300 hover:text-amber"
-          >
-            <Paperclip size={15} strokeWidth={1.6} />
-          </button>
-        </Tip>
+      <div
+        data-testid="composer"
+        className="paper-card mx-auto max-w-[760px] rounded-[22px] px-3 pb-2.5 pt-3 transition-shadow duration-500 focus-within:shadow-[0_6px_28px_-10px_rgb(122_101_80/0.35)]"
+      >
         <textarea
+          ref={ta}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
               submit()
+            } else if (e.key === 'Escape' && running) {
+              e.preventDefault()
+              onStop?.()
             }
           }}
           rows={1}
           placeholder="写下任务…"
-          className="max-h-36 min-h-[40px] flex-1 resize-none bg-transparent py-2.5 font-serif text-[14.5px] leading-relaxed text-ink outline-none placeholder:text-sepia-muted/80"
+          aria-label="输入"
+          className="block max-h-[240px] min-h-[44px] w-full resize-none bg-transparent px-1.5 py-1 font-serif text-[15px] leading-relaxed text-ink outline-none placeholder:text-sepia-muted/80"
         />
-        {running ? (
-          <Tip label="停止" side="top-end">
-            <button
-              type="button"
-              onClick={onStop}
-              aria-label="停止"
-              data-testid="stop"
-              className="mb-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-ink text-parchment transition-all duration-300 hover:bg-espresso"
-            >
-              <Square size={12} strokeWidth={2} fill="currentColor" />
-            </button>
-          </Tip>
-        ) : (
-          <Tip label="发送 · Enter" side="top-end">
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!canSend}
-              aria-label="发送"
-              data-testid="send"
-              className="mb-1 inline-flex h-9 w-9 items-center justify-center rounded-full bg-ink text-parchment transition-all duration-300 enabled:hover:bg-espresso disabled:opacity-25"
-            >
-              <ArrowUp size={16} strokeWidth={1.8} />
-            </button>
-          </Tip>
-        )}
+        <div className="mt-1.5 flex items-center gap-2">
+          <PlusMenu open={menu === 'plus'} onOpenChange={(o) => setMenu(o ? 'plus' : null)} />
+          {repo &&
+            (editingRepo ? (
+              <input
+                autoFocus
+                data-testid="repo-input"
+                value={repo.value}
+                onChange={(e) => repo.onChange(e.target.value)}
+                onBlur={() => setEditingRepo(false)}
+                onKeyDown={(e) => e.key === 'Enter' && setEditingRepo(false)}
+                placeholder={repo.placeholder}
+                spellCheck={false}
+                className="chip w-full max-w-[300px] bg-transparent font-mono text-[11.5px] outline-none placeholder:text-sepia-muted/70"
+              />
+            ) : (
+              <Tip label="仓库路径" side="top-start">
+                <button
+                  type="button"
+                  data-testid="repo-chip"
+                  onClick={() => setEditingRepo(true)}
+                  className="chip max-w-[300px] truncate transition-colors duration-300 hover:text-amber"
+                >
+                  <FolderGit2 size={11} strokeWidth={1.7} />
+                  <span className="truncate font-mono text-[11.5px]">{repo.value || repo.placeholder}</span>
+                </button>
+              </Tip>
+            ))}
+          <div className="ml-auto flex items-center gap-1">
+            <ModelPicker open={menu === 'model'} onOpenChange={(o) => setMenu(o ? 'model' : null)} />
+            <SendSlot running={!!running} canSend={canSend} onSend={submit} onStop={onStop} />
+          </div>
+        </div>
       </div>
+    </div>
+  )
+}
+
+/** 发送位：有字 → 发送；空 → 语音；进行中 → 停止。三者之间做一次轻弹切换 */
+function SendSlot({
+  running,
+  canSend,
+  onSend,
+  onStop,
+}: {
+  running: boolean
+  canSend: boolean
+  onSend: () => void
+  onStop?: () => void
+}) {
+  const kind = running ? 'stop' : canSend ? 'send' : 'mic'
+  const base =
+    'inline-flex h-8 w-8 items-center justify-center rounded-[10px] transition-colors duration-300'
+  return (
+    <div className="relative h-8 w-8">
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.div
+          key={kind}
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.7 }}
+          transition={{ type: 'spring', stiffness: 600, damping: 30 }}
+          className="absolute inset-0"
+        >
+          {kind === 'stop' ? (
+            <Tip label="停止 · Esc" side="top-end">
+              <button type="button" onClick={onStop} aria-label="停止" data-testid="stop" className={`${base} bg-ink text-parchment hover:bg-espresso`}>
+                <Square size={11} strokeWidth={2} fill="currentColor" />
+              </button>
+            </Tip>
+          ) : kind === 'send' ? (
+            <Tip label="发送 · Enter" side="top-end">
+              <button type="button" onClick={onSend} aria-label="发送" data-testid="send" className={`${base} bg-amber text-cream hover:bg-[#b07433]`}>
+                <ArrowUp size={16} strokeWidth={2} />
+              </button>
+            </Tip>
+          ) : (
+            <Tip label="语音输入" side="top-end">
+              <button type="button" onClick={() => notYet('语音输入')} aria-label="语音输入" data-testid="mic" className={`${base} text-sepia hover:bg-panel-raised hover:text-amber`}>
+                <Mic size={15} strokeWidth={1.6} />
+              </button>
+            </Tip>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }

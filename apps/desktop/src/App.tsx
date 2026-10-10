@@ -11,6 +11,10 @@ import { useFixtureCatalog } from './hooks/useFixtureCatalog'
 import { FIXTURES, FixtureSource, type FixtureName } from './data/sources/fixture'
 import { createMockSource } from './data/sources/mock'
 import { foldRun } from './data/mapEvent'
+import { foldTurn } from './data/turns'
+import { getPrefs } from './lib/prefs'
+import { Toaster } from './components/Toaster'
+import { MotionConfig } from 'framer-motion'
 import { parseSourceParam, speedParam, writeSourceParam, type SourceKey } from './lib/sourceParam'
 import type { ChatMessage, StreamLine } from './types'
 import type { Phase } from './data/mapEvent'
@@ -86,8 +90,10 @@ export default function App() {
 
   const feed = useEventFeed(liveId && !liveTask ? `${source}${PENDING}` : source, makeSource)
 
-  // 状态 / 对话 / 费用都只折叠到“笔尖已写到”的那一行：暂停时一起停
+  // 右侧书写推流的角色点跟笔；对话流（Claude 式）与顶部状态 / 费用签按事件实时走
   const run = useMemo(() => foldRun(feed.events, revealedSeq), [feed.events, revealedSeq])
+  const live = useMemo(() => foldRun(feed.events), [feed.events])
+  const turn = useMemo(() => foldTurn(feed.events), [feed.events])
 
   const select = useCallback((key: SourceKey) => {
     setSource(key)
@@ -126,24 +132,24 @@ export default function App() {
 
   const isLocal = source.startsWith('local:')
   const meta = liveId ? metas.find((m) => m.id === liveId) : undefined
-  const title = isLocal ? (locals.find((l) => l.id === source)?.title ?? '') : run.title || (meta?.title ?? '')
+  const title = isLocal ? (locals.find((l) => l.id === source)?.title ?? '') : live.title || (meta?.title ?? '')
   const messages = [...run.messages, ...(localMessages[source] ?? [])]
   const running = !!snap && !snap.exited && !snap.result
-  // 跟笔同步：审批卡等笔尖写到那一行再出；结论卡等笔写完最后一行
-  const approvals = useMemo(() => snap?.approvals.filter((a) => a.seq <= revealedSeq) ?? [], [snap, revealedSeq])
-  const result = snap?.result && liveTask && revealedSeq >= liveTask.afterSeq ? snap.result : null
+  const approvals = snap?.approvals ?? []
+  const result = snap?.result && !turn.streaming ? snap.result : null
   const notice = isLocal
     ? startErr
     : snap?.error
       ? snap.error
-      : snap?.exited && !snap.result && liveTask && revealedSeq >= liveTask.afterSeq && run.phase === 'active'
+      : snap?.exited && !snap.result && live.phase === 'active'
         ? '进程已结束'
         : null
 
   const onSend = (text: string) => {
     if (isLocal && coreOk) {
       setStartErr(null)
-      startTask({ repo, issue: text, mode: coreMode() })
+      const { model, thinking } = getPrefs()
+      startTask({ repo, issue: text, mode: coreMode(), model, thinking })
         .then((id) => {
           setLocals((prev) => prev.filter((l) => l.id !== source))
           select(`live:${id}` as SourceKey)
@@ -169,6 +175,7 @@ export default function App() {
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="app-grain flex h-full flex-col">
       <TitleBar
         title={view === 'settings' ? '设置' : title}
@@ -192,7 +199,9 @@ export default function App() {
           <>
             <ChatPanel
               title={title || '三证'}
-              run={isLocal ? null : run}
+              run={isLocal ? null : live}
+              turn={isLocal ? null : turn}
+              draftKey={source}
               messages={messages}
               onSend={onSend}
               approvals={approvals}
@@ -221,6 +230,8 @@ export default function App() {
       </div>
       <StatusBar />
       <ContextMenu />
+      <Toaster />
     </div>
+    </MotionConfig>
   )
 }

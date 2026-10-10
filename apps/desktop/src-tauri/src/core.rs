@@ -38,6 +38,24 @@ struct ExitEvent {
     code: Option<i32>,
 }
 
+/// 选择项（模型 / 思考强度）：只放行白名单，其余一律丢弃（核心那边还会再拒一次）
+pub fn choice_args(model: Option<&str>, thinking: Option<&str>) -> Vec<String> {
+    let mut a = Vec::new();
+    if let Some(m) = model {
+        if m == "deepseek-flash" {
+            a.push("--model".to_string());
+            a.push(m.to_string());
+        }
+    }
+    if let Some(t) = thinking {
+        if matches!(t, "off" | "low" | "medium" | "high") {
+            a.push("--thinking".to_string());
+            a.push(t.to_string());
+        }
+    }
+    a
+}
+
 /// 组装 `tw run` 参数（纯函数，便于单测）
 pub fn run_args(repo: &str, issue: &str, mode: &str) -> Vec<String> {
     let mut a = vec!["run".to_string(), "--jsonl".into(), "--repo".into(), repo.to_string()];
@@ -96,6 +114,8 @@ pub fn core_start(
     repo: String,
     issue: String,
     mode: String,
+    model: Option<String>,
+    thinking: Option<String>,
 ) -> Result<String, String> {
     if repo.trim().is_empty() {
         return Err("缺少仓库路径".into());
@@ -103,7 +123,8 @@ pub fn core_start(
     if !matches!(mode.as_str(), "demo" | "replay" | "live") {
         return Err(format!("未知运行方式：{mode}"));
     }
-    let args = run_args(repo.trim(), &issue, &mode);
+    let mut args = run_args(repo.trim(), &issue, &mode);
+    args.extend(choice_args(model.as_deref(), thinking.as_deref()));
     let tw_core = std::env::var("TW_CORE").ok();
     let mut last_err = String::from("找不到核心命令");
     let mut child = None;
@@ -232,6 +253,13 @@ mod tests {
         assert_eq!(run_args("C:/r", "修", "demo"), ["run", "--jsonl", "--repo", "C:/r", "--issue", "修", "--demo"]);
         assert_eq!(run_args("/r", "  ", "live"), ["run", "--jsonl", "--repo", "/r", "--live"]);
         assert_eq!(run_args("/r", "x", "replay"), ["run", "--jsonl", "--repo", "/r", "--issue", "x"]);
+    }
+
+    #[test]
+    fn choices_are_whitelisted() {
+        assert_eq!(choice_args(Some("deepseek-flash"), Some("high")), ["--model", "deepseek-flash", "--thinking", "high"]);
+        assert!(choice_args(Some("deepseek-v4-pro"), Some("ultra")).is_empty());
+        assert!(choice_args(None, None).is_empty());
     }
 
     #[test]

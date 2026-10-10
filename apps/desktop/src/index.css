@@ -404,3 +404,89 @@ html {
   font-size: 11px;
   color: var(--color-amber);
 }
+
+/* ───────── 对话流（UI-20）───────── */
+
+/* 新写出的片段：浅琥珀墨、微糊 → 沉成正文色（与推流同一套“随写随干”） */
+.ink-in {
+  animation: inkIn 620ms var(--ease-ink) both;
+}
+@keyframes inkIn {
+  0%   { opacity: 0; color: #c9955a; filter: blur(0.6px); }
+  45%  { opacity: 0.85; color: #8a603c; filter: blur(0); }
+  100% { opacity: 1; color: inherit; }
+}
+
+/* “思考中”：一道很淡的光从左往右扫过 */
+.think-shimmer {
+  background: linear-gradient(90deg, var(--color-amber) 0%, var(--color-amber-glow) 45%, var(--color-amber) 90%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+@keyframes shimmer {
+  from { background-position: 120% 0; }
+  to   { background-position: -120% 0; }
+}
+.think-live {
+  mask-image: linear-gradient(to bottom, transparent 0, black 18px, black 100%);
+}
+
+/* 助手正文的 Markdown */
+.md, .md-tail { font-size: 14.5px; line-height: 1.85; color: var(--color-ink-soft); }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0.55em 0; }
+.md ul, .md ol { margin: 0.5em 0; padding-left: 1.4em; }
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md li { margin: 0.2em 0; }
+.md li::marker { color: var(--color-amber-soft); }
+.md strong { font-weight: 600; color: var(--color-ink); }
+.md h1, .md h2, .md h3 { font-family: var(--font-serif); color: var(--color-ink); margin: 0.9em 0 0.4em; font-weight: 600; }
+.md h1 { font-size: 1.25em; } .md h2 { font-size: 1.12em; } .md h3 { font-size: 1.02em; }
+.md blockquote { margin: 0.6em 0; padding-left: 0.9em; border-left: 2px solid var(--color-border); color: var(--color-sepia); }
+.md table { border-collapse: collapse; margin: 0.6em 0; font-size: 13px; }
+.md th, .md td { border: 1px solid var(--color-border-soft); padding: 4px 10px; }
+.md hr { border: 0; border-top: 1px solid var(--color-border-soft); margin: 1em 0; }
+.md-tail { margin: 0.55em 0 0; }
+
+.tool-pre {
+  margin: 0;
+  max-height: 10rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border-radius: 10px;
+  border: 1px solid var(--color-border-soft);
+  background: color-mix(in srgb, var(--color-cream) 85%, white);
+  padding: 8px 11px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--color-ink-soft);
+}
+
+/* 弹出菜单（模型 / + 菜单）：暖纸卡片 */
+.menu-card {
+  background: color-mix(in srgb, var(--color-panel-raised) 96%, white);
+  border: 1px solid var(--color-border-soft);
+  border-radius: 14px;
+  box-shadow: 0 14px 40px -12px rgb(42 28 20 / 0.28), 0 2px 6px rgb(42 28 20 / 0.06);
+}
+.menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  border-radius: 9px;
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  transition: background-color 200ms var(--ease-tender), color 200ms var(--ease-tender);
+}
+.menu-item:hover:not(:disabled), .menu-item[data-active='true'] { background: rgb(212 196 168 / 0.28); }
+.menu-item:disabled { color: var(--color-sepia-muted); cursor: default; }

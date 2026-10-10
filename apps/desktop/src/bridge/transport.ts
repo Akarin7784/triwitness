@@ -10,6 +10,8 @@ export interface StartOptions {
   repo: string
   issue: string
   mode: CoreMode
+  model?: string
+  thinking?: string
 }
 
 export interface CoreTransport {
@@ -32,7 +34,13 @@ class TauriTransport implements CoreTransport {
   readonly kind = 'tauri' as const
 
   async start(o: StartOptions) {
-    return invoke<string>('core_start', { repo: o.repo, issue: o.issue, mode: o.mode })
+    return invoke<string>('core_start', {
+      repo: o.repo,
+      issue: o.issue,
+      mode: o.mode,
+      model: o.model ?? null,
+      thinking: o.thinking ?? null,
+    })
   }
 
   async send(key: string, line: string) {

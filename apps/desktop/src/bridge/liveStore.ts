@@ -109,12 +109,18 @@ function wire(t: LiveTask, transport: CoreTransport, key: string, id: string) {
     .then((un) => detach.set(id, un))
 }
 
-export async function startTask(opts: { repo: string; issue: string; mode: CoreMode }): Promise<string> {
+export async function startTask(opts: {
+  repo: string
+  issue: string
+  mode: CoreMode
+  model?: string
+  thinking?: string
+}): Promise<string> {
   const transport = await getTransport()
   if (!transport) throw new Error('未连接核心')
   const repo = opts.repo.trim() || (opts.mode === 'demo' ? defaultDemoRepo() : '')
   if (!repo) throw new Error('先选仓库')
-  const key = await transport.start({ repo, issue: opts.issue, mode: opts.mode })
+  const key = await transport.start({ repo, issue: opts.issue, mode: opts.mode, model: opts.model, thinking: opts.thinking })
   const id = `${Date.now().toString(36)}-${key}`
   const t = new LiveTask(id)
   registry.set(id, t)

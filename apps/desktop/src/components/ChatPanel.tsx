@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { FolderGit2 } from 'lucide-react'
+import { ArrowDown, FolderGit2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 import type { ChatMessage } from '../types'
 import { cacheHitRate, type RunView } from '../data/mapEvent'
@@ -9,6 +9,9 @@ import { ApprovalCard } from './ApprovalCard'
 import { ResultCard } from './ResultCard'
 import type { PendingApproval } from '../bridge/liveTask'
 import type { ApprovalScope, ResultMsg } from '../bridge/protocol'
+import type { Turn } from '../data/turns'
+import { AssistantTurn } from './AssistantTurn'
+import { useStickToBottom } from '../hooks/useStickToBottom'
 import { Tip } from './Tip'
 import { PHASE_DOT } from './phase'
 
@@ -26,6 +29,9 @@ interface ChatPanelProps {
   running?: boolean
   onStop?: () => void
   allowEmpty?: boolean
+  /** 对话流（UI-20）：有就按 Claude 式一轮渲染，替代消息气泡 */
+  turn?: Turn | null
+  draftKey?: string
 }
 
 export function ChatPanel({
@@ -41,12 +47,10 @@ export function ChatPanel({
   running,
   onStop,
   allowEmpty,
+  turn,
+  draftKey,
 }: ChatPanelProps) {
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length, approvals.length, result])
+  const { scrollRef, contentRef, atBottom, toBottom } = useStickToBottom<HTMLDivElement, HTMLDivElement>()
 
   const pending = approvals.length > 0 && !result
 
@@ -80,20 +84,46 @@ export function ChatPanel({
         )}
       </header>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto scroll-soft px-8 py-5">
-        {messages.map((m) => (
-          <MessageBubble key={m.id} message={m} />
-        ))}
+      <div className="relative min-h-0 flex-1">
+      <div ref={scrollRef} data-testid="chat-scroll" className="h-full overflow-y-auto scroll-soft px-8 py-5">
+      <div ref={contentRef} className="mx-auto max-w-[760px] space-y-3">
+        {turn ? <AssistantTurn turn={turn} /> : messages.map((m) => <MessageBubble key={m.id} message={m} />)}
         {onApprove &&
           approvals.map((a) => (
             <ApprovalCard key={a.requestId} req={a} onDecide={(c) => onApprove(a.requestId, c.decision, c.scope)} />
           ))}
         {result && <ResultCard result={result} />}
         {notice && <p className="fade-in text-center text-[12px] text-sepia-muted">{notice}</p>}
-        <div ref={bottomRef} />
+      </div>
+      </div>
+      <AnimatePresence>
+        {!atBottom && (
+          <motion.button
+            type="button"
+            data-testid="jump-bottom"
+            aria-label="回到底部"
+            onClick={() => toBottom()}
+            initial={{ opacity: 0, y: 8, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+            className="paper-card absolute bottom-3 left-1/2 inline-flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-sepia hover:text-amber"
+          >
+            <ArrowDown size={15} strokeWidth={1.7} />
+          </motion.button>
+        )}
+      </AnimatePresence>
       </div>
 
-      <Composer onSend={onSend} repo={repo} running={running} onStop={onStop} allowEmpty={allowEmpty} />
+      <Composer
+        key={draftKey}
+        draftKey={draftKey}
+        onSend={onSend}
+        repo={repo}
+        running={running}
+        onStop={onStop}
+        allowEmpty={allowEmpty}
+      />
     </section>
   )
 }

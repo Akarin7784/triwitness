@@ -29,6 +29,14 @@ export function runArgs(repo: string, issue: string, mode: string): string[] {
   return a
 }
 
+/** 与 Rust choice_args 一致：只放行白名单 */
+export function choiceArgs(model?: unknown, thinking?: unknown): string[] {
+  const a: string[] = []
+  if (model === 'deepseek-flash') a.push('--model', model)
+  if (typeof thinking === 'string' && ['off', 'low', 'medium', 'high'].includes(thinking)) a.push('--thinking', thinking)
+  return a
+}
+
 export function readRun(runDir: string, afterSeq: number): string[] {
   const text = readFileSync(join(runDir, 'trajectory.jsonl'), 'utf8')
   return text.split(/\r?\n/).filter((l) => {
@@ -88,7 +96,7 @@ export function coreBridge(repoRoot: string): Plugin {
           if (url.pathname === '/start' && req.method === 'POST') {
             const b = await body(req)
             const [cmd, ...pre] = core()
-            const child = spawn(cmd, [...pre, ...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo'))], {
+            const child = spawn(cmd, [...pre, ...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo')), ...choiceArgs(b.model, b.thinking)], {
               env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
               stdio: ['pipe', 'pipe', 'pipe'],
               windowsHide: true,
