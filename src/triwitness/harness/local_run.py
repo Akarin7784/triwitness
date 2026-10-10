@@ -18,7 +18,8 @@ from triwitness.core.ids import new_run_id, new_task_id
 from triwitness.core.models import Budget
 from triwitness.cost.report import render_cost_markdown
 from triwitness.harness.approvals import Approver, PermissionGate
-from triwitness.harness.loop import HarnessConfig, RouterLike
+from triwitness.harness.config import HarnessConfig
+from triwitness.harness.loop import RouterLike
 from triwitness.harness.run import TaskResult, run_task
 from triwitness.permissions.config import load_policy
 from triwitness.permissions.engine import PermissionEngine
@@ -73,7 +74,7 @@ async def run_local(
         engine = PermissionEngine(policy, workspace=sb.spec.workdir)
         gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo)
         shell = getattr(getattr(sb, "shell", None), "kind", "bash")
-        registry = ToolRegistry(default_tools(shell=shell), gate=gate)
+        registry = ToolRegistry(default_tools(shell=shell, names=(harness or HarnessConfig.load()).tools), gate=gate)
         tw_dir = str(getattr(sb, "tw_dir", "/workspace/.tw"))
         agents_md = repo / "AGENTS.md"
         result = await run_task(

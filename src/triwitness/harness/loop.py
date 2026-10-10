@@ -7,14 +7,15 @@ import json
 from collections import deque
 from typing import Any, Literal, Protocol
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from triwitness.config import load_config
 from triwitness.core.errors import BudgetExceeded, SandboxError, TriWitnessError
 from triwitness.core.events import LoopWarningPayload, ModelCallPayload, ToolCallPayload
 from triwitness.core.models import Budget, FinishReport, Role
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.harness.approvals import NeedsHuman
+from triwitness.harness.config import HarnessConfig
+from triwitness.harness.context import ContextManager
 from triwitness.llm.types import LLMRequest, LLMResponse, Message
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools.base import ToolContext, ToolRegistry
@@ -30,33 +31,6 @@ class RouterLike(Protocol):
         mode: Any = ...,
         category: str = ...,
     ) -> LLMResponse: ...
-
-
-class HarnessConfig(BaseModel):
-    stuck_after_no_tool: int = 3
-    tool_result_max_chars: int = 32_000
-    head_ratio: float = 0.6
-    window: int = 8
-    repeat_threshold: int = 3
-    failure_threshold: int = 5
-    no_progress_threshold: int = 6
-    max_warnings: int = 3
-    reminders: dict[str, str] = Field(default_factory=dict)
-
-    @classmethod
-    def load(cls, name: str = "harness/baseline.yaml") -> HarnessConfig:
-        cfg = load_config(name)
-        return cls(**cfg.get("loop", {}), **cfg.get("loop_detection", {}), reminders=cfg.get("reminders", {}))
-
-    def reminder(self, key: str, **kw: str) -> str:
-        defaults = {
-            "no_tool": "请调用工具继续，或调用 finish 结束。",
-            "wrap_up": "预算已用到警戒线，请尽快收尾。",
-            "repeat": "你在重复同样的动作（{detail}），请换个思路。",
-            "failures": "连续多次工具调用失败（{detail}），请换一种做法。",
-            "no_progress": "已经 {detail}，请修改代码、运行测试或调用 finish。",
-        }
-        return self.reminders.get(key, defaults[key]).format(**kw)
 
 
 class LoopOutcome(BaseModel):
@@ -76,11 +50,18 @@ def prefix_hash(req: LLMRequest) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
-def build_system_prompt(role_prompt: str, *, agents_md: str | None = None, tool_names: list[str] | None = None) -> str:
-    """稳定前缀：角色提示 + AGENTS.md 摘要 + 工具清单（不含任何随任务变化的内容）。"""
+def build_system_prompt(
+    role_prompt: str,
+    *,
+    agents_md: str | None = None,
+    tool_names: list[str] | None = None,
+    agents_md_max_chars: int = 4000,
+) -> str:
+    """稳定前缀：角色提示 + AGENTS.md 摘要 + 工具清单（不含任何随任务变化的内容）。
+    AGENTS.md 摘要的长度由 allocation.prefix 扣掉提示与工具 schema 后的余量决定（spec 007 §token 分配）。"""
     parts = [role_prompt.strip()]
-    if agents_md:
-        parts.append("## 仓库约定（AGENTS.md 摘要）\n" + agents_md.strip()[:4000])
+    if agents_md and agents_md_max_chars > 0:
+        parts.append("## 仓库约定（AGENTS.md 摘要）\n" + agents_md.strip()[:agents_md_max_chars])
     if tool_names:
         parts.append("## 可用工具\n" + "、".join(sorted(tool_names)))
     return "\n\n".join(parts)
@@ -129,13 +110,37 @@ class AgentLoop:
         self.mode: Literal["background", "eval"] = mode
         self.guard = guard or TaskBudgetGuard(budget=budget)
         self.messages: list[Message] = []
+        self.context: ContextManager | None = None
+
+    async def _summarize(self, req: LLMRequest, task_id: str) -> LLMResponse:
+        """压缩用的 summarizer 调用：同一个预算守卫与类别信封，并照常写 model_call 事件（role=summarizer）。"""
+        resp = await self.router.complete(req, guard=self.guard, task_id=task_id, mode=self.mode,
+                                          category=self.category)  # fmt: skip
+        rec = self.emitter
+        seq = rec.next_seq
+        req_ref = rec.artifact(f"{seq}-request.json", {
+            "role": req.role, "thinking": req.thinking,
+            "messages": [m.model_dump(mode="json", exclude_none=True) for m in req.messages],
+        })  # fmt: skip
+        rec.emit(
+            ModelCallPayload(model=_bare_model(resp.model or resp.served_model or "?"), served_model=resp.served_model,
+                             thinking=req.thinking, usage=resp.usage, cost_cny=resp.cost_cny, peak=resp.peak,
+                             latency_ms=resp.latency_ms, finish_reason=resp.finish_reason, request_ref=req_ref,
+                             display="压缩摘要"),
+            role="summarizer",
+        )  # fmt: skip
+        return resp
 
     async def run(self, task_prompt: str, ctx: ToolContext) -> LoopOutcome:
         cfg = self.config
         rec = self.emitter
-        self.messages = [Message(role="system", content=self.system_prompt), Message(role="user", content=task_prompt)]
         tools = self.registry.schemas()
         tool_names = [t["function"]["name"] for t in tools]
+        cm = ContextManager(cfg, tools_chars=len(json.dumps(tools, ensure_ascii=False)),
+                            summarize=lambda r: self._summarize(r, ctx.task_id))  # fmt: skip
+        self.context = cm
+        self.messages = [Message(role="system", content=self.system_prompt),
+                         Message(role="user", content=cm.task_message(task_prompt))]  # fmt: skip
         no_tool = 0
         warnings = 0
         wrapped = False
@@ -145,6 +150,18 @@ class AgentLoop:
         seen_reads: set[str] = set()
         steps = 0
         while True:
+            # 上下文管理（spec 007）：先批量清理，仍超线再压缩；两者都会写 context_event
+            cleared = cm.maybe_clear(self.messages)
+            if cleared is not None:
+                rec.emit(cleared, role=self.role)
+            if cm.needs_compact(self.messages, steps):
+                try:
+                    compacted = await cm.compact(self.messages, steps, ctx)
+                except BudgetExceeded as e:
+                    return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
+                if compacted is not None:
+                    self.messages, payload = compacted
+                    rec.emit(payload, role=self.role)
             req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools)
             try:
                 resp = await self.router.complete(
@@ -155,6 +172,7 @@ class AgentLoop:
             except TriWitnessError as e:
                 return LoopOutcome(status="error", steps=steps, reason=f"{type(e).__name__}: {e}")
             steps += 1
+            cm.observe(len(req.messages), resp.usage)
             seq = rec.next_seq
             req_ref = rec.artifact(f"{seq}-request.json", {
                 "role": self.role, "thinking": req.thinking, "tools": tool_names,
@@ -197,7 +215,8 @@ class AgentLoop:
                 except SandboxError as e:
                     return LoopOutcome(status="error", steps=steps, reason=f"沙箱错误：{e}")
                 duration_ms = max(0, round((rec.monotonic() - t0) * 1000))
-                content, cut = truncate_for_model(result.content, cfg.tool_result_max_chars, cfg.head_ratio)
+                limit, ratio = cfg.max_tool_result_chars, cfg.head_ratio_for(call.name)
+                content, cut = truncate_for_model(result.content, limit, ratio)
                 if cut:
                     saved = f"{ctx.tw_dir.rstrip('/')}/outputs/{ctx.step_index}.txt"
                     try:
@@ -207,7 +226,9 @@ class AgentLoop:
                         saved = None
                 else:
                     saved = None
-                tool_msg = Message(role="tool", tool_call_id=call.id, name=call.name, content=content)
+                tool_msg = Message(role="tool", tool_call_id=call.id, name=call.name,
+                                   content=cm.tool_content(call.name, content))  # fmt: skip
+                cm.record_tool(call, result)
                 seq = rec.next_seq
                 output_ref = rec.artifact(f"{seq}-output.txt", result.content) or saved
                 message_ref = rec.artifact(f"{seq}-tool.json", tool_msg.model_dump(mode="json", exclude_none=True))

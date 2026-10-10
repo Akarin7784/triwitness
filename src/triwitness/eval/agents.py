@@ -19,7 +19,8 @@ from triwitness.core.events import TaskFinishedPayload, TaskStartedPayload
 from triwitness.core.models import Budget, CostReport, FileChange, FinishReport
 from triwitness.cost.report import CostLedger
 from triwitness.eval.task import EvalTask
-from triwitness.harness.loop import HarnessConfig, RouterLike
+from triwitness.harness.config import HarnessConfig
+from triwitness.harness.loop import RouterLike
 from triwitness.harness.run import run_task
 from triwitness.llm.pricing import pricing_version
 from triwitness.sandbox.base import Sandbox
@@ -138,10 +139,11 @@ class LLMAgent:
 
     async def solve(self, task: EvalTask, sandbox: Sandbox, rec: TrajectoryRecorder) -> AgentRun:
         budget = self.budget.model_copy(update={"max_cost_cny": min(self.budget.max_cost_cny, task.tw.max_cost_cny)})
+        harness = self.harness or HarnessConfig.load()
         res = await run_task(
             recorder=rec,
             router=self.router_factory(),
-            registry=ToolRegistry(default_tools()),
+            registry=ToolRegistry(default_tools(names=harness.tools)),
             sandbox=sandbox,
             issue_title=task.config.task.description or task.id,
             task_prompt=task.instruction,
@@ -150,7 +152,7 @@ class LLMAgent:
             config_hash=self.config_hash,
             test_command=task.tw.test_cmd,
             mode="eval",
-            config=self.harness,
+            config=harness,
             category=self.category,
         )
         claimed = res.status == "done" and res.finish is not None and res.finish.tests_passed

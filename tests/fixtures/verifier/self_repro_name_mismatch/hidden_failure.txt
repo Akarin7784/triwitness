@@ -1,0 +1,28 @@
+_________________________ test_data_types_tokenization _________________________
+
+    def test_data_types_tokenization():
+        code = """
+        int a;
+        uint b;
+        float c;
+        double d;
+        bool e;
+        unsigned int f;
+        """
+        try:
+            tokens = tokenize_code(code)
+            assert any(t[0] == "INT" for t in tokens), "Missing 'INT' token"
+            assert any(t[0] == "UINT" for t in tokens), "Missing 'UINT' token"
+            assert any(t[0] == "FLOAT" for t in tokens), "Missing 'FLOAT' token"
+            assert any(t[0] == "DOUBLE" for t in tokens), "Missing 'DOUBLE' token"
+            assert any(t[0] == "BOOL" for t in tokens), "Missing 'BOOL' token"
+>           assert any(
+                t[0] == "UNSIGNED_INT" for t in tokens
+            ), "Missing 'UNSIGNED INT' token"
+E           AssertionError: Missing 'UNSIGNED INT' token
+E           assert False
+E            +  where False = any(<generator object test_data_types_tokenization.<locals>.<genexpr> at 0x7f50fbe57c80>)
+
+tests/test_translator/test_lexer.py:164: AssertionError
+
+1 failed, 14 passed（隐藏测试 tests/test_translator/test_lexer.py）

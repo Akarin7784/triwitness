@@ -83,6 +83,10 @@ def action_for(tool: Tool, params: BaseModel, ctx: ToolContext, *, shell_categor
         return Action("Read", getattr(p, READ_TOOLS[tool.name]) or ".", tool=tool.name)
     if tool.name in EDIT_TOOLS:
         return Action("Edit", getattr(p, EDIT_TOOLS[tool.name]), tool=tool.name)
+    if tool.name == "git":  # 只读：diff / status / log / show
+        return Action("Read", p.path or ".", tool="git")
+    if tool.name == "repo_map":  # 读整个仓库的 .py 签名
+        return Action("Read", ".", tool="repo_map")
     if tool.name == "bash":
         return Action("Bash", p.command, tool="bash")
     if tool.name == "powershell":
@@ -90,7 +94,7 @@ def action_for(tool: Tool, params: BaseModel, ctx: ToolContext, *, shell_categor
     if tool.name == "run_tests":
         cmd = RunTests.command(ctx, p)
         return Action(shell_category, cmd, tool="run_tests") if cmd else None  # type: ignore[arg-type]
-    return None  # finish 等无副作用工具
+    return None  # finish、notes（只写 .tw/，不进 diff）等
 
 
 class PermissionGate:

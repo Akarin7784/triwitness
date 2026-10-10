@@ -1,0 +1,3 @@
+# 消融：4 工具极简版（04 §3.4）
+extends: baseline.yaml
+tools: [bash, edit_file, finish, read_file]

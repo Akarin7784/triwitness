@@ -584,6 +584,212 @@
       "title": "CheckpointPayload",
       "type": "object"
     },
+    "ContextEventEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "context_event",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ContextEventPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ContextEventEvent",
+      "type": "object"
+    },
+    "ContextEventPayload": {
+      "additionalProperties": true,
+      "description": "上下文管理（spec 007，W2-13/14）：clear = 批量把较早的可重取工具结果换成占位符；compact = 摘要压缩。",
+      "properties": {
+        "action": {
+          "enum": [
+            "clear",
+            "compact"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "cleared": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cleared",
+          "type": "integer"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "failures_recorded": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Failures Recorded",
+          "type": "integer"
+        },
+        "notes_chars": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes Chars"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "summarizer": {
+          "anyOf": [
+            {
+              "enum": [
+                "model",
+                "fallback"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summarizer"
+        },
+        "summary_chars": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summary Chars"
+        },
+        "tokens_after": {
+          "minimum": 0,
+          "title": "Tokens After",
+          "type": "integer"
+        },
+        "tokens_before": {
+          "minimum": 0,
+          "title": "Tokens Before",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action",
+        "tokens_before",
+        "tokens_after"
+      ],
+      "title": "ContextEventPayload",
+      "type": "object"
+    },
     "CostLine": {
       "additionalProperties": false,
       "properties": {
@@ -2488,6 +2694,30 @@
           "default": null,
           "title": "Display"
         },
+        "harness": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Harness"
+        },
+        "harness_hash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Harness Hash"
+        },
         "issue_number": {
           "anyOf": [
             {
@@ -2513,6 +2743,21 @@
           ],
           "title": "Mode",
           "type": "string"
+        },
+        "prompt_versions": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prompt Versions"
         },
         "repo": {
           "title": "Repo",
@@ -3070,6 +3315,7 @@
       "approval_requested": "#/$defs/ApprovalRequestedEvent",
       "approval_resolved": "#/$defs/ApprovalResolvedEvent",
       "checkpoint": "#/$defs/CheckpointEvent",
+      "context_event": "#/$defs/ContextEventEvent",
       "error": "#/$defs/ErrorEvent",
       "hitl_request": "#/$defs/HitlRequestEvent",
       "hitl_response": "#/$defs/HitlResponseEvent",
@@ -3103,6 +3349,9 @@
     },
     {
       "$ref": "#/$defs/LoopWarningEvent"
+    },
+    {
+      "$ref": "#/$defs/ContextEventEvent"
     },
     {
       "$ref": "#/$defs/HitlRequestEvent"

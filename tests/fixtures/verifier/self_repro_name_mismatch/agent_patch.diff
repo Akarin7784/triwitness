@@ -1,0 +1,84 @@
+diff --git a/crosstl/translator/lexer.py b/crosstl/translator/lexer.py
+index 84cad4f..b88866d 100644
+--- a/crosstl/translator/lexer.py
++++ b/crosstl/translator/lexer.py
+@@ -33,6 +33,8 @@ TOKENS = OrderedDict(
+         ("RBRACE", r"\}"),
+         ("LPAREN", r"\("),
+         ("RPAREN", r"\)"),
++        ("LBRACKET", r"\["),
++        ("RBRACKET", r"\]"),
+         ("SEMICOLON", r";"),
+         ("COMMA", r","),
+         ("ASSIGN_ADD", r"\+="),
+diff --git a/tests/tw_repro/test_issue_42.py b/tests/tw_repro/test_issue_42.py
+new file mode 100644
+index 0000000..8dd50aa
+--- /dev/null
++++ b/tests/tw_repro/test_issue_42.py
+@@ -0,0 +1,65 @@
++"""Repro tests for the translator frontend lexer token support.
++
++The translator parser (``crosstl/translator/parser.py``, ``parse_cbuffer``)
++expects ``LBRACKET``/``RBRACKET`` tokens for array declarations
++(e.g. ``float weights[2];``), but the translator lexer previously raised
++``SyntaxError: Illegal character '['`` because those tokens were missing.
++"""
++
++from typing import List
++
++import pytest
++
++from crosstl.translator.lexer import Lexer
++from crosstl.translator.parser import Parser
++
++
++def tokenize_code(code: str) -> List:
++    return Lexer(code).tokens
++
++
++def parse_code(tokens: List):
++    return Parser(tokens).parse()
++
++
++def test_bracket_tokens_are_recognized():
++    code = "float weights[2];"
++    tokens = tokenize_code(code)
++    types = [t[0] for t in tokens]
++    assert "LBRACKET" in types, "Missing 'LBRACKET' token for '['"
++    assert "RBRACKET" in types, "Missing 'RBRACKET' token for ']'"
++    assert ("LBRACKET", "[") in tokens
++    assert ("RBRACKET", "]") in tokens
++
++
++def test_cbuffer_array_tokenization():
++    code = """
++    cbuffer Material {
++        vec4 colors[3];
++        float weights[2];
++    };
++    """
++    tokens = tokenize_code(code)
++    types = [t[0] for t in tokens]
++    assert "CBUFFER" in types
++    assert types.count("LBRACKET") == 2
++    assert types.count("RBRACKET") == 2
++
++
++def test_cbuffer_array_parsing():
++    code = """
++    cbuffer Material {
++        vec4 colors[3];
++        float weights[2];
++    };
++    """
++    tokens = tokenize_code(code)
++    ast = parse_code(tokens)
++    assert ast.cbuffers, "cbuffer was not parsed"
++    names = [m.name for m in ast.cbuffers[0].members]
++    assert "colors[3]" in names
++    assert "weights[2]" in names
++
++
++if __name__ == "__main__":
++    pytest.main()

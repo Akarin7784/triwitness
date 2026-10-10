@@ -133,7 +133,7 @@ async def test_tool_result_truncated_and_saved() -> None:
     assert out.status == "finished"
     tool_msg = next(m for m in loop.messages if m.role == "tool")
     assert len(tool_msg.content or "") < 33_000 and "省略" in (tool_msg.content or "")
-    assert (tool_msg.content or "").rstrip().endswith("可用 read_file 查看）")
+    assert (tool_msg.content or "").rstrip().endswith("可用 read_file 查看）\n</untrusted>")  # 工具输出包不可信块
     ev = next(e for e in em.events if e.kind == "tool_call")
     assert ev.payload["truncated"] and ev.payload["output_ref"].endswith("/outputs/1.txt")
     assert any(k.endswith("outputs/1.txt") for k in sb.files)

@@ -17,6 +17,17 @@ describe('toStreamLine', () => {
     expect(l).toMatchObject({ text: '$ run_tests → 42 passed', role: 'executor', tone: 'normal', seq: 1 })
   })
 
+  it('context_event：上下文清理 / 压缩显示一行', () => {
+    const l = toStreamLine({
+      ...env,
+      seq: 5,
+      kind: 'context_event',
+      payload: { action: 'clear', tokens_before: 80000, tokens_after: 30000, cleared: 6 },
+    } as AnyEvent)
+    expect(l?.text).toBe('上下文清理 6 条')
+    expect(l?.tone).toBe('normal')
+  })
+
   it('没有 display 时按 kind 拼一行', () => {
     const l = toStreamLine({
       ...env,

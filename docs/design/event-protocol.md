@@ -31,10 +31,11 @@
 
 | kind | payload 必填（可选） | UI 呈现 |
 |---|---|---|
-| `task_started` | `issue_title`、`repo`、`config_hash`（`issue_number`、`mode`） | 侧栏新会话；对话首条 |
+| `task_started` | `issue_title`、`repo`、`config_hash`（`issue_number`、`mode`、`harness`、`harness_hash`、`prompt_versions`） | 侧栏新会话；对话首条 |
 | `state_change` | `from`、`to`（TaskState） | 推流状态点颜色与角色点亮；标题栏状态 |
 | `model_call` | `model`、`thinking`、`usage{input_tokens,cache_hit_tokens,cache_miss_tokens,output_tokens,reasoning_tokens}`、`cost_cny`、`latency_ms`（`served_model`、`peak`、`finish_reason`、`request_ref`、`response_ref`） | 推流一行；状态栏累计 ¥ 与命中率；`peak=true` 标红 |
 | `tool_call` | `tool`、`ok`、`duration_ms`（`exit_code`、`output_ref`、`truncated`、`error_type`、`permission`、`permission_rule`、`message_ref`） | 推流 `$ tool …`；失败用赭红 |
+| `context_event` | `action`（clear / compact）、`tokens_before`、`tokens_after`（`cleared`、`summary_chars`、`notes_chars`、`failures_recorded`、`summarizer`：model / fallback） | 推流细行“上下文清理 N 条” / “上下文压缩”（spec 007） |
 | `checkpoint` | `label`（`ref`） | 推流细分隔线 |
 | `loop_warning` | `signal`（repeat_action / consecutive_failures / no_progress）、`level`（1–3）（`detail`） | 推流警示行 |
 | `hitl_request` | `request_id`、`question`、`options`（`blocking`） | 审批卡片（UI-13，W4 以后） |

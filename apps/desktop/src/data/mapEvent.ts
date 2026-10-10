@@ -94,6 +94,8 @@ function fallbackText(e: TwEvent): string {
       return e.payload.label
     case 'loop_warning':
       return `⚠ ${e.payload.signal}`
+    case 'context_event':
+      return e.payload.action === 'compact' ? '上下文压缩' : `上下文清理 ${e.payload.cleared ?? 0} 条`
     case 'hitl_request':
       return e.payload.question
     case 'hitl_response':

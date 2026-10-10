@@ -199,6 +199,47 @@ def _glob_ok(rel: str, glob: str | None) -> bool:
     return fnmatch.fnmatch(rel, glob) or fnmatch.fnmatch(rel.rsplit("/", 1)[-1], glob)
 
 
+class GitIgnore:
+    """.gitignore 的常用子集（W2-07）：注释、`!` 取反、`dir/` 只匹配目录、含 `/` 的模式相对根锚定、
+    其余匹配任意层的名字。最后一条匹配的规则生效；只读仓库根的 .gitignore（够 Agent 用，不追求和 git 完全一致）。"""
+
+    def __init__(self, text: str = "") -> None:
+        self.rules: list[tuple[str, bool, bool, bool]] = []  # (模式, 取反, 只匹配目录, 锚定)
+        for raw in text.splitlines():
+            line = raw.rstrip()
+            if not line or line.startswith("#"):
+                continue
+            neg = line.startswith("!")
+            line = line[1:] if neg else line
+            dir_only = line.endswith("/")
+            line = line.rstrip("/")
+            anchored = "/" in line
+            self.rules.append((line.lstrip("/"), neg, dir_only, anchored))
+
+    def _match(self, rel: str, is_dir: bool) -> bool | None:
+        hit: bool | None = None
+        name = rel.rsplit("/", 1)[-1]
+        for pat, neg, dir_only, anchored in self.rules:
+            if dir_only and not is_dir:
+                continue
+            if fnmatch.fnmatchcase(rel if anchored else name, pat):
+                hit = not neg
+        return hit
+
+    def ignored(self, rel: str) -> bool:
+        if not self.rules:
+            return False
+        parts = rel.split("/")
+        return any(self._match("/".join(parts[:i]), is_dir=i < len(parts)) for i in range(1, len(parts) + 1))
+
+
+async def _gitignore(ctx: ToolContext) -> GitIgnore:
+    try:
+        return GitIgnore(_decode(await ctx.sandbox.read_file(".gitignore")))
+    except SandboxError:
+        return GitIgnore()
+
+
 class ListFiles(BaseTool):
     name = "list_files"
     Params = ListFilesParams
@@ -206,17 +247,7 @@ class ListFiles(BaseTool):
 
     async def run(self, params: ListFilesParams, ctx: ToolContext) -> ToolResult:
         try:
-            root = _host_root(ctx, params.path)
-            if root is not None:
-                base = _host_root(ctx, ".") or root
-                files = [_rel(p, base) for p in _walk(root)]
-            else:
-                q = shlex.quote(params.path)
-                r = await ctx.sandbox.exec(
-                    f"find {q} \\( -name .git -o -name .tw -o -name node_modules -o -name .venv \\) -prune "
-                    f"-o -type f -print 2>/dev/null | sed 's|^\\./||' | sort | head -n 5000"
-                )
-                files = [ln for ln in r.stdout.splitlines() if ln]
+            files = await collect_files(ctx, params.path)
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="sandbox")
         files = [f for f in files if _glob_ok(f, params.glob)]
@@ -228,11 +259,57 @@ class ListFiles(BaseTool):
                           data={"count": len(files)})  # fmt: skip
 
 
+async def collect_files(ctx: ToolContext, path: str = ".") -> list[str]:
+    """path 下所有文件（相对工作区根，已排序，跳过 SKIP_DIRS 与 .gitignore）。list_files / repo_map 共用。"""
+    root = _host_root(ctx, path)
+    if root is not None:
+        base = _host_root(ctx, ".") or root
+        files = [_rel(p, base) for p in _walk(root)]
+    else:
+        q = shlex.quote(path)
+        r = await ctx.sandbox.exec(
+            f"find {q} \\( -name .git -o -name .tw -o -name node_modules -o -name .venv -o -name __pycache__ \\) "
+            f"-prune -o -type f -print 2>/dev/null | sed 's|^\\./||' | sort | head -n 5000"
+        )
+        files = [ln for ln in r.stdout.splitlines() if ln]
+    ign = await _gitignore(ctx)
+    return [f for f in files if not ign.ignored(f)]
+
+
 # ---------------------------------------------------------------- grep
 class GrepParams(BaseModel):
     pattern: str = Field(min_length=1, description="正则表达式（Python / ERE 语法）")
     path: str = Field(default=".", description="搜索的目录或文件")
     glob: str | None = Field(default=None, description="只搜匹配此通配的文件，如 *.py")
+    context: int = Field(default=0, ge=0, le=5, description="每处匹配前后各带几行上下文")
+    max_matches: int = Field(default=MAX_MATCHES, ge=1, le=200, description="最多返回多少处匹配")
+
+
+def _regex_hint(pattern: str, err: re.error) -> str:
+    """正则错误 → 可操作的修正建议（04 §3.4）。"""
+    tips = []
+    if any(c in pattern for c in "()[]{}") and ("unbalanced" in str(err) or "missing" in str(err)):
+        tips.append("括号要成对；字面量括号写成 \\( \\) \\[ \\]")
+    if pattern.startswith(("*", "+", "?")) or "nothing to repeat" in str(err):
+        tips.append("* + ? 前面要有字符；任意字符用 .*")
+    tips.append(f"或把整个模式当字面量：{re.escape(pattern)}")
+    return f"正则错误：{err}。建议：" + "；".join(tips)
+
+
+def _with_context(rel: str, lines: list[str], hits: list[int], n: int) -> list[str]:
+    """hits 为 0 基行号；输出 path:行:内容（匹配）与 path-行-内容（上下文），不相邻的块之间用 -- 分隔。"""
+    out: list[str] = []
+    last = -2
+    hit_set = set(hits)
+    for h in hits:
+        lo, hi = max(0, h - n), min(len(lines) - 1, h + n)
+        if out and lo > last + 1:
+            out.append("--")
+        for i in range(max(lo, last + 1), hi + 1):
+            sep = ":" if i in hit_set else "-"
+            out.append(f"{rel}{sep}{i + 1}{sep}{lines[i][:300]}")
+        last = max(last, hi)
+    return out
 
 
 class Grep(BaseTool):
@@ -244,16 +321,18 @@ class Grep(BaseTool):
         try:
             rx = re.compile(params.pattern)
         except re.error as e:
-            return ToolResult(ok=False, content=f"正则错误：{e}；字面量请用 re.escape 风格转义（如 \\( \\.）",
-                              error_code="bad_regex")  # fmt: skip
-        matches: list[str] = []
+            return ToolResult(ok=False, content=_regex_hint(params.pattern, e), error_code="bad_regex")
+        cap = params.max_matches
+        out: list[str] = []
+        n_hits = 0
         try:
             root = _host_root(ctx, params.path)
             if root is not None:
                 base = _host_root(ctx, ".") or root
+                ign = await _gitignore(ctx)
                 for f in _walk(root):
                     rel = _rel(f, base)
-                    if not _glob_ok(rel, params.glob):
+                    if not _glob_ok(rel, params.glob) or ign.ignored(rel):
                         continue
                     try:
                         blob = f.read_bytes()
@@ -261,24 +340,37 @@ class Grep(BaseTool):
                         continue
                     if b"\x00" in blob[:8000]:
                         continue
-                    for i, line in enumerate(_decode(blob).splitlines(), 1):
-                        if rx.search(line):
-                            matches.append(f"{rel}:{i}:{line[:300]}")
-                            if len(matches) > MAX_MATCHES:
-                                break
-                    if len(matches) > MAX_MATCHES:
+                    lines = _decode(blob).splitlines()
+                    hits = [i for i, line in enumerate(lines) if rx.search(line)]
+                    if not hits:
+                        continue
+                    hits = hits[: cap + 1 - n_hits]
+                    n_hits += len(hits)
+                    if params.context:
+                        if out:
+                            out.append("--")
+                        out.extend(_with_context(rel, lines, hits[:cap], params.context))
+                    else:
+                        out.extend(f"{rel}:{i + 1}:{lines[i][:300]}" for i in hits)
+                    if n_hits > cap:
                         break
             else:
                 inc = f"--include={shlex.quote(params.glob)} " if params.glob else ""
+                ctxflag = f"-C {params.context} " if params.context else ""
+                limit = (cap + 1) * (2 * params.context + 2)
                 r = await ctx.sandbox.exec(
-                    f"grep -rnIE {inc}--exclude-dir=.git --exclude-dir=.tw -e {shlex.quote(params.pattern)} "
-                    f"-- {shlex.quote(params.path)} 2>/dev/null | sed 's|^\\./||' | head -n {MAX_MATCHES + 1}"
+                    f"grep -rnIE {ctxflag}{inc}--exclude-dir=.git --exclude-dir=.tw -e {shlex.quote(params.pattern)} "
+                    f"-- {shlex.quote(params.path)} 2>/dev/null | sed 's|^\\./||' | head -n {limit}"
                 )
-                matches = [ln[:400] for ln in r.stdout.splitlines() if ln]
+                out = [ln[:400] for ln in r.stdout.splitlines() if ln]
+                n_hits = sum(1 for ln in out if re.match(r"^[^:]+:\d+:", ln))
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="sandbox")
-        data: dict[str, Any] = {"count": min(len(matches), MAX_MATCHES), "more": len(matches) > MAX_MATCHES}
-        if not matches:
+        more = n_hits > cap
+        data: dict[str, Any] = {"count": min(n_hits, cap), "more": more}
+        if not out:
             return ToolResult(ok=True, content="（没有匹配）", data=data)
-        more = f"\n…（超过 {MAX_MATCHES} 条，只显示前 {MAX_MATCHES} 条；缩小 path / glob）" if data["more"] else ""
-        return ToolResult(ok=True, content="\n".join(matches[:MAX_MATCHES]) + more, data=data)
+        if more and not params.context:
+            out = out[:cap]
+        tail = f"\n…（超过 {cap} 处，只显示前 {cap} 处；缩小 path / glob）" if more else ""
+        return ToolResult(ok=True, content="\n".join(out) + tail, data=data)

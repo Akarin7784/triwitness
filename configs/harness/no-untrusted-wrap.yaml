@@ -1,0 +1,3 @@
+# 消融：不包 <untrusted> 块（测注入防护的成本 / 收益）
+extends: baseline.yaml
+context: {untrusted_wrap: false}

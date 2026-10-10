@@ -25,6 +25,7 @@ EventKind = Literal[
     "state_change",
     "checkpoint",
     "loop_warning",
+    "context_event",
     "hitl_request",
     "hitl_response",
     "approval_requested",
@@ -58,6 +59,9 @@ class TaskStartedPayload(Payload):
     repo: str
     config_hash: str
     issue_number: int | None = None
+    harness: str | None = None  # configs/harness/<name>.yaml（W2-15）
+    harness_hash: str | None = None  # 规范化配置 + 提示版本的哈希
+    prompt_versions: dict[str, str] | None = None  # 角色 → name@vN（04 §3.3 原则 4）
     mode: Literal["background", "interactive", "eval"] = "background"
 
 
@@ -102,6 +106,19 @@ class LoopWarningPayload(Payload):
     signal: Literal["repeat_action", "consecutive_failures", "no_progress"]
     level: int = Field(ge=1, le=3)
     detail: str | None = None
+
+
+class ContextEventPayload(Payload):
+    """上下文管理（spec 007，W2-13/14）：clear = 批量把较早的可重取工具结果换成占位符；compact = 摘要压缩。"""
+
+    action: Literal["clear", "compact"]
+    tokens_before: int = Field(ge=0)
+    tokens_after: int = Field(ge=0)
+    cleared: int = Field(default=0, ge=0)
+    summary_chars: int | None = None
+    notes_chars: int | None = None
+    failures_recorded: int = Field(default=0, ge=0)
+    summarizer: Literal["model", "fallback"] | None = None
 
 
 class HitlRequestPayload(Payload):
@@ -194,6 +211,7 @@ PAYLOADS: dict[str, type[Payload]] = {
     "tool_call": ToolCallPayload,
     "checkpoint": CheckpointPayload,
     "loop_warning": LoopWarningPayload,
+    "context_event": ContextEventPayload,
     "hitl_request": HitlRequestPayload,
     "hitl_response": HitlResponsePayload,
     "approval_requested": ApprovalRequestedPayload,

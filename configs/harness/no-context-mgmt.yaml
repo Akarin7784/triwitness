@@ -1,0 +1,3 @@
+# 消融：关闭上下文管理（不清理、不压缩），其余同 baseline
+extends: baseline.yaml
+context: {clear: false, compact: false}

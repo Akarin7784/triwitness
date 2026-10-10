@@ -24,6 +24,7 @@ export const KNOWN_KINDS: ReadonlySet<string> = new Set<TwKind>([
   'tool_call',
   'checkpoint',
   'loop_warning',
+  'context_event',
   'hitl_request',
   'hitl_response',
   'verification',

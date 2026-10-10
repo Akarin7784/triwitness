@@ -1,0 +1,3 @@
+# 消融：只清理不压缩
+extends: baseline.yaml
+context: {compact: false}

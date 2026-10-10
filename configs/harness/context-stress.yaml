@@ -1,0 +1,5 @@
+# 压力配置：把工作预算压到 32K，让清理 / 压缩在 dev 的 SWE 任务上真实触发（验证上下文管理，不用于出成绩）
+extends: baseline.yaml
+context:
+  working_budget_tokens: 32000    # 清理线 19.2K、压缩线 25.6K（W1 基线 SWE 题单次请求常到 30–55K）
+  allocation: {prefix: 6000, task: 3000, notes: 1000, summary: 2000, tool_result: 4000, repo_map: 1000}

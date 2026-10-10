@@ -1,0 +1,7 @@
+# W2 上下文管理的真实验证（小工作预算，触发清理 / 压缩）；花费记入 dev 信封
+name: context-stress
+harness: configs/harness/context-stress.yaml
+executor: {model: deepseek-flash, thinking: true, effort: high}
+attempts: 1
+budget_profile: eval
+category: dev

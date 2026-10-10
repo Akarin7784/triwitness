@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Literal
 
@@ -20,16 +21,16 @@ from triwitness.core.events import (
 )
 from triwitness.core.models import Budget, CostReport, FinishReport, TaskState
 from triwitness.cost.report import CostLedger
-from triwitness.harness.loop import AgentLoop, HarnessConfig, LoopOutcome, RouterLike, build_system_prompt
+from triwitness.harness.config import HarnessConfig
+from triwitness.harness.loop import AgentLoop, LoopOutcome, RouterLike, build_system_prompt
 from triwitness.llm.pricing import pricing_version
+from triwitness.prompts import load_prompt
 from triwitness.sandbox.base import Sandbox
+from triwitness.telemetry.otel import bridge_from_env
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools.base import ToolContext, ToolRegistry
 
-EXECUTOR_PROMPT = (
-    "你是 TriWitness 的执行者。在仓库里定位并修复问题：先读相关代码，必要时写复现测试，"
-    "修改后用 run_tests 验证，最后调用 finish 如实报告（测试没过就写 tests_passed=false）。"
-)
+EXECUTOR_PROMPT = load_prompt("executor").text  # 版本化提示：src/triwitness/prompts/executor.md
 
 FinishStatus = Literal["done", "failed", "budget_exceeded", "stuck", "needs_human", "cancelled"]
 _STATUS: dict[str, tuple[FinishStatus, TaskState, str]] = {
@@ -80,18 +81,30 @@ async def run_task(
     category: str = "dev",
 ) -> TaskResult:
     rec = recorder
+    cfg = config or HarnessConfig.load()
     ledger = CostLedger(task_id=rec.task_id, budget_cny=budget.max_cost_cny, pricing_version=pricing_version())
     rec.subscribe(ledger.observe)
+    bridge = bridge_from_env()  # 没配置 OTLP 端点时为 None（spec 005 AC5）
+    if bridge is not None:
+        rec.subscribe(bridge.observe)
     head = f"Issue #{issue_number} · {issue_title}" if issue_number is not None else issue_title
     rec.emit(TaskStartedPayload(issue_title=issue_title, repo=repo, config_hash=config_hash,
-                                issue_number=issue_number, mode=mode, display=head))  # fmt: skip
+                                issue_number=issue_number, mode=mode, display=head, harness=cfg.name,
+                                harness_hash=cfg.config_hash(), prompt_versions=cfg.prompt_versions()))  # fmt: skip
     st = _States(rec)
     st.go(TaskState.PREPARING, "准备沙箱")
     base_ref = await _checkpoint(rec, sandbox, "start")
     st.go(TaskState.EXECUTING, "修复")
-    loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=config, category=category,
-                     system_prompt=build_system_prompt(EXECUTOR_PROMPT, agents_md=agents_md,
-                                                       tool_names=registry.names))  # fmt: skip
+    role_prompt = load_prompt(cfg.prompts.get("executor", "executor")).text
+    # token 分配：AGENTS.md 摘要只能用 prefix 预算里扣掉提示与工具 schema 后的余量
+    room = (
+        cfg.context.chars(cfg.context.allocation.prefix)
+        - len(role_prompt)
+        - len(json.dumps(registry.schemas(), ensure_ascii=False))
+    )
+    loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=cfg, category=category,
+                     system_prompt=build_system_prompt(role_prompt, agents_md=agents_md, tool_names=registry.names,
+                                                       agents_md_max_chars=min(4000, max(0, room))))  # fmt: skip
     ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
                       tw_dir=tw_dir)  # fmt: skip
     outcome = await loop.run(task_prompt, ctx)

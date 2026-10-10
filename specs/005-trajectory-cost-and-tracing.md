@@ -116,7 +116,7 @@ class CostReport(BaseModel):
 - [x] AC2：进程在第 3 步被杀，JSONL 至少包含前 2 步的完整事件（每行都是合法 JSON）。
 - [x] AC3：`CostReport` 的总额等于各 `model_call` 事件 `cost_cny` 之和（误差 < 0.0001）；缓存命中率计算正确。
 - [ ] AC4：配置 Langfuse 后，一个任务在 Langfuse 中显示为一棵 trace 树：task → agent → chat / execute_tool（手动验证，截图放进 docs）。
-- [ ] AC5：未配置 OTel 端点时，运行不报错、不阻塞。
+- [x] AC5：未配置 OTel 端点时，运行不报错、不阻塞。
 - [ ] AC6：导出文件中不包含任何 `sk-`、`ghp_` 前缀的字符串和宿主机 home 路径（单测用注入的假密钥验证）。
 - [x] AC7：PR 账单 Markdown 渲染快照测试通过。
 
@@ -147,3 +147,4 @@ class CostReport(BaseModel):
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：Usage 拆命中/未命中、CostLine 嵌套 usage；轨迹路径；事件格式 = tw-events/1（v、display、role_hint）。
 - 2026-10-10：按 ADR-0005 修订：tw-events/1 新增 `approval_requested` / `approval_resolved`；`tool_call` 增加 `permission`、`permission_rule`；`verification` 增加 `clean_env`、`unverified_reason`（均可选，只增不改）；权限审计日志见 spec 006 §10。
 - 2026-10-10：W1-24 实现 `telemetry/trajectory.py`（TrajectoryRecorder、Trajectory.load）与 `harness/run.py`（单角色任务驱动，产出 task_started → … → task_finished）。tw-events/1 只增不改：`model_call` 加 `request_ref` / `response_ref`，`tool_call` 加 `message_ref`（回放用）；display 与所有产物写盘前脱敏。新增 golden fixture `recorded.jsonl` 由真实代码路径（FakeRouter + FakeSandbox、固定时钟）生成，桌面端测试同时读取。CostReport 先由 `cost/report.py` 从事件汇总（W1-25 再做实时账本与 PR 账单）。
+- 2026-10-10：W2-17 实现 `telemetry/otel.py`：OTel span 由轨迹事件流派生（TrajectoryRecorder 订阅者），不在循环里另插桩；`tw.task → invoke_agent {role} → chat {model} / execute_tool {tool}`，时间取事件的 latency_ms / duration_ms；gen_ai.* + tw.* 属性；默认不记内容（`TW_TRACE_CONTENT=1` 只附加已脱敏的 display）；端点用 `TW_OTLP_ENDPOINT` 或标准 `OTEL_EXPORTER_OTLP_*`（Langfuse 鉴权走 `OTEL_EXPORTER_OTLP_HEADERS`）。AC5 勾选；AC4（Langfuse 截图）留给 W2-18。

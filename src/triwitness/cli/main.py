@@ -112,6 +112,7 @@ def eval_run(
     attempts: Annotated[int | None, typer.Option(help="覆盖配置里的 attempts")] = None,
     concurrency: Annotated[int, typer.Option(help="并发 attempt 数")] = 4,
     limit: Annotated[int | None, typer.Option(help="只跑前 N 个任务")] = None,
+    task: Annotated[list[str] | None, typer.Option(help="只跑这些任务（id 或通配，如 swe-*），可多次")] = None,
     out: Annotated[Path | None, typer.Option(help="结果目录；指定已有目录即续跑")] = None,
     live: Annotated[bool, typer.Option("--live", help="真实调用模型（录制到回放缓存）；默认只回放、不联网")] = False,
     allow_peak: Annotated[bool, typer.Option("--allow-peak", help="允许高峰时段（2× 价，报告标注）")] = False,
@@ -127,7 +128,7 @@ def eval_run(
     from triwitness.eval.report import render_markdown, write_report
     from triwitness.eval.runner import DEFAULT_RESULTS, EvalRunner, RunConfig, run_stamp
     from triwitness.eval.task import discover, load_task
-    from triwitness.harness.loop import HarnessConfig
+    from triwitness.harness.config import HarnessConfig
     from triwitness.llm.gate import PeakGate
 
     configs = [RunConfig.load(p) for p in config or []]
@@ -137,9 +138,13 @@ def eval_run(
         configs.append(RunConfig.fake(a))  # type: ignore[arg-type]
     if not configs:
         raise typer.BadParameter("至少给一个 --config 或 --agent")
+    import fnmatch
+
     tasks = [load_task(d) for d in discover(Path("evals/tasks") / suite)]
+    if task:
+        tasks = [t for t in tasks if any(fnmatch.fnmatchcase(t.id, pat) for pat in task)]
     if not tasks:
-        raise typer.BadParameter(f"evals/tasks/{suite} 下没有任务")
+        raise typer.BadParameter(f"evals/tasks/{suite} 下没有匹配的任务")
     if live:
         os.environ["TW_LLM_MODE"] = "live"  # 每次都真调（尝试之间互不回放），同时写入回放缓存，之后可离线复现
 
