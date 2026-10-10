@@ -21,6 +21,7 @@ from triwitness.verify.diffutil import added_lines, removed_lines, split_patch
 from triwitness.verify.rerun import RerunResult
 from triwitness.verify.risk import RiskInputs, RiskPolicy, RiskResult, assess
 from triwitness.verify.static_checks import StaticReport
+from triwitness.verify.verifier import HUMAN_REVIEW_CODES, regression_blind
 
 Check = Literal["pass", "fail", "skipped"]
 
@@ -94,6 +95,11 @@ def build_evidence(
         verdict = claim.evidence_verdict
     if ac.blocked and verdict == "pass":
         verdict = "fail"
+    # W3-15：需人审的防作弊提示（单独新增 skip / xfail）与回归盲区 → 最多 inconclusive
+    if verdict == "pass" and any(f.code in HUMAN_REVIEW_CODES for f in ac.flags):
+        verdict = "inconclusive"
+    if verdict == "pass" and regression is not None and regression_blind([regression]):
+        verdict = "inconclusive"
     risk = assess(
         RiskInputs(
             patch=patch,

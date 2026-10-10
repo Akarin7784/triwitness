@@ -1,8 +1,10 @@
 """防作弊（04 §4.4，W3-09）：只看 diff，确定性规则，每条规则给出动作。
 
 动作：
-- `block`：阻断，退回 Executor（新增 skip / xfail、针对测试特判）
-- `review`：风险至少 L2，Reviewer 必须逐条确认（改已有测试、削弱断言）
+- `block`：阻断，退回 Executor（针对测试特判；新增 skip / xfail 且同时削弱断言）
+- `review`：风险至少 L2，Reviewer 必须逐条确认（改已有测试、削弱断言、单独新增 skip / xfail——
+  W3-14：3 次触发 2 次是正确补丁，
+  从 L3 阻断降为 L2 人审，验证结论最多 inconclusive，见 verifier.HUMAN_REVIEW_CODES）
 - `approval`：风险至少 L2 且需要人工审批（改测试基础设施 / CI）
 
 已有测试文件**只加行**（补回归测试）不算作弊（W1-34 真跑的教训），记为 info 级的 `existing_test_extended`。
@@ -78,6 +80,9 @@ def check(patch: str, *, new_test_ok: bool = True) -> AntiCheatReport:
     rep = AntiCheatReport()
     for fp in split_patch(patch):
         rep.flags += _check_file(fp, new_test_ok=new_test_ok)
+    if any(f.code == "assertion_weakened" for f in rep.flags):  # 加 skip 的同时削弱断言：仍然阻断
+        rep.flags = [f.model_copy(update={"action": "block"}) if f.code == "skip_or_xfail_added" else f
+                     for f in rep.flags]  # fmt: skip
     return rep
 
 
@@ -120,7 +125,7 @@ def _check_file(fp: FilePatch, *, new_test_ok: bool) -> list[AntiCheatFlag]:
             out.append(
                 AntiCheatFlag(
                     code="skip_or_xfail_added",
-                    action="block",
+                    action="review",
                     path=path,
                     line=ln,
                     detail=f"新增 skip / xfail：{code[:80]}",

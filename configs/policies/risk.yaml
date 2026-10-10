@@ -25,7 +25,7 @@ build_files: ["pyproject.toml", "setup.py", "setup.cfg", "requirements*.txt", "P
               "Dockerfile", "Makefile", ".github/workflows/*", ".gitlab-ci.yml", "tox.ini", "noxfile.py"]
 floors:            # 硬下限（不看分数）
   secrets: L3                # 密钥扫描命中：不开 PR
-  anticheat_block: L3        # 新增 skip / xfail、针对测试特判 → 不开 PR，NEEDS_HUMAN
-  anticheat_review: L2       # 删改已有测试、削弱断言、改测试基础设施
+  anticheat_block: L3        # 针对测试特判；新增 skip / xfail 且同时削弱断言 → 不开 PR，NEEDS_HUMAN
+  anticheat_review: L2       # 删改已有测试、削弱断言、改测试基础设施、单独新增 skip / xfail（W3-15）
   clean_env_unverified: L2   # 无沙箱：没在干净环境复跑（spec 002 §8 / ADR-0005 §3.3），禁止自动合并
   repro_not_reproduced: L1

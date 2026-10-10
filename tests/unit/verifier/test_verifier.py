@@ -107,7 +107,10 @@ def test_deterministic_verdict_and_combine() -> None:
     blocked = anticheat.check(
         new_file("tests/test_a.py", ["import pytest", "@pytest.mark.skip", "def test_a():", "    pass"])
     )
-    assert deterministic_verdict("reproduced", ok_runs, blocked)[0] == "fail"
+    lab, why = deterministic_verdict("reproduced", ok_runs, blocked)  # W3-15：单独加 skip → 人审，不判 fail
+    assert lab == "inconclusive" and any(w.startswith("需人审：skip_or_xfail_added") for w in why)
+    special = anticheat.check(new_file("src/a.py", ["import sys", "if 'pytest' in sys.modules:", "    X = 1"]))
+    assert deterministic_verdict("reproduced", ok_runs, special)[0] == "fail"
     claim = ClaimVerdict(verdict="insufficient_evidence", flags=["repro_not_tied_to_issue"])
     assert deterministic_verdict("reproduced", ok_runs, claim=claim) == (
         "inconclusive",
@@ -142,3 +145,50 @@ async def test_cross_vendor_routing() -> None:
     single = Router({"verifier": RoleRoute(model="deepseek/deepseek-flash", variant="strict")}, {"deepseek": ds})  # type: ignore[dict-item]
     res2 = await run_verifier(single, INP, executor_vendor="deepseek")
     assert res2.vendor_policy == "single_vendor" and res2.variant == "strict" and ds.models
+
+
+# ---------------------------------------------------------------- W3-15：回归盲区 + 证据缺口降级
+
+
+def test_regression_blind_spot_caps_at_inconclusive() -> None:
+    from triwitness.verify.verifier import regression_blind
+
+    ok_runs = INP.test_runs
+    blind = TestRun(scope="full", command="pytest", passed=0, failed=0, skipped=1, errors=1, duration_s=1, log_ref="x")
+    lab, why = deterministic_verdict("reproduced", [*ok_runs[:2], blind])
+    assert lab == "inconclusive" and why[0].startswith("回归盲区")
+    assert regression_blind([*ok_runs[:2], blind]) and regression_blind(ok_runs) is None
+    assert regression_blind(ok_runs[:2]) is None  # 没跑回归 ≠ 盲区（交给 thin_evidence）
+
+
+def test_gap_downgrade_on_unspecified_names_and_single_path() -> None:
+    from triwitness.verify.verifier import Verdict, gap_downgrade
+
+    def v(*gaps: str) -> Verdict:
+        return Verdict(verdict="pass", confidence=0.7, evidence_gaps=list(gaps))
+
+    real = [  # W3-14 真实缺口（msal-730 / conan-19750 一类）+ 英文
+        "参数命名（claims 为主、claims_challenge 为别名）为本实现假设；Issue 未指定名称",
+        "Issue 未指定新 token 的名字，复现测试用的是 Agent 自己起的名",
+        "其它把范围写入 transitive_deps 的路径仍可能崩溃；本次仅在 profile 层拦截",
+        "The fix only handles the main code path; other paths may still fail",
+    ]
+    for g in real:
+        assert gap_downgrade(v(g)).verdict == "inconclusive", g
+    # 普通缺口不降级；非 pass 不动
+    assert gap_downgrade(v("未做静态检查", "全量套件 1 个基线失败")).verdict == "pass"
+    assert gap_downgrade(Verdict(verdict="fail", confidence=0.9, evidence_gaps=["Issue 未指定名称"])).verdict == "fail"
+
+
+async def test_run_verifier_applies_gap_downgrade() -> None:
+    r = FakeRouter([say(call("submit_verdict", verdict="pass", confidence=0.8, rationale="ok",
+                             evidence_gaps=["Issue 未指定参数名称，实现自行假设为 claims"]))])  # fmt: skip
+    res = await run_verifier(r, INP)
+    assert res.verdict.verdict == "inconclusive" and "证据不足" in res.verdict.rationale
+
+
+def test_verifier_prompt_v2_has_gap_rules() -> None:
+    from triwitness.prompts import load_prompt
+
+    p = load_prompt("verifier")
+    assert p.version == "2" and "最多 inconclusive" in p.text and "只修了一条路径" in p.text

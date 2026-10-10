@@ -115,13 +115,14 @@ def test_no_sandbox_is_unverified_l2_with_banner() -> None:
     snapshot("pr_no_sandbox_l2.md", md)
 
 
-def test_skip_added_blocks_pass_and_forces_l3() -> None:
+def test_skip_added_needs_human_review_l2() -> None:
+    """W3-15：单独新增 skip 从 L3 阻断降为 L2 人审——结论 inconclusive（不放行、也不判失败）。"""
     cheat = PATCH + modify("tests/test_calc.py", ["def test_old():"],
                            ["@pytest.mark.skip", "def test_old():"])  # fmt: skip
     ev = evidence(patch=cheat)
-    assert ev.verdict == "fail" and ev.risk_level == "L3"
+    assert ev.verdict == "inconclusive" and ev.risk_level == "L2"
     md = render_pr(ev)
-    assert "无新增 skip ❌" in md and "🛑 L3" in md
+    assert "无新增 skip ❌" in md
 
 
 def test_crosstl_style_claim_downgrades_to_inconclusive() -> None:

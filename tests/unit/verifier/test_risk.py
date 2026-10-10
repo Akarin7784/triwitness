@@ -64,9 +64,15 @@ def test_every_factor_writes_points_and_reason() -> None:
 
 
 def test_floor_anticheat_block_forces_l3() -> None:
-    p = modify("tests/test_calc.py", [], ["@pytest.mark.skip"])
+    p = modify("src/calc.py", [], ["if 'pytest' in sys.modules:", "    return 3"])  # 针对测试特判
     r = assess(RiskInputs(patch=p, anticheat=check(p)))
     assert r.level == "L3" and r.needs_human and r.factors[-1].code == "floor:anticheat_block"
+
+
+def test_skip_alone_is_l2_review_not_l3() -> None:
+    p = modify("tests/test_calc.py", [], ["@pytest.mark.skip"])
+    r = assess(RiskInputs(patch=p, anticheat=check(p)))
+    assert r.level == "L2" and not r.needs_human and any(f.code == "floor:anticheat_review" for f in r.factors)
 
 
 def test_floor_anticheat_review_forces_l2() -> None:

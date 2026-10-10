@@ -29,6 +29,7 @@ from triwitness.verify.anticheat import AntiCheatReport
 from triwitness.verify.claim import ClaimVerdict
 
 VerdictLabel = Literal["pass", "fail", "inconclusive"]
+REGRESSION_SCOPES = ("full", "related")
 Path_ = Literal["tool_call", "repair", "content_json", "failed"]
 MAX_REPAIRS = 2
 ORDER: dict[str, int] = {"pass": 0, "inconclusive": 1, "fail": 2}
@@ -111,6 +112,13 @@ def deterministic_verdict(
         reasons.append(f"新增失败 {len(new)} 个：" + ", ".join(new[:3]))
     if reasons:
         return "fail", reasons
+    blind = regression_blind(test_runs)
+    if blind:
+        reasons.append(blind)
+    if anticheat is not None:
+        review = [f for f in anticheat.flags if f.code in HUMAN_REVIEW_CODES and f.action != "block"]
+        if review:
+            reasons.append("需人审：" + ", ".join(dict.fromkeys(f.code for f in review)))
     if repro_status != "reproduced":
         reasons.append(f"复现状态 {repro_status}")
     if claim is not None and claim.verdict != "pass":
@@ -119,7 +127,18 @@ def deterministic_verdict(
 
 
 ModelPolicy = Literal["thin_pass", "always"]
-REGRESSION_SCOPES = ("full", "related")
+HUMAN_REVIEW_CODES = frozenset({"skip_or_xfail_added"})  # 不阻断，但结论最多 inconclusive（W3-14：3 次触发 2 次是对的）
+
+
+def regression_blind(test_runs: list[TestRun]) -> str | None:
+    """回归盲区（W3-14：46 个补丁里 10 个）：回归跑了，但一个测试都没通过——收集期报错 / 断网 / 命令不对，
+    基线也一样，于是“新增失败”永远是 0。这种回归不能当“无回归”的证据。"""
+    reg = [r for r in test_runs if r.scope in REGRESSION_SCOPES]
+    if reg and all(r.passed == 0 for r in reg):
+        r = reg[-1]
+        return (f"回归盲区：{r.scope} 一个测试都没通过（失败 {r.failed} / 错误 {r.errors}），"
+                "测试套件没真正跑起来，无回归证据")  # fmt: skip
+    return None
 
 
 def thin_evidence(
@@ -220,10 +239,37 @@ def extract_json(text: str | None) -> dict[str, Any] | None:
     return None
 
 
+# W3-14：两个漏网的假成功，模型都在 evidence_gaps 里写出了风险却仍判 pass。
+_W = r"[^。；;，,\n]"  # 同一分句内
+GAP_UNSPECIFIED = re.compile(
+    rf"(Issue|issue|需求){_W}{{0,6}}(未|没有?)(指定|给出|写明|明确|规定){_W}{{0,16}}(名|命名|参数|接口|字段|签名|API|token|类型)"
+    rf"|(名称|命名|名字|参数名){_W}{{0,24}}假设"
+    r"|(unspecified|not specified)\b.{0,40}\b(name|parameter|api|field|token)|\bassumed (name|parameter|api)",
+    re.I,
+)
+GAP_SINGLE_PATH = re.compile(
+    rf"(其它|其他|其余|别的){_W}{{0,30}}(路径|调用方|入口|分支){_W}{{0,12}}(仍|可能|未|没)"
+    rf"|(只|仅)(修|改|在){_W}{{0,12}}(主路径|一条路径|一处|这一层|层|处)(拦截|修复|处理)?"
+    r"|\bonly (fixes|handles|patches) (the )?(main|one|single|primary)\b|\bother (code )?paths? (still|may|remain)",
+    re.I,
+)
+
+
+def gap_downgrade(v: Verdict) -> Verdict:
+    """pass 但证据缺口里提到“Issue 没指定的名字由 Agent 假设”或“只修了一条路径”→ 降为 inconclusive（证据不足）。"""
+    if v.verdict != "pass":
+        return v
+    hits = [g for g in v.evidence_gaps if GAP_UNSPECIFIED.search(g) or GAP_SINGLE_PATH.search(g)]
+    if not hits:
+        return v
+    why = f"证据缺口涉及未指定的名字 / 只修一条路径（{len(hits)} 条）→ 证据不足"
+    return v.model_copy(update={"verdict": "inconclusive", "rationale": (v.rationale + "；" + why).lstrip("；")})
+
+
 def _validate(raw: Any) -> tuple[Verdict | None, str]:
     try:
         data = json.loads(raw) if isinstance(raw, str) else raw
-        return Verdict.model_validate(data), ""
+        return gap_downgrade(Verdict.model_validate(data)), ""
     except (ValueError, ValidationError) as e:
         return None, str(e)[:800]
 
@@ -279,6 +325,7 @@ async def run_verifier(
 
 
 __all__ = [
+    "HUMAN_REVIEW_CODES",
     "CriterionJudgement",
     "ModelPolicy",
     "Verdict",
@@ -287,7 +334,9 @@ __all__ = [
     "combine",
     "deterministic_verdict",
     "extract_json",
+    "gap_downgrade",
     "needs_model",
+    "regression_blind",
     "render_input",
     "run_verifier",
     "thin_evidence",

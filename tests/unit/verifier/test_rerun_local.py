@@ -153,3 +153,52 @@ async def test_crash_without_junit_counts_as_failure(tmp_path: Path) -> None:
                             ReproRef(path=REPRO, cmd="no-such-pytest-binary " + REPRO))  # fmt: skip
     assert res.repro_status == "failed"  # 修复前后都“失败”：绝不能判为 reproduced
     assert [r.failed for r in res.test_runs] == [1, 1]
+
+
+# ---------------------------------------------------------------- W3-15：回归盲区（W3-14：46 个补丁里 10 个）
+
+
+def test_normalize_test_cmd() -> None:
+    from triwitness.verify.rerun import normalize_test_cmd
+
+    assert normalize_test_cmd("python -m pytest -q -x") == "python -m pytest --continue-on-collection-errors -q"
+    assert normalize_test_cmd("pytest --maxfail=1 tests") == "pytest --continue-on-collection-errors tests"
+    assert (
+        normalize_test_cmd("uv run pytest --maxfail 3 --exitfirst") == "uv run pytest --continue-on-collection-errors"
+    )
+    assert normalize_test_cmd("pytest -k 'x or y'") == "pytest --continue-on-collection-errors -k 'x or y'"
+    same = "pytest --continue-on-collection-errors -q"
+    assert normalize_test_cmd(same) == same
+    assert normalize_test_cmd("make test -x") == "make test -x"  # 非 pytest 原样
+    p = '"/tmp/pytest-of-box/py" -m pytest -x'  # 路径里的 pytest 不动
+    assert normalize_test_cmd(p) == '"/tmp/pytest-of-box/py" -m pytest --continue-on-collection-errors'
+
+
+async def test_regression_survives_exitfirst_and_collection_error(tmp_path: Path) -> None:
+    """断网沙箱里某个测试文件收集期就报错 + `-x`：以前整套停在第一个错误（0 通过，回归盲区）。"""
+    repo = make_repo(tmp_path, {
+        "calc.py": BUGGY, "tests/__init__.py": "",
+        "tests/test_aaa_net.py": "raise ConnectionError('pypi.org: Temporary failure in name resolution')\n",
+        "tests/test_calc.py": "from calc import add\n\n\ndef test_zero():\n    assert add(0, 0) == 0\n",
+    })  # fmt: skip
+    patch = make_patch(repo, {"calc.py": FIXED})
+    run, res = await regression(LocalSandboxBackend(home=tmp_path / "home"), SandboxSpec(repo=repo), patch,
+                                f"{PY} -x")  # fmt: skip
+    assert run.scope == "full" and run.passed == 1 and run.errors >= 1 and run.new_failures == [], res.logs
+    assert "--continue-on-collection-errors" in run.command and " -x" not in run.command
+
+
+async def test_regression_blind_falls_back_to_related_tests(tmp_path: Path) -> None:
+    """全量一个都没通过（这里：某个测试文件导入时直接让进程退出）→ 改跑与改动相关的测试文件。"""
+    repo = make_repo(tmp_path, {
+        "calc.py": BUGGY, "tests/__init__.py": "",
+        "tests/test_aaa_crash.py": "import os\nos._exit(3)\n",
+        "tests/test_calc.py": "from calc import add\n\n\ndef test_zero():\n    assert add(0, 0) == 0\n",
+    })  # fmt: skip
+    patch = make_patch(repo, {"calc.py": FIXED})
+    run, res = await regression(LocalSandboxBackend(home=tmp_path / "home"), SandboxSpec(repo=repo), patch, PY)
+    assert run.scope == "related" and run.passed == 1 and "tests/test_calc.py" in run.command, (res.notes, res.logs)
+    assert any("改跑与改动相关的 1 个测试文件" in n for n in res.notes)
+    off, _ = await regression(LocalSandboxBackend(home=tmp_path / "home2"), SandboxSpec(repo=repo), patch, PY,
+                              related_fallback=False)  # fmt: skip
+    assert off.scope == "full" and off.passed == 0

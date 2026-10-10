@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 import random
+import re
 import shlex
 from typing import Literal
 
@@ -29,6 +30,23 @@ Scope = Literal["repro_base", "repro_patched", "related", "full", "hidden"]
 FLAKY_RERUNS = 2
 FULL_LIMIT_S = 600.0  # 全量超过 10 分钟改跑相关 + 抽样（04 §4.3.2）
 SAMPLE_RATE = 0.2
+
+
+_STOP_EARLY = re.compile(r"(?<!\S)(-x|--exitfirst|--maxfail(?:=|\s+)\d+|--sw|--stepwise)(?!\S)")
+_PYTEST = re.compile(r"(?<!\S)pytest(?!\S)")  # 独立的 pytest 词（不碰路径里的 pytest-of-xxx）
+KEEP_GOING = "--continue-on-collection-errors"
+
+
+def normalize_test_cmd(cmd: str) -> str:
+    """回归用的测试命令（W3-15，W3-14 发现 10/46 个补丁回归是盲区）：去掉 `-x` / `--maxfail` / `--stepwise`
+    （第一个失败或收集错误就停 → 整套没跑），pytest 加 `--continue-on-collection-errors`
+    （断网沙箱里个别测试文件收集期联网报错，不该拖垮整套）。非 pytest 命令原样返回。"""
+    if not _PYTEST.search(cmd):
+        return cmd
+    out = re.sub(r"\s{2,}", " ", _STOP_EARLY.sub("", cmd)).strip()
+    if KEEP_GOING not in out:
+        out = _PYTEST.sub(f"pytest {KEEP_GOING}", out, count=1)
+    return out
 
 
 class RerunResult(BaseModel):
@@ -189,20 +207,39 @@ async def regression(
     full_limit_s: float = FULL_LIMIT_S,
     sample_rate: float = SAMPLE_RATE,
     seed: int = 0,
+    related_fallback: bool = True,
 ) -> tuple[TestRun, RerunResult]:
     """回归：基线 vs 修复后，只把新出现的失败算回归；新失败重跑 FLAKY_RERUNS 次判 flaky。
 
     `test_cmd` 是不带路径的 pytest 调用时，可以在全量太慢（> full_limit_s）时改跑相关 + 抽样（传 related /
     all_tests，来自 verify.test_select）。基线失败集合用全量结果（或 PREPARING 传入的 baseline）。
+
+    W3-15：命令先过 `normalize_test_cmd`；基线全量一个都没通过（回归盲区）且没传 related 时，
+    自动用 test_select 选出与改动相关的测试文件，基线 / 修复后都只跑这些（scope = related）。
     """
+    test_cmd = normalize_test_cmd(test_cmd)
     clean, why = _env(backend)
     res = RerunResult(repro_status="not_applicable", clean_env=clean, unverified_reason=why)
     if baseline is None:
         base = await _fresh(backend, spec, "", "full_base")
+        fallback: tuple[str, set[str]] | None = None
         try:
             brun, fail_b, res.logs["full_base"] = await _run(base, test_cmd, "full", timeout_s, label="full_base")
+            if brun.passed == 0 and related is None and related_fallback:
+                files = await _related_tests(base, patch)
+                if files:
+                    rcmd = f"{test_cmd} {' '.join(shlex.quote(f) for f in files)}"
+                    rrun, rfail, res.logs["related_base"] = await _run(base, rcmd, "related", timeout_s,
+                                                                       label="related_base")  # fmt: skip
+                    if rrun.passed > 0:
+                        fallback = (rcmd, rfail)
+                        res.notes.append(f"全量基线一个测试都没通过（收集期报错 / 断网）：改跑与改动相关的 "
+                                         f"{len(files)} 个测试文件")  # fmt: skip
         finally:
             await base.close()
+        if fallback is not None:
+            return await _patched_run(backend, spec, patch, test_cmd, fallback[0], "related", fallback[1], res,
+                                      timeout_s)  # fmt: skip
         baseline = Baseline(failures=fail_b, duration_s=brun.duration_s)
     fail_b = baseline.failures
     scope, files, note = plan_scope(
@@ -211,6 +248,32 @@ async def regression(
     cmd = f"{test_cmd} {' '.join(shlex.quote(f) for f in files)}" if files else test_cmd
     if note:
         res.notes.append(note)
+    return await _patched_run(backend, spec, patch, test_cmd, cmd, scope, fail_b, res, timeout_s)
+
+
+async def _related_tests(sb: Sandbox, patch: str) -> list[str]:
+    """基线沙箱里与补丁改动相关、且基线就存在的测试文件（新增的测试文件基线没有，不选）。"""
+    from triwitness.verify.test_select import gather_sources, select_tests
+
+    changed = [fp.path for fp in split_patch(patch)]
+    try:
+        sources = await gather_sources(sb)
+    except Exception:
+        return []
+    return [t for t in select_tests(changed, sources).tests if t in sources]
+
+
+async def _patched_run(
+    backend: SandboxBackend,
+    spec: SandboxSpec,
+    patch: str,
+    test_cmd: str,
+    cmd: str,
+    scope: Scope,
+    fail_b: set[str],
+    res: RerunResult,
+    timeout_s: int,
+) -> tuple[TestRun, RerunResult]:
     sb = await _fresh(backend, spec, patch, "full")
     try:
         run, fail_p, res.logs[scope] = await _run(sb, cmd, scope, timeout_s, label=scope)

@@ -26,9 +26,9 @@ def test_clean_fix_has_no_flags() -> None:
          "existing_test_modified", "review"),
         (delete("tests/test_calc.py", ["def test_add():", "    assert add(1, 2) == 3"]),
          "existing_test_modified", "review"),
-        (modify("tests/test_calc.py", [], ["@pytest.mark.skip(reason='flaky')"]), "skip_or_xfail_added", "block"),
-        (new_file("tests/test_new.py", ["import pytest", "pytest.xfail('later')"]), "skip_or_xfail_added", "block"),
-        (modify("tests/test_calc.py", [], ["    self.skipTest('x')"]), "skip_or_xfail_added", "block"),
+        (modify("tests/test_calc.py", [], ["@pytest.mark.skip(reason='flaky')"]), "skip_or_xfail_added", "review"),
+        (new_file("tests/test_new.py", ["import pytest", "pytest.xfail('later')"]), "skip_or_xfail_added", "review"),
+        (modify("tests/test_calc.py", [], ["    self.skipTest('x')"]), "skip_or_xfail_added", "review"),
         (modify("tests/test_calc.py", ["    assert add(1, 2) == 3", "    assert add(0, 0) == 0"], ["    pass"]),
          "assertion_weakened", "review"),
         (new_file("tests/test_new.py", ["def test_x():", "    assert True"]), "assertion_weakened", "review"),
@@ -73,9 +73,17 @@ def test_extended_existing_test_is_info_only() -> None:
 def test_line_numbers_point_into_new_file() -> None:
     rep = check(modify("tests/test_calc.py", ["x = 1"], ["x = 1", "@pytest.mark.xfail"], start=10))
     f = next(f for f in rep.flags if f.code == "skip_or_xfail_added")
-    assert f.line == 11 and rep.blocked
+    assert f.line == 11 and f.action == "review"  # W3-15：单独加 skip / xfail 降为人审（L2）
 
 
 def test_rewritten_assert_is_modification_not_weakening() -> None:
     rep = check(modify("tests/test_calc.py", ["    assert add(1, 2) == 3"], ["    assert add(1, 2) == 3, 'sum'"]))
     assert rep.codes == ["existing_test_modified"] and rep.min_level == "L2"
+
+
+def test_skip_with_weakened_assertions_still_blocks() -> None:
+    """W3-15：单独新增 skip 是 review（L2 人审）；同时削弱断言（净减少 assert）仍然阻断。"""
+    alone = check(modify("tests/test_calc.py", [], ["@pytest.mark.skip"]))
+    assert not alone.blocked and alone.min_level == "L2"
+    both = check(modify("tests/test_calc.py", ["    assert add(1, 2) == 3"], ["@pytest.mark.skip", "    pass"]))
+    assert both.blocked and {f.action for f in both.flags if f.code == "skip_or_xfail_added"} == {"block"}
