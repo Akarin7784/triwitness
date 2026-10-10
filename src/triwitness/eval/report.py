@@ -18,6 +18,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from triwitness.eval.runner import AttemptResult
+from triwitness.eval.verification import VerifierMetrics, verifier_metrics
 
 LOW_HIT_RATE = 0.9
 BOOTSTRAP_N = 2000
@@ -74,6 +75,8 @@ class ConfigRow(BaseModel):
     ci95: tuple[float, float] | None = None  # Resolved@1 的 bootstrap 95% 置信区间
     graded: int = 0  # 计入分母的 attempt 1 数（去掉 infra_error）
     failure_categories: dict[str, int] = Field(default_factory=dict)
+    verifier_mode: str | None = None
+    verifier: VerifierMetrics | None = None  # W3-13：精确率 / 召回率 / 验证后假成功 / 风险等级 vs 通过率
 
 
 class EvalReport(BaseModel):
@@ -136,6 +139,14 @@ def build_report(run_dir: Path) -> EvalReport:
             live=any(r.live for r in rs),
             ci95=bootstrap_ci(outcomes),
             graded=len(first),
+            verifier_mode=next((r.verifier_mode for r in rs if r.verifier_mode), None),
+            verifier=verifier_metrics(
+                [
+                    (r.resolved, r.agent_claimed_success, r.verifier_verdict, r.risk_level)
+                    for r in rs
+                    if cats[id(r)] != "infra_error"
+                ]
+            ),
             failure_categories=dict(sorted(Counter(cats.values()).items(), key=lambda kv: CATEGORIES.index(kv[0]))),
         )
         rows.append(row)
@@ -196,6 +207,21 @@ def render_markdown(rep: EvalReport) -> str:
             lines.append(
                 f"| {r.config} | " + " | ".join(str(r.failure_categories.get(c, 0)) for c in CATEGORIES) + " |"
             )
+    vrows = [r for r in rep.rows if r.verifier]
+    if vrows:
+        head = (
+            "| 配置 | 档位 | 验证数 | Verifier 判 pass | 精确率 | 召回率 | 假成功（Agent 自称） "
+            "| 假成功（验证后） | 风险等级 → 实际通过率 |"
+        )
+        lines += ["", "## 验证器（以隐藏测试为真值）", "", head, "|---|---|---|---|---|---|---|---|---|"]
+        for r in vrows:
+            v = r.verifier
+            assert v is not None
+            pct = lambda x: "—" if x is None else f"{x:.0%}"  # noqa: E731
+            risk = "；".join(f"{lv} {n} 个 → {rate:.0%}" for lv, (n, rate) in v.by_risk.items()) or "—"
+            fs = f"{v.false_success_claimed} | {v.false_success_verified}"
+            lines.append(f"| {r.config} | {r.verifier_mode} | {v.n} | {v.verified_pass} | {pct(v.precision)} "
+                         f"| {pct(v.recall)} | {fs} | {risk} |")  # fmt: skip
     if rep.infra_errors:
         lines += ["", "## 基础设施错误（不计入分母）", ""]
         lines += [f"- `{k}`：{v.splitlines()[0][:200] if v else ''}" for k, v in sorted(rep.infra_errors.items())]

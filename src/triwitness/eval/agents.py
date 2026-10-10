@@ -47,6 +47,7 @@ class AgentRun(BaseModel):
     cost: CostReport | None = None
     steps: int = 0
     error: str | None = None
+    finish: FinishReport | None = None  # 验证器（W3-13）要读复现路径与自述风险
 
 
 class EvalAgent(Protocol):
@@ -68,6 +69,7 @@ def _finish(rec: TrajectoryRecorder, task: EvalTask, run: AgentRun, report: Fini
     status = "done" if run.claimed_success else "failed"
     rec.emit(TaskFinishedPayload(status=status, finish_report=report, cost_report=run.cost or _zero_cost(task.id),
                                  display="完成" if run.claimed_success else "未修改"))  # fmt: skip
+    run.finish = report
     return run
 
 
@@ -163,6 +165,7 @@ class LLMAgent:
             cost=res.cost,
             steps=res.outcome.steps,
             error=res.outcome.reason if res.outcome.status != "finished" else None,
+            finish=res.finish,
         )
 
 

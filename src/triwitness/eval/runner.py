@@ -31,9 +31,11 @@ from triwitness.cost.ledger import GlobalLedger
 from triwitness.eval.agents import FAKE_AGENTS, AgentKind, AgentRun, EvalAgent
 from triwitness.eval.grade import Grader, GradeResult
 from triwitness.eval.task import EvalTask
+from triwitness.eval.verification import FactoryBackend, VerificationOutcome, VerifierMode, verify_attempt
 from triwitness.llm.gate import PeakGate, estimate_run
 from triwitness.llm.pricing import to_shanghai
 from triwitness.telemetry.trajectory import TrajectoryRecorder
+from triwitness.verify.verifier import RouterLike
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +58,8 @@ class RunConfig(BaseModel):
     budget_profile: str = "eval"
     harness: str | None = None
     category: str = "baseline"  # 全局账本类别信封（configs/budget.yaml envelopes_cny）
+    verifier: VerifierMode = "none"  # W3-13：none / deterministic / model
+    verifier_regression: bool = True  # 验证时是否跑基线 vs 修复后的回归对比（慢）
 
     @classmethod
     def load(cls, path: Path) -> RunConfig:
@@ -93,6 +97,15 @@ class AttemptResult(BaseModel):
     trajectory_id: str
     live: bool = False
     error: str | None = None
+    # W3-13 验证器（verifier=none 时为 None）
+    verifier_mode: str | None = None
+    verifier_verdict: str | None = None
+    verifier_deterministic: str | None = None
+    verifier_model_verdict: str | None = None
+    verify_repro_status: str | None = None
+    risk_level: str | None = None
+    verifier_cost_cny: float = 0.0
+    verifier_error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -190,7 +203,9 @@ class EvalRunner:
         per_task_estimate_cny: float | None = None,
         results_root: Path = DEFAULT_RESULTS,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        verifier_router_factory: Callable[[], RouterLike] | None = None,
     ) -> None:
+        self.verifier_router_factory = verifier_router_factory
         self.grader = grader
         self.llm_agent_factory = llm_agent_factory
         self.live = live
@@ -286,6 +301,31 @@ class EvalRunner:
             _write_json_atomic(out / "errors.json", summary.infra_errors)
         return summary
 
+    async def _verify(self, job: Job, run: AgentRun, d: Path) -> tuple[VerificationOutcome | None, str | None]:
+        """W3-13：在全新的任务沙箱里验证（不碰判分沙箱，隐藏测试不进入）。出错不影响判分结果。"""
+        mode = job.config.verifier
+        if mode == "none":
+            return None, None
+        if not run.diff.strip():  # 没有改动：无需复跑，直接判 fail
+            out = VerificationOutcome(
+                mode=mode, verdict="fail", deterministic="fail", repro_status="not_applicable",
+                clean_env="verified", risk_score=0, risk_level="L0", reasons=["没有改动"],
+            )  # fmt: skip
+        else:
+            try:
+                out = await verify_attempt(
+                    issue=job.task.instruction, diff=run.diff, finish=run.finish,
+                    backend=FactoryBackend(lambda: self.grader.new_sandbox(job.task)), mode=mode,
+                    test_cmd=job.task.tw.test_cmd, run_regression=job.config.verifier_regression,
+                    router=self.verifier_router_factory() if mode == "model" and self.verifier_router_factory else None,
+                    task_id=job.task.id,
+                )  # fmt: skip
+            except Exception as e:
+                log.exception("验证失败：%s", job.rel().as_posix())
+                return None, f"{type(e).__name__}: {e}"[:500]
+        _write_json_atomic(d / "verification.json", out.model_dump(mode="json"))
+        return out, None
+
     def _agent(self, cfg: RunConfig) -> EvalAgent:
         if cfg.agent == "llm":
             assert self.llm_agent_factory is not None
@@ -305,6 +345,7 @@ class EvalRunner:
         (d / "patch.diff").write_text(run.diff, encoding="utf-8")
         grade: GradeResult = await self.grader.grade(job.task, run.diff)
         (d / "verifier.log").write_text(grade.log_tail + (f"\n{grade.error}" if grade.error else ""), encoding="utf-8")
+        ver, ver_err = await self._verify(job, run, d)
         tin = tcached = tout = peak = 0
         if run.cost is not None:
             for ln in run.cost.lines:
@@ -325,7 +366,7 @@ class EvalRunner:
             tamper_paths=grade.tamper_paths,
             ignored_paths=grade.ignored_paths,
             patch_applied=grade.patch_applied,
-            cost_cny=run.cost.total_cny if run.cost else 0.0,
+            cost_cny=(run.cost.total_cny if run.cost else 0.0) + (ver.cost_cny if ver else 0.0),
             tokens_in=tin,
             tokens_cached=tcached,
             tokens_out=tout,
@@ -335,6 +376,14 @@ class EvalRunner:
             trajectory_id=(job.rel() / "trajectory.jsonl").as_posix(),
             live=self.live and job.config.agent == "llm",
             error=run.error or grade.error,
+            verifier_mode=job.config.verifier if job.config.verifier != "none" else None,
+            verifier_verdict=ver.verdict if ver else None,
+            verifier_deterministic=ver.deterministic if ver else None,
+            verifier_model_verdict=ver.model_verdict if ver else None,
+            verify_repro_status=ver.repro_status if ver else None,
+            risk_level=ver.risk_level if ver else None,
+            verifier_cost_cny=ver.cost_cny if ver else 0.0,
+            verifier_error=ver_err,
         )
         _write_json_atomic(d / "result.json", res.model_dump())
         return res

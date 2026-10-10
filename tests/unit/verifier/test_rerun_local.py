@@ -143,3 +143,13 @@ async def test_regression_related_when_full_too_slow(tmp_path: Path) -> None:
                                 baseline=base, sample_rate=0.0)  # fmt: skip
     assert run.scope == "related" and run.passed == 1 and run.failed == 0, res.logs  # test_other 没被选中
     assert run.new_failures == [] and any("改跑相关 1 个" in n for n in res.notes)
+
+
+async def test_crash_without_junit_counts_as_failure(tmp_path: Path) -> None:
+    """pytest 收集阶段崩溃 / 命令不存在 → 没有 junit 报告：按退出码判失败，而不是“0 个失败 = 通过”。"""
+    repo = make_repo(tmp_path, {"calc.py": BUGGY, "tests/__init__.py": "", "tests/tw_repro/__init__.py": ""})
+    patch = make_patch(repo, {"calc.py": FIXED, REPRO: repro_test("assert add(1, 2) == 3")})
+    res = await rerun_repro(LocalSandboxBackend(home=tmp_path / "home"), SandboxSpec(repo=repo), patch,
+                            ReproRef(path=REPRO, cmd="no-such-pytest-binary " + REPRO))  # fmt: skip
+    assert res.repro_status == "failed"  # 修复前后都“失败”：绝不能判为 reproduced
+    assert [r.failed for r in res.test_runs] == [1, 1]

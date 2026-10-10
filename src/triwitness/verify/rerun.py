@@ -91,6 +91,8 @@ async def _run(
         await sb.write_file(junit, b"")
     r = await sb.exec(run_cmd, timeout_s=timeout_s)
     rep = parse_junit(await sb.read_file(junit)) if is_pytest else None
+    if rep is not None and rep.tests == 0 and r.exit_code != 0:
+        rep = None  # 没写出报告（收集阶段崩溃 / 命令不存在）：按退出码算失败，不能当成“全部通过”
     failed_ids = {f.nodeid for f in rep.failures} if rep else ({"<command>"} if r.exit_code else set())
     tail = (r.stdout + r.stderr)[-2000:]
     if rep is not None:
