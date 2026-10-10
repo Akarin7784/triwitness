@@ -49,3 +49,33 @@ describe('偏好', () => {
     expect(p.getDraft('b')).toBe('')
   })
 })
+
+describe('设置（UI-21）', () => {
+  it('坏值回默认；勇士模式与超上限不能从存储读出', async () => {
+    const p = await import('./prefs')
+    localStorage.setItem(
+      'tw.prefs',
+      JSON.stringify({ permissionMode: 'unrestricted', maxCost: 5, backend: 'vm', theme: 'neon', fontScale: 3, allowPeak: 'yes' }),
+    )
+    p.reloadPrefs()
+    const s = p.getPrefs()
+    expect(s.permissionMode).toBe('auto_edit')
+    expect(s.maxCost).toBe(1)
+    expect(s.backend).toBe('auto')
+    expect(s.theme).toBe('light')
+    expect(s.fontScale).toBe(1)
+    expect(s.allowPeak).toBe(false)
+    p.setPrefs({ permissionMode: 'unrestricted' as never, maxCost: 0.4, theme: 'dark' })
+    expect(p.getPrefs().permissionMode).toBe('auto_edit')
+    expect(p.getPrefs().maxCost).toBe(0.4)
+    expect(p.getPrefs().theme).toBe('dark')
+  })
+
+  it('勇士模式只上膛一次、不落盘', async () => {
+    const p = await import('./prefs')
+    p.armUnrestricted()
+    expect(localStorage.getItem('tw.prefs') ?? '').not.toContain('unrestricted')
+    expect(p.takeUnrestricted()).toBe(true)
+    expect(p.takeUnrestricted()).toBe(false)
+  })
+})

@@ -38,7 +38,7 @@ export function TitleBar({
       )}
     >
       <div data-tauri-drag-region className="flex h-full w-[248px] shrink-0 items-center gap-1 pl-3">
-        <Tip label={sidebarOpen ? '收起侧栏' : '展开侧栏'} side="bottom">
+        <Tip label={`${sidebarOpen ? '收起侧栏' : '展开侧栏'} · Ctrl Shift S`} side="bottom">
           <button type="button" onClick={onToggleSidebar} className="tb-icon" aria-label="侧栏">
             <PanelLeft size={15} strokeWidth={1.5} />
           </button>

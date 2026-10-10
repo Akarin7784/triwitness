@@ -4,7 +4,7 @@
 //! 核心命令解析：环境变量 `TW_CORE`（JSON 数组，如 `["uv","run","--project","C:/src/triwitness","tw"]`）
 //! → `tw` → `python -m triwitness`（Windows 再试 `py -3 -m triwitness`）。
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
@@ -38,20 +38,51 @@ struct ExitEvent {
     code: Option<i32>,
 }
 
-/// 选择项（模型 / 思考强度）：只放行白名单，其余一律丢弃（核心那边还会再拒一次）
-pub fn choice_args(model: Option<&str>, thinking: Option<&str>) -> Vec<String> {
-    let mut a = Vec::new();
-    if let Some(m) = model {
-        if m == "deepseek-flash" {
-            a.push("--model".to_string());
-            a.push(m.to_string());
-        }
+/// 本次任务的选择（输入框 + 设置页）：只放行白名单，其余一律丢弃（核心那边还会再拒一次）
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Choices {
+    pub model: Option<String>,
+    pub thinking: Option<String>,
+    pub backend: Option<String>,
+    pub max_cost: Option<f64>,
+    pub permission_mode: Option<String>,
+    pub confirm_unrestricted: Option<String>,
+    pub allow_peak: Option<bool>,
+}
+
+pub const UNRESTRICTED_PHRASE: &str = "我了解风险";
+/// 与 core `Budget.for_run()` 一致：设置页只能调低
+pub const MAX_COST_CAP: f64 = 1.0;
+
+pub fn choice_args(c: &Choices) -> Vec<String> {
+    let mut a: Vec<String> = Vec::new();
+    let mut push = |k: &str, v: &str| {
+        a.push(k.to_string());
+        a.push(v.to_string());
+    };
+    if let Some(m) = c.model.as_deref().filter(|m| *m == "deepseek-flash") {
+        push("--model", m);
     }
-    if let Some(t) = thinking {
-        if matches!(t, "off" | "low" | "medium" | "high") {
-            a.push("--thinking".to_string());
-            a.push(t.to_string());
+    if let Some(t) = c.thinking.as_deref().filter(|t| matches!(*t, "off" | "low" | "medium" | "high")) {
+        push("--thinking", t);
+    }
+    if let Some(b) = c.backend.as_deref().filter(|b| matches!(*b, "auto" | "docker" | "none")) {
+        push("--backend", b);
+    }
+    if let Some(x) = c.max_cost.filter(|x| x.is_finite() && *x > 0.0 && *x <= MAX_COST_CAP) {
+        push("--max-cost", &format!("{x:.2}"));
+    }
+    match c.permission_mode.as_deref() {
+        Some(m @ ("plan" | "ask" | "auto_edit" | "auto" | "full_access")) => push("--permission-mode", m),
+        Some("unrestricted") if c.confirm_unrestricted.as_deref() == Some(UNRESTRICTED_PHRASE) => {
+            push("--permission-mode", "unrestricted");
+            push("--confirm-unrestricted", UNRESTRICTED_PHRASE);
         }
+        _ => {}
+    }
+    if c.allow_peak == Some(true) {
+        a.push("--allow-peak".to_string());
     }
     a
 }
@@ -89,8 +120,11 @@ pub fn core_candidates(tw_core: Option<&str>) -> Vec<Vec<String>> {
     c
 }
 
-fn spawn(prefix: &[String], args: &[String]) -> std::io::Result<Child> {
+fn spawn(prefix: &[String], args: &[String], api_key: Option<&str>) -> std::io::Result<Child> {
     let mut cmd = Command::new(&prefix[0]);
+    if let Some(k) = api_key {
+        cmd.env("DEEPSEEK_API_KEY", k); // 只进子进程环境，不写盘、不回传前端
+    }
     cmd.args(&prefix[1..])
         .args(args)
         .stdin(Stdio::piped())
@@ -114,8 +148,7 @@ pub fn core_start(
     repo: String,
     issue: String,
     mode: String,
-    model: Option<String>,
-    thinking: Option<String>,
+    choices: Option<Choices>,
 ) -> Result<String, String> {
     if repo.trim().is_empty() {
         return Err("缺少仓库路径".into());
@@ -124,12 +157,14 @@ pub fn core_start(
         return Err(format!("未知运行方式：{mode}"));
     }
     let mut args = run_args(repo.trim(), &issue, &mode);
-    args.extend(choice_args(model.as_deref(), thinking.as_deref()));
+    args.extend(choice_args(&choices.unwrap_or_default()));
+    // 真实模式：凭据库里有密钥就注入；没有则沿用环境变量 DEEPSEEK_API_KEY
+    let api_key = if mode == "live" { crate::secrets::read_key() } else { None };
     let tw_core = std::env::var("TW_CORE").ok();
     let mut last_err = String::from("找不到核心命令");
     let mut child = None;
     for prefix in core_candidates(tw_core.as_deref()) {
-        match spawn(&prefix, &args) {
+        match spawn(&prefix, &args, api_key.as_deref()) {
             Ok(c) => {
                 child = Some(c);
                 break;
@@ -257,9 +292,19 @@ mod tests {
 
     #[test]
     fn choices_are_whitelisted() {
-        assert_eq!(choice_args(Some("deepseek-flash"), Some("high")), ["--model", "deepseek-flash", "--thinking", "high"]);
-        assert!(choice_args(Some("deepseek-v4-pro"), Some("ultra")).is_empty());
-        assert!(choice_args(None, None).is_empty());
+        let s = |v: &str| Some(v.to_string());
+        let ok = Choices { model: s("deepseek-flash"), thinking: s("high"), backend: s("none"), max_cost: Some(0.5),
+                           permission_mode: s("ask"), confirm_unrestricted: None, allow_peak: Some(true) };
+        assert_eq!(choice_args(&ok), ["--model", "deepseek-flash", "--thinking", "high", "--backend", "none",
+                                      "--max-cost", "0.50", "--permission-mode", "ask", "--allow-peak"]);
+        let bad = Choices { model: s("deepseek-v4-pro"), thinking: s("ultra"), backend: s("vm"), max_cost: Some(9.0),
+                            permission_mode: s("unrestricted"), confirm_unrestricted: s("ok"), allow_peak: Some(false) };
+        assert!(choice_args(&bad).is_empty());
+        assert!(choice_args(&Choices { max_cost: Some(f64::NAN), ..Default::default() }).is_empty());
+        let warrior = Choices { permission_mode: s("unrestricted"), confirm_unrestricted: s(UNRESTRICTED_PHRASE), ..Default::default() };
+        assert_eq!(choice_args(&warrior), ["--permission-mode", "unrestricted", "--confirm-unrestricted", UNRESTRICTED_PHRASE]);
+        let parsed: Choices = serde_json::from_str(r#"{"maxCost":0.3,"permissionMode":"plan"}"#).unwrap();
+        assert_eq!(choice_args(&parsed), ["--max-cost", "0.30", "--permission-mode", "plan"]);
     }
 
     #[test]

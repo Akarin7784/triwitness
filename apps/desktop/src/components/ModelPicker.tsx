@@ -9,9 +9,19 @@ import { Popover, MenuDivider } from './Popover'
 const DEFAULT_THINKING = 'medium'
 
 /** Claude 式模型选择：输入框右下角；模型列表（一行说明）· 思考强度子菜单 · 更多模型 */
-export function ModelPicker({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function ModelPicker({
+  open,
+  onOpenChange,
+  effort,
+}: {
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  /** Ctrl+Shift+E：打开时直接展开思考强度 */
+  effort?: boolean
+}) {
   const prefs = usePrefs()
-  const [sub, setSub] = useState(false)
+  const [subState, setSub] = useState(false)
+  const sub = subState || !!effort
   const model = MODELS.find((m) => m.id === prefs.model) ?? MODELS[0]
   const level = THINKING_LEVELS.find((t) => t.id === prefs.thinking)!
   const close = () => {

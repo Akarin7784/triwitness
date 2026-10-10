@@ -1,6 +1,26 @@
-import { PenLine, Settings } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import {
+  Boxes,
+  CircleHelp,
+  FolderClosed,
+  Info,
+  Keyboard,
+  MessagesSquare,
+  MoreHorizontal,
+  PenLine,
+  Pencil,
+  Search,
+  Settings,
+  Star,
+  StarOff,
+  Trash2,
+  FolderPlus,
+} from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 import type { Phase } from '../data/mapEvent'
+import { notYet } from '../lib/toast'
+import { MenuDivider, MenuItem, Popover } from './Popover'
 import { Tip } from './Tip'
 import { StatusGlyph } from './StatusGlyph'
 
@@ -10,85 +30,242 @@ export interface SidebarItem {
   phase?: Phase
   label?: string
   time?: string
+  starred?: boolean
 }
 
 interface SidebarProps {
   items: SidebarItem[]
   activeId: string
+  collapsed: boolean
+  userName: string
   onSelect: (id: string) => void
   onNew: () => void
-  onSettings: () => void
+  onSearch: () => void
+  onSettings: (section?: string) => void
+  onShortcuts: () => void
+  onRename: (id: string) => void
+  onDelete: (id: string) => void
+  onStar: (id: string) => void
   settingsActive?: boolean
 }
 
-export function Sidebar({ items, activeId, onSelect, onNew, onSettings, settingsActive }: SidebarProps) {
+const SPRING = { type: 'spring', stiffness: 380, damping: 36, mass: 0.9 } as const
+
+/**
+ * Claude 式侧栏：新会话 · 搜索 · 会话 / 项目 / 作品入口 · 星标 · 近期（每项 … 菜单：星标 / 重命名 / 加入项目 / 删除）· 底部用户菜单。
+ * 收起时变成图标窄栏（Ctrl+Shift+S），宽度弹簧过渡。
+ */
+export function Sidebar(p: SidebarProps) {
+  const starred = p.items.filter((c) => c.starred)
+  const recents = p.items.filter((c) => !c.starred)
   return (
-    <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border-soft bg-panel/70">
-      <div className="px-3 pb-2 pt-3">
+    <motion.aside
+      data-testid="sidebar"
+      data-collapsed={p.collapsed}
+      initial={false}
+      animate={{ width: p.collapsed ? 52 : 248 }}
+      transition={SPRING}
+      className="flex h-full shrink-0 flex-col overflow-hidden border-r border-border-soft bg-panel/70"
+    >
+      <div className={clsx('space-y-px pb-2 pt-3', p.collapsed ? 'px-2' : 'px-3')}>
+        <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber" />} label="新会话" kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
+        <NavButton collapsed={p.collapsed} icon={<Search size={15} strokeWidth={1.6} />} label="搜索" kbd="Ctrl K" onClick={p.onSearch} testId="nav-search" />
+        <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label="会话" onClick={p.onSearch} />
+        <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label="项目" onClick={() => notYet('项目')} testId="nav-projects" />
+        <NavButton collapsed={p.collapsed} icon={<Boxes size={15} strokeWidth={1.6} />} label="作品" onClick={() => notYet('作品（Artifacts）')} testId="nav-artifacts" />
+      </div>
+
+      <AnimatePresence initial={false}>
+        {!p.collapsed && (
+          <motion.nav
+            key="list"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { delay: 0.08, duration: 0.2 } }}
+            exit={{ opacity: 0, transition: { duration: 0.1 } }}
+            className="min-h-0 w-[248px] flex-1 overflow-y-auto scroll-soft px-2 pb-4"
+          >
+            {starred.length > 0 && (
+              <>
+                <SectionLabel>星标</SectionLabel>
+                <motion.div layout className="space-y-px">
+                  {starred.map((c) => (
+                    <ChatRow key={c.id} c={c} {...p} />
+                  ))}
+                </motion.div>
+              </>
+            )}
+            <SectionLabel>近期</SectionLabel>
+            <motion.div layout className="space-y-px">
+              <AnimatePresence initial={false}>
+                {recents.map((c) => (
+                  <ChatRow key={c.id} c={c} {...p} />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
+      {p.collapsed && <div className="flex-1" />}
+
+      <UserMenu {...p} />
+    </motion.aside>
+  )
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return <p className="px-4 pb-1.5 pt-4 text-[10.5px] tracking-[0.14em] text-sepia-muted">{children}</p>
+}
+
+function NavButton({
+  collapsed,
+  icon,
+  label,
+  kbd,
+  onClick,
+  testId,
+}: {
+  collapsed: boolean
+  icon: ReactNode
+  label: string
+  kbd?: string
+  onClick: () => void
+  testId?: string
+}) {
+  const btn = (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      data-testid={testId}
+      className={clsx(
+        'group flex h-9 items-center gap-2.5 rounded-xl text-[13px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised',
+        collapsed ? 'w-9 justify-center' : 'w-full px-3',
+      )}
+    >
+      <span className="flex w-4 shrink-0 justify-center">{icon}</span>
+      {!collapsed && (
+        <>
+          <span className="truncate">{label}</span>
+          {kbd && (
+            <span className="ml-auto font-mono text-[10px] text-sepia-muted opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              {kbd}
+            </span>
+          )}
+        </>
+      )}
+    </button>
+  )
+  return collapsed ? (
+    <Tip label={kbd ? `${label} · ${kbd}` : label} side="right">
+      {btn}
+    </Tip>
+  ) : (
+    btn
+  )
+}
+
+function ChatRow({
+  c,
+  activeId,
+  settingsActive,
+  onSelect,
+  onRename,
+  onDelete,
+  onStar,
+}: { c: SidebarItem } & SidebarProps) {
+  const [menu, setMenu] = useState(false)
+  const active = !settingsActive && c.id === activeId
+  return (
+    <motion.div
+      layout="position"
+      initial={{ opacity: 0, x: -6 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, height: 0, transition: { duration: 0.18 } }}
+      transition={SPRING}
+      className="relative"
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        data-testid="chat-row"
+        data-id={c.id}
+        onClick={() => onSelect(c.id)}
+        onKeyDown={(e) => e.key === 'Enter' && onSelect(c.id)}
+        className={clsx(
+          'group flex w-full cursor-default items-center gap-2 rounded-lg py-2 pl-4 pr-1.5 text-left outline-none transition-colors duration-300 focus-visible:ring-1 focus-visible:ring-amber/40',
+          active || menu ? 'bg-panel-raised shadow-[0_1px_0_rgb(212_196_168/0.6)]' : 'hover:bg-panel-raised/60',
+        )}
+      >
+        {c.phase && (
+          <Tip label={c.label ?? ''} side="right">
+            <span className="flex h-4 w-3.5 items-center justify-center">
+              <StatusGlyph phase={c.phase} />
+            </span>
+          </Tip>
+        )}
+        <span className={clsx('min-w-0 flex-1 truncate font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
+          {c.title}
+        </span>
+        {c.time && (
+          <span className={clsx('shrink-0 font-mono text-[10px] tabular-nums text-sepia-muted transition-opacity duration-200 group-hover:hidden', menu && 'hidden')}>
+            {c.time}
+          </span>
+        )}
         <button
           type="button"
-          onClick={onNew}
-          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised"
+          aria-label="更多"
+          data-testid="chat-more"
+          onClick={(e) => {
+            e.stopPropagation()
+            setMenu((m) => !m)
+          }}
+          className={clsx(
+            'h-6 w-6 shrink-0 items-center justify-center rounded-md text-sepia transition-colors duration-200 hover:bg-parchment-deep hover:text-ink',
+            menu ? 'inline-flex' : 'hidden group-hover:inline-flex',
+          )}
         >
-          <PenLine size={15} strokeWidth={1.6} className="text-amber" />
-          新会话
+          <MoreHorizontal size={14} strokeWidth={1.7} />
         </button>
       </div>
+      <Popover open={menu} onClose={() => setMenu(false)} side="down" align="right" className="w-[176px]" testId="chat-menu">
+        <MenuItem icon={c.starred ? StarOff : Star} label={c.starred ? '取消星标' : '星标'} onClick={() => (setMenu(false), onStar(c.id))} />
+        <MenuItem icon={Pencil} label="重命名" onClick={() => (setMenu(false), onRename(c.id))} testId="menu-rename" />
+        <MenuItem icon={FolderPlus} label="加入项目" onClick={() => (setMenu(false), notYet('项目'))} />
+        <MenuDivider />
+        <MenuItem icon={Trash2} label="删除" danger onClick={() => (setMenu(false), onDelete(c.id))} testId="menu-delete" />
+      </Popover>
+    </motion.div>
+  )
+}
 
-      <p className="px-6 pb-1.5 pt-3 text-[10.5px] tracking-[0.14em] text-sepia-muted">近期</p>
-
-      <nav className="min-h-0 flex-1 space-y-px overflow-y-auto scroll-soft px-2 pb-4">
-        {items.map((c) => {
-          const active = !settingsActive && c.id === activeId
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => onSelect(c.id)}
-              className={clsx(
-                'group flex w-full items-center gap-2 rounded-lg px-4 py-2 text-left transition-colors duration-300',
-                active ? 'bg-panel-raised shadow-[0_1px_0_rgb(212_196_168/0.6)]' : 'hover:bg-panel-raised/60',
-              )}
-            >
-              {c.phase && (
-                <Tip label={c.label ?? ''} side="right">
-                  <span className="flex h-4 w-3.5 items-center justify-center">
-                    <StatusGlyph phase={c.phase} />
-                  </span>
-                </Tip>
-              )}
-              <span
-                className={clsx(
-                  'min-w-0 flex-1 truncate font-serif text-[13px]',
-                  active ? 'text-ink' : 'text-ink-soft/90',
-                )}
-              >
-                {c.title}
-              </span>
-              {c.time && (
-                <span className="shrink-0 font-mono text-[10px] tabular-nums text-sepia-muted">{c.time}</span>
-              )}
-            </button>
-          )
-        })}
-      </nav>
-
-      <div className="border-t border-border-soft/80 p-2">
-        <Tip label="设置与预算" side="top-start" className="w-full">
-          <button
-            type="button"
-            onClick={onSettings}
-            aria-label="设置与预算"
-            className={clsx(
-              'flex w-full items-center gap-2.5 rounded-lg px-4 py-2 text-[12.5px] transition-colors duration-300 hover:bg-panel-raised',
-              settingsActive ? 'bg-panel-raised text-ink' : 'text-sepia',
-            )}
-          >
-            <Settings size={14} strokeWidth={1.6} />
-            设置
-          </button>
-        </Tip>
-      </div>
-    </aside>
+function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive }: SidebarProps) {
+  const [open, setOpen] = useState(false)
+  const name = userName.trim() || '本机'
+  return (
+    <div className="relative border-t border-border-soft/80 p-2">
+      <button
+        type="button"
+        data-testid="user-menu"
+        aria-label="用户菜单"
+        onClick={() => setOpen((o) => !o)}
+        className={clsx(
+          'flex h-10 items-center gap-2.5 rounded-lg text-[12.5px] transition-colors duration-300 hover:bg-panel-raised',
+          collapsed ? 'w-9 justify-center' : 'w-full px-2.5',
+          (open || settingsActive) && 'bg-panel-raised',
+        )}
+      >
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-espresso font-serif text-[12px] text-parchment">
+          {name.slice(0, 1)}
+        </span>
+        {!collapsed && <span className="truncate text-ink-soft">{name}</span>}
+      </button>
+      <Popover open={open} onClose={() => setOpen(false)} className="w-[220px]" testId="user-popover">
+        <MenuItem icon={Settings} label="设置" kbd="Ctrl ," onClick={() => (setOpen(false), onSettings())} testId="open-settings" />
+        <MenuItem icon={Keyboard} label="快捷键" kbd="Ctrl /" onClick={() => (setOpen(false), onShortcuts())} />
+        <MenuItem icon={CircleHelp} label="帮助" onClick={() => (setOpen(false), notYet('帮助'))} />
+        <MenuDivider />
+        <MenuItem icon={Info} label="关于三证" onClick={() => (setOpen(false), onSettings('about'))} />
+      </Popover>
+    </div>
   )
 }

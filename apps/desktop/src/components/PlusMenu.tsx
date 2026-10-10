@@ -1,4 +1,4 @@
-import { Camera, Globe, Paperclip, Plug, Puzzle, Sparkles, Telescope, Plus } from 'lucide-react'
+import { Camera, Globe, Palette, Paperclip, Plug, Puzzle, Sparkles, Telescope, Plus } from 'lucide-react'
 import clsx from 'clsx'
 import { notYet } from '../lib/toast'
 import { Kbd, MenuDivider, Popover } from './Popover'
@@ -14,6 +14,8 @@ const ITEMS = [
   { icon: Sparkles, label: '技能' },
   { icon: Plug, label: '连接器' },
   { icon: Puzzle, label: '插件' },
+  null,
+  { icon: Palette, label: '风格' },
 ] as const
 
 /** 输入框左下角的 +：与 Claude 同一组入口；未实现的点了给一句“即将推出” */

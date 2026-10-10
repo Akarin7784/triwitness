@@ -48,7 +48,7 @@ check('页面未被刷新', (await page.evaluate(() => window.__marker)) === 1)
 
 // 4. 选区规则：UI 不可选，消息可选
 const sel = await page.evaluate(() => ({
-  sidebar: getComputedStyle(document.querySelector('aside nav button span')).userSelect,
+  sidebar: getComputedStyle(document.querySelector('aside nav [data-testid="chat-row"] span')).userSelect,
   message: getComputedStyle(document.querySelector('article .selectable')).userSelect,
   stream: getComputedStyle(document.querySelector('.selectable.font-mono') ?? document.body).userSelect,
 }))

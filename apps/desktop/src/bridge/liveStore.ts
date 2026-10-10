@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { LiveTask, type TaskMeta } from './liveTask'
 import { approveCmd, CANCEL_CMD, type ApprovalScope, type CoreMode } from './protocol'
 import { getTransport, type CoreTransport } from './transport'
+import type { RunChoices } from './choices'
 
 const TASKS_KEY = 'tw.live.tasks'
 const MODE_KEY = 'tw.core.mode'
@@ -109,26 +110,35 @@ function wire(t: LiveTask, transport: CoreTransport, key: string, id: string) {
     .then((un) => detach.set(id, un))
 }
 
-export async function startTask(opts: {
-  repo: string
-  issue: string
-  mode: CoreMode
-  model?: string
-  thinking?: string
-}): Promise<string> {
+export async function startTask(opts: { repo: string; issue: string; mode: CoreMode } & RunChoices): Promise<string> {
   const transport = await getTransport()
   if (!transport) throw new Error('未连接核心')
   const repo = opts.repo.trim() || (opts.mode === 'demo' ? defaultDemoRepo() : '')
   if (!repo) throw new Error('先选仓库')
-  const key = await transport.start({ repo, issue: opts.issue, mode: opts.mode, model: opts.model, thinking: opts.thinking })
+  const key = await transport.start({ ...opts, repo })
   const id = `${Date.now().toString(36)}-${key}`
   const t = new LiveTask(id)
   registry.set(id, t)
   const title = opts.issue.trim().split(/\r?\n/)[0].slice(0, 60) || (opts.mode === 'demo' ? '演示任务' : '新任务')
-  setMetas([{ id, title, repo, mode: opts.mode, key, startedAt: Date.now() }, ...metas])
+  setMetas([
+    { id, title, repo, mode: opts.mode, key, startedAt: Date.now(), issue: opts.issue, model: opts.model, thinking: opts.thinking },
+    ...metas,
+  ])
   if (opts.repo.trim()) storage()?.setItem(REPO_KEY, opts.repo.trim())
   await wire(t, transport, key, id)
   return id
+}
+
+/** 删除任务记录（侧栏删除）；进程还在先停掉 */
+export async function forgetTask(id: string) {
+  const m = metas.find((x) => x.id === id)
+  if (!m) return
+  const t = registry.get(id)
+  if (t && !t.snapshot.exited && !t.snapshot.result) await cancelTask(id)
+  detach.get(id)?.()
+  detach.delete(id)
+  registry.delete(id)
+  setMetas(metas.filter((x) => x.id !== id))
 }
 
 /** 续上：进程在 → 读盘补齐 + 接实时流；不在 → 读盘回放全程（只读） */

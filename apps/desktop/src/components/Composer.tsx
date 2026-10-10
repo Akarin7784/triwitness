@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowUp, FolderGit2, Mic, Square } from 'lucide-react'
+import { ArrowUp, FolderGit2, Mic, ShieldAlert, Square, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { getDraft, setDraft } from '../lib/prefs'
+import { disarmUnrestricted, getDraft, setDraft, useUnrestrictedArmed } from '../lib/prefs'
 import { notYet } from '../lib/toast'
 import { ModelPicker } from './ModelPicker'
 import { PlusMenu } from './PlusMenu'
@@ -34,7 +34,8 @@ const MAX_H = 240
  */
 export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey = 'default' }: ComposerProps) {
   const [value, setValue] = useState(() => getDraft(draftKey))
-  const [menu, setMenu] = useState<'plus' | 'model' | null>(null)
+  const [menu, setMenu] = useState<'plus' | 'model' | 'effort' | null>(null)
+  const armed = useUnrestrictedArmed()
   const [editingRepo, setEditingRepo] = useState(false)
   const ta = useRef<HTMLTextAreaElement>(null)
 
@@ -53,8 +54,16 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
 
   useEffect(() => {
     const focus = () => ta.current?.focus()
+    const model = () => setMenu('model')
+    const effort = () => setMenu('effort')
     window.addEventListener('tw:focus-composer', focus)
-    return () => window.removeEventListener('tw:focus-composer', focus)
+    window.addEventListener('tw:model-menu', model)
+    window.addEventListener('tw:effort-menu', effort)
+    return () => {
+      window.removeEventListener('tw:focus-composer', focus)
+      window.removeEventListener('tw:model-menu', model)
+      window.removeEventListener('tw:effort-menu', effort)
+    }
   }, [])
 
   const canSend = !running && (!!value.trim() || !!allowEmpty)
@@ -117,8 +126,21 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
                 </button>
               </Tip>
             ))}
+          {armed && (
+            <span data-testid="unrestricted-chip" className="chip fade-in border-rose-ink/40 bg-rose-ink/10 text-rose-ink">
+              <ShieldAlert size={11} strokeWidth={1.8} />
+              勇士模式
+              <button type="button" aria-label="取消勇士模式" onClick={disarmUnrestricted} className="-mr-1 rounded-full p-0.5 hover:bg-rose-ink/15">
+                <X size={10} strokeWidth={2} />
+              </button>
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-1">
-            <ModelPicker open={menu === 'model'} onOpenChange={(o) => setMenu(o ? 'model' : null)} />
+            <ModelPicker
+              open={menu === 'model' || menu === 'effort'}
+              effort={menu === 'effort'}
+              onOpenChange={(o) => setMenu(o ? 'model' : null)}
+            />
             <SendSlot running={!!running} canSend={canSend} onSend={submit} onStop={onStop} />
           </div>
         </div>

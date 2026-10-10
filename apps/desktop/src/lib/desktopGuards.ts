@@ -55,10 +55,8 @@ export function installDesktopGuards() {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (blockedKey(e)) {
-        e.preventDefault()
-        e.stopPropagation()
-      }
+      // 只取消浏览器默认动作，不拦截冒泡：Ctrl+U / Ctrl+Shift+C / Ctrl+Shift+I 是应用快捷键（Claude 同款）
+      if (blockedKey(e)) e.preventDefault()
     },
     { capture: true },
   )

@@ -2,7 +2,7 @@
  * 开发桥（UI-10）：浏览器预览 / 截图 / e2e 用，等价于 Tauri 后端的 core_* 命令。
  * 只在 `npm run dev` 且 TW_DEV_BRIDGE=1 时启用（只绑本机）；正式构建不包含。
  *   GET  /__tw/health            → { bridge: 'tw-bridge/1' }
- *   POST /__tw/start {repo,issue,mode} → { key }
+ *   POST /__tw/start {repo,issue,mode,...RunChoices} → { key }
  *   GET  /__tw/stream?key=       → SSE：每行一条 message；结束发 event: exit
  *   POST /__tw/send {key,line} · /__tw/cancel {key} · /__tw/alive {key} · /__tw/read {runDir,afterSeq}
  * 核心命令：TW_CORE（JSON 数组），默认 `uv run --project <仓库根> tw`。
@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
+import { choiceArgs } from './src/bridge/choices.ts'
 
 interface Task {
   child: ChildProcess
@@ -26,14 +27,6 @@ export function runArgs(repo: string, issue: string, mode: string): string[] {
   if (issue.trim()) a.push('--issue', issue)
   if (mode === 'demo') a.push('--demo')
   if (mode === 'live') a.push('--live')
-  return a
-}
-
-/** 与 Rust choice_args 一致：只放行白名单 */
-export function choiceArgs(model?: unknown, thinking?: unknown): string[] {
-  const a: string[] = []
-  if (model === 'deepseek-flash') a.push('--model', model)
-  if (typeof thinking === 'string' && ['off', 'low', 'medium', 'high'].includes(thinking)) a.push('--thinking', thinking)
   return a
 }
 
@@ -96,7 +89,7 @@ export function coreBridge(repoRoot: string): Plugin {
           if (url.pathname === '/start' && req.method === 'POST') {
             const b = await body(req)
             const [cmd, ...pre] = core()
-            const child = spawn(cmd, [...pre, ...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo')), ...choiceArgs(b.model, b.thinking)], {
+            const child = spawn(cmd, [...pre, ...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo')), ...choiceArgs(b)], {
               env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
               stdio: ['pipe', 'pipe', 'pipe'],
               windowsHide: true,

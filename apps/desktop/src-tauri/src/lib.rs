@@ -1,4 +1,5 @@
 mod core;
+mod secrets;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -10,7 +11,10 @@ pub fn run() {
             core::core_send,
             core::core_cancel,
             core::core_read_run,
-            core::core_alive
+            core::core_alive,
+            secrets::secret_status,
+            secrets::secret_set,
+            secrets::secret_clear
         ])
         .setup(|app| {
             #[cfg(windows)]

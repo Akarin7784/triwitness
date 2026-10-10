@@ -72,17 +72,18 @@ check('未做的入口：即将推出', await until(async () => (await text('[da
 await wait(2600)
 
 // 4) 草稿按会话保存：切走再切回
-await clickText('aside button', '#87')
+await clickText('[data-testid="chat-row"]', '#87')
 await wait(500)
-await clickText('aside button', '新会话')
+await clickText('[data-testid="chat-row"]', '新会话')
 await wait(300)
 
 // 发送
 await page.evaluate(() => {
   const ta = document.querySelector('textarea[aria-label="输入"]')
-  if (ta && !ta.value) ta.focus()
+  ta?.focus()
 })
 const draft = await page.$eval('textarea[aria-label="输入"]', (el) => el.value)
+check(`草稿按会话保存（${draft.length} 字）`, draft.includes('line_count'))
 if (!draft) {
   await page.click('textarea[aria-label="输入"]')
   await page.keyboard.type('line_count 把空行也算进去了，帮我修一下')
@@ -109,7 +110,7 @@ await clickText('[data-testid="approval-card"] button', '允许一次')
 check('结论卡', await until(() => has('[data-testid="result-card"]'), 120_000))
 const rows = await page.$$('[data-testid="tool-row"]')
 check(`工具行 ${rows.length} 条`, rows.length >= 7)
-await rows[1].click()
+if (rows[1]) await rows[1].click()
 await wait(500)
 const md = await page.$$eval('.md-code', (els) => els.length)
 check(`Markdown 代码块（带复制）${md}`, md >= 1)

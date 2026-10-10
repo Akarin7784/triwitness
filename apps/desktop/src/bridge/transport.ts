@@ -5,13 +5,12 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type { CoreMode } from './protocol'
+import type { RunChoices } from './choices'
 
-export interface StartOptions {
+export interface StartOptions extends RunChoices {
   repo: string
   issue: string
   mode: CoreMode
-  model?: string
-  thinking?: string
 }
 
 export interface CoreTransport {
@@ -38,8 +37,15 @@ class TauriTransport implements CoreTransport {
       repo: o.repo,
       issue: o.issue,
       mode: o.mode,
-      model: o.model ?? null,
-      thinking: o.thinking ?? null,
+      choices: {
+        model: o.model,
+        thinking: o.thinking,
+        backend: o.backend,
+        maxCost: o.maxCost,
+        permissionMode: o.permissionMode,
+        confirmUnrestricted: o.confirmUnrestricted,
+        allowPeak: o.allowPeak,
+      },
     })
   }
 
