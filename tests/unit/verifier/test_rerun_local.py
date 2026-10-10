@@ -14,7 +14,7 @@ import pytest
 from triwitness.core.models import ReproRef
 from triwitness.sandbox.base import Capabilities, SandboxSpec
 from triwitness.sandbox.local import LocalSandboxBackend
-from triwitness.verify.rerun import only_test_files, regression, rerun_repro
+from triwitness.verify.rerun import Baseline, only_test_files, plan_scope, regression, rerun_repro
 from triwitness.verify.risk import RiskInputs, assess
 from triwitness.verify.testing import git, make_patch, make_repo
 
@@ -118,3 +118,28 @@ async def test_regression_counts_only_new_failures_and_flaky(tmp_path: Path) -> 
     assert len(run.flaky) == 1 and run.flaky[0].endswith("test_flaky")
     assert any("基线上就存在" in n for n in res.notes)  # test_broken 在基线上就失败，不算回归
     assert res.clean_env == "unverified"
+
+
+def test_plan_scope_full_vs_related_sample() -> None:
+    assert plan_scope(30, ["t/test_a.py"], ["t/test_a.py", "t/test_b.py"]) == ("full", [], None)
+    assert plan_scope(9999, None, None)[0] == "full"  # 没有相关测试信息就只能全量
+    tests = [f"t/test_{i}.py" for i in range(11)]
+    scope, files, note = plan_scope(900, ["t/test_0.py"], tests, sample_rate=0.2, seed=1)
+    assert scope == "related" and "t/test_0.py" in files and len(files) == 1 + 2  # ceil(10 × 0.2)
+    assert files == plan_scope(900, ["t/test_0.py"], tests, sample_rate=0.2, seed=1)[1]  # 固定种子可复现
+    assert note and "15.0 分钟" in note and "抽样 2/10" in note
+
+
+async def test_regression_related_when_full_too_slow(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path, {
+        "calc.py": BUGGY, "tests/__init__.py": "",
+        "tests/test_calc.py": "from calc import add\n\n\ndef test_add():\n    assert add(2, 2) == 4\n",
+        "tests/test_other.py": "def test_other():\n    assert False\n",
+    })  # fmt: skip
+    patch = make_patch(repo, {"calc.py": FIXED})
+    base = Baseline(failures={"tests.test_calc::test_add"}, duration_s=1200)
+    run, res = await regression(LocalSandboxBackend(home=tmp_path / "home"), SandboxSpec(repo=repo), patch, PY,
+                                related=["tests/test_calc.py"], all_tests=["tests/test_calc.py", "tests/test_other.py"],
+                                baseline=base, sample_rate=0.0)  # fmt: skip
+    assert run.scope == "related" and run.passed == 1 and run.failed == 0, res.logs  # test_other 没被选中
+    assert run.new_failures == [] and any("改跑相关 1 个" in n for n in res.notes)

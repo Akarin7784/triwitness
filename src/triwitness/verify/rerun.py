@@ -12,6 +12,8 @@
 
 from __future__ import annotations
 
+import math
+import random
 import shlex
 from typing import Literal
 
@@ -25,6 +27,8 @@ from triwitness.verify.diffutil import is_test_file, split_patch
 ReproStatus = Literal["reproduced", "not_applicable", "inconclusive", "failed"]
 Scope = Literal["repro_base", "repro_patched", "related", "full", "hidden"]
 FLAKY_RERUNS = 2
+FULL_LIMIT_S = 600.0  # 全量超过 10 分钟改跑相关 + 抽样（04 §4.3.2）
+SAMPLE_RATE = 0.2
 
 
 class RerunResult(BaseModel):
@@ -141,27 +145,80 @@ async def rerun_repro(
     return res
 
 
+class Baseline(BaseModel):
+    """基线测试结果（PREPARING 阶段已跑过时直接传入，省一次全量）。"""
+
+    failures: set[str]
+    duration_s: float
+
+
+def plan_scope(
+    base_duration_s: float,
+    related: list[str] | None,
+    all_tests: list[str] | None,
+    *,
+    full_limit_s: float = FULL_LIMIT_S,
+    sample_rate: float = SAMPLE_RATE,
+    seed: int = 0,
+) -> tuple[Scope, list[str], str | None]:
+    """全量 ≤ full_limit_s → 跑全量；否则相关测试 + 其余测试文件按比例随机抽样（固定种子，证据里写明）。"""
+    if base_duration_s <= full_limit_s or related is None:
+        return "full", [], None
+    rest = sorted(set(all_tests or ()) - set(related))
+    k = min(len(rest), math.ceil(len(rest) * sample_rate)) if rest else 0
+    sample = sorted(random.Random(seed).sample(rest, k)) if k else []
+    note = (
+        f"全量测试基线耗时 {base_duration_s / 60:.1f} 分钟 > {full_limit_s / 60:g} 分钟："
+        f"改跑相关 {len(related)} 个 + 抽样 {k}/{len(rest)} 个测试文件（种子 {seed}），未覆盖部分可能漏掉回归"
+    )
+    return "related", sorted({*related, *sample}), note
+
+
 async def regression(
-    backend: SandboxBackend, spec: SandboxSpec, patch: str, test_cmd: str, *, timeout_s: int = 900
+    backend: SandboxBackend,
+    spec: SandboxSpec,
+    patch: str,
+    test_cmd: str,
+    *,
+    timeout_s: int = 900,
+    related: list[str] | None = None,
+    all_tests: list[str] | None = None,
+    baseline: Baseline | None = None,
+    full_limit_s: float = FULL_LIMIT_S,
+    sample_rate: float = SAMPLE_RATE,
+    seed: int = 0,
 ) -> tuple[TestRun, RerunResult]:
-    """全量（或给定范围）测试：基线 vs 修复后；新失败重跑 FLAKY_RERUNS 次判 flaky。"""
+    """回归：基线 vs 修复后，只把新出现的失败算回归；新失败重跑 FLAKY_RERUNS 次判 flaky。
+
+    `test_cmd` 是不带路径的 pytest 调用时，可以在全量太慢（> full_limit_s）时改跑相关 + 抽样（传 related /
+    all_tests，来自 verify.test_select）。基线失败集合用全量结果（或 PREPARING 传入的 baseline）。
+    """
     clean, why = _env(backend)
     res = RerunResult(repro_status="not_applicable", clean_env=clean, unverified_reason=why)
-    base = await _fresh(backend, spec, "", "full_base")
-    try:
-        _, fail_b, res.logs["full_base"] = await _run(base, test_cmd, "full", timeout_s, label="full_base")
-    finally:
-        await base.close()
+    if baseline is None:
+        base = await _fresh(backend, spec, "", "full_base")
+        try:
+            brun, fail_b, res.logs["full_base"] = await _run(base, test_cmd, "full", timeout_s, label="full_base")
+        finally:
+            await base.close()
+        baseline = Baseline(failures=fail_b, duration_s=brun.duration_s)
+    fail_b = baseline.failures
+    scope, files, note = plan_scope(
+        baseline.duration_s, related, all_tests, full_limit_s=full_limit_s, sample_rate=sample_rate, seed=seed
+    )
+    cmd = f"{test_cmd} {' '.join(shlex.quote(f) for f in files)}" if files else test_cmd
+    if note:
+        res.notes.append(note)
     sb = await _fresh(backend, spec, patch, "full")
     try:
-        run, fail_p, res.logs["full"] = await _run(sb, test_cmd, "full", timeout_s)
+        run, fail_p, res.logs[scope] = await _run(sb, cmd, scope, timeout_s, label=scope)
         new = sorted(fail_p - fail_b)
         flaky: list[str] = []
         for nodeid in new:
             if nodeid.startswith("<"):
                 continue
             for i in range(FLAKY_RERUNS):
-                _, again, _ = await _run(sb, f"{test_cmd} {shlex.quote(nodeid)}", "full", timeout_s, label=f"rerun{i}")
+                _, again, _ = await _run(sb, f"{test_cmd} {shlex.quote(nodeid)}", scope, timeout_s, label=f"rerun{i}")
                 if nodeid not in again:
                     flaky.append(nodeid)
                     break
