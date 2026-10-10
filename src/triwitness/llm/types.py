@@ -75,3 +75,8 @@ class LLMResponse(BaseModel):
     latency_ms: int = 0
     source: Literal["live", "replay", "fake"] = "live"
     request_key: str | None = None
+    # 以下由 Router 填写（写入 Trajectory / 证据包）
+    role: Role | None = None
+    variant: str | None = None
+    vendor_policy: Literal["single_vendor", "cross_vendor"] = "single_vendor"
+    fallback_from: str | None = None  # 回退前的首选模型

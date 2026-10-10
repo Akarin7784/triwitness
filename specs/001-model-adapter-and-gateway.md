@@ -185,3 +185,4 @@ constraints:
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：只做 DeepSeek；白名单拒 v4-pro；vendor_policy；高峰窗口与节假日表；AC1/AC5/AC6 修订，AC3/AC4 推迟。
 - 2026-10-10：W1-07/08/11/12 落地（types、ModelAdapter、DeepSeekAdapter、录制/回放、pricing + 节假日表、单任务守卫 + 全局账本）；记录实测字段名；调休上班的周末按官方字面视为空闲（`adjusted_workdays_are_peak: false` 可切换）。
+- 2026-10-10：W1-13 Router 落地（llm/router.py：角色路由、vendor_policy、eval 禁止回退、回退标注 degraded、漂移告警）；W1-14 批量层闸门（llm/gate.py：高峰拒绝启动、跨入高峰停止派发、allow_peak 报告标注、`tw eval estimate` 双价估算）。AC6（v4-pro 拒绝 + cross_vendor FakeClient）与 AC7（eval 模式 429 重试 2 次后抛出、不回退）单测通过。
