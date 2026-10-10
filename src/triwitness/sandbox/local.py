@@ -34,6 +34,18 @@ from triwitness.sandbox.base import (
 from triwitness.sandbox.gitsnap import EXCLUDES, GitSnapshotter, git
 from triwitness.sandbox.proc import pid_alive, run_tree
 
+# git 的 .git/worktrees 元数据不支持并发修改（Windows CI 真机：并发 worktree add 报
+# “failed to read .git/worktrees/<id>/commondir”）。同一仓库的 worktree add/remove/prune 在进程内串行。
+_WT_LOCKS: dict[tuple[str, int], asyncio.Lock] = {}
+
+
+async def _worktree(*args: str, cwd: Path, check: bool = True) -> tuple[int, bytes, bytes]:
+    key = (str(Path(cwd).resolve()), id(asyncio.get_running_loop()))
+    lock = _WT_LOCKS.setdefault(key, asyncio.Lock())
+    async with lock:
+        return await git("worktree", *args, cwd=cwd, check=check)
+
+
 ShellKind = Literal["bash", "powershell"]
 FinishAction = Literal["apply", "keep", "discard"]
 _LIVE: dict[str, LocalSandbox] = {}
@@ -253,8 +265,8 @@ class LocalSandbox:
             _, sha, _ = await git("rev-parse", "HEAD", cwd=self.worktree)
             result = sha.decode().strip()
         await self.snap.drop_refs()
-        await git("worktree", "remove", "--force", str(self.worktree), cwd=self.repo, check=False)
-        await git("worktree", "prune", cwd=self.repo, check=False)
+        await _worktree("remove", "--force", str(self.worktree), cwd=self.repo, check=False)
+        await _worktree("prune", cwd=self.repo, check=False)
         if action != "keep":
             await git("branch", "-D", self.branch, cwd=self.repo, check=False)
         shutil.rmtree(self.worktree, ignore_errors=True)
@@ -316,11 +328,11 @@ class LocalSandboxBackend:
             raise SandboxError(f"worktree 已存在：{wt}")
         wt.parent.mkdir(parents=True, exist_ok=True)
         branch = f"tw/{run_id}"
-        await git("worktree", "add", "--detach", "-q", str(wt), base_sha, cwd=repo)
+        await _worktree("add", "--detach", "-q", str(wt), base_sha, cwd=repo)
         try:
             await git("switch", "-q", "-c", branch, cwd=wt)
         except SandboxError:
-            await git("worktree", "remove", "--force", str(wt), cwd=repo, check=False)
+            await _worktree("remove", "--force", str(wt), cwd=repo, check=False)
             raise
         tw_dir = self.home / "runs" / run_id / ".tw"
         tw_dir.mkdir(parents=True, exist_ok=True)
@@ -357,8 +369,8 @@ class LocalSandboxBackend:
                     # <repo>/.git/worktrees/<name>
                     repo = Path(txt.split(":", 1)[1].strip()).parents[2]
             if repo is not None and repo.exists():
-                await git("worktree", "remove", "--force", str(wt), cwd=repo, check=False)
-                await git("worktree", "prune", cwd=repo, check=False)
+                await _worktree("remove", "--force", str(wt), cwd=repo, check=False)
+                await _worktree("prune", cwd=repo, check=False)
                 await git("branch", "-D", f"tw/{run_id}", cwd=repo, check=False)
                 _, refs, _ = await git("for-each-ref", "--format=%(refname)", f"refs/tw/ckpt/{run_id}/", cwd=repo,
                                        check=False)  # fmt: skip
