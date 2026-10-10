@@ -46,10 +46,10 @@ def snapshot(name: str, text: str) -> None:
 
 def cost() -> CostReport:
     lines = [
-        CostLine(role="executor", vendor="deepseek", model="deepseek-v4-flash", calls=12,
+        CostLine(role="executor", vendor="deepseek", model="deepseek-flash", calls=12,
                  usage=Usage(input_tokens=1_200_000, cache_hit_tokens=1_056_000,
                              cache_miss_tokens=144_000, output_tokens=41_000), cost_cny=0.66),
-        CostLine(role="verifier", vendor="deepseek", model="deepseek-v4-pro", calls=1,
+        CostLine(role="verifier", vendor="deepseek", model="deepseek-flash", calls=1,
                  usage=Usage(input_tokens=48_000, cache_hit_tokens=34_080,
                              cache_miss_tokens=13_920, output_tokens=3_000), cost_cny=0.2),
     ]  # fmt: skip
@@ -85,9 +85,9 @@ def evidence(**kw: object) -> Evidence:
         task_id="t1", finish=finish(), patch=PATCH, root_cause="`add()` 用了减号。",
         rerun=RerunResult(repro_status="reproduced", clean_env="verified", test_runs=runs()),
         regression=FULL, static_checks={"ruff": "pass", "pyright": "pass"}, verdict="pass",
-        verifier_model="deepseek-v4-pro", verifier_confidence=0.9,
+        verifier_model="deepseek-flash", verifier_confidence=0.9,
         criteria_results={"add 返回和": "met"}, cost=cost(), config_hash="h:7f3a01",
-        base_ref="abc1234def", review_model="deepseek-v4-pro", review_variant="strict-reviewer",
+        base_ref="abc1234def", review_model="deepseek-flash", review_variant="strict-reviewer",
         findings=[Finding(severity="minor", file=FIX, line=1, message="docstring 未更新", status="fixed")],
     )  # fmt: skip
     args.update(kw)

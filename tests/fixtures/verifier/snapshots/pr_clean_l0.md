@@ -18,14 +18,14 @@ ruff ✅ · pyright ✅ · 未修改已有测试 ✅ · 无新增 skip ✅ · �
 ### 风险因子
 无
 
-### 评审（deepseek-v4-pro · strict-reviewer，同厂商异构评审）
+### 评审（deepseek-flash · strict-reviewer，同厂商异构评审）
 - [minor][已修复] `calc.py:1` docstring 未更新
 
 ### 成本
 | 角色 | 模型 | 输入（缓存命中率） | 输出 | 费用 |
 |---|---|---|---|---|
-| Executor | deepseek-v4-flash | 1.2M（88%） | 41K | ¥0.66 |
-| Verifier | deepseek-v4-pro | 48K（71%） | 3K | ¥0.20 |
+| Executor | deepseek-flash | 1.2M（88%） | 41K | ¥0.66 |
+| Verifier | deepseek-flash | 48K（71%） | 3K | ¥0.20 |
 | **合计** | | | | **¥0.86**（预算 ¥5） |
 
 配置哈希：`h:7f3a01` · TriWitness v0.1.0
