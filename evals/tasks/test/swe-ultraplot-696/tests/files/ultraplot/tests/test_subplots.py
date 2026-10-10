@@ -1,0 +1,988 @@
+#!/usr/bin/env python3
+"""
+Test subplot layout.
+"""
+
+import numpy as np
+import pytest
+
+import ultraplot as uplt
+
+
+def _singleton_axis(obj):
+    if isinstance(obj, uplt.SubplotGrid):
+        assert len(obj) == 1
+        return obj[0]
+    return obj
+
+
+@pytest.mark.mpl_image_compare
+def test_align_labels():
+    """
+    Test spanning and aligned labels.
+    """
+    fig, axs = uplt.subplots(
+        [[2, 1, 4], [2, 3, 5]], refnum=2, refwidth=1.5, align=1, span=0
+    )
+    fig.format(xlabel="xlabel", ylabel="ylabel", abc="A.", abcloc="ul")
+    axs[0].format(ylim=(10000, 20000))
+    axs[-1].panel_axes("bottom", share=False)
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+@pytest.mark.parametrize("share", [0, 1, 2, 3, 4])
+def test_all_share_levels(share):
+    N = 10
+    x = np.arange(N)
+    fig, ax = uplt.subplots(nrows=2, ncols=2, share=share)
+    ax[0].plot(x, x)
+    ax[-1].plot(x * 1000, x * 1000)
+    ax.format(xlabel="xlabel", ylabel="ylabel", suptitle=f"Share level={share}")
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_share_all_basic():
+    """
+    Test sharing level all.
+    """
+    # Simple example
+    N = 10
+    fig, axs = uplt.subplots(nrows=1, ncols=2, refwidth=1.5, share="all")
+    axs[0].plot(np.arange(N) * 1e2, np.arange(N) * 1e4)
+    # Complex example
+    fig, axs = uplt.subplots(nrows=2, ncols=2, refwidth=1.5, share="all")
+    axs[0].panel("b")
+    pax = axs[0].panel("r")
+    pax.format(ylabel="label")
+    axs[0].plot(np.arange(N) * 1e2, np.arange(N) * 1e4)
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_span_labels():
+    """
+    Rigorous tests of spanning and aligned labels feature.
+    """
+    fig, axs = uplt.subplots([[1, 2, 4], [1, 3, 5]], refwidth=1.5, share=0, span=1)
+    fig.format(xlabel="xlabel", ylabel="ylabel", abc="A.", abcloc="ul")
+    axs[1].format()  # xlabel='xlabel')
+    axs[2].format()
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_title_deflection():
+    """
+    Test the deflection of titles above and below panels.
+    """
+    fig, ax = uplt.subplots()
+    # ax.format(abc='A.', title='Title', titleloc='left', titlepad=30)
+    tax = ax.panel_axes("top")
+    ax.format(titleabove=False)  # redirects to bottom
+    ax.format(abc="A.", title="Title", titleloc="left", titlepad=50)
+    ax.format(xlabel="xlabel", ylabel="ylabel", ylabelpad=50)
+    tax.format(title="Fear Me", title_kw={"size": "x-large"})
+    tax.format(ultitle="Inner", titlebbox=True, title_kw={"size": "med-large"})
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_complex_ticks():
+    """
+    Normally title offset with these different tick arrangements is tricky
+    but `_update_title_position` accounts for edge cases.
+    """
+    fig, axs = uplt.subplots(ncols=2)
+    axs[0].format(
+        xtickloc="both",
+        xticklabelloc="top",
+        xlabelloc="top",
+        title="title",
+        xlabel="xlabel",
+        suptitle="Test",
+    )
+    axs[1].format(
+        xtickloc="both",
+        xticklabelloc="top",
+        # xlabelloc='top',
+        xlabel="xlabel",
+        title="title",
+        suptitle="Test",
+    )
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_both_ticklabels():
+    """
+    Test both tick labels.
+    """
+    fig, ax = uplt.subplots()  # when both, have weird bug
+    ax.format(xticklabelloc="both", title="title", suptitle="Test")
+    fig, ax = uplt.subplots()  # when *just top*, bug disappears
+    ax.format(xtickloc="top", xticklabelloc="top", title="title", suptitle="Test")
+    fig, ax = uplt.subplots()  # not sure here
+    ax.format(xtickloc="both", xticklabelloc="neither", suptitle="Test")
+    fig, ax = uplt.subplots()  # doesn't seem to change the title offset though
+    ax.format(xtickloc="top", xticklabelloc="neither", suptitle="Test")
+    return fig
+
+
+def test_gridspec_copies():
+    """
+    Test whether gridspec copies work.
+    """
+    fig1, ax = uplt.subplots(ncols=2)
+    gs = fig1.gridspec.copy(left=5, wspace=0, right=5)
+    fig2 = uplt.figure()
+    fig2.add_subplots(gs)
+    fig = uplt.figure()
+    with pytest.raises(ValueError):
+        fig.add_subplots(gs)  # should raise error
+
+
+@pytest.mark.mpl_image_compare
+def test_aligned_outer_guides():
+    """
+    Test alignment adjustment.
+    """
+    fig, ax = uplt.subplot()
+    h1 = ax.plot(np.arange(5), label="foo")
+    h2 = ax.plot(np.arange(5) + 1, label="bar")
+    h3 = ax.plot(np.arange(5) + 2, label="baz")
+    ax.legend(h1, loc="bottom", align="left")
+    ax.legend(h2, loc="bottom", align="right")
+    ax.legend(h3, loc="b", align="c")
+    ax.colorbar("magma", loc="right", align="top", shrink=0.4)  # same as length
+    ax.colorbar("magma", loc="right", align="bottom", shrink=0.4)
+    ax.colorbar("magma", loc="left", align="top", length=0.6)  # should offset
+    ax.colorbar("magma", loc="left", align="bottom", length=0.6)
+    ax.legend(h1, loc="top", align="right", pad="4pt", frame=False)
+    ax.format(title="Very long title", titlepad=6, titleloc="left")
+    return fig
+
+
+@pytest.mark.parametrize(
+    "test_case,refwidth,kwargs,setup_func,ref",
+    [
+        (
+            "simple",
+            1.5,
+            {"ncols": 2},
+            None,
+            None,
+        ),
+        (
+            "funky_layout",
+            1.5,
+            {"array": [[1, 1, 2, 2], [0, 3, 3, 0]]},
+            lambda fig, axs: (
+                axs[1].panel_axes("left"),
+                axs.format(xlocator=0.2, ylocator=0.2),
+            ),
+            3,
+        ),
+        (
+            "with_panels",
+            2.0,
+            {"array": [[1, 1, 2], [3, 4, 5], [3, 4, 6]], "hratios": (2, 1, 1)},
+            lambda fig, axs: (
+                axs[2].panel_axes("right", width=0.5),
+                axs[0].panel_axes("bottom", width=0.5),
+                axs[3].panel_axes("left", width=0.5),
+            ),
+            None,
+        ),
+    ],
+)
+@pytest.mark.mpl_image_compare
+def test_reference_aspect(test_case, refwidth, kwargs, setup_func, ref):
+    """
+    Rigorous test of reference aspect ratio accuracy.
+    """
+    # Add ref and refwidth to kwargs
+    subplot_kwargs = kwargs.copy()
+    subplot_kwargs["refwidth"] = refwidth
+    if ref is not None:
+        subplot_kwargs["ref"] = ref
+
+    # Create subplots
+    fig, axs = uplt.subplots(**subplot_kwargs)
+
+    # Run setup function if provided
+    if setup_func is not None:
+        setup_func(fig, axs)
+
+    # Apply auto layout
+    fig.auto_layout()
+    # Assert reference width accuracy
+    assert np.isclose(refwidth, axs[fig._refnum - 1]._get_size_inches()[0], rtol=1e-3)
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+@pytest.mark.parametrize("share", ["limits", "labels"])
+def test_axis_sharing(share):
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=share, span=False)
+    labels = ["A", "B", "C", "D"]
+    for idx, axi in enumerate(ax):
+        axi.scatter(idx, idx)
+        axi.set_xlabel(labels[idx])
+        axi.set_ylabel(labels[idx])
+
+    # TODO: the labels are handled in a funky way. The plot looks fine but
+    # the label are not "shared" that is the labels still exist but they
+    # are not visible and instead there are new labels created. Need to
+    # figure this out.
+    # test left hand side
+    if share != "labels":
+        assert all([i == j for i, j in zip(ax[0].get_xlim(), ax[2].get_xlim())])
+        assert all([i == j for i, j in zip(ax[0].get_ylim(), ax[1].get_ylim())])
+        assert all([i == j for i, j in zip(ax[1].get_xlim(), ax[3].get_xlim())])
+    elif share == "labels":
+        ax.draw(
+            fig.canvas.get_renderer()
+        )  # forcing a draw to ensure the labels are shared
+        # columns shares x label; top row should be empty
+        assert ax[0].xaxis.get_label().get_visible() == False
+        assert ax[1].xaxis.get_label().get_visible() == False
+
+        assert ax[2].xaxis.get_label().get_visible() == True
+        assert ax[2].get_xlabel() == "A"
+        assert ax[3].xaxis.get_label().get_visible() == True
+        assert ax[3].get_xlabel() == "B"
+
+        # rows share ylabel
+        assert ax[3].yaxis.get_label().get_visible() == False
+        assert ax[1].yaxis.get_label().get_visible() == False
+
+        assert ax[0].yaxis.get_label().get_visible() == True
+        assert ax[2].yaxis.get_label().get_visible() == True
+        assert ax[0].get_ylabel() == "B"
+        assert ax[2].get_ylabel() == "D"
+
+    return fig
+
+
+def test_subset_share_xlabels_override():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share="labels", span=False)
+    ax[0, 0].format(xlabel="Top-left X")
+    ax[0, 1].format(xlabel="Top-right X")
+    bottom = ax[1, :]
+    bottom[0].format(xlabel="Bottom-row X", share_xlabels=list(bottom))
+
+    fig.canvas.draw()
+
+    assert not ax[0, 0].xaxis.get_label().get_visible()
+    assert not ax[0, 1].xaxis.get_label().get_visible()
+    assert bottom[0].get_xlabel().strip() == ""
+    assert bottom[1].get_xlabel().strip() == ""
+    assert any(lab.get_text() == "Bottom-row X" for lab in fig._supxlabel_dict.values())
+
+    uplt.close(fig)
+
+
+def test_spanning_labels_excluded_from_tight_layout_bbox():
+    """
+    Spanning x/y labels should not be counted twice by tight layout.
+
+    Regression test: with ``space=0``, including the figure-level spanning labels
+    in layout caused oversized left/bottom margins.
+    """
+    fig, ax = uplt.subplots(space=0, refwidth="10em")
+    ax.format(xticks="null", yticks="null", xlabel="x axis", ylabel="y axis")
+    fig.canvas.draw()
+
+    assert fig._supxlabel_dict
+    assert fig._supylabel_dict
+    assert all(not lab.get_in_layout() for lab in fig._supxlabel_dict.values())
+    assert all(not lab.get_in_layout() for lab in fig._supylabel_dict.values())
+
+    left, bottom, _, _ = ax.get_position().bounds
+    assert left < 0.25
+    assert bottom < 0.25
+
+    uplt.close(fig)
+
+
+def test_subset_share_xlabels_implicit():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share="labels", span=False)
+    ax[0, 0].format(xlabel="Top-left X")
+    ax[0, 1].format(xlabel="Top-right X")
+    bottom = ax[1, :]
+    bottom.format(xlabel="Bottom-row X")
+
+    fig.canvas.draw()
+
+    assert not ax[0, 0].xaxis.get_label().get_visible()
+    assert not ax[0, 1].xaxis.get_label().get_visible()
+    assert bottom[0].get_xlabel().strip() == ""
+    assert bottom[1].get_xlabel().strip() == ""
+    assert any(lab.get_text() == "Bottom-row X" for lab in fig._supxlabel_dict.values())
+
+    uplt.close(fig)
+
+
+def test_subset_share_ylabels_override():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share="labels", span=False)
+    ax[0, 0].format(ylabel="Left-top Y")
+    ax[1, 0].format(ylabel="Left-bottom Y")
+    right = ax[:, 1]
+    right[0].format(ylabel="Right-column Y", share_ylabels=list(right))
+
+    fig.canvas.draw()
+
+    assert ax[0, 0].yaxis.get_label().get_visible()
+    assert ax[0, 0].get_ylabel() == "Left-top Y"
+    assert ax[1, 0].yaxis.get_label().get_visible()
+    assert ax[1, 0].get_ylabel() == "Left-bottom Y"
+    assert right[0].get_ylabel().strip() == ""
+    assert right[1].get_ylabel().strip() == ""
+    assert any(
+        lab.get_text() == "Right-column Y" for lab in fig._supylabel_dict.values()
+    )
+
+    uplt.close(fig)
+
+
+def test_subset_share_xlabels_implicit_column():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    right = ax[:, 1]
+    right.format(xlabel="Right-column X")
+
+    fig.canvas.draw()
+
+    assert ax[0, 1].get_xlabel().strip() == ""
+    assert ax[1, 1].get_xlabel().strip() == ""
+    label_axes = [
+        axi
+        for axi, lab in fig._supxlabel_dict.items()
+        if lab.get_text() == "Right-column X"
+    ]
+    assert label_axes and label_axes[0] is _singleton_axis(ax[1, 1])
+
+    uplt.close(fig)
+
+
+def test_subset_share_xlabels_overridden_by_global_format():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    bottom = ax[1, :]
+    bottom.format(xlabel="Bottom-row X")
+    ax[0, 0].format(xlabel="Top-left X")
+    ax.format(xlabel="Global X")
+
+    fig.canvas.draw()
+
+    assert ax[0, 0].get_xlabel() == "Global X"
+    assert ax[0, 1].get_xlabel() == "Global X"
+    assert not any(
+        lab.get_text() == "Bottom-row X" for lab in fig._supxlabel_dict.values()
+    )
+
+    uplt.close(fig)
+
+
+def test_full_grid_clears_share_label_groups():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    bottom = ax[1, :]
+    bottom.format(xlabel="Bottom-row X")
+    ax.format(xlabel="Global X")
+
+    fig.canvas.draw()
+
+    assert not fig._has_share_label_groups("x")
+    assert not any(
+        lab.get_text() == "Bottom-row X" for lab in fig._supxlabel_dict.values()
+    )
+    assert all(axi.get_xlabel() == "Global X" for axi in ax)
+
+    uplt.close(fig)
+
+
+def test_subset_share_ylabels_implicit_row():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    top = ax[0, :]
+    top.format(ylabel="Top-row Y")
+
+    fig.canvas.draw()
+
+    assert ax[0, 0].get_ylabel().strip() == ""
+    assert ax[0, 1].get_ylabel().strip() == ""
+    label_axes = [
+        axi for axi, lab in fig._supylabel_dict.items() if lab.get_text() == "Top-row Y"
+    ]
+    assert label_axes and label_axes[0] is _singleton_axis(ax[0, 0])
+
+    uplt.close(fig)
+
+
+def test_subset_share_xlabels_clear():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    bottom = ax[1, :]
+    bottom.format(xlabel="Shared")
+
+    fig.canvas.draw()
+    assert any(lab.get_text() == "Shared" for lab in fig._supxlabel_dict.values())
+
+    bottom.format(share_xlabels=False, xlabel="Unshared")
+    fig.canvas.draw()
+
+    assert not any(lab.get_text() == "Shared" for lab in fig._supxlabel_dict.values())
+    assert not any(lab.get_text() == "Unshared" for lab in fig._supxlabel_dict.values())
+    assert bottom[0].get_xlabel() == "Unshared"
+    assert bottom[1].get_xlabel() == "Unshared"
+
+    uplt.close(fig)
+
+
+def test_subset_share_labels_method_both():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    right = ax[:, 1]
+    right[0].set_xlabel("Right-column X")
+    right[0].set_ylabel("Right-column Y")
+    right.share_labels(axis="both")
+
+    fig.canvas.draw()
+
+    assert right[0].get_xlabel().strip() == ""
+    assert right[1].get_xlabel().strip() == ""
+    assert right[0].get_ylabel().strip() == ""
+    assert right[1].get_ylabel().strip() == ""
+    assert any(
+        lab.get_text() == "Right-column X" for lab in fig._supxlabel_dict.values()
+    )
+    assert any(
+        lab.get_text() == "Right-column Y" for lab in fig._supylabel_dict.values()
+    )
+
+    uplt.close(fig)
+
+
+def test_subset_share_labels_invalid_axis():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    with pytest.raises(ValueError):
+        ax[:, 1].share_labels(axis="nope")
+
+    uplt.close(fig)
+
+
+def test_subset_share_xlabels_mixed_sides():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    ax[0, :].format(xlabelloc="top", share_xlabels=False)
+    ax[1, :].format(xlabelloc="bottom", share_xlabels=False)
+    ax[0, 0].set_xlabel("Top X")
+    ax[0, 1].set_xlabel("Top X")
+    ax[1, 0].set_xlabel("Bottom X")
+    ax[1, 1].set_xlabel("Bottom X")
+    ax[0, 0].format(share_xlabels=list(ax))
+
+    fig.canvas.draw()
+
+    assert any(lab.get_text() == "Top X" for lab in fig._supxlabel_dict.values())
+    assert any(lab.get_text() == "Bottom X" for lab in fig._supxlabel_dict.values())
+
+    uplt.close(fig)
+
+
+def test_subset_share_xlabels_implicit_column_top():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    right = ax[:, 1]
+    right.format(xlabel="Right-column X (top)", xlabelloc="top")
+
+    fig.canvas.draw()
+
+    assert ax[0, 1].get_xlabel().strip() == ""
+    assert ax[1, 1].get_xlabel().strip() == ""
+    label_axes = [
+        axi
+        for axi, lab in fig._supxlabel_dict.items()
+        if lab.get_text() == "Right-column X (top)"
+    ]
+    assert label_axes and label_axes[0] is _singleton_axis(ax[0, 1])
+
+    uplt.close(fig)
+
+
+def test_subset_share_ylabels_implicit_row_right():
+    fig, ax = uplt.subplots(ncols=2, nrows=2, share=0, span=False)
+    top = ax[0, :]
+    top.format(ylabel="Top-row Y (right)", ylabelloc="right")
+
+    fig.canvas.draw()
+
+    assert ax[0, 0].get_ylabel().strip() == ""
+    assert ax[0, 1].get_ylabel().strip() == ""
+    label_axes = [
+        axi
+        for axi, lab in fig._supylabel_dict.items()
+        if lab.get_text() == "Top-row Y (right)"
+    ]
+    assert label_axes and label_axes[0] is _singleton_axis(ax[0, 1])
+
+    uplt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        [[1, 2], [3, 4]],  # simple 2x2
+        [[1, 6, 2], [0, 3, 0], [4, 0, 5]],  # complex 3x3 with independent plots
+        [[0, 0, 1, 1, 0, 0], [0, 2, 2, 3, 3, 0]],  # 1 spanning 2 different plot
+        [
+            [0, 2, 2, 3, 3, 0],
+            [0, 0, 1, 1, 0, 0],
+        ],  # horizontal inverse of the previous
+        [
+            [0, 2, 2, 0, 3, 3, 0],
+            [0, 0, 1, 1, 1, 0, 0],
+        ],  # horizontal inverse of the previous
+    ],
+)
+@pytest.mark.mpl_image_compare
+def test_label_sharing_top_right(layout):
+    fig, ax = uplt.subplots(layout)
+    ax.format(
+        xticklabelloc="t",
+        yticklabelloc="r",
+        xlabel="xlabel",
+        ylabel="ylabel",
+        title="Test Title",
+    )
+    fig.canvas.draw()  # force redraw tick labels
+    for axi in ax:
+        assert axi._is_ticklabel_on("labelleft") == False
+        assert axi._is_ticklabel_on("labelbottom") == False
+
+    for side, axs in fig._get_border_axes().items():
+        for axi in axs:
+            if side == "top":
+                assert axi._is_ticklabel_on("labeltop") == True
+            if side == "right":
+                assert axi._is_ticklabel_on("labelright") == True
+    return fig
+
+
+@pytest.mark.parametrize("layout", [[[1, 2], [3, 4]]])
+@pytest.mark.mpl_image_compare
+def test_panel_sharing_top_right(layout):
+    fig, ax = uplt.subplots(layout)
+    for dir in "left right top bottom".split():
+        pax = ax[0].panel(dir)
+    fig.canvas.draw()  # force redraw tick labels
+
+    # Main panel: ticks are off
+    assert not ax[0]._is_ticklabel_on("labelleft")
+    assert not ax[0]._is_ticklabel_on("labelright")
+    assert not ax[0]._is_ticklabel_on("labeltop")
+    assert not ax[0]._is_ticklabel_on("labelbottom")
+
+    # For panels the inside ticks are off
+    panel = ax[0]._panel_dict["left"][-1]
+    assert panel._is_ticklabel_on("labelleft")
+    assert panel._is_ticklabel_on("labelbottom")
+    assert not panel._is_ticklabel_on("labelright")
+    assert not panel._is_ticklabel_on("labeltop")
+
+    panel = ax[0]._panel_dict["top"][-1]
+    assert panel._is_ticklabel_on("labelleft")
+    assert not panel._is_ticklabel_on("labelbottom")
+    assert not panel._is_ticklabel_on("labelright")
+    assert not panel._is_ticklabel_on("labeltop")
+
+    panel = ax[0]._panel_dict["right"][-1]
+    assert not panel._is_ticklabel_on("labelleft")
+    assert panel._is_ticklabel_on("labelbottom")
+    assert not panel._is_ticklabel_on("labelright")
+    assert not panel._is_ticklabel_on("labeltop")
+
+    panel = ax[0]._panel_dict["bottom"][-1]
+    assert panel._is_ticklabel_on("labelleft")
+    assert not panel._is_ticklabel_on("labelbottom")
+    assert not panel._is_ticklabel_on("labelright")
+    assert not panel._is_ticklabel_on("labeltop")
+
+    assert not ax[1]._is_ticklabel_on("labelleft")
+    assert not ax[1]._is_ticklabel_on("labelright")
+    assert not ax[1]._is_ticklabel_on("labeltop")
+    assert not ax[1]._is_ticklabel_on("labelbottom")
+
+    assert ax[2]._is_ticklabel_on("labelleft")
+    assert not ax[2]._is_ticklabel_on("labelright")
+    assert not ax[2]._is_ticklabel_on("labeltop")
+    assert ax[2]._is_ticklabel_on("labelbottom")
+
+    assert not ax[3]._is_ticklabel_on("labelleft")
+    assert not ax[3]._is_ticklabel_on("labelright")
+    assert not ax[3]._is_ticklabel_on("labeltop")
+    assert ax[3]._is_ticklabel_on("labelbottom")
+
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_uneven_span_subplots(rng):
+    fig = uplt.figure(refwidth=1, refnum=5, span=False)
+    axs = fig.subplots([[1, 1, 2], [3, 4, 2], [3, 4, 5]], hratios=[2.2, 1, 1])
+    axs.format(xlabel="xlabel", ylabel="ylabel", suptitle="Complex SubplotGrid")
+    axs[0].format(ec="black", fc="gray1", lw=1.4)
+    axs[1, 1:].format(fc="blush")
+    axs[1, :1].format(fc="sky blue")
+    axs[-1, -1].format(fc="gray4", grid=False)
+    axs[0].plot((rng.random((50, 10)) - 0.5).cumsum(axis=0), cycle="Grays_r", lw=2)
+    return fig
+
+
+@pytest.mark.mpl_image_compare
+def test_uneven_span_subplots(rng):
+    fig = uplt.figure(refwidth=1, refnum=5, span=False)
+    axs = fig.subplots([[1, 1, 2], [3, 4, 2], [3, 4, 5]], hratios=[2.2, 1, 1])
+    axs.format(xlabel="xlabel", ylabel="ylabel", suptitle="Complex SubplotGrid")
+    axs[0].format(ec="black", fc="gray1", lw=1.4)
+    axs[1, 1:].format(fc="blush")
+    axs[1, :1].format(fc="sky blue")
+    axs[-1, -1].format(fc="gray4", grid=False)
+    axs[0].plot((rng.random((50, 10)) - 0.5).cumsum(axis=0), cycle="Grays_r", lw=2)
+    return fig
+
+
+@pytest.mark.parametrize("share_panels", [True, False])
+def test_panel_ticklabels_all_sides_share_and_no_share(share_panels):
+    # 2x2 grid; add panels on all sides of the first axes
+    fig, ax = uplt.subplots(nrows=2, ncols=2)
+    axi = ax[0]
+
+    # Create panels on all sides with configurable sharing
+    pax_left = axi.panel("left", share=share_panels)
+    pax_right = axi.panel("right", share=share_panels)
+    pax_top = axi.panel("top", share=share_panels)
+    pax_bottom = axi.panel("bottom", share=share_panels)
+
+    # Force draw so ticklabel state is resolved
+    fig.canvas.draw()
+
+    def assert_panel(axi_panel, side, share_flag):
+        on_left = axi_panel._is_ticklabel_on("labelleft")
+        on_right = axi_panel._is_ticklabel_on("labelright")
+        on_top = axi_panel._is_ticklabel_on("labeltop")
+        on_bottom = axi_panel._is_ticklabel_on("labelbottom")
+
+        # Inside (toward the main) must be off in all cases
+        if side == "left":
+            # Inside is right
+            assert not on_right
+        elif side == "right":
+            # Inside is left
+            assert not on_left
+        elif side == "top":
+            # Inside is bottom
+            assert not on_bottom
+        elif side == "bottom":
+            # Inside is top
+            assert not on_top
+
+        if not share_flag:
+            # For non-sharing panels, prefer outside labels on for top/right
+            if side == "right":
+                assert on_right
+            if side == "top":
+                assert on_top
+            # For left/bottom non-sharing, we don't enforce outside on here
+            # (baseline may keep left/bottom on the main)
+
+    # Check each panel side
+    assert_panel(pax_left, "left", share_panels)
+    assert_panel(pax_right, "right", share_panels)
+    assert_panel(pax_top, "top", share_panels)
+    assert_panel(pax_bottom, "bottom", share_panels)
+
+
+def test_non_rectangular_outside_labels_top():
+    """
+    Check that non-rectangular layouts work with outside labels.
+    """
+    layout = [
+        [1, 1, 2, 2],
+        [0, 3, 3, 0],
+        [4, 4, 5, 5],
+    ]
+
+    fig, ax = uplt.subplots(
+        layout,
+    )
+    ax.format(rightlabels=[2, 3, 5])
+    ax.format(bottomlabels=[4, 5])
+    ax.format(leftlabels=[1, 3, 4])
+    ax.format(toplabels=[1, 2])
+    fig.canvas.draw()
+    uplt.close(fig)
+
+
+@pytest.mark.mpl_image_compare(tolerance=4)
+def test_outside_labels_with_panels():
+    fig, ax = uplt.subplots(
+        ncols=2,
+        nrows=2,
+        share=True,
+    )
+    # Create extreme case where we add a lot of panels
+    # This should push the left labels further left
+    for idx in range(5):
+        ax[0].panel("left")
+    ax.format(leftlabels=["A", "B"])
+    return fig
+
+
+def test_panel_group_membership_respects_figure_share_flags():
+    """
+    Ensure that panel-only configurations do not promote sharing when figure-level
+    sharing is disabled, and do promote when figure-level sharing is enabled.
+    """
+    # Right-only panels with share=False should NOT mark y panel-group
+    fig, ax = uplt.subplots(nrows=2, share=False)
+    ax[0].panel("right")
+    fig.canvas.draw()
+    assert ax[0]._panel_sharey_group is False
+
+    # Right-only panels with share='labels' SHOULD mark y panel-group
+    fig2, ax2 = uplt.subplots(nrows=2, share="labels")
+    ax2[0].panel("right")
+    fig2.canvas.draw()
+    assert ax2[0]._panel_sharey_group is True
+
+    # Top-only panels with share=False should NOT mark x panel-group
+    fig3, ax3 = uplt.subplots(ncols=2, share=False)
+    ax3[0].panel("top")
+    fig3.canvas.draw()
+    assert ax3[0]._panel_sharex_group is False
+
+    # Top-only panels with share='labels' SHOULD mark x panel-group
+    fig4, ax4 = uplt.subplots(ncols=2, share="labels")
+    ax4[0].panel("top")
+    fig4.canvas.draw()
+    assert ax4[0]._panel_sharex_group is True
+
+
+def test_panel_share_flag_controls_group_membership():
+    """
+    Panels created with share=False should not join panel share groups even when
+    the figure has sharing enabled.
+    """
+    # Y panels: right-only with panel share=False
+    fig, ax = uplt.subplots(nrows=2, share="labels")
+    ax[0].panel("right", share=False)
+    fig.canvas.draw()
+    assert ax[0]._panel_sharey_group is False
+
+    # X panels: top-only with panel share=False
+    fig2, ax2 = uplt.subplots(ncols=2, share="labels")
+    ax2[0].panel("top", share=False)
+    fig2.canvas.draw()
+    assert ax2[0]._panel_sharex_group is False
+
+
+def test_ticklabels_with_guides_share_true_cartesian():
+    """
+    With share=True, tick labels should only appear on bottom row and left column
+    even when colorbars and legends are present on borders.
+    """
+    rng = np.random.default_rng(0)
+    fig, ax = uplt.subplots(nrows=2, ncols=2, share=True)
+    m = ax[0].pcolormesh(rng.random((8, 8)), colorbar="r")  # outer right colorbar
+    ax[3].legend(loc="bottom")  # bottom legend
+    fig.canvas.draw()
+    for i, axi in enumerate(ax):
+        on_left = axi._is_ticklabel_on("labelleft")
+        on_right = axi._is_ticklabel_on("labelright")
+        on_top = axi._is_ticklabel_on("labeltop")
+        on_bottom = axi._is_ticklabel_on("labelbottom")
+
+        # Left column indices: 0, 2
+        if i % 2 == 0:
+            assert on_left
+            assert not on_right
+        else:
+            assert not on_left
+            assert not on_right
+
+        # Bottom row indices: 2, 3
+        if i // 2 == 1:
+            assert on_bottom
+            assert not on_top
+        else:
+            assert not on_bottom
+            assert not on_top
+
+
+def test_ticklabels_with_guides_share_true_geo():
+    """
+    With share=True on GeoAxes, tick labels should only appear on bottom row and left column
+    even when colorbars and legends are present on borders.
+    """
+    rng = np.random.default_rng(1)
+    fig, ax = uplt.subplots(nrows=2, ncols=2, share=True, proj="cyl")
+    ax.format(labels="both", land=True)  # ensure gridliner labels can be toggled
+    ax[0].pcolormesh(rng.random((10, 10)), colorbar="r")  # outer right colorbar
+    ax[3].legend(loc="bottom")  # bottom legend
+    fig.canvas.draw()
+    for i, axi in enumerate(ax):
+        on_left = axi._is_ticklabel_on("labelleft")
+        on_right = axi._is_ticklabel_on("labelright")
+        on_top = axi._is_ticklabel_on("labeltop")
+        on_bottom = axi._is_ticklabel_on("labelbottom")
+        if i == 0:
+            assert on_left
+            assert on_top
+            assert not on_bottom
+            assert not on_right
+        elif i == 1:
+            assert not on_left
+            assert on_top
+            assert not on_bottom
+            assert on_right
+        elif i == 2:
+            assert on_left
+            assert not on_top
+            assert on_bottom
+            assert not on_right
+        else:  # i == 3
+            assert not on_left
+            assert not on_top
+            assert on_bottom
+            assert on_right
+
+
+def test_deep_panel_stacks_border_detection():
+    """
+    Multiple stacked panels on the same side should mark only the outermost panel
+    as the figure border for that side. The main axes should not be considered a
+    border once a panel exists on that side.
+    """
+    fig, axs = uplt.subplots()
+    axi = axs[0]
+    # Stack multiple right panels
+    p1 = axi.panel("right")
+    p2 = axi.panel("right")
+    p3 = axi.panel("right")  # outermost
+    # Stack multiple top panels
+    t1 = axi.panel("top")
+    t2 = axi.panel("top")  # outermost
+    fig.canvas.draw()
+
+    borders = fig._get_border_axes(force_recalculate=True)
+    # Main axes should not be the border on right/top anymore
+    assert axi not in borders.get("right", [])
+    assert axi not in borders.get("top", [])
+    # Outermost panels should be borders
+    assert p3 in borders.get("right", [])
+    assert t2 in borders.get("top", [])
+
+
+def test_right_panel_and_right_colorbar_border_priority():
+    """
+    When both a right panel and a right colorbar exist, the colorbar (added last)
+    should be considered the outermost border on the right. The main axes should
+    not be listed as a right border. Accept either the panel or the colorbar
+    container as the right border, depending on backend/implementation details.
+    """
+    rng = np.random.default_rng(0)
+    fig, axs = uplt.subplots()
+    axi = axs[0]
+    # Add a right panel first
+    pax = axi.panel("right")
+    # Add a right colorbar after plotting, making it the outermost right object
+    m = axi.pcolormesh(rng.random((5, 5)))
+    cbar = axi.colorbar(m, loc="right")
+    fig.canvas.draw()
+
+    borders = fig._get_border_axes(force_recalculate=True)
+    right_borders = borders.get("right", [])
+    # Main axes should not be the right border anymore
+    assert axi not in right_borders
+    # Either the panel or the colorbar axes should be recognized as a right border
+    assert (pax in right_borders) or (cbar.ax in right_borders)
+
+
+@pytest.mark.mpl_image_compare
+def test_grid_geo_and_cartesian():
+    """
+    Check that sharing geo and cartesian axes in a grid works.
+    For a grid like
+
+        | 1 | 2 |
+        | 3 | 4 |
+    We expect the 2nd plot to be a bottom edge and 4 too if 4 is a geo axes.
+    """
+
+    layout = [[1, 2], [3, 4]]
+    fig, axs = uplt.subplots(layout, proj=(None, None, None, "cyl"))
+    axs[-1].format(
+        land=True,
+        ocean=True,
+        landcolor="green",
+        oceancolor="ocean blue",
+        title="Cylindrical Projection",
+        lonlabels=True,
+        latlabels=True,
+        grid=0,
+    )
+    outer_axes = fig._get_border_axes()
+    assert axs[0] in outer_axes["top"]
+    assert axs[1] in outer_axes["top"]
+    assert axs[2] not in outer_axes["top"]
+    assert axs[3] in outer_axes["top"]
+
+    assert axs[0] not in outer_axes["bottom"]
+    assert axs[1] in outer_axes["bottom"]
+    assert axs[2] in outer_axes["bottom"]
+    assert axs[3] in outer_axes["bottom"]
+
+    assert axs[0] in outer_axes["left"]
+    assert axs[1] not in outer_axes["left"]
+    assert axs[2] in outer_axes["left"]
+    assert axs[3] in outer_axes["left"]
+
+    assert axs[0] not in outer_axes["right"]
+    assert axs[1] in outer_axes["right"]
+    assert axs[2] in outer_axes["right"]
+    assert axs[3] in outer_axes["right"]
+    return fig
+
+
+@pytest.mark.parametrize("share_level", ["labs", "lims"])
+def test_outer_legend_keeps_ticklabels_with_label_sharing(share_level: str) -> None:
+    """
+    Regression test for issue #694. With ``sharey`` set to a "label" or
+    "limits" level (i.e. < 3), tick labels must remain on every visible
+    subplot even after an outer legend (``loc='r'``) is added next to one
+    of them. Previously the legend's hidden filled panel promoted the
+    parent's effective share level to 3 and hid its left tick labels.
+    """
+    fig, axs = uplt.subplots(ncols=3, sharey=share_level)
+    axs[-1].set_visible(False)
+    for ax in axs[:-1]:
+        ax.plot([0, 1], [0, 1], label="line")
+    axs[-2].legend(loc="r")
+    fig.canvas.draw()
+
+    for ax in axs[:-1]:
+        assert ax.yaxis.get_tick_params()["labelleft"] is True
+
+
+def test_outer_legend_preserves_share_true_ticklabel_hiding() -> None:
+    """
+    Counterpart to ``test_outer_legend_keeps_ticklabels_with_label_sharing``:
+    when ``sharey=True`` (level 3) the inner subplots' tick labels must
+    still be hidden even after an outer legend is attached. Guards against
+    over-correcting the issue #694 fix.
+    """
+    fig, axs = uplt.subplots(ncols=3, sharey=True)
+    for ax in axs:
+        ax.plot([0, 1], [0, 1], label="line")
+    axs[1].legend(loc="r")
+    fig.canvas.draw()
+
+    assert axs[0].yaxis.get_tick_params()["labelleft"] is True
+    assert axs[1].yaxis.get_tick_params()["labelleft"] is False
+    assert axs[2].yaxis.get_tick_params()["labelleft"] is False

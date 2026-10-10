@@ -1,0 +1,52 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-openhands-resolver-123"
+description = "SWE-rebench All-Hands-AI__openhands-resolver-123"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/All-Hands-AI/openhands-resolver"
+base_commit = "84ccb9b29d786c3cb16f100b31ee456ddc622fd0"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2024-09-28"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "All-Hands-AI__openhands-resolver-123"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_send_pull_request.py::test_send_pull_request[branch]",
+  "tests/test_send_pull_request.py::test_send_pull_request[draft]",
+  "tests/test_send_pull_request.py::test_send_pull_request[ready]",
+  "tests/test_send_pull_request.py::test_send_pull_request_branch_naming",
+]
+pass_to_pass = [
+  "tests/test_send_pull_request.py::test_load_single_resolver_output",
+  "tests/test_send_pull_request.py::test_apply_patch",
+  "tests/test_send_pull_request.py::test_apply_patch_preserves_line_endings",
+  "tests/test_send_pull_request.py::test_apply_patch_create_new_file",
+  "tests/test_send_pull_request.py::test_apply_patch_delete_file",
+  "tests/test_send_pull_request.py::test_initialize_repo",
+  "tests/test_send_pull_request.py::test_send_pull_request_git_push_failure",
+  "tests/test_send_pull_request.py::test_send_pull_request_permission_error",
+  "tests/test_send_pull_request.py::test_process_single_issue",
+  "tests/test_send_pull_request.py::test_process_all_successful_issues",
+  "tests/test_send_pull_request.py::test_main",
+]
+max_cost_cny = 0.5

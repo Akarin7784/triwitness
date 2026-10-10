@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  tests/unit/test_regressions.py::test_comment_on_opening_line_of_aliased_import_does_not_move \
+  tests/unit/test_regressions.py::test_isort_duplicating_comments_issue_1264 \
+  tests/unit/test_regressions.py::test_moving_comments_issue_726 \
+  tests/unit/test_regressions.py::test_blank_lined_removed_issue_1275 \
+  tests/unit/test_regressions.py::test_blank_lined_removed_issue_1283 \
+  tests/unit/test_regressions.py::test_extra_blank_line_added_nested_imports_issue_1290 \
+  tests/unit/test_regressions.py::test_add_imports_shouldnt_make_isort_unusable_issue_1297 \
+  tests/unit/test_regressions.py::test_no_extra_lines_for_imports_in_functions_issue_1277 \
+  tests/unit/test_regressions.py::test_no_extra_blank_lines_in_methods_issue_1293 \
+  tests/unit/test_regressions.py::test_force_single_line_shouldnt_remove_preceding_comment_lines_issue_1296 \
+  tests/unit/test_regressions.py::test_ensure_new_line_before_comments_mixed_with_ensure_newline_before_comments_1295 \
+  tests/unit/test_regressions.py::test_trailing_comma_doesnt_introduce_broken_code_with_comment_and_wrap_issue_1302 \
+  tests/unit/test_regressions.py::test_ensure_sre_parse_is_identified_as_stdlib_issue_1304 \
+  tests/unit/test_regressions.py::test_add_imports_shouldnt_move_lower_comments_issue_1300 \
+  tests/unit/test_regressions.py::test_windows_newline_issue_1277 \
+  tests/unit/test_regressions.py::test_windows_newline_issue_1278 \
+  tests/unit/test_regressions.py::test_check_never_passes_with_indented_headings_issue_1301 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_fail_on_long_from_with_dot_issue_1190 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_add_extra_new_line_when_fass_and_n_issue_1315 \
+  tests/unit/test_regressions.py::test_isort_doesnt_rewrite_import_with_dot_to_from_import_issue_1280 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_introduce_extra_lines_with_fass_issue_1322 \
+  tests/unit/test_regressions.py::test_comments_should_cause_wrapping_on_long_lines_black_mode_issue_1219 \
+  tests/unit/test_regressions.py::test_comment_blocks_should_stay_associated_without_extra_lines_issue_1156 \
+  tests/unit/test_regressions.py::test_comment_shouldnt_be_duplicated_with_fass_enabled_issue_1329 \
+  tests/unit/test_regressions.py::test_wrap_mode_equal_to_line_length_with_indendet_imports_issue_1333 \
+  tests/unit/test_regressions.py::test_isort_skipped_nested_imports_issue_1339 \
+  tests/unit/test_regressions.py::test_windows_diff_too_large_misrepresentative_issue_1348 \
+  tests/unit/test_regressions.py::test_combine_as_does_not_lose_comments_issue_1321 \
+  tests/unit/test_regressions.py::test_combine_as_does_not_lose_comments_issue_1381 \
+  tests/unit/test_regressions.py::test_incorrect_grouping_when_comments_issue_1396 \
+  tests/unit/test_regressions.py::test_reverse_relative_combined_with_force_sort_within_sections_issue_1395 \
+  tests/unit/test_regressions.py::test_isort_should_be_able_to_add_independent_of_doc_string_placement_issue_1420 \
+  tests/unit/test_regressions.py::test_comments_should_never_be_moved_between_imports_issue_1427 \
+  tests/unit/test_regressions.py::test_isort_doesnt_misplace_comments_issue_1431 \
+  tests/unit/test_regressions.py::test_isort_doesnt_misplace_add_import_issue_1445 \
+  tests/unit/test_regressions.py::test_isort_doesnt_mangle_code_when_adding_imports_issue_1444 \
+  tests/unit/test_regressions.py::test_isort_float_to_top_with_sort_on_off_tests \
+  tests/unit/test_regressions.py::test_isort_doesnt_float_to_top_correctly_when_imports_not_at_top_issue_1382 \
+  tests/unit/test_regressions.py::test_empty_float_to_top_shouldnt_error_issue_1453 \
+  tests/unit/test_regressions.py::test_import_sorting_shouldnt_be_endless_with_headers_issue_1454 \
+  tests/unit/test_regressions.py::test_isort_should_leave_non_import_from_lines_alone_issue_1488 \
+  tests/unit/test_regressions.py::test_isort_float_to_top_correctly_identifies_single_line_comments_1499 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_mangle_from_multi_line_string_issue_1507 \
+  tests/unit/test_regressions.py::test_isort_should_keep_all_as_and_non_as_imports_issue_1523 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_introduce_syntax_error_issue_1539 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_split_skip_issue_1548 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_split_skip_issue_1556 \
+  tests/unit/test_regressions.py::test_isort_losing_imports_vertical_prefix_from_module_import_wrap_mode_issue_1542 \
+  tests/unit/test_regressions.py::test_isort_adding_second_comma_issue_1621 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_duplicate_comments_issue_1631 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_add_extra_new_lines_with_import_heading_issue_1670 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_add_extra_line_float_to_top_issue_1667 \
+  tests/unit/test_regressions.py::test_isort_shouldnt_move_noqa_comment_issue_1594 \
+  tests/unit/test_regressions.py::test_isort_correctly_handles_unix_vs_linux_newlines_issue_1566 \
+  tests/unit/test_regressions.py::test_isort_treats_src_paths_same_as_from_config_as_cli_issue_1711 \
+  tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_hanging_line_mode_issue_1741 \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[0]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[1]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[2]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[3]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[4]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[5]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[6]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[7]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[8]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[9]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[10]' \
+  'tests/unit/test_regressions.py::test_isort_should_never_quietly_remove_imports_in_any_hangin_mode_issue_1741[11]' \
+  tests/unit/test_regressions.py::test_isort_should_keep_multi_noqa_with_star_issue_1744 \
+  tests/unit/test_regressions.py::test_isort_should_keep_multiple_noqa_comments_force_single_line_mode_issue_1721 \
+  tests/unit/test_regressions.py::test_isort_should_only_add_imports_to_valid_location_issue_1769 \
+  tests/unit/test_regressions.py::test_literal_sort_at_top_of_file_issue_1792 \
+  tests/unit/test_regressions.py::test_isort_should_produce_the_same_code_on_subsequent_runs_issue_1799 \
+  tests/unit/test_regressions.py::test_unrecoverable_exception_on_valid_input_ending_with_backslash_issue_1893; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

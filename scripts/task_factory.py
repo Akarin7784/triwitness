@@ -72,6 +72,17 @@ def license_of(repo: str, cache: dict[str, str]) -> str:
     return cache[repo]
 
 
+SPDX = {"MIT License": "MIT", "Apache License 2.0": "Apache-2.0", 'BSD 3-Clause "New" or "Revised" License':
+        "BSD-3-Clause", 'BSD 2-Clause "Simplified" License': "BSD-2-Clause", "Expat License": "MIT",
+        "3-Clause BSD license": "BSD-3-Clause", "The Unlicense": "Unlicense"}  # fmt: skip
+
+
+def to_spdx(lic: str) -> str:
+    """数据集 / GitHub 的许可证名 → SPDX；task.toml 里的 "X（代码）；SWE-rebench 数据集 CC-BY-4.0" 取代码部分。"""
+    lic = lic.split("（")[0].strip()
+    return SPDX.get(lic, lic)
+
+
 def patch_files(patch: str) -> list[str]:
     return re.findall(r"^diff --git a/\S+ b/(\S+)$", patch, re.M)
 
@@ -138,9 +149,7 @@ def mine(out: Path, months: list[str], filtered_pages: int) -> None:
         spdx = ""
         if why is None:
             lic = r.get("license_name") or license_of(r["repo"], lic_cache)
-            spdx = {"MIT License": "MIT", "Apache License 2.0": "Apache-2.0", 'BSD 3-Clause "New" or "Revised" License':
-                    "BSD-3-Clause", 'BSD 2-Clause "Simplified" License': "BSD-2-Clause", "Expat License": "MIT",
-                    "3-Clause BSD license": "BSD-3-Clause", "The Unlicense": "Unlicense"}.get(lic, lic)  # fmt: skip
+            spdx = to_spdx(lic)
             if spdx not in PERMISSIVE:
                 why = f"许可证 {spdx}"
             elif seen_repo[r["repo"]] >= 2:
@@ -336,9 +345,10 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
         for r in picked:
             src = Path(r["dir"])
             dst = tasks / split_name / src.name
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.move(str(src), dst)
+            if src.exists():  # 重跑 split 时已经搬过的直接复用（只重写 yaml）
+                if dst.exists():
+                    shutil.rmtree(dst)
+                shutil.move(str(src), dst)
             _set_meta(dst / "task.toml", "difficulty", difficulty(rows[r["instance_id"]]))
             r["dir"] = str(dst)
 
@@ -347,7 +357,7 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
         src = meta.get("dataset", meta["source"])
         month = next((r["source"].split(":")[1] for r in ok if Path(r["dir"]) == d and ":" in r["source"]), None)
         return SuiteTask(id=d.name, source=f"{src}:{month}" if month else src, created_at=meta["created_at"],
-                         difficulty=meta["difficulty"], license=meta["license"])  # fmt: skip
+                         difficulty=meta["difficulty"], license=to_spdx(meta["license"]))  # fmt: skip
 
     def make(name: str, dirs: list[Path], desc: str, parent: str | None = None) -> Suite:
         dirs = sorted(dirs, key=lambda p: p.name)

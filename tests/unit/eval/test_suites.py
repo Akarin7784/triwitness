@@ -66,4 +66,8 @@ def test_real_split_is_frozen_and_well_formed() -> None:
     assert not set(dev.ids) & set(test.ids)
     for t in dev.tasks + test.tasks:
         assert t.license.startswith(PERMISSIVE), (t.id, t.license)
-    assert min(t.created_at for t in test.tasks) >= max(t.created_at for t in dev.tasks if t.source != "synthetic")
+    # leaderboard 部分（污染风险最低）比 dev 里所有真实任务都新；leaderboard 只产出 23 个，其余用 filtered 补齐，
+    # 报告里按来源分开给 Resolved@1
+    fresh = [t for t in test.tasks if "leaderboard" in t.source]
+    assert len(fresh) >= 20
+    assert min(t.created_at for t in fresh) >= max(t.created_at for t in dev.tasks if t.source != "synthetic")

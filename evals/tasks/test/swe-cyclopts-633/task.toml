@@ -1,0 +1,129 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-cyclopts-633"
+description = "SWE-rebench BrianPugh__cyclopts-633"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/BrianPugh/cyclopts"
+base_commit = "23fed053c63ca13e7ab28ca54e94804012d23946"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2025-10-24"
+license = "Apache-2.0\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "BrianPugh__cyclopts-633"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_help.py::test_help_format_group_parameters_bool_or_none_custom_negative[--negative]",
+  "tests/test_help.py::test_help_format_group_parameters_bool_or_none_custom_negative[negative]",
+]
+pass_to_pass = [
+  "tests/test_help.py::test_empty_help_panel_rich_silent",
+  "tests/test_help.py::test_help_mutable_default",
+  "tests/test_help.py::test_help_default_action",
+  "tests/test_help.py::test_help_custom_usage",
+  "tests/test_help.py::test_help_custom_usage_subapp",
+  "tests/test_help.py::test_help_default_help_flags",
+  "tests/test_help.py::test_help_format_usage_empty",
+  "tests/test_help.py::test_help_format_usage_command",
+  "tests/test_help.py::test_format_commands_docstring",
+  "tests/test_help.py::test_format_commands_docstring_multi_line_pep0257",
+  "tests/test_help.py::test_format_commands_no_show",
+  "tests/test_help.py::test_format_commands_explicit_help",
+  "tests/test_help.py::test_format_commands_explicit_name",
+  "tests/test_help.py::test_help_functools_partial_1",
+  "tests/test_help.py::test_help_functools_partial_2",
+  "tests/test_help.py::test_help_empty",
+  "tests/test_help.py::test_format_choices_rich_format",
+  "tests/test_help.py::test_help_format_group_parameters_empty",
+  "tests/test_help.py::test_help_format_group_parameters",
+  "tests/test_help.py::test_help_format_group_parameters_short_name",
+  "tests/test_help.py::test_help_format_group_parameters_from_docstring",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_directives",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_versionchanged",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_note_warning_seealso",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_multiple_directives",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_deprecated_no_content",
+  "tests/test_help.py::test_help_format_group_parameters_bool_flag",
+  "tests/test_help.py::test_help_format_group_parameters_bool_flag_custom_negative[--yesnt-foo]",
+  "tests/test_help.py::test_help_format_group_parameters_bool_flag_custom_negative[yesnt-foo]",
+  "tests/test_help.py::test_help_format_group_parameters_list_flag",
+  "tests/test_help.py::test_help_format_group_parameters_defaults",
+  "tests/test_help.py::test_help_format_group_parameters_defaults_no_show",
+  "tests/test_help.py::test_help_format_dataclass_default_parameter_negative_propagation",
+  "tests/test_help.py::test_help_format_dataclass_decorated_parameter_negative_propagation",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_no_show",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_union",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_union_python310_syntax_0",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_union_python310_syntax_1",
+  "tests/test_help.py::test_help_format_group_parameters_choices_enum",
+  "tests/test_help.py::test_help_format_group_parameters_choices_enum_list",
+  "tests/test_help.py::test_help_format_group_parameters_choices_enum_list_typing",
+  "tests/test_help.py::test_help_format_group_parameters_choices_enum_sequence",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_sequence",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_set",
+  "tests/test_help.py::test_help_parameter_string_annotation",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_set_typing",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple_typing",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple_variadic_typing",
+  "tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple_variadic",
+  "tests/test_help.py::test_help_format_group_parameters_env_var",
+  "tests/test_help.py::test_help_print_function",
+  "tests/test_help.py::test_help_print_parameter_required",
+  "tests/test_help.py::test_help_print_function_defaults",
+  "tests/test_help.py::test_help_print_function_no_parse",
+  "tests/test_help.py::test_help_print_parameter_group_description",
+  "tests/test_help.py::test_help_print_parameter_group_no_show",
+  "tests/test_help.py::test_help_print_command_group_description",
+  "tests/test_help.py::test_help_print_command_group_no_show",
+  "tests/test_help.py::test_help_print_combined_parameter_command_group",
+  "tests/test_help.py::test_help_print_commands",
+  "tests/test_help.py::test_help_print_commands_group_sort_key",
+  "tests/test_help.py::test_help_print_commands_and_function",
+  "tests/test_help.py::test_help_print_commands_special_flag_reassign",
+  "tests/test_help.py::test_help_print_parameters_no_negative_from_default_parameter",
+  "tests/test_help.py::test_help_print_commands_plus_meta",
+  "tests/test_help.py::test_help_print_commands_sort_key",
+  "tests/test_help.py::test_help_print_commands_sort_key_generator",
+  "tests/test_help.py::test_help_print_commands_plus_meta_short",
+  "tests/test_help.py::test_help_restructuredtext",
+  "tests/test_help.py::test_help_markdown",
+  "tests/test_help.py::test_help_rich",
+  "tests/test_help.py::test_help_plaintext",
+  "tests/test_help.py::test_help_consistent_formatting",
+  "tests/test_help.py::test_help_help_on_error",
+  "tests/test_help.py::test_issue_373_help_space_with_meta_app",
+  "tests/test_help.py::test_format_plain_formatter",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_only_directives",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_nested_indentation",
+  "tests/test_help.py::test_help_format_group_parameters_sphinx_inline_directive_content",
+  "tests/test_help.py::test_help_flag_after_end_of_options_delimiter",
+  "tests/test_help.py::test_help_epilogue_basic",
+  "tests/test_help.py::test_help_epilogue_multiline",
+  "tests/test_help.py::test_help_epilogue_none",
+  "tests/test_help.py::test_help_epilogue_empty_string",
+  "tests/test_help.py::test_help_epilogue_markdown",
+  "tests/test_help.py::test_help_epilogue_subcommand",
+  "tests/test_help.py::test_help_epilogue_with_parameters",
+  "tests/test_help.py::test_help_epilogue_inheritance",
+  "tests/test_help.py::test_help_epilogue_override",
+]
+max_cost_cny = 0.5

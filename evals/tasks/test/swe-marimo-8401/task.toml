@@ -1,0 +1,87 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-marimo-8401"
+description = "SWE-rebench marimo-team__marimo-8401"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/marimo-team/marimo"
+base_commit = "ba84c0f362524945984df58ce94715737e967794"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2026-02-20"
+license = "Apache-2.0\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "marimo-team__marimo-8401"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/_ast/test_cell_manager.py::TestIsExternalCellId::test_bare_uuid_not_external",
+]
+pass_to_pass = [
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_create_cell_id",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_register_cell",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_register_cell_auto_id",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_ensure_one_cell",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_cell_queries",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_get_cell_id_by_code",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_get_cell_code",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_get_cell_data",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_register_unparsable_cell",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_valid_cells",
+  "tests/_ast/test_cell_manager.py::TestCellManager::test_create_cell_id_1000",
+  "tests/_ast/test_cell_manager.py::TestIsExternalCellId::test_normal_cell_id",
+  "tests/_ast/test_cell_manager.py::TestIsExternalCellId::test_embedded_cell_id",
+  "tests/_ast/test_cell_manager.py::TestIsExternalCellId::test_embedded_setup_cell_id",
+  "tests/_ast/test_cell_manager.py::TestIsExternalCellId::test_empty_string",
+  "tests/_ast/test_cell_manager.py::TestIsExternalCellId::test_non_uuid_long_string",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_exact_matches",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_reordered_codes",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_similar_but_not_exact_matches",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_similar_but_not_exact_matches_with_dupes",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_left_inexact_matches_with_dupes",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_right_inexact_matches_with_dupes",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_outer_inexact_matches",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_outer_inexact_matches_with_dupes",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_fewer_next_cells",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_more_next_cells",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_completely_different_codes",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_empty_lists",
+  "tests/_ast/test_cell_manager.py::TestCellMatching::test_empty_strings",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_multiple_identical_codes_in_prev",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_multiple_identical_codes_in_next",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_very_long_common_prefixes_suffixes",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_unicode_and_special_characters",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_mixed_case_sensitivity",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_whitespace_variations",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_all_codes_being_substrings",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_maximum_length_differences",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_empty_strings_edge_case",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_identical_codes",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_completely_different_codes_edge_case",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_special_python_syntax",
+  "tests/_ast/test_cell_manager.py::TestCellMatchingEdgeCases::test_similar_reduction",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_simple_reorder",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_reorder_same_ids",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_less_cells",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_more_cells",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_similar_reduction",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_code_map",
+  "tests/_ast/test_cell_manager.py::TestSortCellIdsBySimilarity::test_code_map_empty",
+]
+max_cost_cny = 0.5

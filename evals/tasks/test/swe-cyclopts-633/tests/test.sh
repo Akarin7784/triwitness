@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  'tests/test_help.py::test_help_format_group_parameters_bool_or_none_custom_negative[--negative]' \
+  'tests/test_help.py::test_help_format_group_parameters_bool_or_none_custom_negative[negative]' \
+  tests/test_help.py::test_empty_help_panel_rich_silent \
+  tests/test_help.py::test_help_mutable_default \
+  tests/test_help.py::test_help_default_action \
+  tests/test_help.py::test_help_custom_usage \
+  tests/test_help.py::test_help_custom_usage_subapp \
+  tests/test_help.py::test_help_default_help_flags \
+  tests/test_help.py::test_help_format_usage_empty \
+  tests/test_help.py::test_help_format_usage_command \
+  tests/test_help.py::test_format_commands_docstring \
+  tests/test_help.py::test_format_commands_docstring_multi_line_pep0257 \
+  tests/test_help.py::test_format_commands_no_show \
+  tests/test_help.py::test_format_commands_explicit_help \
+  tests/test_help.py::test_format_commands_explicit_name \
+  tests/test_help.py::test_help_functools_partial_1 \
+  tests/test_help.py::test_help_functools_partial_2 \
+  tests/test_help.py::test_help_empty \
+  tests/test_help.py::test_format_choices_rich_format \
+  tests/test_help.py::test_help_format_group_parameters_empty \
+  tests/test_help.py::test_help_format_group_parameters \
+  tests/test_help.py::test_help_format_group_parameters_short_name \
+  tests/test_help.py::test_help_format_group_parameters_from_docstring \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_directives \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_versionchanged \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_note_warning_seealso \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_multiple_directives \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_deprecated_no_content \
+  tests/test_help.py::test_help_format_group_parameters_bool_flag \
+  'tests/test_help.py::test_help_format_group_parameters_bool_flag_custom_negative[--yesnt-foo]' \
+  'tests/test_help.py::test_help_format_group_parameters_bool_flag_custom_negative[yesnt-foo]' \
+  tests/test_help.py::test_help_format_group_parameters_list_flag \
+  tests/test_help.py::test_help_format_group_parameters_defaults \
+  tests/test_help.py::test_help_format_group_parameters_defaults_no_show \
+  tests/test_help.py::test_help_format_dataclass_default_parameter_negative_propagation \
+  tests/test_help.py::test_help_format_dataclass_decorated_parameter_negative_propagation \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_no_show \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_union \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_union_python310_syntax_0 \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_union_python310_syntax_1 \
+  tests/test_help.py::test_help_format_group_parameters_choices_enum \
+  tests/test_help.py::test_help_format_group_parameters_choices_enum_list \
+  tests/test_help.py::test_help_format_group_parameters_choices_enum_list_typing \
+  tests/test_help.py::test_help_format_group_parameters_choices_enum_sequence \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_sequence \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_set \
+  tests/test_help.py::test_help_parameter_string_annotation \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_set_typing \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple_typing \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple_variadic_typing \
+  tests/test_help.py::test_help_format_group_parameters_choices_literal_tuple_variadic \
+  tests/test_help.py::test_help_format_group_parameters_env_var \
+  tests/test_help.py::test_help_print_function \
+  tests/test_help.py::test_help_print_parameter_required \
+  tests/test_help.py::test_help_print_function_defaults \
+  tests/test_help.py::test_help_print_function_no_parse \
+  tests/test_help.py::test_help_print_parameter_group_description \
+  tests/test_help.py::test_help_print_parameter_group_no_show \
+  tests/test_help.py::test_help_print_command_group_description \
+  tests/test_help.py::test_help_print_command_group_no_show \
+  tests/test_help.py::test_help_print_combined_parameter_command_group \
+  tests/test_help.py::test_help_print_commands \
+  tests/test_help.py::test_help_print_commands_group_sort_key \
+  tests/test_help.py::test_help_print_commands_and_function \
+  tests/test_help.py::test_help_print_commands_special_flag_reassign \
+  tests/test_help.py::test_help_print_parameters_no_negative_from_default_parameter \
+  tests/test_help.py::test_help_print_commands_plus_meta \
+  tests/test_help.py::test_help_print_commands_sort_key \
+  tests/test_help.py::test_help_print_commands_sort_key_generator \
+  tests/test_help.py::test_help_print_commands_plus_meta_short \
+  tests/test_help.py::test_help_restructuredtext \
+  tests/test_help.py::test_help_markdown \
+  tests/test_help.py::test_help_rich \
+  tests/test_help.py::test_help_plaintext \
+  tests/test_help.py::test_help_consistent_formatting \
+  tests/test_help.py::test_help_help_on_error \
+  tests/test_help.py::test_issue_373_help_space_with_meta_app \
+  tests/test_help.py::test_format_plain_formatter \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_only_directives \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_nested_indentation \
+  tests/test_help.py::test_help_format_group_parameters_sphinx_inline_directive_content \
+  tests/test_help.py::test_help_flag_after_end_of_options_delimiter \
+  tests/test_help.py::test_help_epilogue_basic \
+  tests/test_help.py::test_help_epilogue_multiline \
+  tests/test_help.py::test_help_epilogue_none \
+  tests/test_help.py::test_help_epilogue_empty_string \
+  tests/test_help.py::test_help_epilogue_markdown \
+  tests/test_help.py::test_help_epilogue_subcommand \
+  tests/test_help.py::test_help_epilogue_with_parameters \
+  tests/test_help.py::test_help_epilogue_inheritance \
+  tests/test_help.py::test_help_epilogue_override; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

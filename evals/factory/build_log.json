@@ -424,9 +424,11 @@
   "instance_id": "scipp__plopp-513",
   "source": "nebius/SWE-rebench-leaderboard:2026_01",
   "created_at": "2026-01-22",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpr05va7ky'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-plopp-513",
+  "image": "tw-task/swe-plopp-513:152bc2ea3ff1",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nte-packages/matplotlib/_api/__init__.py:494: PendingDeprecationWarning\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nFAILED tests/plotting/inspector_test.py::test_kwargs_propagation - PendingDep...\nFAILED tests/plotting/inspector_test.py::test_creation - PendingDeprecationWa...\nFAILED tests/plotting/inspector_test.py::test_from_node - PendingDeprecationW...\nFAILED tests/plotting/inspector_test.py::test_line_creation - PendingDeprecat...\nFAILED tests/plotting/inspector_test.py::test_line_removal - PendingDeprecati...\nFAILED tests/plotting/inspector_test.py::test_operation - PendingDeprecationW...\n========================= 6 failed, 3 passed in 1.41s ==========================\n",
+  "seconds": 207
  },
  "modelcontextprotocol__python-sdk-1864": {
   "instance_id": "modelcontextprotocol__python-sdk-1864",
@@ -441,169 +443,199 @@
   "instance_id": "sciunto-org__python-bibtexparser-515",
   "source": "nebius/SWE-rebench-leaderboard:2026_01",
   "created_at": "2026-01-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-python-bibtexparser-515",
   "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpeicxh8b5'",
-  "seconds": 0
+  "log": "TaskFormatError: /workspace/triwitness/evals/tasks/_staging/swe-python-bibtexparser-515：tests/ 下缺少 test_entrypoint.py（tests/test_entrypoint.py::test_gbk）；tests/ 下缺少 test_entrypoint.py（tests/test_entrypoint.py::test_write_file_default_encoding）；tests/ 下缺少 test_entrypoint.py（tests/test_entrypoint.py::test_write_file_gbk_encoding）；tests/ 下缺少 test_entrypoint.py（tests/test_entrypoint.py::test_write_file_roundtrip_gbk）",
+  "seconds": 81
  },
  "pyfar__pyrato-113": {
   "instance_id": "pyfar__pyrato-113",
   "source": "nebius/SWE-rebench-leaderboard:2026_01",
   "created_at": "2026-01-06",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpvw0ruy5e'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pyrato-113",
+  "image": "tw-task/swe-pyrato-113:9ce426c341f2",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nnectionpool:connectionpool.py:874 Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NameResolutionError(\"HTTPSConnection(host='github.com', port=443): Failed to resolve 'github.com' ([Errno -3] Temporary failure in name resolution)\")': /pyfar/files/raw/refs/heads/main/pyfar.signals.files/room_impulse_response.wav\n=========================== short test summary info ============================\nFAILED tests/test_edc.py::test_multidim_edc[energy_decay_curve_chu] - urllib3...\nFAILED tests/test_edc.py::test_multidim_edc[energy_decay_curve_lundeby0] - ur...\nFAILED tests/test_edc.py::test_multidim_edc[energy_decay_curve_chu_lundeby]\nFAILED tests/test_edc.py::test_multidim_edc[energy_decay_curve_lundeby1] - ur...\n4 failed, 6 passed in 2.52s\n",
+  "seconds": 112
  },
  "openai__openai-agents-python-2144": {
   "instance_id": "openai__openai-agents-python-2144",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-03",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpbz8jzhgc'",
-  "seconds": 0
+  "status": "build_failed",
+  "log": "-$(uname -r)\n          apt-get install linux-headers-$(uname -r)\n          emerge sys-kernel/linux-headers\n          pacman -S kernel-headers\n      \n      In case they are installed in a non-standard location, you may use\n      the '--evdev-headers' option to specify one or more colon-separated\n      paths. For example:\n      \n          python setup.py \\\n            build \\\n            build_ecodes --evdev-headers path/input.h:path/input-event-codes.h \\\n            build_ext --include-dirs path/ \\\n            install\n      \n      If you want to avoid building this package from source, then please consider\n      installing the `evdev-binary` package instead. Keep in mind that it may not be\n      fully compatible with, or support all the features of your current kernel.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n  ERROR: Failed building wheel for evdev\nERROR: Failed to build installable wheels for some pyproject.toml based projects (evdev)\n\u001b[0m ---> Removed intermediate container 053b1e15d396\nThe command '/bin/sh -c pip install -e .[voice,viz,litellm,realtime,sqlalchemy,encrypt,redis,dapr] --quiet && pip install pytest pytest-asyncio pytest-mock rich mkdocs mkdocs-material mkdocstrings[python] coverage playwright inline-snapshot pynput types-pynput sounddevice textual websockets graphviz eval-type-backport fastapi aiosqlite cryptography fakeredis dapr grpcio testcontainers --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-openai-agents-python-2144",
+  "seconds": 53
  },
  "oOo0oOo__leanclient-24": {
   "instance_id": "oOo0oOo__leanclient-24",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-14",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpls5dg15e'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-leanclient-24",
+  "image": "tw-task/swe-leanclient-24:36e3e96a4726",
+  "status": "ok",
+  "seconds": 57
  },
  "DiamondLightSource__mx-bluesky-1519": {
   "instance_id": "DiamondLightSource__mx-bluesky-1519",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-11",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpfa72tii3'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-mx-bluesky-1519",
+  "status": "build_failed",
+  "log": "so==2.12.4     shellingham==1.5.4     six==1.17.0     smmap==5.0.3     snowballstemmer==3.1.1     soupsieve==2.10     sparse==0.19.2     sphinx-autobuild==2025.8.25     sphinx-copybutton==0.5.2     Sphinx==9.0.4     sphinx_design==0.7.0     sphinxcontrib-applehelp==2.0.0     sphinxcontrib-devhelp==2.0.0     sphinxcontrib-htmlhelp==2.1.0     sphinxcontrib-jsmath==1.0.1     sphinxcontrib-qthelp==2.0.0     sphinxcontrib-serializinghtml==2.0.0     SQLAlchemy==2.1.4     stack-data==0.6.3     stamina==26.1.0     starlette==1.7.0     stomp.py==9.0.0     tabulate==0.10.0     tenacity==9.2.1     terminado==0.18.1     threadpoolctl==3.7.0     tiled==0.2.18     tinycss2==1.5.1     tomli==2.5.0     tomli_w==1.2.0     tomlkit==0.15.1     toolz==1.2.0     tornado==6.5.10     tox-direct==0.4     tox==3.28.0     tqdm==4.70.1     traitlets==5.16.1     truststore==0.10.4     typer==0.27.3     types-mock==5.2.0.20260518     types-requests==2.33.0.20261006     typing-inspection==0.4.4     typing_extensions==4.16.0     tzdata==2026.5     uri-template==1.3.0     urllib3==2.8.0     uvicorn==0.54.0     uvloop==0.23.0     velocity-profile==1.0.0     virtualenv==21.14.6     watchfiles==1.3.0     wcwidth==0.9.2     webcolors==25.10.0     webencodings==0.6.1     websocket-client==1.9.2     websockets==17.2     Werkzeug==3.1.9     workflows==3.3     wrapt==2.5.0     xarray==2026.9.0     xmltodict==1.0.4     yarl==1.25.1     zipp==4.1.1     zocalo==1.5.0     zstandard==0.25.0' returned a non-zero code: 1\n",
+  "seconds": 289
  },
  "UXARRAY__uxarray-1423": {
   "instance_id": "UXARRAY__uxarray-1423",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-10",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp6tuc0r2k'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-uxarray-1423",
+  "image": "tw-task/swe-uxarray-1423:b583219edbed",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nCSne30::test_zonal_weights\nFAILED test/grid/integrate/test_zonal.py::TestZonalCSne30::test_lat_inputs - ...\nFAILED test/grid/integrate/test_zonal.py::TestConservativeZonalMean::test_conservative_zonal_mean_basic\nFAILED test/grid/integrate/test_zonal.py::TestConservativeZonalMean::test_conservative_float_step_size\nFAILED test/grid/integrate/test_zonal.py::TestConservativeZonalMean::test_conservative_near_pole\nFAILED test/grid/integrate/test_zonal.py::TestConservativeZonalMean::test_conservative_step_size_validation\nFAILED test/grid/integrate/test_zonal.py::TestConservativeZonalMean::test_conservative_full_sphere_conservation\nFAILED test/grid/integrate/test_zonal.py::TestConservativeZonalMean::test_conservative_vs_nonconservative_comparison\n13 failed, 2 passed, 1 warning in 68.97s (0:01:08)\n",
+  "seconds": 342
  },
  "a2aproject__a2a-python-576": {
   "instance_id": "a2aproject__a2a-python-576",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-03",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpa0su_tjy'",
-  "seconds": 0
+  "status": "build_failed",
+  "log": "elf.metadata.validate_fields()\n        File \"/tmp/pip-build-env-1yigqh_j/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 282, in validate_fields\n          _ = self.version\n              ^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-1yigqh_j/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 151, in version\n          self._version = self._get_version()\n                          ^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-1yigqh_j/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 264, in _get_version\n          version = self.hatch.version.cached\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-1yigqh_j/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 1550, in cached\n          raise type(e)(message) from None\n      RuntimeError: Error getting the version from source `uv-dynamic-versioning`: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container f43da726ddf7\nThe command '/bin/sh -c pip install -e . --quiet && pip install pytest pytest-asyncio pytest-cov respx uvicorn --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-a2a-python-576",
+  "seconds": 14
  },
  "ag2ai__faststream-2701": {
   "instance_id": "ag2ai__faststream-2701",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-02",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmptu5ah5r6'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-faststream-2701",
+  "image": "tw-task/swe-faststream-2701:4779a4a8f7ef",
+  "status": "ok",
+  "seconds": 70
  },
  "VRSEN__agency-swarm-468": {
   "instance_id": "VRSEN__agency-swarm-468",
   "source": "nebius/SWE-rebench-leaderboard:2025_12",
   "created_at": "2025-12-01",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpbilws8ac'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-agency-swarm-468",
+  "image": "tw-task/swe-agency-swarm-468:e604b09e98c4",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n\nsrc/agency_swarm/agency/__init__.py:15: in <module>\n    from .core import Agency, AgencyChart, AgencyChartEntry, CommunicationFlowEntry\nsrc/agency_swarm/agency/core.py:10: in <module>\n    from agency_swarm.agent.agent_flow import AgentFlow\nsrc/agency_swarm/agent/__init__.py:8: in <module>\n    from .execution import Execution\nsrc/agency_swarm/agent/execution.py:16: in <module>\n    from agency_swarm.agent.execution_helpers import (\nsrc/agency_swarm/agent/execution_helpers.py:28: in <module>\n    from agency_swarm.tools.mcp_manager import default_mcp_manager\nsrc/agency_swarm/tools/__init__.py:30: in <module>\n    from .base_tool import BaseTool\nsrc/agency_swarm/tools/base_tool.py:14: in <module>\n    from docstring_parser import parse\nE   ModuleNotFoundError: No module named 'docstring_parser'\n",
+  "seconds": 182
  },
  "BrianPugh__cyclopts-701": {
   "instance_id": "BrianPugh__cyclopts-701",
   "source": "nebius/SWE-rebench-leaderboard:2025_11",
   "created_at": "2025-11-22",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpoh52x9t7'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-cyclopts-701",
+  "image": "tw-task/swe-cyclopts-701:ba3964b6442f",
+  "status": "ok",
+  "seconds": 88
  },
  "bas-amop__PolarRoute-server-159": {
   "instance_id": "bas-amop__PolarRoute-server-159",
   "source": "nebius/SWE-rebench-leaderboard:2025_11",
   "created_at": "2025-11-14",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp62ffg5lr'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-polarroute-server-159",
+  "status": "build_failed",
+  "log": "ols==4.66.1     fsspec==2026.9.0     geopandas==1.2.0     go==5.2.18     haversine==2.9.0     identify==2.6.20     idna==3.20     inflection==0.5.1     iniconfig==2.3.1     joblib==1.6.0     jsonschema-specifications==2025.9.1     jsonschema==4.26.0     kiwisolver==1.5.1     kombu==5.6.2     locket==1.0.0     matplotlib==3.11.2     meshiphi==2.1.13     narwhals==2.27.1     netCDF4==1.7.4     nodeenv==1.11.0     numpy==2.5.3     packaging==26.3     pandas==3.0.6     partd==1.4.2     pillow==12.3.0     platformdirs==4.12.4     pluggy==1.6.0     polar-route==1.0.0     pre_commit==4.6.2     prompt_toolkit==3.0.53     psutil==7.2.2     psycopg==3.3.6     Pygments==2.21.0     pyogrio==0.13.0     pyparsing==3.3.3     pyproj==3.8.0     pyshp==3.1.6     pytest-celery==1.3.0     pytest-django==4.14.0     pytest==9.1.1     pytest_docker_tools==3.1.10     python-crontab==3.4.0     python-dateutil==2.9.0.post0     python-discovery==1.6.2     PyYAML==6.0.3     rasterio==1.5.2     referencing==0.37.0     requests==2.34.2     rioxarray==0.23.0     rpds-py==2026.9.1     ruff==0.17.0     scikit-learn==1.9.1     scipy==1.18.1     shapely==2.2.0     six==1.17.0     SQLAlchemy==2.1.4     sqlparse==0.6.0     tenacity==9.2.1     threadpoolctl==3.7.0     toolz==1.2.0     tqdm==4.70.1     typing_extensions==4.16.0     tzdata==2026.5     tzlocal==5.4.4     uritemplate==4.2.0     urllib3==2.8.0     vine==5.1.0     virtualenv==21.14.6     wcwidth==0.9.2     xarray==2026.9.0' returned a non-zero code: 1\n",
+  "seconds": 112
  },
  "marimo-team__marimo-6819": {
   "instance_id": "marimo-team__marimo-6819",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-16",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmptvmtbe1v'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-marimo-6819",
+  "image": "tw-task/swe-marimo-6819:a7e127b232a7",
+  "status": "ok",
+  "seconds": 165
  },
  "cpp-linter__cpp-linter-hooks-142": {
   "instance_id": "cpp-linter__cpp-linter-hooks-142",
   "source": "nebius/SWE-rebench-leaderboard:2025_11",
   "created_at": "2025-11-04",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpmtui_t0n'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-cpp-linter-hooks-142",
+  "image": "tw-task/swe-cpp-linter-hooks-142:aed55301ecd9",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n8: PytestUnknownMarkWarning: Unknown pytest.mark.benchmark - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.benchmark\n\ntests/test_util.py:277\n  /workspace/repo/tests/test_util.py:277: PytestUnknownMarkWarning: Unknown pytest.mark.benchmark - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html\n    @pytest.mark.benchmark\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n=========================== short test summary info ============================\nFAILED tests/test_util.py::test_resolve_install_tool_already_installed_correct_version\n1 failed, 28 passed, 17 warnings in 8.23s\n",
+  "seconds": 96
  },
  "BrianPugh__cyclopts-633": {
   "instance_id": "BrianPugh__cyclopts-633",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-24",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpjt01xce0'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-cyclopts-633",
+  "image": "tw-task/swe-cyclopts-633:789715625677",
+  "status": "ok",
+  "seconds": 73
  },
  "scikit-rf__scikit-rf-1336": {
   "instance_id": "scikit-rf__scikit-rf-1336",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-14",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpeyxdkim1'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-scikit-rf-1336",
+  "image": "tw-task/swe-scikit-rf-1336:8c8b4eefbc98",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n parse_fontconfig_pattern(s)\n/usr/local/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:83: in parse_fontconfig_pattern\n    parser = _make_fontconfig_parser()\n/usr/local/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: in _make_fontconfig_parser\n    prop = Group((name + Suppress(\"=\") + comma_separated(value)) | oneOf(_CONSTANTS))\n/usr/local/lib/python3.9/site-packages/pyparsing/util.py:472: in _inner\n    warnings.warn(\nE   pyparsing.warnings.PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nERROR skrf/media/tests/test_distributedCircuit.py - pyparsing.warnings.Pypars...\n1 error in 0.82s\n",
+  "seconds": 188
  },
  "openai__openai-agents-python-1965": {
   "instance_id": "openai__openai-agents-python-1965",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-21",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpvq23r126'",
-  "seconds": 0
+  "status": "build_failed",
+  "log": "ue:\n      \n          dnf install kernel-headers-$(uname -r)\n          apt-get install linux-headers-$(uname -r)\n          emerge sys-kernel/linux-headers\n          pacman -S kernel-headers\n      \n      In case they are installed in a non-standard location, you may use\n      the '--evdev-headers' option to specify one or more colon-separated\n      paths. For example:\n      \n          python setup.py \\\n            build \\\n            build_ecodes --evdev-headers path/input.h:path/input-event-codes.h \\\n            build_ext --include-dirs path/ \\\n            install\n      \n      If you want to avoid building this package from source, then please consider\n      installing the `evdev-binary` package instead. Keep in mind that it may not be\n      fully compatible with, or support all the features of your current kernel.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91m  ERROR: Failed building wheel for evdev\n\u001b[0m\u001b[91mERROR: Failed to build installable wheels for some pyproject.toml based projects (evdev)\n\u001b[0m ---> Removed intermediate container f512fc799bbe\nThe command '/bin/sh -c python -m pip install -e . --quiet && python -m pip install pytest pytest-asyncio pytest-mock rich mkdocs mkdocs-material mkdocstrings[python] coverage playwright inline-snapshot pynput types-pynput sounddevice textual websockets graphviz eval-type-backport fastapi aiosqlite cryptography fakeredis --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-openai-agents-python-1965",
+  "seconds": 28
  },
  "yt-project__unyt-593": {
   "instance_id": "yt-project__unyt-593",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-08",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpvh_sghrb'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-unyt-593",
+  "image": "tw-task/swe-unyt-593:849e1d2cc8ff",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nts/test_unyt_array.py::test_invalid_expression_quantity_from_string\n(no match in any of [<Module test_unyt_array.py>])\n\nERROR: not found: /workspace/repo/unyt/tests/test_unyt_array.py::test_invalid_expression_quantity_from_string\n(no match in any of [<Module test_unyt_array.py>])\n\nERROR: not found: /workspace/repo/unyt/tests/test_unyt_array.py::test_invalid_unit_quantity_from_string\n(no match in any of [<Module test_unyt_array.py>])\n\nERROR: not found: /workspace/repo/unyt/tests/test_unyt_array.py::test_invalid_unit_quantity_from_string\n(no match in any of [<Module test_unyt_array.py>])\n\nERROR: not found: /workspace/repo/unyt/tests/test_unyt_array.py::test_invalid_unit_quantity_from_string\n(no match in any of [<Module test_unyt_array.py>])\n\n\n\u001b[33m\u001b[33mno tests ran\u001b[0m\u001b[33m in 1.04s\u001b[0m\u001b[0m\n",
+  "seconds": 73
  },
  "stanfordnlp__dspy-8890": {
   "instance_id": "stanfordnlp__dspy-8890",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-02",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp153r094g'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-dspy-8890",
+  "image": "tw-task/swe-dspy-8890:aa55789a21e0",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nRNING: get_model_cost_map.py:315 - LiteLLM: model cost map fetch attempt 1/3 failed (ConnectError fetching https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [Errno -3] Temporary failure in name resolution); retrying in 2.5s\n08:08:17 - LiteLLM:WARNING: get_model_cost_map.py:672 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: ConnectError fetching https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [Errno -3] Temporary failure in name resolution. Falling back to local backup.\n=========================== short test summary info ============================\nERROR tests/streaming/test_streaming.py\n1 error in 0.18s\n",
+  "seconds": 169
  },
  "strands-agents__sdk-python-994": {
   "instance_id": "strands-agents__sdk-python-994",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-07",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp5265_vwy'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sdk-python-994",
+  "image": "tw-task/swe-sdk-python-994:421f6eb89fa5",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n(ConnectError fetching https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [Errno -3] Temporary failure in name resolution); retrying in 2.8s\n08:05:50 - LiteLLM:WARNING: get_model_cost_map.py:672 - LiteLLM: Failed to fetch remote model cost map from https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: ConnectError fetching https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json: [Errno -3] Temporary failure in name resolution. Falling back to local backup.\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nERROR tests/strands/models/test_litellm.py\n1 error in 3.48s\n",
+  "seconds": 198
  },
  "vndee__llm-sandbox-101": {
   "instance_id": "vndee__llm-sandbox-101",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-07",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpde1olh1g'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-llm-sandbox-101",
+  "image": "tw-task/swe-llm-sandbox-101:d3e23fc9f058",
+  "status": "ok",
+  "seconds": 90
  },
  "google__adk-python-3088": {
   "instance_id": "google__adk-python-3088",
   "source": "nebius/SWE-rebench-leaderboard:2025_10",
   "created_at": "2025-10-03",
-  "status": "error",
-  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpdwbmdo6l'",
-  "seconds": 0
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-adk-python-3088",
+  "image": "tw-task/swe-adk-python-3088:7233a8488cfb",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nlib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/unittests/tools/test_build_function_declaration.py:19: in <module>\n    from google.adk.tools import _automatic_function_calling_util\nsrc/google/adk/__init__.py:16: in <module>\n    from .agents.llm_agent import Agent\nsrc/google/adk/agents/__init__.py:15: in <module>\n    from .base_agent import BaseAgent\nsrc/google/adk/agents/base_agent.py:32: in <module>\n    from google.genai import types\nE   ModuleNotFoundError: No module named 'google.genai'\n=========================== short test summary info ============================\nERROR tests/unittests/tools/test_build_function_declaration.py\n1 error in 0.10s\n",
+  "seconds": 246
  },
  "cs-si__eodag-2176": {
   "instance_id": "cs-si__eodag-2176",

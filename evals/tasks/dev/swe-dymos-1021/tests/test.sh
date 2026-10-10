@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControl::test_brachistochrone_polynomial_control_birkhoff \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlBoundaryConstrained::test_brachistochrone_polynomial_control_birkhoff \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlPathConstrained::test_brachistochrone_polynomial_control_birkhoff \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlRatePathConstrained::test_brachistochrone_polynomial_control_birkhoff \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlRate2PathConstrained::test_brachistochrone_polynomial_control_birkhoff \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlSimulation::test_brachistochrone_polynomial_control_birkhoff \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControl::test_brachistochrone_polynomial_control_gauss_lobatto \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControl::test_brachistochrone_polynomial_control_radau \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlBoundaryConstrained::test_brachistochrone_polynomial_control_gauss_lobatto \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlBoundaryConstrained::test_brachistochrone_polynomial_control_radau \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlPathConstrained::test_brachistochrone_polynomial_control_gauss_lobatto \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlPathConstrained::test_brachistochrone_polynomial_control_radau \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlRatePathConstrained::test_brachistochrone_polynomial_control_gauss_lobatto \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlRatePathConstrained::test_brachistochrone_polynomial_control_radau \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlRate2PathConstrained::test_brachistochrone_polynomial_control_gauss_lobatto \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlRate2PathConstrained::test_brachistochrone_polynomial_control_radau \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlSimulation::test_brachistochrone_polynomial_control_gauss_lobatto \
+  dymos/examples/brachistochrone/test/test_doc_brachistochrone_polynomial_controls.py::TestBrachistochronePolynomialControlSimulation::test_brachistochrone_polynomial_control_radau; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

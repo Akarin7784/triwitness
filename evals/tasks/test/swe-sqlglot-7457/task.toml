@@ -1,0 +1,95 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-sqlglot-7457"
+description = "SWE-rebench tobymao__sqlglot-7457"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/tobymao/sqlglot"
+base_commit = "e8bbc8044ac10a550eaf7da762987270fee8d81d"
+difficulty = "hard"
+tags = ["python", "real-world"]
+created_at = "2026-04-05"
+license = "MIT\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "tobymao__sqlglot-7457"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_ml_functions",
+]
+pass_to_pass = [
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_annotate_timestamps",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_approx_quantiles",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_approx_quantiles_to_duckdb",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_approx_qunatiles",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_array_agg",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_array_concat",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_avoid_generating_nested_comment",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_bignumeric",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_bigquery",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_bit_aggs",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_bitwise_and",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_bitwise_not",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_cast_format_with_parentheses",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_concat",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_convert",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_declare",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_errors",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_format_temporal",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_gap_fill",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_generate_date_array",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_identifier_meta",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_inline_constructor",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_json_array",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_json_extract",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_json_extract_array",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_json_lax",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_json_object",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_md5",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_merge",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_mod",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_models",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_null_ordering",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_null_ordering_in_analytic_functions",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_override_normalization_strategy",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_pseudocolumns",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_pushdown_cte_column_names",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_quoted_identifier_meta",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_range_type",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_regexp_extract",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_remove_precision_parameterized_types",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_rename_table",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_round",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_safe_math_funcs",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_select_as_struct",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_set_operations",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_string_agg",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_to_hex",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_to_json_string",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_unix_micros",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_unix_millis",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_unix_seconds",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_unnest",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_unnest_with_offset",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_user_defined_functions",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_warnings",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_week",
+  "tests/dialects/test_bigquery.py::TestBigQuery::test_with_offset",
+]
+max_cost_cny = 0.5

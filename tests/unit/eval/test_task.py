@@ -99,9 +99,9 @@ def test_hidden_test_file_must_exist(task_dir: Path) -> None:
         load_task(task_dir)
 
 
-def test_ac1_dev_suite_has_ten_distinct_tasks() -> None:
+def test_ac1_dev_suite_has_distinct_tasks() -> None:
     tasks = [load_task(d) for d in discover(DEV)]
-    assert len(tasks) == 10
+    assert len(tasks) == 15  # W1 的 10 个 + W2-23 切分加入的 filtered 5 个
     assert len({t.image_tag() for t in tasks}) == len(tasks)
     kinds = {t.meta.source for t in tasks}
     assert kinds == {"synthetic", "swe-rebench"}

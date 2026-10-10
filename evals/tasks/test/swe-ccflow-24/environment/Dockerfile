@@ -1,0 +1,144 @@
+# Point72__ccflow-24（Point72/ccflow @ 67f4b6dcbb38）；依赖在构建时装好，运行时断网。
+# 国内网络：pip 命令可加 -i https://mirrors.aliyun.com/pypi/simple
+FROM python:3.9-slim
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
+RUN for i in 1 2 3 4 5; do \
+      apt-get -o Acquire::Retries=3 update -qq && \
+      apt-get install -y -qq --no-install-recommends git >/dev/null && break; \
+      sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*
+ADD https://github.com/Point72/ccflow/archive/67f4b6dcbb387e2e486e408806789d94c9b02886.tar.gz /tmp/src.tar.gz
+RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz
+RUN pip install --no-cache-dir \
+    aiosignal==1.3.2 \
+    annotated-types==0.7.0 \
+    antlr4-python3-runtime==4.9.3 \
+    anyio==4.9.0 \
+    asttokens==3.0.0 \
+    attrs==25.3.0 \
+    backports.tarfile==1.2.0 \
+    bracex==2.5.post1 \
+    build==1.2.2.post1 \
+    bump-my-version==1.1.1 \
+    certifi==2025.1.31 \
+    cexprtk==0.4.1 \
+    cffi==1.17.1 \
+    charset-normalizer==3.4.1 \
+    check-manifest==0.50 \
+    click==8.1.8 \
+    cloudpathlib==0.21.0 \
+    cloudpickle==3.1.1 \
+    codespell==2.3.0 \
+    coverage==7.8.0 \
+    cryptography==44.0.2 \
+    csp==0.0.11 \
+    dask==2024.8.0 \
+    decorator==5.2.1 \
+    Deprecated==1.2.18 \
+    docutils==0.21.2 \
+    executing==2.2.0 \
+    filelock==3.18.0 \
+    frozenlist==1.5.0 \
+    fsspec==2025.3.2 \
+    greenlet==3.1.1 \
+    h11==0.14.0 \
+    hatchling==1.27.0 \
+    httpcore==1.0.7 \
+    httpx==0.28.1 \
+    hydra-core==1.3.2 \
+    id==1.5.0 \
+    idna==3.10 \
+    importlib_metadata==8.6.1 \
+    ipython==8.18.1 \
+    jaraco.classes==3.4.0 \
+    jaraco.context==6.0.1 \
+    jaraco.functools==4.1.0 \
+    jedi==0.19.2 \
+    jeepney==0.9.0 \
+    Jinja2==3.1.6 \
+    jsonschema-specifications==2024.10.1 \
+    jsonschema==4.23.0 \
+    keyring==25.6.0 \
+    locket==1.0.0 \
+    markdown-it-py==3.0.0 \
+    MarkupSafe==3.0.2 \
+    matplotlib-inline==0.1.7 \
+    mdformat==0.7.22 \
+    mdurl==0.1.2 \
+    more-itertools==10.6.0 \
+    msgpack==1.1.0 \
+    mypy-extensions==1.0.0 \
+    narwhals==1.33.0 \
+    nh3==0.2.21 \
+    numpy==1.26.4 \
+    omegaconf==2.3.0 \
+    orjson==3.10.16 \
+    pandas==2.2.3 \
+    pandera==0.23.1 \
+    parso==0.8.4 \
+    partd==1.4.2 \
+    pathspec==0.12.1 \
+    pexpect==4.9.0 \
+    plotly==6.0.1 \
+    polars==1.26.0 \
+    prompt_toolkit==3.0.50 \
+    protobuf==6.30.2 \
+    psutil==7.0.0 \
+    ptyprocess==0.7.0 \
+    pure_eval==0.2.3 \
+    pyarrow==18.1.0 \
+    pycparser==2.22 \
+    pydantic-settings==2.8.1 \
+    pydantic==2.11.2 \
+    pydantic_core==2.33.1 \
+    Pygments==2.19.1 \
+    pyproject_hooks==1.2.0 \
+    pytest-asyncio==0.26.0 \
+    pytest-cov==6.1.0 \
+    pytest-sugar==1.0.0 \
+    pytest==8.3.5 \
+    python-dateutil==2.9.0.post0 \
+    python-dotenv==1.1.0 \
+    pytz==2025.2 \
+    PyYAML==6.0.2 \
+    questionary==2.1.0 \
+    ray==2.44.1 \
+    readme_renderer==44.0 \
+    referencing==0.36.2 \
+    requests-toolbelt==1.0.0 \
+    requests==2.32.3 \
+    rfc3986==2.0.0 \
+    rich-click==1.8.8 \
+    rich==14.0.0 \
+    rpds-py==0.24.0 \
+    ruamel.yaml.clib==0.2.12 \
+    ruamel.yaml==0.18.10 \
+    ruff==0.8.6 \
+    scipy==1.13.1 \
+    SecretStorage==3.3.3 \
+    six==1.17.0 \
+    smart-open==7.1.0 \
+    sniffio==1.3.1 \
+    SQLAlchemy==2.0.40 \
+    stack-data==0.6.3 \
+    tenacity==9.1.2 \
+    termcolor==3.0.1 \
+    toml==0.10.2 \
+    tomlkit==0.13.2 \
+    toolz==1.0.0 \
+    traitlets==5.14.3 \
+    trove-classifiers==2025.3.19.19 \
+    twine==6.1.0 \
+    typeguard==4.4.2 \
+    typing-inspect==0.9.0 \
+    typing-inspection==0.4.0 \
+    typing_extensions==4.13.1 \
+    tzdata==2025.2 \
+    urllib3==2.3.0 \
+    wcmatch==10.0 \
+    wcwidth==0.2.13 \
+    wrapt==1.17.2 \
+    xarray==2024.7.0 \
+    zipp==3.21.0
+RUN pip install --no-cache-dir -e /workspace/repo
+RUN chown -R 1000:1000 /workspace
+WORKDIR /workspace/repo

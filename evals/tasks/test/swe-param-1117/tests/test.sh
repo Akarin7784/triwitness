@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  tests/testreactive.py::test_shared_rx_only_triggers_once \
+  tests/testreactive.py::test_async_shared_rx_only_triggers_once \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[add]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[divmod]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[floordiv]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[mod]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[mul]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[pow]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[sub]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops[truediv]' \
+  'tests/testreactive.py::test_reactive_numeric_comparison_ops[eq]' \
+  'tests/testreactive.py::test_reactive_numeric_comparison_ops[ge]' \
+  'tests/testreactive.py::test_reactive_numeric_comparison_ops[gt]' \
+  'tests/testreactive.py::test_reactive_numeric_comparison_ops[le]' \
+  'tests/testreactive.py::test_reactive_numeric_comparison_ops[lt]' \
+  'tests/testreactive.py::test_reactive_numeric_comparison_ops[ne]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[abs]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[ceil]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[floor]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[trunc]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[neg]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[pos]' \
+  'tests/testreactive.py::test_reactive_numeric_unary_ops[round]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[add]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[divmod]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[floordiv]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[mod]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[mul]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[pow]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[sub]' \
+  'tests/testreactive.py::test_reactive_numeric_binary_ops_reverse[truediv]' \
+  'tests/testreactive.py::test_reactive_logic_binary_ops[and_]' \
+  'tests/testreactive.py::test_reactive_logic_binary_ops[or_]' \
+  'tests/testreactive.py::test_reactive_logic_binary_ops[xor]' \
+  'tests/testreactive.py::test_reactive_logic_unary_ops[inv]' \
+  'tests/testreactive.py::test_reactive_logic_binary_ops_reverse[and_]' \
+  'tests/testreactive.py::test_reactive_logic_binary_ops_reverse[or_]' \
+  'tests/testreactive.py::test_reactive_logic_binary_ops_reverse[xor]' \
+  tests/testreactive.py::test_reactive_getitem_dict \
+  tests/testreactive.py::test_reactive_getitem_list \
+  tests/testreactive.py::test_reactive_getitem_list_with_slice \
+  tests/testreactive.py::test_reactive_empty_construct \
+  tests/testreactive.py::test_reactive_set_new_value_assignment \
+  tests/testreactive.py::test_reactive_set_new_value_method \
+  tests/testreactive.py::test_reactive_increment_value \
+  tests/testreactive.py::test_reactive_multiply_value_inplace \
+  tests/testreactive.py::test_reactive_pipeline_set_new_value \
+  tests/testreactive.py::test_reactive_reflect_param_value \
+  tests/testreactive.py::test_reactive_skip_value \
+  tests/testreactive.py::test_reactive_skip_value_return \
+  tests/testreactive.py::test_reactive_pipeline_reflect_param_value \
+  tests/testreactive.py::test_reactive_reactive_reflect_other_rx \
+  tests/testreactive.py::test_reactive_pipeline_reflect_other_reactive_expr \
+  tests/testreactive.py::test_reactive_reflect_bound_method \
+  tests/testreactive.py::test_reactive_pipeline_reflect_bound_method \
+  tests/testreactive.py::test_reactive_reflect_bound_function \
+  tests/testreactive.py::test_reactive_pipeline_reflect_bound_function \
+  tests/testreactive.py::test_reactive_len \
+  tests/testreactive.py::test_reactive_bool \
+  tests/testreactive.py::test_reactive_not_ \
+  tests/testreactive.py::test_reactive_and_ \
+  tests/testreactive.py::test_reactive_or_ \
+  tests/testreactive.py::test_reactive_map \
+  tests/testreactive.py::test_reactive_async_map \
+  tests/testreactive.py::test_reactive_map_args \
+  tests/testreactive.py::test_reactive_iter \
+  tests/testreactive.py::test_reactive_multi_iter \
+  tests/testreactive.py::test_reactive_is \
+  tests/testreactive.py::test_reactive_in \
+  tests/testreactive.py::test_reactive_is_not \
+  tests/testreactive.py::test_reactive_where_expr \
+  tests/testreactive.py::test_reactive_where_expr_refs \
+  tests/testreactive.py::test_reactive_watch_on_set_input \
+  tests/testreactive.py::test_reactive_watch_async_on_event \
+  tests/testreactive.py::test_reactive_set_value_non_root_raises \
+  tests/testreactive.py::test_reactive_clone_evaluates_once \
+  tests/testreactive.py::test_reactive_when \
+  tests/testreactive.py::test_reactive_when_initial \
+  tests/testreactive.py::test_reactive_resolve \
+  tests/testreactive.py::test_reactive_resolve_nested \
+  tests/testreactive.py::test_reactive_resolve_recursive \
+  tests/testreactive.py::test_reactive_async_func \
+  tests/testreactive.py::test_reactive_pipe_async_func \
+  tests/testreactive.py::test_reactive_gen \
+  tests/testreactive.py::test_reactive_gen_pipe \
+  tests/testreactive.py::test_reactive_gen_with_dep \
+  tests/testreactive.py::test_reactive_gen_pipe_with_dep \
+  tests/testreactive.py::test_reactive_async_gen \
+  tests/testreactive.py::test_reactive_async_gen_pipe \
+  tests/testreactive.py::test_reactive_async_gen_with_dep \
+  tests/testreactive.py::test_reactive_async_gen_pipe_with_dep \
+  tests/testreactive.py::test_root_invalidation \
+  tests/testreactive.py::test_ensure_ref_can_update_by_watcher_of_same_parameter \
+  tests/testreactive.py::test_reactive_dunder_len_error \
+  tests/testreactive.py::test_reactive_dunder_bool \
+  tests/testreactive.py::test_reactive_set_value_attributeerror; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

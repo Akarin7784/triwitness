@@ -1,0 +1,62 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-ro-crate-py-171"
+description = "SWE-rebench ResearchObject__ro-crate-py-171"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/ResearchObject/ro-crate-py"
+base_commit = "42aeed481d1c14dab3eaef00c90db7a9a30caf9e"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2024-01-09"
+license = "Apache License 2.0\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "ResearchObject__ro-crate-py-171"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "test/test_cli.py::test_cli_help[command_path6]",
+  "test/test_cli.py::test_cli_help[command_path7]",
+  "test/test_cli.py::test_cli_add_file[False]",
+  "test/test_cli.py::test_cli_add_file[True]",
+  "test/test_cli.py::test_cli_add_dataset[False]",
+  "test/test_cli.py::test_cli_add_dataset[True]",
+]
+pass_to_pass = [
+  "test/test_cli.py::test_cli_help[command_path0]",
+  "test/test_cli.py::test_cli_help[command_path1]",
+  "test/test_cli.py::test_cli_help[command_path2]",
+  "test/test_cli.py::test_cli_help[command_path3]",
+  "test/test_cli.py::test_cli_help[command_path4]",
+  "test/test_cli.py::test_cli_help[command_path5]",
+  "test/test_cli.py::test_cli_init[False-False]",
+  "test/test_cli.py::test_cli_init[False-True]",
+  "test/test_cli.py::test_cli_init[True-False]",
+  "test/test_cli.py::test_cli_init[True-True]",
+  "test/test_cli.py::test_cli_init_exclude",
+  "test/test_cli.py::test_cli_add_workflow[False]",
+  "test/test_cli.py::test_cli_add_workflow[True]",
+  "test/test_cli.py::test_cli_add_test_metadata[False]",
+  "test/test_cli.py::test_cli_add_test_metadata[True]",
+  "test/test_cli.py::test_cli_add_test_metadata_explicit_ids[False]",
+  "test/test_cli.py::test_cli_add_test_metadata_explicit_ids[True]",
+  "test/test_cli.py::test_cli_write_zip[False]",
+  "test/test_cli.py::test_cli_write_zip[True]",
+]
+max_cost_cny = 0.5

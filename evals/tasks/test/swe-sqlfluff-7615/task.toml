@@ -1,0 +1,62 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-sqlfluff-7615"
+description = "SWE-rebench sqlfluff__sqlfluff-7615"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/sqlfluff/sqlfluff"
+base_commit = "14d78ec8b330821ba3bc06c70f0847a95ba9ceeb"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2026-03-15"
+license = "MIT\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "sqlfluff__sqlfluff-7615"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_double_colon_cast]",
+]
+pass_to_pass = [
+  "test/core/templaters/placeholder_test.py::test__templater_raw",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[no_changes]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_simple_substitution]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_accept_block_at_end]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_tuple_substitution]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_quoted]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_nospaces]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[colon_nospaces_double_colon_ignored]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[question_mark]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[numeric_colon]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[pyformat]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[dollar]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[numeric_dollar]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[numeric_dollar_with_braces]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[numeric_dollar_with_braces_and_string]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[dollar_surround]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[percent]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[ampersand]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[flyway_var0]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[flyway_var1]",
+  "test/core/templaters/placeholder_test.py::test__templater_param_style[params_not_specified]",
+  "test/core/templaters/placeholder_test.py::test__templater_custom_regex",
+  "test/core/templaters/placeholder_test.py::test__templater_setup",
+  "test/core/templaters/placeholder_test.py::test__templater_styles",
+]
+max_cost_cny = 0.5

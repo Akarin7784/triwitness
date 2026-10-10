@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestThinkingModeCompatibility::test_retrieve_customer_context_does_not_append_assistant_message \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestThinkingModeCompatibility::test_retrieve_customer_context_no_assistant_message_multi_turn \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestThinkingModeCompatibility::test_retrieve_customer_context_default_context_tag \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_init_basic \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_events_to_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_session_id_mismatch \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_session_valid \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_session_invalid \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_session_legacy_migration \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_agent \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_agent_wrong_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_agent_valid \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_agent_no_events \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_agent_legacy_migration \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_message \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages_returns_values_in_correct_reverse_order \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_events_to_messages_empty_payload \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_delete_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_agent_wrong_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_agent_exception \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_update_agent \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_update_agent_wrong_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_message_wrong_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_create_message_exception \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_message \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_read_message_not_found \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_update_message \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_update_message_wrong_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages_with_limit \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages_wrong_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages_exception \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_load_long_term_memories_no_config \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_validate_namespace_resolution \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_load_long_term_memories_with_validation_failure \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retry_with_backoff_success \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retry_with_backoff_max_retries \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_generate_initialization_query \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_generate_initialization_query_custom \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_contextual_memories_all_namespaces \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_contextual_memories_specific_namespaces \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_contextual_memories_no_config \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_contextual_memories_invalid_namespace \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_load_long_term_memories_with_config \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_load_long_term_memories_exception_handling \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_namespace_variable_resolution \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_generate_initialization_query_patterns \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_load_long_term_memories_enhanced_functionality \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_initialize_with_ltm_integration \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_init_with_boto_config \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_customer_context_no_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_customer_context_no_config \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_customer_context_with_memories \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_customer_context_exception \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_retrieve_customer_context_filters_by_relevance_score \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages_default_max_results \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestAgentCoreMemorySessionManager::test_list_messages_with_limit_calculates_max_results \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingConfig::test_batch_size_default_value \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingConfig::test_batch_size_custom_value \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingConfig::test_batch_size_maximum_value \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingConfig::test_batch_size_exceeds_maximum_raises_error \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingConfig::test_batch_size_zero_raises_error \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingConfig::test_batch_size_negative_raises_error \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBufferManagement::test_pending_message_count_empty_buffer \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBufferManagement::test_pending_message_count_with_buffered_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBufferManagement::test_buffer_auto_flushes_at_batch_size \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBufferManagement::test_create_message_returns_empty_dict_when_buffered \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test__flush_messages_empty_buffer \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test__flush_messages_sends_all_buffered \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test__flush_messages_maintains_order \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test__flush_messages_clears_buffer \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test__flush_messages_exception_handling \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_partial_flush_failure_preserves_all_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_batching_combines_messages_for_same_session \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_multiple_sessions_grouped_into_separate_api_calls \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_latest_timestamp_used_for_combined_events \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_partial_failure_multiple_sessions_preserves_buffer \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_blob_messages_sent_individually_not_batched \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingFlush::test_mixed_sessions_with_blobs_and_conversational \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBackwardsCompatibility::test_batch_size_one_sends_immediately \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBackwardsCompatibility::test_batch_size_one_returns_event_id \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingContextManager::test_context_manager_returns_self \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingContextManager::test_context_manager_flushes_on_exit \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingContextManager::test_context_manager_flushes_on_exception \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingContextManager::test_exit_preserves_original_exception_when_flush_fails \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingContextManager::test_exit_raises_flush_exception_when_no_original_exception \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingClose::test_close_flushes_pending_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingClose::test_close_with_empty_buffer \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBlobMessages::test_blob_message_sent_via_gmdp_client \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestBatchingBlobMessages::test_mixed_conversational_and_blob_messages \
+  tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py::TestThinkingModeCompatibility::test_retrieve_customer_context_custom_context_tag \
+  tests_integ/memory/integrations/test_session_manager.py::TestAgentCoreMemorySessionManager::test_session_manager_error_handling; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

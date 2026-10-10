@@ -1,0 +1,50 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/swe-scrapy-7351_interface"
+description = "SWE-rebench scrapy__scrapy-7351_interface"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/scrapy/scrapy"
+base_commit = "2b174e348d88d19dd32135e8e483c4eb784aeca8"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2026-03-24"
+license = "BSD-3-Clause\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "scrapy__scrapy-7351_interface"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_pqueues.py::TestDownloaderAwarePriorityQueue::test_tie_breaking_rotates_slots",
+  "tests/test_pqueues.py::TestDownloaderAwarePriorityQueue::test_tie_breaking_keeps_rotation_after_selected_slot_is_deleted",
+]
+pass_to_pass = [
+  "tests/test_pqueues.py::TestPriorityQueue::test_queue_push_pop_one",
+  "tests/test_pqueues.py::TestPriorityQueue::test_peek",
+  "tests/test_pqueues.py::TestPriorityQueue::test_queue_push_pop_priorities",
+  "tests/test_pqueues.py::TestDownloaderAwarePriorityQueue::test_push_pop",
+  "tests/test_pqueues.py::TestDownloaderAwarePriorityQueue::test_peek",
+  "tests/test_pqueues.py::test_pop_order[input_0-output0]",
+  "tests/test_pqueues.py::test_pop_order[input_1-output1]",
+  "tests/test_pqueues.py::test_pop_order[input_2-output2]",
+  "tests/test_pqueues.py::test_pop_order[input_3-output3]",
+  "tests/test_pqueues.py::test_pop_order[input_4-output4]",
+  "tests/test_pqueues.py::test_pop_order[input_5-output5]",
+]
+max_cost_cny = 0.5
