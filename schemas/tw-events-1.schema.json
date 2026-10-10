@@ -1,0 +1,2380 @@
+{
+  "$defs": {
+    "CheckpointEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "checkpoint",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/CheckpointPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "CheckpointEvent",
+      "type": "object"
+    },
+    "CheckpointPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        }
+      },
+      "required": [
+        "label"
+      ],
+      "title": "CheckpointPayload",
+      "type": "object"
+    },
+    "CostLine": {
+      "additionalProperties": false,
+      "properties": {
+        "calls": {
+          "minimum": 0,
+          "title": "Calls",
+          "type": "integer"
+        },
+        "cost_cny": {
+          "minimum": 0,
+          "title": "Cost Cny",
+          "type": "number"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "peak_calls": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Peak Calls",
+          "type": "integer"
+        },
+        "role": {
+          "enum": [
+            "planner",
+            "executor",
+            "verifier",
+            "reviewer",
+            "summarizer",
+            "classifier"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "usage": {
+          "$ref": "#/$defs/Usage"
+        },
+        "vendor": {
+          "enum": [
+            "deepseek",
+            "qwen",
+            "zhipu"
+          ],
+          "title": "Vendor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "vendor",
+        "model",
+        "calls",
+        "usage",
+        "cost_cny"
+      ],
+      "title": "CostLine",
+      "type": "object"
+    },
+    "CostReport": {
+      "additionalProperties": false,
+      "properties": {
+        "budget_cny": {
+          "exclusiveMinimum": 0,
+          "title": "Budget Cny",
+          "type": "number"
+        },
+        "cache_hit_rate": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Cache Hit Rate",
+          "type": "number"
+        },
+        "estimated": {
+          "default": false,
+          "title": "Estimated",
+          "type": "boolean"
+        },
+        "lines": {
+          "items": {
+            "$ref": "#/$defs/CostLine"
+          },
+          "title": "Lines",
+          "type": "array"
+        },
+        "pricing_version": {
+          "title": "Pricing Version",
+          "type": "string"
+        },
+        "sandbox_cost_cny": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Sandbox Cost Cny",
+          "type": "number"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "total_cny": {
+          "minimum": 0,
+          "title": "Total Cny",
+          "type": "number"
+        }
+      },
+      "required": [
+        "task_id",
+        "lines",
+        "total_cny",
+        "budget_cny",
+        "cache_hit_rate",
+        "pricing_version"
+      ],
+      "title": "CostReport",
+      "type": "object"
+    },
+    "ErrorEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "error",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ErrorPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ErrorEvent",
+      "type": "object"
+    },
+    "ErrorPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "message"
+      ],
+      "title": "ErrorPayload",
+      "type": "object"
+    },
+    "FileChange": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "added",
+            "modified",
+            "deleted"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "note": {
+          "default": "",
+          "title": "Note",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "kind"
+      ],
+      "title": "FileChange",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "blocker",
+            "major",
+            "minor",
+            "nit"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "status": {
+          "default": "open",
+          "enum": [
+            "open",
+            "fixed",
+            "wontfix"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "suggestion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suggestion"
+        }
+      },
+      "required": [
+        "severity",
+        "message"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FinishReport": {
+      "additionalProperties": false,
+      "properties": {
+        "changes": {
+          "items": {
+            "$ref": "#/$defs/FileChange"
+          },
+          "title": "Changes",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "open_risks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Open Risks",
+          "type": "array"
+        },
+        "repro": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReproRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "tests_passed": {
+          "title": "Tests Passed",
+          "type": "boolean"
+        },
+        "tests_run": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tests Run",
+          "type": "array"
+        }
+      },
+      "required": [
+        "summary",
+        "changes",
+        "tests_passed",
+        "confidence"
+      ],
+      "title": "FinishReport",
+      "type": "object"
+    },
+    "HitlRequestEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "hitl_request",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/HitlRequestPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "HitlRequestEvent",
+      "type": "object"
+    },
+    "HitlRequestPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "blocking": {
+          "default": true,
+          "title": "Blocking",
+          "type": "boolean"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        }
+      },
+      "required": [
+        "request_id",
+        "question",
+        "options"
+      ],
+      "title": "HitlRequestPayload",
+      "type": "object"
+    },
+    "HitlResponseEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "hitl_response",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/HitlResponsePayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "HitlResponseEvent",
+      "type": "object"
+    },
+    "HitlResponsePayload": {
+      "additionalProperties": true,
+      "properties": {
+        "answer": {
+          "title": "Answer",
+          "type": "string"
+        },
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        }
+      },
+      "required": [
+        "request_id",
+        "answer",
+        "by"
+      ],
+      "title": "HitlResponsePayload",
+      "type": "object"
+    },
+    "LoopWarningEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "loop_warning",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/LoopWarningPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "LoopWarningEvent",
+      "type": "object"
+    },
+    "LoopWarningPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Detail"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "level": {
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Level",
+          "type": "integer"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "signal": {
+          "enum": [
+            "repeat_action",
+            "consecutive_failures",
+            "no_progress"
+          ],
+          "title": "Signal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal",
+        "level"
+      ],
+      "title": "LoopWarningPayload",
+      "type": "object"
+    },
+    "ModelCallEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "model_call",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ModelCallPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ModelCallEvent",
+      "type": "object"
+    },
+    "ModelCallPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "cost_cny": {
+          "minimum": 0,
+          "title": "Cost Cny",
+          "type": "number"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "finish_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finish Reason"
+        },
+        "latency_ms": {
+          "minimum": 0,
+          "title": "Latency Ms",
+          "type": "integer"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "peak": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Peak"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "served_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Served Model"
+        },
+        "thinking": {
+          "title": "Thinking",
+          "type": "boolean"
+        },
+        "usage": {
+          "$ref": "#/$defs/Usage"
+        }
+      },
+      "required": [
+        "model",
+        "thinking",
+        "usage",
+        "cost_cny",
+        "latency_ms"
+      ],
+      "title": "ModelCallPayload",
+      "type": "object"
+    },
+    "ReproRef": {
+      "additionalProperties": false,
+      "properties": {
+        "cmd": {
+          "title": "Cmd",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "cmd"
+      ],
+      "title": "ReproRef",
+      "type": "object"
+    },
+    "ReviewEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "review",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ReviewPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ReviewEvent",
+      "type": "object"
+    },
+    "ReviewPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/Finding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "variant": {
+          "title": "Variant",
+          "type": "string"
+        },
+        "vendor_policy": {
+          "default": "single_vendor",
+          "enum": [
+            "single_vendor",
+            "cross_vendor"
+          ],
+          "title": "Vendor Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model",
+        "variant"
+      ],
+      "title": "ReviewPayload",
+      "type": "object"
+    },
+    "StateChangeEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "state_change",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/StateChangePayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "StateChangeEvent",
+      "type": "object"
+    },
+    "StateChangePayload": {
+      "additionalProperties": true,
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "from": {
+          "$ref": "#/$defs/TaskState"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "to": {
+          "$ref": "#/$defs/TaskState"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "StateChangePayload",
+      "type": "object"
+    },
+    "TaskFinishedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "task_finished",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/TaskFinishedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "TaskFinishedEvent",
+      "type": "object"
+    },
+    "TaskFinishedPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "cost_report": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CostReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "finish_report": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FinishReport"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "status": {
+          "enum": [
+            "done",
+            "failed",
+            "budget_exceeded",
+            "stuck",
+            "needs_human",
+            "cancelled"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "TaskFinishedPayload",
+      "type": "object"
+    },
+    "TaskStartedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "task_started",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/TaskStartedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "TaskStartedEvent",
+      "type": "object"
+    },
+    "TaskStartedPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "config_hash": {
+          "title": "Config Hash",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "issue_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issue Number"
+        },
+        "issue_title": {
+          "title": "Issue Title",
+          "type": "string"
+        },
+        "mode": {
+          "default": "background",
+          "enum": [
+            "background",
+            "interactive",
+            "eval"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "repo": {
+          "title": "Repo",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        }
+      },
+      "required": [
+        "issue_title",
+        "repo",
+        "config_hash"
+      ],
+      "title": "TaskStartedPayload",
+      "type": "object"
+    },
+    "TaskState": {
+      "enum": [
+        "received",
+        "preparing",
+        "planning",
+        "await_plan_approval",
+        "reproducing",
+        "executing",
+        "verifying",
+        "reviewing",
+        "packaging",
+        "await_pr_approval",
+        "pr_opened",
+        "ci_watch",
+        "done",
+        "needs_human",
+        "budget_exceeded",
+        "failed",
+        "cancelled"
+      ],
+      "title": "TaskState",
+      "type": "string"
+    },
+    "ToolCallEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "tool_call",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ToolCallPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ToolCallEvent",
+      "type": "object"
+    },
+    "ToolCallPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "duration_ms": {
+          "minimum": 0,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        },
+        "exit_code": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exit Code"
+        },
+        "ok": {
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "output_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Ref"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        },
+        "truncated": {
+          "default": false,
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tool",
+        "ok",
+        "duration_ms"
+      ],
+      "title": "ToolCallPayload",
+      "type": "object"
+    },
+    "Usage": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_hit_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cache Hit Tokens",
+          "type": "integer"
+        },
+        "cache_miss_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Cache Miss Tokens",
+          "type": "integer"
+        },
+        "input_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "reasoning_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reasoning Tokens"
+        }
+      },
+      "title": "Usage",
+      "type": "object"
+    },
+    "VerificationEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "verification",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/VerificationPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "VerificationEvent",
+      "type": "object"
+    },
+    "VerificationPayload": {
+      "additionalProperties": true,
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "evidence_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Ref"
+        },
+        "risk_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "L0",
+                "L1",
+                "L2",
+                "L3"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Risk Level"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "tests_passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tests Passed"
+        },
+        "verdict": {
+          "enum": [
+            "pass",
+            "fail",
+            "inconclusive"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict"
+      ],
+      "title": "VerificationPayload",
+      "type": "object"
+    }
+  },
+  "$id": "https://triwitness.dev/schemas/tw-events-1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "TriWitness 轨迹事件（一行一个 JSON 对象）。读取方遇到未知 kind 必须忽略。",
+  "discriminator": {
+    "mapping": {
+      "checkpoint": "#/$defs/CheckpointEvent",
+      "error": "#/$defs/ErrorEvent",
+      "hitl_request": "#/$defs/HitlRequestEvent",
+      "hitl_response": "#/$defs/HitlResponseEvent",
+      "loop_warning": "#/$defs/LoopWarningEvent",
+      "model_call": "#/$defs/ModelCallEvent",
+      "review": "#/$defs/ReviewEvent",
+      "state_change": "#/$defs/StateChangeEvent",
+      "task_finished": "#/$defs/TaskFinishedEvent",
+      "task_started": "#/$defs/TaskStartedEvent",
+      "tool_call": "#/$defs/ToolCallEvent",
+      "verification": "#/$defs/VerificationEvent"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/TaskStartedEvent"
+    },
+    {
+      "$ref": "#/$defs/StateChangeEvent"
+    },
+    {
+      "$ref": "#/$defs/ModelCallEvent"
+    },
+    {
+      "$ref": "#/$defs/ToolCallEvent"
+    },
+    {
+      "$ref": "#/$defs/CheckpointEvent"
+    },
+    {
+      "$ref": "#/$defs/LoopWarningEvent"
+    },
+    {
+      "$ref": "#/$defs/HitlRequestEvent"
+    },
+    {
+      "$ref": "#/$defs/HitlResponseEvent"
+    },
+    {
+      "$ref": "#/$defs/VerificationEvent"
+    },
+    {
+      "$ref": "#/$defs/ReviewEvent"
+    },
+    {
+      "$ref": "#/$defs/TaskFinishedEvent"
+    },
+    {
+      "$ref": "#/$defs/ErrorEvent"
+    }
+  ],
+  "title": "tw-events/1"
+}

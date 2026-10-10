@@ -4,3 +4,5 @@
 
 - 2026-10-10｜W1-01｜Eva 一次性采纳 ADR-0001（接口与路径）、ADR-0002（预算与模型策略）。
 - 2026-10-10｜W1-04 / W1-05｜AI 生成 monorepo 骨架、CI、规格回写；桌面端从 `agent-product/apps/desktop` 复制进 `apps/desktop`（monorepo 版本为准）。
+- 2026-10-10｜W1-06｜AI 按 architecture §8 + ADR-0001/0002 实现 core（models / errors / ids / events）；`Usage` 拆命中 / 未命中并校验相加，`Budget` 默认 eval 档，时间字段强制带时区。Vendor 保留 `zhipu`（沿用设计文档命名）。
+- 2026-10-10｜W1-36｜AI 冻结 tw-events/1：每个 kind 一个 payload 模型（允许额外字段），导出判别式 JSON Schema；3 份 fixture 由脚本确定性生成（贴近桌面端 mock 的 Issue #87），测试检查 seq 连续、无密钥样式、只出现 deepseek-flash、空闲时段。
