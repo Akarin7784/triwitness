@@ -2,6 +2,36 @@
 
 > 不按日历排期，做完一项记一项。
 
+## UI-09 · 回放 tw-events/1 fixture（已完成）
+
+**事件模型**
+- `scripts/gen-event-types.mjs` 用 json-schema-to-typescript 把 `schemas/tw-events-1.schema.json` 编译成 `src/data/tw-events.gen.ts`；`npm run check:events` 检查生成文件是否过期（已接入 CI）
+- `events.ts`：逐行解析，并校验 v=1、seq、ts、id 和 payload；坏行跳过，按 seq 去重排序；未知 kind 保留为 UnknownEvent，不渲染、不崩
+- `sources/`：`EventSource` 接口（subscribe / afterSeq / close）。`FixtureSource` 按 ts 间隔回放，支持倍速、空档上限和 afterSeq 续传；`MockSource` 把旧演示日志包装成事件，复用同一条路径
+- `useEventFeed` 取代 `useMockFeed`（已删）
+
+**映射（event-protocol §3）**
+- 推流：优先显示 `payload.display`，没有时按 kind 拼出一行；角色取 `role_hint`，其次 `role`，都没有时归为系统
+- 推流行的样式：状态切换显示为居中的章节标题；checkpoint 显示为琥珀色细分隔；失败的工具调用和复验失败用赭红；高峰时段调用和循环警告用琥珀；收尾行用衬线字
+- 角色点：亮起当前状态对应的角色（规划 / 执行 / 验证 / 评审）
+- 状态 chip：显示中文状态，配色点按阶段区分（进行 / 等待 / 完成 / 失败 / 预算耗尽 / 取消）
+- 费用 chip：显示 `¥x.xxx` 和一条迷你预算条；悬停显示命中率、上限和高峰调用次数。超过 80% 变琥珀，超出预算或预算耗尽变赭红
+- **跟笔同步**：状态、费用和对话只推进到笔尖已经写到的那一行；暂停时一起冻结
+- 对话：task_started 显示为用户消息（Issue 标题）；task_finished 显示为助手消息（finish_report 摘要，附带置信度）
+
+**选择 fixture**：没有新增任何说明文字。左侧「近期」直接列出三条 #87，用状态图标（✓ / × / 钱币）加北京时间区分，标签放在悬停提示里；也支持 `?source=fixture:<name>|mock` 和 `?speed=`。
+
+**和任务卡的偏差**
+- fixture 用 Vite 的 `?raw` 直接从仓库根导入，没有复制到 `public/`。这样只有一份数据源，构建时会打成独立的 chunk，Tauri 离线也能用。为此 `vite.config.ts` 的 `server.fs.allow` 加上了仓库根
+- 新增两个开发依赖：`json-schema-to-typescript`（生成类型）和 `vitest`（单元测试），都不进产物
+
+**验证**
+- `npm test`：29 项通过（覆盖解析、映射、三份 fixture 的终态、幂等、部分折叠、回放计时 / 续传 / 退订、URL 参数、生成类型是否过期）
+- `npm run lint`：通过，只剩 useWritingStream 里原有的警告；`npm run build`：通过；`uv run pytest -q`：35 项通过
+- `tools/shoot-replay.mjs`：三份 fixture 都走到终态，chip 显示正确；暂停冻结，继续后不跳字；mock 源可用；页面没有报错
+- `tools/test-guards.mjs`：21/21 通过
+- 本轮没有重建 Windows 安装包
+
 ## 第 4 轮（已完成）
 
 **屏蔽浏览器默认行为**
@@ -75,6 +105,9 @@
 - 详细步骤见 `docs/WINDOWS_BUILD.md`
 
 ## 截图（docs/）
+- `replay-success.png` / `replay-failure.png` / `replay-budget_exceeded.png`：三份 fixture 回放到终态
+- `replay-success-mid.png`：success 回放到规划阶段（状态、费用跟笔）
+- `replay-budget-tooltip.png`：费用 chip 的悬停提示
 - `main-midstream.png`：主界面，推流写到一半
 - `titlebar.png`：标题栏，关闭按钮处于悬停状态
 - `tooltip.png`：悬停提示示例
@@ -83,12 +116,14 @@
 - `main-reduced-motion.png`：开启减少动态效果时
 - `settings.png` / `settings-full.png`：设置与预算页
 
-重新截图：先运行 `npm run dev`，再运行 `cd tools && node shoot.mjs`
+重新截图：先运行 `npm run dev`，再运行 `cd tools && node shoot.mjs`；回放截图运行 `node tools/shoot-replay.mjs`（可用 `SPEED=` 调速）
 
 ## 下一步
 - [ ] 在 Windows 真机上装一次安装包，看字体渲染（ClearType）和窗口的 DPI 缩放
 - [ ] Win11 贴靠布局：自绘最大化按钮在 Rust 里处理窗口命中测试
-- [ ] 接入真实事件源（编排器通过 SSE 或本地 socket 推送），替换 mock
+- [x] 用 tw-events/1 事件模型替换 mock（UI-09）
+- [ ] 实现 SSE 版 EventSource，接 `/v1/runs/{id}/events`（断线后按 afterSeq 续传）
+- [ ] 实现 hitl_request 卡片（批准 / 拒绝）
 - [ ] 推流面板：可折叠、可停靠到底部，书写速度和字号可调
 - [ ] 证据包卡片，L0–L3 风险徽章
 - [ ] 接入法定节假日日历；账本改由 `tw budget` 驱动
