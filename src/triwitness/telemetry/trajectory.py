@@ -48,11 +48,16 @@ class TrajectoryRecorder:
         self.clock = clock
         self.monotonic = monotonic
         self.events: list[TrajectoryEvent] = []
+        self._subscribers: list[Callable[[TrajectoryEvent], None]] = []
         self._seq = 0
         if run_dir is not None:
             run_dir.mkdir(parents=True, exist_ok=True)
             if self.path is not None and self.path.exists():  # 断点续跑：接着已有 seq 写
                 self._seq = len(Trajectory.read_events(self.path))
+
+    def subscribe(self, fn: Callable[[TrajectoryEvent], None]) -> None:
+        """事件写盘后同步回调（CostLedger、`tw serve` 的 SSE 推送等）。"""
+        self._subscribers.append(fn)
 
     @property
     def path(self) -> Path | None:
@@ -77,6 +82,8 @@ class TrajectoryRecorder:
                 f.flush()
                 if self.fsync:
                     os.fsync(f.fileno())
+        for fn in self._subscribers:
+            fn(ev)
         return ev
 
     def artifact(self, name: str, data: str | bytes | dict[str, Any] | list[Any]) -> str | None:

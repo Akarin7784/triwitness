@@ -19,7 +19,7 @@ from triwitness.core.events import (
     TaskStartedPayload,
 )
 from triwitness.core.models import Budget, CostReport, FinishReport, TaskState
-from triwitness.cost.report import cost_report_from_events
+from triwitness.cost.report import CostLedger
 from triwitness.harness.loop import AgentLoop, HarnessConfig, LoopOutcome, RouterLike, build_system_prompt
 from triwitness.llm.pricing import pricing_version
 from triwitness.sandbox.base import Sandbox
@@ -79,6 +79,8 @@ async def run_task(
     tw_dir: str = "/workspace/.tw",
 ) -> TaskResult:
     rec = recorder
+    ledger = CostLedger(task_id=rec.task_id, budget_cny=budget.max_cost_cny, pricing_version=pricing_version())
+    rec.subscribe(ledger.observe)
     head = f"Issue #{issue_number} · {issue_title}" if issue_number is not None else issue_title
     rec.emit(TaskStartedPayload(issue_title=issue_title, repo=repo, config_hash=config_hash,
                                 issue_number=issue_number, mode=mode, display=head))  # fmt: skip
@@ -106,8 +108,7 @@ async def run_task(
     if status == "done":
         st.go(TaskState.PACKAGING, "整理结果")
     st.go(final, label)
-    cost = cost_report_from_events(rec.events, task_id=rec.task_id, budget_cny=budget.max_cost_cny,
-                                   pricing_version=pricing_version())  # fmt: skip
+    cost = ledger.report()
     shown = f"{label} · ¥{cost.total_cny:.3f}"
     if cost.cache_hit_rate:
         shown += f" · 命中 {cost.cache_hit_rate:.0%}"

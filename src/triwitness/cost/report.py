@@ -41,3 +41,66 @@ def cost_report_from_events(
     ]
     return CostReport.from_lines(task_id, lines, budget_cny=budget_cny, pricing_version=pricing_version,
                                  sandbox_cost_cny=sandbox_cost_cny)  # fmt: skip
+
+
+class CostLedger:
+    """订阅轨迹事件、实时累加 model_call（spec 005 §5.3）。`TrajectoryRecorder.subscribe(ledger.observe)`。"""
+
+    def __init__(self, *, task_id: str, budget_cny: float, pricing_version: str) -> None:
+        self.task_id = task_id
+        self.budget_cny = budget_cny
+        self.pricing_version = pricing_version
+        self.events: list[TrajectoryEvent] = []
+        self.total_cny = 0.0
+
+    def observe(self, ev: TrajectoryEvent) -> None:
+        if ev.kind == "model_call":
+            self.events.append(ev)
+            self.total_cny += float(ev.payload["cost_cny"])
+
+    @property
+    def remaining_cny(self) -> float:
+        return self.budget_cny - self.total_cny
+
+    def report(self, *, sandbox_cost_cny: float = 0.0) -> CostReport:
+        return cost_report_from_events(
+            self.events,
+            task_id=self.task_id,
+            budget_cny=self.budget_cny,
+            pricing_version=self.pricing_version,
+            sandbox_cost_cny=sandbox_cost_cny,
+        )
+
+
+def fmt_tokens(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 10_000:
+        return f"{n / 1000:.0f}K"
+    if n >= 1000:
+        return f"{n / 1000:.1f}K"
+    return str(n)
+
+
+def fmt_cny(c: float) -> str:
+    return f"¥{c:.2f}" if c >= 1 else f"¥{c:.3f}"
+
+
+def render_cost_markdown(rep: CostReport) -> str:
+    """PR 成本账单（spec 005 §5.6）。"""
+    rows = [
+        "### 💰 成本（本地估算，非厂商账单）",
+        "| 角色 | 模型 | 调用 | 输入（命中） | 输出 | 费用 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for ln in rep.lines:
+        u = ln.usage
+        calls = f"{ln.calls}" + (f"（高峰 {ln.peak_calls}）" if ln.peak_calls else "")
+        rows.append(f"| {ln.role} | {ln.model} | {calls} | {fmt_tokens(u.input_tokens)}（{u.cache_hit_rate:.0%}） | "
+                    f"{fmt_tokens(u.output_tokens)} | {fmt_cny(ln.cost_cny)} |")  # fmt: skip
+    if rep.sandbox_cost_cny:
+        rows.append(f"| 沙箱 | — | — | — | — | {fmt_cny(rep.sandbox_cost_cny)} |")
+    version = rep.pricing_version.removeprefix("deepseek-")
+    total = f"**合计 {fmt_cny(rep.total_cny)}**｜缓存命中率 {rep.cache_hit_rate:.0%}"
+    rows.append(f"{total}｜预算 {fmt_cny(rep.budget_cny)}｜价格表版本 {version}")
+    return "\n".join(rows) + "\n"
