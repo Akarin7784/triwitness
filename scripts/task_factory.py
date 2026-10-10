@@ -314,7 +314,7 @@ def _set_meta(toml: Path, key: str, value: str) -> None:
 
 
 def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
-    """冻结切分：test = 最新的 leaderboard 任务（污染风险最低）；dev = W1 的 10 个 + filtered 拆分里最新的若干个。"""
+    """冻结切分：test = 最新的 leaderboard 任务（污染风险最低）；dev = W1 的 10 个 + filtered 拆分里最旧的若干个。"""
     import tomllib
 
     sys.path.insert(0, str(ROOT / "src"))
@@ -326,10 +326,10 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
     ok.sort(key=lambda r: (r["created_at"], r["instance_id"]), reverse=True)
     fresh = [r for r in ok if "leaderboard" in r["source"]]
     older = [r for r in ok if "leaderboard" not in r["source"]]
+    dev_new = older[-n_dev_new:] if n_dev_new else []  # dev 先拿 filtered 里最旧的（污染风险最高，只用来调参）
     test = fresh[:n_test]
     if len(test) < n_test:  # leaderboard 不够时用较新的 filtered 补齐（报告里注明）
-        test += older[: n_test - len(test)]
-    dev_new = [r for r in older if r not in test][:n_dev_new]
+        test += [r for r in older if r not in dev_new][: n_test - len(test)]
     reserve = [r for r in ok if r not in test and r not in dev_new]
     tasks = ROOT / "evals" / "tasks"
     for split_name, picked in (("test", test), ("dev", dev_new)):
@@ -360,8 +360,8 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
             _set_meta(d / "task.toml", "difficulty", difficulty(rows[iid]))
     test_dirs = [p.parent for p in sorted((tasks / "test").glob("*/task.toml"))]
     for s in (
-        make("dev", dev_dirs, "开发集：调 harness / prompt 用（W1 合成 5 + W1 SWE 5 + SWE-rebench filtered 较新 5）"),
-        make("test", test_dirs, "测试集：只用于出报告（--allow-test）；SWE-rebench leaderboard 2025-10 起的最新任务"),
+        make("dev", dev_dirs, "开发集：调 harness / prompt 用（W1 合成 5 + W1 SWE 5 + SWE-rebench filtered 较旧 5）"),
+        make("test", test_dirs, "测试集：只出报告（--allow-test）；leaderboard 最新任务，不足用 filtered 较新的补"),
         make("dev-smoke", [tasks / "dev" / i for i in SMOKE], "每周冒烟（防模型漂移）：dev 中固定 5 个", parent="dev"),
     ):
         print(f"{dump_suite(s, ROOT / 'evals' / 'suites').relative_to(ROOT)}：{len(s.tasks)} 个，digest {s.digest}")
