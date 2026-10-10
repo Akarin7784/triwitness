@@ -16,7 +16,7 @@ TriWitness 是一个验证优先的后台 Coding Agent：Issue → 计划 → �
 ```bash
 uv sync                                   # 安装依赖
 uv run pytest -q                          # 单元测试（不联网，强制 TW_LLM_MODE=replay）
-uv run pytest -q -m integration           # 集成测试（需要 Docker）
+uv run pytest -q -m integration           # 集成测试（需要 Docker；本 box 上用 sg docker -c "..."，无 Docker 时自动跳过）
 uv run ruff check . && uv run ruff format --check .
 uv run pyright
 uv run tw --help

@@ -1,0 +1,107 @@
+# TriWitness 内置默认权限规则（spec 006 §9）。default 层；unrestricted（勇士模式）下整层解除。
+# 规则是护栏，不是安全边界：无沙箱时真正的边界是你自己的确认。
+mode: auto_edit
+
+deny:
+  # 密钥文件
+  - Read(**/.env)
+  - Read(**/.env.*)
+  - Read(!**/.env.example)
+  - Read(!**/.env.sample)
+  - Read(~/.ssh/**)
+  - Read(~/.aws/**)
+  - Read(~/.config/gcloud/**)
+  - Read(~/.docker/config.json)
+  - Read(~/.git-credentials)
+  - Read(~/.npmrc)
+  - Read(~/.pypirc)
+  - Read(**/*.pem)
+  - Read(**/*.key)
+  - Read(**/id_rsa*)
+  - Read(**/id_ed25519*)
+  - Read(~/.triwitness/**)
+  # 提权与系统
+  - Bash(sudo *)
+  - Bash(su *)
+  - Bash(doas *)
+  - Bash(runas *)
+  - Bash(mkfs*)
+  - Bash(dd *)
+  - Bash(shutdown *)
+  - Bash(reboot*)
+  - Bash(format *)
+  - Bash(diskpart*)
+  - Bash(reg *)
+  - Bash(bcdedit*)
+  - PowerShell(Set-ExecutionPolicy *)
+  - PowerShell(Format-Volume *)
+  # 管道执行远程脚本
+  - Bash(* | sh)
+  - Bash(* | bash)
+  - Bash(* | sh *)
+  - Bash(* | bash *)
+  - PowerShell(* | Invoke-Expression*)
+  - PowerShell(iex *)
+  - PowerShell(Invoke-Expression *)
+  # 破坏性删除
+  - Bash(rm -rf /*)
+  - Bash(rm -rf ~*)
+  - Bash(rm -rf /)
+  - Bash(rm -rf $HOME*)
+  # 发布与强推
+  - Bash(git push --force*)
+  - Bash(git push * --force*)
+  - Bash(git push -f*)
+  - Bash(git push * -f*)
+  - Bash(npm publish*)
+  - Bash(pnpm publish*)
+  - Bash(yarn publish*)
+  - Bash(twine upload*)
+  - Bash(uv publish*)
+  - Bash(cargo publish*)
+  # 改全局配置
+  - Bash(git config --global *)
+  - Bash(git config --system *)
+
+ask:
+  - Bash(git push *)
+  - Bash(git reset --hard*)
+  - Bash(git clean *)
+  - Bash(git checkout -- *)
+  - Bash(git rebase *)
+  - Bash(git branch -D *)
+  # 网络 / 安装（已采纳默认 #1：auto_edit 下安装依赖也要确认）
+  - Bash(curl *)
+  - Bash(wget *)
+  - Bash(pip install *)
+  - Bash(pip3 install *)
+  - Bash(uv add *)
+  - Bash(uv pip install *)
+  - Bash(npm install *)
+  - Bash(npm i *)
+  - Bash(npm ci*)
+  - Bash(pnpm add *)
+  - Bash(pnpm install*)
+  - Bash(yarn add *)
+  - Bash(git clone *)
+  - Bash(git fetch *)
+  - Bash(git pull *)
+  - PowerShell(Invoke-WebRequest *)
+  - PowerShell(Invoke-RestMethod *)
+  - Fetch
+  # 删除（仅无沙箱；容器里由沙箱兜底）
+  - {rule: "Bash(rm *)", backends: [none]}
+  - {rule: "Bash(rmdir *)", backends: [none]}
+  - {rule: "PowerShell(Remove-Item *)", backends: [none]}
+  - Bash(docker *)
+  - Bash(kill *)
+  - Bash(pkill *)
+  - PowerShell(Stop-Process *)
+  - Bash(chmod -R *)
+  - Bash(chown *)
+  # 执行字符串
+  - {rule: "Bash(sh -c *)", backends: [none]}
+  - {rule: "Bash(bash -c *)", backends: [none]}
+  - {rule: "Bash(eval *)", backends: [none]}
+  - {rule: "Bash(python -c *)", backends: [none]}
+  - {rule: "Bash(node -e *)", backends: [none]}

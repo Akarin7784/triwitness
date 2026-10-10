@@ -93,19 +93,30 @@ allow 规则命中 或 模式默认放行 → allow
 
 ## 6. 模式默认行为
 
-| 操作 | plan | ask | auto_edit（none 默认） | auto（docker 默认） | full_access |
-|---|---|---|---|---|---|
-| 工作区内读 | allow | allow | allow | allow | allow |
-| 工作区外读 | ask | ask | ask | 沙箱内无宿主文件 | allow |
-| worktree 内改 / 建文件 | deny | ask | allow | allow | allow |
-| 工作区外改 | deny | ask | ask | 不可达 | allow |
-| 内置只读命令（`ls`、`cat`、`git status/log/diff/show`、`rg`…） | allow | allow | allow | allow | allow |
-| `run_tests`（任务配置的测试命令） | deny | ask | allow | allow | allow |
-| 其他命令 | deny | ask | ask | allow | allow |
-| 出网（`curl`、`pip install`、`npm install`、`Fetch`） | deny | ask | ask | ask（沙箱默认断网） | allow |
-| deny 规则 | deny | deny | deny | deny | deny |
+| 操作 | plan | ask | auto_edit（none 默认） | auto（docker 默认） | full_access | unrestricted |
+|---|---|---|---|---|---|---|
+| 工作区内读 | allow | allow | allow | allow | allow | allow |
+| 工作区外读 | ask | ask | ask | 沙箱内无宿主文件 | allow | allow |
+| worktree 内改 / 建文件 | deny | ask | allow | allow | allow | allow |
+| 受保护路径（`.git/`、`.triwitness/`、`.tw/`）改 | deny | deny | deny | deny | deny | allow |
+| 工作区外改 | deny | ask | ask | 不可达 | allow | allow |
+| 内置只读命令（`ls`、`cat`、`git status/log/diff/show`、`rg`…） | allow | allow | allow | allow | allow | allow |
+| `run_tests`（任务配置的测试命令） | deny | ask | allow | allow | allow | allow |
+| 其他命令 | deny | ask | ask | allow | allow | allow |
+| 出网（`curl`、`pip install`、`npm install`、`Fetch`） | deny | ask | ask | ask（沙箱默认断网） | allow | allow |
+| ask 规则 | — | ask | ask | ask | allow | allow（不问） |
+| 内置默认 deny 规则 | deny | deny | deny | deny | deny | **解除** |
+| 用户 / 项目 / 管理员 deny 规则 | deny | deny | deny | deny | deny | deny |
 
 `full_access` 在 `none` 后端下不可选（配置加载时报错）；只能在用户层或 CLI 设置，项目 / local 配置里写了无效（抄 Claude Code）。
+
+### 6.1 unrestricted（勇士模式，ADR-0005 §3.6）
+
+- 无沙箱也可用；不弹任何确认；内置默认层（`configs/permissions.default.yaml`）与受保护路径整体解除；非 default 层的 deny 规则仍生效。
+- 硬底线：子进程不拿密钥类环境变量；eval / CI / 非交互拒绝开启（`ConfigError`）；审计照记；超时杀进程树。
+- 只能经 `SessionOverrides(mode="unrestricted", unrestricted=UnrestrictedActivation(acknowledged=True, typed="我了解风险", scope=...))` 或 `ModeController.activate_unrestricted()` 开启；任何配置文件里的 `mode: unrestricted` 忽略并告警。
+- `scope=task`：`ModeController.on_task_finished(task_id)` 自动回退并发 `mode_changed(by="auto_revert")`；`scope=session`：进程重启即回退（不落盘）。
+- 事件 `mode_changed`：`from_mode`、`to_mode`、`scope`（task / session）、`risk`（normal / high；`full_access`、`unrestricted` 为 high）、`by`（user / system / auto_revert）、`backend`、`reason`。
 
 ## 7. 审批流程与事件
 
@@ -233,6 +244,7 @@ def parse_rule(raw: str, kind: Decision, source: str) -> Rule: ...  # 语法错�
 - [ ] AC9：“总是允许”写入 `permissions.local.yaml`，复合命令最多拆 5 条；重新加载后同命令 allow。
 - [ ] AC10：审计日志每次判定一行，注入假 `sk-` 密钥后日志中查不到。
 - [ ] AC11：`sh -c 'rm -rf /'`、`bash -c ...` → ask（不被前缀 allow 放行）；引号不闭合 → ask。
+- [ ] AC12：unrestricted 未经两步确认 → ConfigError；eval / CI / 非交互 → ConfigError；配置文件里的 `mode: unrestricted` 被忽略；开启后默认 deny / ask 解除、用户 deny 仍生效、审计照记、不写任何文件；`scope=task` 任务结束自动回退；两次切换各发一条 `mode_changed`（high / normal）。
 
 ## 14. 测试计划
 
@@ -240,12 +252,18 @@ def parse_rule(raw: str, kind: Decision, source: str) -> Rule: ...  # 语法错�
 - 属性测试（hypothesis，可选）：任意 allow 规则都不能放行命中 deny 的命令。
 - 集成：本机后端 + 引擎 + 事件（FakeRouter 驱动），断言事件序列。
 
-## 15. 开放问题
+## 15. 已采纳的默认值（Eva 可推翻）与开放问题
 
-- `auto_edit` 下是否默认允许 `npm install` 等装依赖（便利 vs 供应链风险）？当前：ask。
+已采纳（ADR-0005 §6）：
+- `auto_edit` 下装依赖（`npm install`、`pip install`、`uv add` 等）= **ask**。
+- 模式 ID 用英文；UI 中文标签：`plan` 只读规划、`ask` 逐项确认、`auto_edit` 自动改文件、`auto` 沙箱自动、`full_access` 完全放行、`unrestricted` 无限制（勇士模式）。
+- 后台任务审批**不超时**（`approval_timeout_s` 默认 `None`）。
+
+开放：
 - 是否提供 Cursor 式“删除保护 / 工作区外保护”的独立开关？当前：用规则表达，设置页做成类别开关（Cline 风格）映射到规则。
-- 后台任务审批超时默认值（当前：不超时，任务停在 needs_human）。
 
 ## 16. 变更记录
 
 - 2026-10-10：初稿（ADR-0005）。`tw-events/1` 已加入 `approval_requested` / `approval_resolved` 与可选字段（schema 桩，引擎未实现）。
+- 2026-10-10：记录已采纳默认值（装依赖 ask、英文模式 ID + 中文标签、审批不超时）；W1-39/W1-40 实现。
+- 2026-10-10：新增 `unrestricted`（勇士模式，§6.1、AC12）与 `mode_changed` 事件；实现 `permissions/{shell,paths,rules,config,engine,audit,mode}.py`。AC1–AC12 单测覆盖（AC6 的轨迹事件部分待 W1-41 接入工具层）。

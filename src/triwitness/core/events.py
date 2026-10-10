@@ -29,6 +29,7 @@ EventKind = Literal[
     "hitl_response",
     "approval_requested",
     "approval_resolved",
+    "mode_changed",
     "verification",
     "review",
     "task_finished",
@@ -37,6 +38,7 @@ EventKind = Literal[
 RoleHint = Literal["planner", "executor", "verifier", "reviewer", "system"]
 PermissionDecision = Literal["allow", "ask", "deny"]
 SandboxBackendName = Literal["none", "docker", "wsl2", "remote"]
+ApprovalMode = Literal["plan", "ask", "auto_edit", "auto", "full_access", "unrestricted"]
 
 
 # ---------------------------------------------------------------- payloads
@@ -142,6 +144,18 @@ class ApprovalResolvedPayload(Payload):
     comment: str | None = None  # 用户附言（拒绝理由会回传给模型）
 
 
+class ModeChangedPayload(Payload):
+    """审批模式切换（spec 006 §4.6）。risk=high（full_access / unrestricted）时 UI 显示常驻红色横幅，直到切回。"""
+
+    from_mode: ApprovalMode
+    to_mode: ApprovalMode
+    scope: Literal["task", "session"] = "task"
+    risk: Literal["normal", "high"] = "normal"
+    by: Literal["user", "system", "auto_revert"] = "user"
+    backend: SandboxBackendName = "none"
+    reason: str | None = None
+
+
 class VerificationPayload(Payload):
     verdict: Literal["pass", "fail", "inconclusive"]
     evidence_ref: str | None = None
@@ -181,6 +195,7 @@ PAYLOADS: dict[str, type[Payload]] = {
     "hitl_response": HitlResponsePayload,
     "approval_requested": ApprovalRequestedPayload,
     "approval_resolved": ApprovalResolvedPayload,
+    "mode_changed": ModeChangedPayload,
     "verification": VerificationPayload,
     "review": ReviewPayload,
     "task_finished": TaskFinishedPayload,

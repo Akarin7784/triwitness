@@ -174,7 +174,7 @@ class SandboxPool:
 |---|---|---|---|
 | `preflight` | Windows 10 2004（build 19041）+ 或 Windows 11；`Get-CimInstance Win32_Processor` 的 `VirtualizationFirmwareEnabled` 或 Hyper-V 已运行；`wsl --status`；`docker version`；磁盘 ≥ 10 GB；winget 可用 | 否 | 只读 |
 | `wsl` | `wsl --install --no-distribution`（参考 <https://learn.microsoft.com/windows/wsl/install>）；已装则 `wsl --update` | 是（UAC，经提权助手进程） | `wsl --status` 成功即跳过 |
-| `docker` | `winget install -e --id Docker.DockerDesktop --accept-package-agreements --accept-source-agreements`；winget 失败时提示手动下载（附国内镜像说明） | 是 | 已安装即跳过 |
+| `docker` | `winget install -e --id Docker.DockerDesktop --accept-package-agreements --accept-source-agreements`；winget 失败或 10 分钟无进度时，按 `configs/sandbox_install.yaml` 的后备来源顺序下载安装包（校验 Authenticode 签名发布者为 Docker Inc、拒绝 Last-Modified 超过 `max_age_days` 的过期镜像，然后静默安装 `install --quiet --accept-license`），再失败才提示手动下载 | 是 | 已安装即跳过 |
 | `reboot` | 写 `~/.triwitness/installer-state.json`（已完成步骤、时间戳）；注册一次性续装（HKCU `RunOnce` 启动应用并带 `--resume-sandbox-install`）；请求用户重启 | 否 | 状态文件标记 |
 | `engine` | 启动 Docker Desktop，轮询 `docker info` 直到就绪（超时 5 分钟） | 否 | `docker info` 成功即跳过 |
 | `image` | 拉取 `python:3.12-slim`（显示层进度；支持配置镜像加速） | 否 | 本地已有即跳过 |
@@ -229,8 +229,8 @@ none 后端（单测 + 本机集成，CI 的 Linux 与 Windows runner 都跑）�
 ## 12. 开放问题
 
 - 是否默认使用 gVisor（runsc）？→ 可选项，文档说明。
-- Docker Desktop 授权不适用的用户（大型企业）→ 推荐 `wsl2` 后端或 Rancher Desktop / Podman（兼容 Docker API，probe 时接受）。是否在一键安装里提供“装 Rancher Desktop”分支？待定。
-- 国内 winget 源慢 → 是否内置镜像下载地址？待定。
+- Docker Desktop 授权不适用的用户（大型企业）→ 推荐 `wsl2` 后端或自行安装 Rancher Desktop / Podman（兼容 Docker API，probe 时接受）。已采纳默认：一键安装**只提供 Docker Desktop**，Rancher 分支推迟（ADR-0005 §6）。
+- 国内 winget 源慢 → 已采纳默认：内置下载地址作后备（ADR-0005 §6 #5）。2026-10-10 检查：阿里云镜像站的 Docker Desktop 停更于 2021-10-12，默认禁用；官方 CDN 可用。**仍缺一个新鲜的国内镜像**，找到后填入配置。
 
 ## 13. AI 实施提示
 
@@ -244,3 +244,4 @@ none 后端（单测 + 本机集成，CI 的 Linux 与 Windows runner 都跑）�
 - 2026-10-10：初稿。
 - 2026-10-10：按 ADR-0001 / ADR-0002 修订：`.tw/` 统一为沙箱 /workspace/.tw/（ADR-0001 #7）。
 - 2026-10-10：按 ADR-0005 重写：`SandboxBackend` 协议 + none / docker / wsl2 / remote 四后端、后端选择、一键安装流程、无沙箱时干净复跑证人记为 unverified。原 `SandboxProvider` 更名为 `SandboxBackend`；`copy_in` 变为 docker 后端内部细节。
+- 2026-10-10：记录已采纳默认（只装 Docker Desktop、国内镜像后备）；W1-15 实现 SandboxBackend 协议与后端选择。

@@ -1465,6 +1465,216 @@
       "title": "LoopWarningPayload",
       "type": "object"
     },
+    "ModeChangedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "mode_changed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ModeChangedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "ModeChangedEvent",
+      "type": "object"
+    },
+    "ModeChangedPayload": {
+      "additionalProperties": true,
+      "description": "审批模式切换（spec 006 §4.6）。risk=high（full_access / unrestricted）时 UI 显示常驻红色横幅，直到切回。",
+      "properties": {
+        "backend": {
+          "default": "none",
+          "enum": [
+            "none",
+            "docker",
+            "wsl2",
+            "remote"
+          ],
+          "title": "Backend",
+          "type": "string"
+        },
+        "by": {
+          "default": "user",
+          "enum": [
+            "user",
+            "system",
+            "auto_revert"
+          ],
+          "title": "By",
+          "type": "string"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "from_mode": {
+          "enum": [
+            "plan",
+            "ask",
+            "auto_edit",
+            "auto",
+            "full_access",
+            "unrestricted"
+          ],
+          "title": "From Mode",
+          "type": "string"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "risk": {
+          "default": "normal",
+          "enum": [
+            "normal",
+            "high"
+          ],
+          "title": "Risk",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "scope": {
+          "default": "task",
+          "enum": [
+            "task",
+            "session"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "to_mode": {
+          "enum": [
+            "plan",
+            "ask",
+            "auto_edit",
+            "auto",
+            "full_access",
+            "unrestricted"
+          ],
+          "title": "To Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_mode",
+        "to_mode"
+      ],
+      "title": "ModeChangedPayload",
+      "type": "object"
+    },
     "ModelCallEvent": {
       "additionalProperties": false,
       "properties": {
@@ -2828,6 +3038,7 @@
       "hitl_request": "#/$defs/HitlRequestEvent",
       "hitl_response": "#/$defs/HitlResponseEvent",
       "loop_warning": "#/$defs/LoopWarningEvent",
+      "mode_changed": "#/$defs/ModeChangedEvent",
       "model_call": "#/$defs/ModelCallEvent",
       "review": "#/$defs/ReviewEvent",
       "state_change": "#/$defs/StateChangeEvent",
@@ -2868,6 +3079,9 @@
     },
     {
       "$ref": "#/$defs/ApprovalResolvedEvent"
+    },
+    {
+      "$ref": "#/$defs/ModeChangedEvent"
     },
     {
       "$ref": "#/$defs/VerificationEvent"

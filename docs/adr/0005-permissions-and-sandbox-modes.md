@@ -40,6 +40,7 @@ Eva 的决定：
 | `auto_edit` | worktree 内改文件自动；允许清单内命令自动；其余 ask | Claude `acceptEdits` + Codex Auto |
 | `auto` | 沙箱内一切自动，只有越界（出网、`git push`、发布）才 ask | Codex workspace-write + on-request |
 | `full_access` | 不问（deny 规则仍生效）；**仅限 docker / wsl2 / remote**，`none` 后端下禁止 | Claude bypassPermissions / Codex danger-full-access |
+| `unrestricted`（无限制 / 勇士模式） | 不问，**内置默认 deny / ask 规则与受保护路径全部解除**；无沙箱也可用；只剩用户 / 管理员自己写的 deny 规则。只能在本次会话 / 任务中经两步确认开启，见 §3.6 | Eva 2026-10-10 新增 |
 
 另有正交开关 `interactive`：`false`（eval、CI、`tw run --non-interactive`）时 **ask 一律按 deny 处理**（Gemini headless、Claude dontAsk、Codex never）。
 
@@ -81,6 +82,16 @@ Eva 的决定：
 
 设置页“沙箱”一节：检测 → 说明与同意（列出要装什么、需要管理员、需要重启、Docker Desktop 授权条款）→ `wsl --install --no-distribution` → `winget install -e --id Docker.DockerDesktop` → 重启后自动续装 → 等 Docker 引擎就绪 → 拉基础镜像 → 冒烟测试 → 切到 `docker` 后端 + `auto` 模式。任何一步失败都可重试，且**不影响继续用无沙箱模式**。细节见 spec 002 §7。
 
+### 3.6 unrestricted（勇士模式）
+
+给明确愿意承担风险的用户。和 `full_access` 的区别：`full_access` 只在沙箱里用、内置 deny 仍生效；`unrestricted` 在宿主机上也能用、连内置 deny 都解除。
+
+- **行为**：永远不弹确认（用户层 ask 规则也不再问）；`configs/permissions.default.yaml` 整层不生效、`.git/` 等受保护路径可写；用户 / 管理员层的 deny 规则仍生效（自己写的底线自己保留）。
+- **硬底线（不可关闭）**：① API 密钥 / 令牌类环境变量永远不传给子进程（`scrub_host_env`、沙箱 env 占位符校验）；② eval、CI（`CI` 环境变量）、非交互运行一律拒绝开启；③ 审计日志照常逐条记录；④ 超时杀整棵进程树。
+- **开启**：只能交互式两步确认——第一步勾选“我知道没有任何确认和默认拒绝”，第二步输入“我了解风险”。
+- **范围**：只在内存里，`scope=task`（任务结束自动回退）或 `scope=session`（应用重启即回退）。**从不写入任何配置文件**；user / project / local / managed 里写 `mode: unrestricted` 一律忽略并告警；管理员可用 `disable_modes` 禁用。
+- **可见性**：切换时发 `mode_changed` 事件（`risk=high`），UI 显示红色模式徽标和常驻红色顶部横幅，直到回退（UI-20）。
+
 ## 4. 备选与不选的理由
 
 - **强制装 Docker**：门槛高，劝退大部分 Windows 用户。不选。
@@ -93,3 +104,14 @@ Eva 的决定：
 - 新增 spec 006 与任务：规则解析器、权限引擎、审批事件、本机后端、UI 审批卡片、设置权限页、一键安装（前端 + 后端）、Docker 后端改按 SandboxBackend 协议实现。
 - `tw-events/1` 只增不改：新增 `approval_requested`、`approval_resolved`；`tool_call` 增加可选 `permission`、`permission_rule`；`verification` 增加可选 `clean_env`、`unverified_reason`。
 - 评测结果只承认 docker 后端；`none` 后端的运行在报告中标为“未沙箱”，不进入 Leaderboard。
+
+## 6. 已采纳的默认值（Eva 可随时推翻，2026-10-10）
+
+| # | 问题 | 默认 |
+|---|---|---|
+| 1 | `auto_edit` 下 `npm install` / `pip install` 等装依赖 | **ask**（供应链风险优先于便利） |
+| 2 | 模式命名 | 配置与代码里的模式 ID 保持英文（`plan` / `ask` / `auto_edit` / `auto` / `full_access`），UI 显示中文标签（只读规划 / 逐项确认 / 自动改文件 / 沙箱自动 / 完全放行 / 无限制（勇士模式）） |
+| 3 | 后台任务审批超时 | **不超时**：任务停在 `needs_human`，直到用户处理或取消 |
+| 4 | 一键安装的容器运行时 | 目前**只提供 Docker Desktop**；Rancher Desktop / Podman 分支推迟（probe 仍接受兼容 Docker API 的运行时） |
+| 5 | 国内 winget 慢 | 内置下载地址作为 winget 失败 / 超时后的后备（`configs/sandbox_install.yaml`，带检查日期；校验签名发布者，拒绝过期镜像）。2026-10-10 检查：阿里云镜像停更于 2021 年，默认禁用；目前只有官方 CDN 可用 |
+| 6 | 本 ADR 状态 | 保持“方向已定”，Eva 审阅（W1-43）后再改为“已采纳” |

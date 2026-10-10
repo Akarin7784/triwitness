@@ -102,6 +102,8 @@ function fallbackText(e: TwEvent): string {
       return `? ${e.payload.tool} ${e.payload.action}`
     case 'approval_resolved':
       return e.payload.decision === 'allow' ? '已允许' : '已拒绝'
+    case 'mode_changed':
+      return `模式 ${e.payload.from_mode} → ${e.payload.to_mode}`
     case 'verification':
       return `复验 ${e.payload.verdict}`
     case 'review':
@@ -126,6 +128,8 @@ function toneOf(e: TwEvent): StreamTone {
     case 'loop_warning':
     case 'approval_requested':
       return 'warn'
+    case 'mode_changed':
+      return e.payload.risk === 'high' ? 'error' : 'chapter'
     case 'verification':
       return e.payload.verdict === 'pass' ? 'normal' : e.payload.verdict === 'fail' ? 'error' : 'warn'
     case 'error':

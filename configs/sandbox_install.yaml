@@ -1,0 +1,30 @@
+# 一键安装（spec 002 §7）的下载来源。winget 失败或 10 分钟无进度时按顺序尝试 fallback。
+# 规则：只接受 Authenticode 签名发布者为 "Docker Inc" 的安装包；HEAD 返回的 Last-Modified
+# 早于 max_age_days 的来源视为过期并跳过（防止装上很旧的版本）。
+# 检查日期均为北京时间。
+docker_desktop:
+  winget_id: Docker.DockerDesktop
+  winget_timeout_s: 600
+  max_age_days: 180
+  signer: "Docker Inc"
+  fallback:
+    - name: docker-official-cdn
+      url: "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe"
+      region: global
+      checked: "2026-10-10"
+      note: "官方 CDN，国内多数地区可直连；Last-Modified 2026-10-07，约 606 MiB"
+    - name: aliyun-mirror
+      url: "https://mirrors.aliyun.com/docker-toolbox/windows/docker-for-windows/stable/Docker%20Desktop%20Installer.exe"
+      region: cn
+      checked: "2026-10-10"
+      enabled: false
+      note: "阿里云镜像站；2026-10-10 检查时 Last-Modified 为 2021-10-12（已停更），超过 max_age_days，默认禁用"
+  # 新增国内来源时：填写 url、checked、note；先人工确认 Last-Modified 在 max_age_days 内再设 enabled: true
+wsl:
+  # wsl --install 走 Windows Update / GitHub Releases；国内慢时可从 GitHub Releases 下载 wsl.<ver>.x64.msi
+  fallback:
+    - name: github-releases
+      url: "https://github.com/microsoft/WSL/releases/latest"
+      region: global
+      checked: "2026-10-10"
+      note: "官方 MSI；国内访问 GitHub 不稳时提示用户手动下载"
