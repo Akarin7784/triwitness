@@ -164,7 +164,7 @@ async def test_ac7_finish_rejected_after_failed_tests() -> None:
     r = reg()
     t1 = await run(r, c, "run_tests", selector="tests/test_a.py")
     assert not t1.ok and t1.data and t1.data["failed"] == 1
-    assert sb.commands[-1] == "pytest -q tests/test_a.py"
+    assert sb.commands[-1] == "pytest -q tests/test_a.py --junitxml=/workspace/.tw/junit.xml"
     bad = await run(r, c, "finish", **FINISH)
     assert not bad.ok and bad.error_code == "tests_failed" and "test_two" in bad.content
     honest = await run(r, c, "finish", **{**FINISH, "tests_passed": False})

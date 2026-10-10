@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
-from typing import Any
+import shlex
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -11,6 +13,7 @@ from triwitness.core.errors import SandboxError
 from triwitness.core.models import FileChange, FinishReport, ReproRef
 from triwitness.permissions.shell import ShellParseError, parse_bash, program, strip_wrappers
 from triwitness.tools.base import BaseTool, SideEffects, ToolContext, ToolResult
+from triwitness.tools.pytest_report import changed_paths, parse_junit, related_tests, render_failures
 
 DEFAULT_TIMEOUT = 120
 MAX_TIMEOUT = 600
@@ -108,7 +111,12 @@ def parse_pytest(output: str) -> dict[str, Any]:
 
 
 class RunTestsParams(BaseModel):
-    selector: str | None = Field(default=None, description="可选：测试选择器，如 tests/test_x.py::test_y 或 -k 表达式")
+    mode: Literal["full", "related", "selected"] = Field(
+        default="full",
+        description="full=全部；related=与改动文件相关的测试（按命名约定推断，找不到则全部）；selected=只跑 selector",
+    )
+    selector: str | None = Field(default=None, description="selected 模式：测试选择器，如 tests/test_x.py::test_y 或 -k 表达式")
+    rerun_failed: bool = Field(default=False, description="只重跑上一次失败的用例（忽略 mode / selector）")
 
 
 class RunTests(BaseTool):
@@ -118,26 +126,72 @@ class RunTests(BaseTool):
 
     @staticmethod
     def command(ctx: ToolContext, params: RunTestsParams) -> str | None:
+        """权限判定用的命令（related / rerun_failed 追加的只是工作区内的测试路径 / 节点 id）。"""
         if not ctx.test_command:
             return None
         return f"{ctx.test_command} {params.selector}" if params.selector else ctx.test_command
 
+    async def _targets(self, params: RunTestsParams, ctx: ToolContext) -> tuple[list[str] | None, str]:
+        """返回（追加的测试参数，说明）；None 表示用 selector / 全部。"""
+        if params.rerun_failed:
+            failed = (ctx.state.get("last_run_tests") or {}).get("failures") or []
+            if failed:
+                return [shlex.quote(f) for f in failed], f"只重跑上次失败的 {len(failed)} 个用例"
+            return None, "上次没有失败用例，改为全部"
+        if params.mode == "related":
+            try:
+                changed = changed_paths(await ctx.sandbox.diff("base"))
+            except SandboxError:
+                changed = []
+            from triwitness.tools.files import collect_files
+
+            files = await collect_files(ctx, ".") if changed else []
+            rel = related_tests(changed, files)
+            if rel:
+                return [shlex.quote(f) for f in rel], f"相关测试 {len(rel)} 个文件（按改动推断）"
+            return None, "没找到相关测试，改为全部" if changed else "还没有改动，改为全部"
+        return None, ""
+
     async def run(self, params: RunTestsParams, ctx: ToolContext) -> ToolResult:
-        cmd = self.command(ctx, params)
-        if cmd is None:
+        base = self.command(ctx, params if params.mode == "selected" or params.selector else
+                            params.model_copy(update={"selector": None}))  # fmt: skip
+        if base is None:
             return ToolResult(
                 ok=False, content="任务没有配置测试命令；请用 bash 运行测试", error_code="no_test_command"
             )
+        extra, note = await self._targets(params, ctx)
+        cmd = f"{ctx.test_command} {' '.join(extra)}" if extra else base
+        junit = f"{ctx.tw_dir}/junit.xml"
+        is_pytest = "pytest" in (ctx.test_command or "")
+        run_cmd = f"{cmd} --junitxml={shlex.quote(junit)}" if is_pytest else cmd
+        if is_pytest:
+            with contextlib.suppress(SandboxError):
+                await ctx.sandbox.write_file(junit, b"")  # 清掉上一次的报告
         try:
-            r = await ctx.sandbox.exec(cmd, timeout_s=MAX_TIMEOUT)
+            r = await ctx.sandbox.exec(run_cmd, timeout_s=MAX_TIMEOUT)
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="sandbox")
+        rep = None
+        if is_pytest:
+            with contextlib.suppress(SandboxError):
+                rep = parse_junit(await ctx.sandbox.read_file(junit))
         parsed = parse_pytest(r.stdout + "\n" + r.stderr)
+        if rep is not None and rep.tests:
+            parsed = {"passed": rep.passed, "failed": rep.failed, "errors": rep.errors, "skipped": rep.skipped,
+                      "failures": [f.nodeid for f in rep.failures], "summary": rep.summary()}  # fmt: skip
         passed = r.exit_code == 0 and not r.timed_out
         ctx.state["last_run_tests"] = {**parsed, "command": cmd, "ok": passed}
         ctx.state.setdefault("tests_run", []).append(cmd)
         head = f"测试{'通过' if passed else '失败'}：{parsed['summary'] or f'exit_code={r.exit_code}'}"
-        return ToolResult(ok=passed, content=head + "\n" + _format(r), exit_code=r.exit_code, truncated=r.truncated,
+        if note:
+            head += f"（{note}）"
+        if rep is not None and rep.tests and not passed and rep.failures:
+            body = f"$ {cmd}\n" + render_failures(rep)  # 只保留失败用例的断言与栈
+        elif rep is not None and rep.tests and passed:
+            body = f"$ {cmd}\nexit_code=0"
+        else:
+            body = _format(r)  # 不是 pytest / 没有报告（收集阶段报错等）：原样输出，交给截断
+        return ToolResult(ok=passed, content=head + "\n" + body, exit_code=r.exit_code, truncated=r.truncated,
                           data={**parsed, "command": cmd, "ok": passed})  # fmt: skip
 
 
