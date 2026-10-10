@@ -194,3 +194,30 @@ def test_deepseek_default_factory_is_offline() -> None:
     r = Router.deepseek_default()
     client = r.clients["deepseek"]
     assert isinstance(client, LLMClient) and client.transport.inner is None
+
+
+async def test_runconfig_executor_override_nonthinking() -> None:
+    """W2-25：RunConfig.executor 之前被忽略（dev 非思考对照会悄悄跑成思考 high）。"""
+    fake = FakeClient()
+    router = Router.from_config({"deepseek": fake})
+    router.override_executor({"model": "deepseek-flash", "thinking": False})
+    await router.complete(_req("executor"), mode="eval")
+    req = fake.calls[-1][1]
+    assert req.thinking is False and req.effort is None
+    assert router.route_for("reviewer").thinking is True  # 其他角色不受影响
+
+
+def test_runconfig_executor_override_rejects_pro_and_unknown() -> None:
+    router = Router.from_config({"deepseek": FakeClient()})
+    with pytest.raises(ConfigError):
+        router.override_executor({"model": "deepseek-v4-pro"})
+    with pytest.raises(ConfigError):
+        router.override_executor({"temperature": 0.2})
+
+
+def test_deepseek_default_applies_runconfig_executor() -> None:
+    """CLI `tw eval run` 把 RunConfig.executor 传给 deepseek_default（configs/runs/baseline-deepseek-nothink.yaml）。"""
+    r = Router.deepseek_default(executor={"model": "deepseek-flash", "thinking": False})
+    route = r.route_for("executor")
+    assert route.thinking is False and route.effort is None
+    assert Router.deepseek_default().route_for("executor").thinking is True

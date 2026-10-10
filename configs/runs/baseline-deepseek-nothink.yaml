@@ -1,0 +1,6 @@
+# RunConfig（W2-25 dev 对照）：flash 非思考；tw eval run --suite dev --config configs/runs/baseline-deepseek-nothink.yaml
+name: baseline-deepseek-nothink
+harness: configs/harness/baseline.yaml
+executor: {model: deepseek-flash, thinking: false}
+attempts: 1
+budget_profile: eval

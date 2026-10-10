@@ -203,7 +203,7 @@ def eval_run(
         from triwitness.llm.router import Router
 
         harness = HarnessConfig.load(cfg.harness.removeprefix("configs/")) if cfg.harness else None
-        return LLMAgent(lambda: Router.deepseek_default(allow_peak=allow_peak), harness=harness,
+        return LLMAgent(lambda: Router.deepseek_default(allow_peak=allow_peak, executor=cfg.executor), harness=harness,
                         category=cfg.category, config_hash=cfg.name)  # fmt: skip
 
     ledger = None

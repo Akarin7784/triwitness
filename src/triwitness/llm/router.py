@@ -82,11 +82,30 @@ class Router:
         return cls(routes, clients, vendor_policy=policy)
 
     @classmethod
-    def deepseek_default(cls, *, allow_peak: bool = False) -> Router:
-        """v0.1 默认：单厂商，只有 DeepSeek 客户端（按 TW_LLM_MODE 选择回放 / 录制 / 真调）。"""
+    def deepseek_default(cls, *, allow_peak: bool = False, executor: dict[str, Any] | None = None) -> Router:
+        """v0.1 默认：单厂商，只有 DeepSeek 客户端（按 TW_LLM_MODE 选择回放 / 录制 / 真调）。
+
+        executor：RunConfig.executor 覆盖（thinking / effort），用于“flash 思考 vs 非思考”对照。
+        """
         from triwitness.llm.client import LLMClient
 
-        return cls.from_config({"deepseek": LLMClient.deepseek(allow_peak=allow_peak)})
+        router = cls.from_config({"deepseek": LLMClient.deepseek(allow_peak=allow_peak)})
+        if executor:
+            router.override_executor(executor)
+        return router
+
+    def override_executor(self, executor: dict[str, Any]) -> None:
+        """按 RunConfig.executor 改写 executor 路由；模型仍只允许 deepseek-flash（ADR-0002）。"""
+        unknown = set(executor) - {"model", "thinking", "effort"}
+        if unknown:
+            raise ConfigError(f"RunConfig.executor 不认识的字段：{sorted(unknown)}")
+        model = executor.get("model")
+        if model is not None and model not in ("deepseek-flash", "deepseek/deepseek-flash"):
+            raise ConfigError(f"executor.model 只允许 deepseek-flash（ADR-0002），收到 {model}")
+        base = self.route_for("executor")
+        thinking = bool(executor.get("thinking", base.thinking))
+        effort = executor.get("effort", base.effort) if thinking else None
+        self.routes = {**self.routes, "executor": base.model_copy(update={"thinking": thinking, "effort": effort})}
 
     def route_for(self, role: Role) -> RoleRoute:
         if role not in self.routes:
