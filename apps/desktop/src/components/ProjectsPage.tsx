@@ -46,11 +46,11 @@ export function ProjectsPage({
     <main data-testid="projects-page" className="min-w-0 flex-1 overflow-y-auto scroll-soft">
       <AnimatePresence mode="wait" initial={false}>
         {project ? (
-          <motion.div key={project.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={SPRING}>
+          <motion.div key={project.id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ pointerEvents: 'none', opacity: 0, x: -12 }} transition={SPRING}>
             <ProjectDetail project={project} chats={chatsOf(project.id)} onBack={() => onSelect(null)} onOpenChat={onOpenChat} onNewChat={() => onNewChat(project.id)} />
           </motion.div>
         ) : (
-          <motion.div key="list" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12 }} transition={SPRING}>
+          <motion.div key="list" initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ pointerEvents: 'none', opacity: 0, x: 12 }} transition={SPRING}>
             <ProjectList projects={projects} chatsOf={chatsOf} onSelect={onSelect} />
           </motion.div>
         )}

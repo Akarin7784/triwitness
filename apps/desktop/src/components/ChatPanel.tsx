@@ -138,7 +138,7 @@ export function ChatPanel({
             data-testid="drop-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ pointerEvents: 'none', opacity: 0 }}
             transition={{ duration: 0.18 }}
             className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-3xl border-2 border-dashed border-amber/60 bg-parchment/80 backdrop-blur-[2px]"
           >
@@ -235,7 +235,7 @@ export function ChatPanel({
             onClick={() => toBottom()}
             initial={{ opacity: 0, y: 8, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.92 }}
+            exit={{ pointerEvents: 'none', opacity: 0, y: 6, scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 500, damping: 32 }}
             className="paper-card absolute bottom-3 left-1/2 inline-flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-sepia hover:text-amber"
           >

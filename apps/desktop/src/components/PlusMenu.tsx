@@ -61,7 +61,7 @@ export function PlusMenu({
               key="main"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
+              exit={{ pointerEvents: 'none', opacity: 0, x: -16 }}
               transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             >
               <button
@@ -113,7 +113,7 @@ export function PlusMenu({
               data-testid="style-menu"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
+              exit={{ pointerEvents: 'none', opacity: 0, x: 16 }}
               transition={{ type: 'spring', stiffness: 520, damping: 38 }}
             >
               <button type="button" className="menu-item text-sepia" onClick={() => setPage('main')}>

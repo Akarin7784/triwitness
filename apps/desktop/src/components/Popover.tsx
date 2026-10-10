@@ -51,7 +51,7 @@ export function Popover({
           data-testid={testId}
           initial={{ opacity: 0, y: side === 'up' ? 6 : -6, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: side === 'up' ? 4 : -4, scale: 0.98, transition: { duration: 0.14 } }}
+          exit={{ pointerEvents: 'none', opacity: 0, y: side === 'up' ? 4 : -4, scale: 0.98, transition: { duration: 0.14 } }}
           transition={{ type: 'spring', stiffness: 520, damping: 34, mass: 0.7 }}
           style={{ transformOrigin: `${side === 'up' ? 'bottom' : 'top'} ${align}` }}
           className={clsx(

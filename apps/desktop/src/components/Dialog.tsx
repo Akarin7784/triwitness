@@ -62,7 +62,7 @@ export function Dialog({
           className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[14vh]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.16 } }}
+          exit={{ opacity: 0, pointerEvents: 'none', transition: { duration: 0.16 } }}
         >
           <div className="absolute inset-0 bg-ink/20 backdrop-blur-[2px]" onPointerDown={onClose} aria-hidden />
           <motion.div
@@ -73,7 +73,7 @@ export function Dialog({
             data-testid={testId}
             initial={{ opacity: 0, y: 14, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.14 } }}
+            exit={{ opacity: 0, y: 8, scale: 0.98, pointerEvents: 'none', transition: { duration: 0.14 } }}
             transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
             style={{ width }}
             className={clsx('menu-card relative max-w-full outline-none', !bare && 'p-5', className)}

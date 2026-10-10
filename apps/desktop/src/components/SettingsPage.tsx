@@ -23,6 +23,9 @@ import { Tip } from './Tip'
 import { UnrestrictedDialog } from './ChatDialogs'
 import { RulesEditor } from './settings/RulesEditor'
 import { SandboxInstall } from './settings/SandboxInstall'
+import { ClearHistoryDialog, LicensesDialog } from './settings/DataDialogs'
+import { clearHistory, collectLocalData, exportFileStamp } from '../lib/localData'
+import { saveText } from '../lib/download'
 import {
   BUDGET_TOTAL,
   PEAK_WINDOWS,
@@ -142,7 +145,7 @@ export function SettingsPage({
             key={section}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
+            exit={{ pointerEvents: 'none', opacity: 0, y: -4, transition: { duration: 0.12 } }}
             transition={{ type: 'spring', stiffness: 380, damping: 34 }}
             className="max-w-[760px] px-12 pb-16 pt-8"
           >
@@ -807,6 +810,7 @@ function Connectors() {
 }
 
 function Privacy() {
+  const [confirm, setConfirm] = useState(false)
   return (
     <>
       <Title>{tr('隐私')}</Title>
@@ -814,22 +818,31 @@ function Privacy() {
         <Row label={tr('数据位置')} hint={tr('会话、轨迹与证据都在本机 ~/.triwitness')}>
           <Lock size={14} strokeWidth={1.6} className="text-sage" />
         </Row>
-        <Row label={tr('导出数据')}>
-          <button type="button" onClick={() => notYet(tr('导出数据'))} className="chip hover:text-amber">
+        <Row label={tr('导出数据')} hint={tr('会话、项目和设置（JSON）；不含 API 密钥')}>
+          <button type="button" data-testid="export-data" onClick={() => void saveText(exportFileStamp(), collectLocalData(), 'application/json')} className="chip hover:text-amber">
             {tr('导出')}
           </button>
         </Row>
         <Row label={tr('清除本机会话记录')}>
-          <button type="button" onClick={() => notYet(tr('清除记录'))} className="chip hover:text-rose-ink">
+          <button type="button" data-testid="clear-history" onClick={() => setConfirm(true)} className="chip hover:text-rose-ink">
             {tr('清除')}
           </button>
         </Row>
       </Group>
+      <ClearHistoryDialog
+        open={confirm}
+        onClose={() => setConfirm(false)}
+        onConfirm={() => {
+          clearHistory()
+          window.location.reload()
+        }}
+      />
     </>
   )
 }
 
 function About({ onShortcuts }: { onShortcuts: () => void }) {
+  const [licenses, setLicenses] = useState(false)
   return (
     <>
       <Title>{tr('关于')}</Title>
@@ -848,11 +861,12 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
           </button>
         </Row>
         <Row label={tr('开源许可')}>
-          <button type="button" onClick={() => notYet(tr('开源许可'))} className="chip hover:text-amber">
+          <button type="button" data-testid="open-licenses" onClick={() => setLicenses(true)} className="chip hover:text-amber">
             {tr('查看')}
           </button>
         </Row>
       </Group>
+      <LicensesDialog open={licenses} onClose={() => setLicenses(false)} />
     </>
   )
 }

@@ -88,7 +88,7 @@ export function ModelPicker({
                 data-testid="effort-menu"
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -4, transition: { duration: 0.12 } }}
+                exit={{ pointerEvents: 'none', opacity: 0, x: -4, transition: { duration: 0.12 } }}
                 transition={{ type: 'spring', stiffness: 520, damping: 36 }}
                 className="menu-card absolute bottom-0 left-[calc(100%+6px)] w-[150px] p-1.5"
               >
