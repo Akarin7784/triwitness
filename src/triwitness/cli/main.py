@@ -83,6 +83,25 @@ eval_app = typer.Typer(add_completion=False, no_args_is_help=True, help="评测"
 app.add_typer(eval_app, name="eval")
 
 
+@eval_app.command("estimate-verifier")
+def eval_estimate_verifier(
+    results: Annotated[list[Path] | None, typer.Option(help="W2 结果目录（复用其中的 patch.diff）；可多次")] = None,
+    suite: Annotated[list[str] | None, typer.Option(help="没有结果时按套件参考解估算；可多次")] = None,
+    repeats: int = typer.Option(1, help="model 档每个 attempt 判几次（测稳定性）"),
+    output_tokens: int = typer.Option(2500, help="每次 Verifier 输出 token（思考档）"),
+    peak: bool = typer.Option(False, "--peak", help="按高峰价估算"),
+) -> None:
+    """W3-14：verifier 三档（none / deterministic / model）只重跑验证阶段的花费预估。不调用 API。"""
+    from triwitness.eval.suites import load_suite
+    from triwitness.eval.verify_estimate import estimate, render, sizes_from_results, sizes_from_suite
+
+    sizes = [s for r in results or [] for s in sizes_from_results(r)]
+    if not sizes:
+        names = suite or ["test", "dev"]
+        sizes = sizes_from_suite([t.id for n in names for t in load_suite(n).tasks])
+    typer.echo(render(estimate(sizes * repeats, output_tokens=output_tokens, peak=peak)))
+
+
 @eval_app.command("estimate")
 def eval_estimate(
     tasks: int = typer.Option(10, help="任务数"),
