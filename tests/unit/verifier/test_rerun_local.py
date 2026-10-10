@@ -202,3 +202,20 @@ async def test_regression_blind_falls_back_to_related_tests(tmp_path: Path) -> N
     off, _ = await regression(LocalSandboxBackend(home=tmp_path / "home2"), SandboxSpec(repo=repo), patch, PY,
                               related_fallback=False)  # fmt: skip
     assert off.scope == "full" and off.passed == 0
+
+
+async def test_related_fallback_skipped_when_selection_too_large(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """相关测试选出太多（> MAX_RELATED_FILES）不算“相关”：不回退，保持全量盲区结论。"""
+    from triwitness.verify import rerun as rr
+
+    monkeypatch.setattr(rr, "MAX_RELATED_FILES", 0)
+    repo = make_repo(tmp_path, {
+        "calc.py": BUGGY, "tests/__init__.py": "",
+        "tests/test_aaa_crash.py": "import os\nos._exit(3)\n",
+        "tests/test_calc.py": "from calc import add\n\n\ndef test_zero():\n    assert add(0, 0) == 0\n",
+    })  # fmt: skip
+    patch = make_patch(repo, {"calc.py": FIXED})
+    run, _ = await regression(LocalSandboxBackend(home=tmp_path / "home"), SandboxSpec(repo=repo), patch, PY)
+    assert run.scope == "full" and run.passed == 0

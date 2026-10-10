@@ -251,6 +251,9 @@ async def regression(
     return await _patched_run(backend, spec, patch, test_cmd, cmd, scope, fail_b, res, timeout_s)
 
 
+MAX_RELATED_FILES = 40
+
+
 async def _related_tests(sb: Sandbox, patch: str) -> list[str]:
     """基线沙箱里与补丁改动相关、且基线就存在的测试文件（新增的测试文件基线没有，不选）。"""
     from triwitness.verify.test_select import gather_sources, select_tests
@@ -260,7 +263,9 @@ async def _related_tests(sb: Sandbox, patch: str) -> list[str]:
         sources = await gather_sources(sb)
     except Exception:
         return []
-    return [t for t in select_tests(changed, sources).tests if t in sources]
+    picked = [t for t in select_tests(changed, sources).tests if t in sources]
+    # 选出太多就不算“相关”（W3-14 后续：faststream 选出约 300 个文件，断网下整批超时）→ 放弃回退，保持盲区结论
+    return picked if len(picked) <= MAX_RELATED_FILES else []
 
 
 async def _patched_run(
