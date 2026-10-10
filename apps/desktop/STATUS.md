@@ -2,6 +2,43 @@
 
 > 不按日历排期，做完一项记一项。
 
+## UI-21 · Claude 交互对齐（第 1 轮已完成，第 2 轮进行中）
+
+原则（Eva）：操作方式与 Claude Desktop 一一对应，不缺也不多；差异只放在审美和复验功能上。没做的功能也放真入口，点了提示“即将推出”。逐项状态见 `docs/claude-parity.md`。
+
+**核心（a3f9c7b，提交名误写成 UI-20；UI-20 实为勇士模式 UI）**
+- tw-events/1 新增 `model_delta` / `reasoning_delta`（call_id、index、text），属于增量字段，v 仍为 1
+- `model_call` / `tool_call` 带 call_id；`tool_call` 带参数和输出预览（已脱敏）
+- DeepSeek 流式：`stream=true` 解析 SSE，再拼回非流式形状，所以回放缓存的 key 不变；已经输出一部分后不重试。只用合成 SSE 夹具测试，没有真实调用
+- 回放命中时，把缓存回复切成 delta 输出；DeltaWriter 按 50ms / 48 字合并
+- 只在 `tw run --jsonl`（桌面端）时写 delta，eval 不写
+- `--model` / `--thinking`：关 / 低 / 中 / 高 → thinking + reasoning_effort（low / high / max），只接受 deepseek-flash
+- 演示适配器按强度流式输出思考和正文（含列表和代码块）
+
+**桌面端（710dbf5）**
+- 输入框：自动增高，Enter 发送，Shift+Enter 换行，输入法安全，每个会话单独保存草稿；底部依次是 + 菜单（各项为占位）、仓库签、模型选择、发送 / 停止 / 语音（弹簧切换），Esc 停止
+- 模型选择：DeepSeek Flash 可选；通义千问、智谱 GLM 灰显“稍后”；不出现 v4-pro。思考强度是子菜单（照 Claude 的 Effort）。选择会保存，并经 tw-bridge 传给核心（Rust 和开发桥两侧都做白名单）
+- 流式消息：rAF 平滑显示，新字淡入，柔和光标；Markdown（列表、表格、代码块带复制）；思考块边想边流，结束后折叠为“思考了 N 秒”；工具调用是可展开的紧凑行，与正文交错
+- 滚动：默认贴底；向上滚时暂停，并出现“回到底部”
+- 消息操作：复制可用；重试、赞 / 踩、编辑后重发为占位
+- 动画用 framer-motion 弹簧，整体包在 `MotionConfig reducedMotion="user"` 里
+
+**和 UI-09 的偏差**
+- 对话区改为实时显示，不再跟笔；右侧书写推流和角色点仍跟笔
+
+**验证**
+- vitest 56 项通过（新增 turns、prefs、streamText 测试；turns 用真实核心录下的 `__fixtures__/demo-stream.jsonl`）
+- lint / check:events / build 通过；`cargo xwin check --tests` 通过（含 `choices_are_whitelisted`）
+- `tools/shoot-chat.mjs` 全部通过；`tools/shoot-live.mjs` 18/18 通过
+- Python 侧：新增 test_stream（9 项）、test_deltas 和 bridge 流式测试；ruff / pyright / pytest 全部通过
+- 截图（docs/）：`composer-model-picker.png`、`composer-plus-menu.png`、`thinking-streaming.png`、`streaming-mid-message.png`、`chat-tool-rows.png`、`chat-result.png`
+
+**第 2 轮**
+- 设置分区：常规、模型（API Key 存系统钥匙串）、预算、权限（含红色无限制）、沙箱、关于
+- 侧栏：搜索 Ctrl+K、重命名 / 删除 / 星标、收起
+- 重试和编辑后重发做成真功能
+- 快捷键和快捷键列表
+
 ## UI-10 · 桌面端驱动真实核心（已完成）
 
 **通路**：新会话 → 输入框上方的仓库签（点开填路径；演示模式可留空，核心自动建示例仓库）→ 发送 → 后端拉起 `tw run --jsonl` → 实时 tw-events/1 进入原有推流、状态 / 费用 chip 和角色点 → 审批卡 → 结论卡。
