@@ -198,6 +198,10 @@ def truncate_output(data: bytes | str, max_bytes: int) -> tuple[str, bool]:
     return f"{head}\n...[省略 {omitted} 字节]...\n{tail}", True
 
 
+# 跑测试 / 复现命令时的固定环境（W3-14 后续）：不写 .pyc——同一秒内同长度的改动会让 Python 读到旧字节码
+TEST_ENV: dict[str, str] = {"PYTHONDONTWRITEBYTECODE": "1"}
+
+
 def validate_sandbox_env(env: Mapping[str, str]) -> None:
     """键名像密钥的变量，值必须以 tw-placeholder 开头（spec 002 §5、AC7）。"""
     bad = [k for k, v in env.items() if SECRET_KEY_RE.search(k) and not v.startswith(PLACEHOLDER_PREFIX)]

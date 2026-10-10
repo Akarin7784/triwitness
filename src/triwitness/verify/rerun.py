@@ -21,7 +21,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from triwitness.core.models import ReproRef, TestRun
-from triwitness.sandbox.base import Sandbox, SandboxBackend, SandboxSpec
+from triwitness.sandbox.base import TEST_ENV, Sandbox, SandboxBackend, SandboxSpec
 from triwitness.tools.pytest_report import parse_junit
 from triwitness.verify.diffutil import is_test_file, split_patch
 
@@ -107,7 +107,7 @@ async def _run(
     run_cmd = f"{cmd} --junitxml={shlex.quote(junit)}" if is_pytest else cmd
     if is_pytest:
         await sb.write_file(junit, b"")
-    r = await sb.exec(run_cmd, timeout_s=timeout_s)
+    r = await sb.exec(run_cmd, timeout_s=timeout_s, env=dict(TEST_ENV))
     rep = parse_junit(await sb.read_file(junit)) if is_pytest else None
     if rep is not None and rep.tests == 0 and r.exit_code != 0:
         rep = None  # 没写出报告（收集阶段崩溃 / 命令不存在）：按退出码算失败，不能当成“全部通过”

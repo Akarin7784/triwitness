@@ -102,7 +102,10 @@ def deterministic_verdict(
     claim: ClaimVerdict | None = None,
 ) -> tuple[VerdictLabel, list[str]]:
     reasons: list[str] = []
-    new = [f for r in test_runs if r.scope not in ("repro_base",) for f in r.new_failures]
+    # 补丁侧回归超时（基线没超时）：`<timeout>` / `<command>` 只说明没跑完，不是新失败 → 最多 inconclusive
+    timed = [r for r in test_runs if r.scope in REGRESSION_SCOPES and "<timeout>" in r.new_failures]
+    new = [f for r in test_runs if r.scope not in ("repro_base",)
+           for f in r.new_failures if not (any(r is t for t in timed) and f.startswith("<"))]  # fmt: skip
     patched = [r for r in test_runs if r.scope == "repro_patched"]
     if anticheat is not None and anticheat.blocked:
         reasons.append("防作弊阻断：" + ", ".join(f.code for f in anticheat.flags if f.action == "block"))
@@ -112,7 +115,9 @@ def deterministic_verdict(
         reasons.append(f"新增失败 {len(new)} 个：" + ", ".join(new[:3]))
     if reasons:
         return "fail", reasons
-    blind = regression_blind(test_runs)
+    for r in timed:
+        reasons.append(f"回归超时：补丁后的 {r.scope} 在时限内没跑完，无回归结论")
+    blind = None if timed else regression_blind(test_runs)
     if blind:
         reasons.append(blind)
     if anticheat is not None:
@@ -150,7 +155,7 @@ def thin_evidence(
     """确定性判 pass 时，证据是否“薄”（W3-14 结论：model 档只在这种 pass 上调用，且只判 1 次）。
 
     薄 = 没有回归证据 / 回归只跑了相关 + 抽样 / 有非阻断的防作弊提示（改已有测试、吞异常…）/
-    声明审计有标记 / Executor 自报了未覆盖的风险。返回原因列表；空列表 = 证据充分，不调模型。
+    声明审计有标记。Executor 自报的未覆盖风险只作附注，单独出现不算薄。返回原因列表；空列表 = 证据充分，不调模型。
     """
     out: list[str] = []
     reg = [r for r in test_runs if r.scope in REGRESSION_SCOPES]
@@ -164,7 +169,8 @@ def thin_evidence(
             out.append("防作弊提示：" + ", ".join(dict.fromkeys(soft)))
     if claim is not None and claim.flags:
         out.append("声明审计标记：" + ", ".join(claim.flags))
-    if open_risks:
+    # 自报风险单独出现不算薄（W3-14 后续：17/17 个 pass 都自报了风险，门控失去意义）；只在已有其他信号时附上
+    if open_risks and out:
         out.append(f"Executor 自报未覆盖的风险 {len(open_risks)} 条")
     return out
 

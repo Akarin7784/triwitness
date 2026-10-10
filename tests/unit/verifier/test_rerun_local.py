@@ -219,3 +219,13 @@ async def test_related_fallback_skipped_when_selection_too_large(
     patch = make_patch(repo, {"calc.py": FIXED})
     run, _ = await regression(LocalSandboxBackend(home=tmp_path / "home"), SandboxSpec(repo=repo), patch, PY)
     assert run.scope == "full" and run.passed == 0
+
+
+async def test_test_runs_disable_bytecode() -> None:
+    """W3-14 后续：跑测试 / 复现时 PYTHONDONTWRITEBYTECODE=1（同秒同长度改动会读到旧 .pyc）。"""
+    from triwitness.harness.testing import FakeSandbox
+    from triwitness.verify.rerun import _run
+
+    sb = FakeSandbox()
+    await _run(sb, "python -m unittest", "full", 10)  # type: ignore[arg-type]
+    assert sb.envs[-1] == {"PYTHONDONTWRITEBYTECODE": "1"}

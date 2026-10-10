@@ -73,6 +73,7 @@ class FakeSandbox:
         }
         self.exec_handler = exec_handler
         self.commands: list[str] = []
+        self.envs: list[dict[str, str] | None] = []
         self.snapshots: dict[str, dict[str, bytes]] = {"base": dict(self.files)}
 
     @staticmethod
@@ -85,6 +86,7 @@ class FakeSandbox:
     async def exec(self, cmd: str, *, timeout_s: int = 120, cwd: str | None = None,
                    env: dict[str, str] | None = None) -> ExecResult:  # fmt: skip
         self.commands.append(cmd)
+        self.envs.append(dict(env) if env else None)
         if self.exec_handler is None:
             return ExecResult(exit_code=0, stdout="", stderr="", duration_ms=1, timed_out=False)
         return self.exec_handler(cmd, self)

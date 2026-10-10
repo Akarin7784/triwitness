@@ -14,6 +14,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from triwitness.core.errors import SandboxError
+from triwitness.sandbox.base import TEST_ENV
 from triwitness.tools.base import BaseTool, SideEffects, ToolContext, ToolResult
 from triwitness.tools.pytest_report import _TEST_FILE, changed_paths
 
@@ -83,7 +84,7 @@ class SubmitRepro(BaseTool):
                                 f"当前已改了非测试文件：{', '.join(src[:5])}。请先撤销这些改动"
                                 "（例如 git checkout -- <文件>），再提交复现。")  # fmt: skip
         try:
-            r = await ctx.sandbox.exec(params.cmd, timeout_s=TIMEOUT_S)
+            r = await ctx.sandbox.exec(params.cmd, timeout_s=TIMEOUT_S, env=dict(TEST_ENV))
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="sandbox")
         tail = (r.stdout + r.stderr)[-1500:]

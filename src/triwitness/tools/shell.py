@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from triwitness.core.errors import SandboxError
 from triwitness.core.models import FileChange, FinishReport, ReproRef
 from triwitness.permissions.shell import ShellParseError, parse_bash, program, strip_wrappers
+from triwitness.sandbox.base import TEST_ENV
 from triwitness.tools.base import BaseTool, SideEffects, ToolContext, ToolResult
 from triwitness.tools.pytest_report import changed_paths, parse_junit, related_tests, render_failures
 
@@ -170,7 +171,7 @@ class RunTests(BaseTool):
             with contextlib.suppress(SandboxError):
                 await ctx.sandbox.write_file(junit, b"")  # 清掉上一次的报告
         try:
-            r = await ctx.sandbox.exec(run_cmd, timeout_s=MAX_TIMEOUT)
+            r = await ctx.sandbox.exec(run_cmd, timeout_s=MAX_TIMEOUT, env=dict(TEST_ENV))
         except SandboxError as e:
             return ToolResult(ok=False, content=str(e), error_code="sandbox")
         rep = None

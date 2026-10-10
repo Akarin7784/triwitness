@@ -192,3 +192,15 @@ def test_verifier_prompt_v2_has_gap_rules() -> None:
 
     p = load_prompt("verifier")
     assert p.version == "2" and "最多 inconclusive" in p.text and "只修了一条路径" in p.text
+
+
+def test_patch_side_timeout_is_inconclusive_not_fail() -> None:
+    """W3-14 后续：conan / copier 补丁后全量超时、基线没超时 → `<timeout>` 不是新失败，判 inconclusive。"""
+    ok_runs = INP.test_runs
+    timed = TestRun(scope="full", command="pytest", passed=0, failed=1, skipped=0, errors=0, duration_s=600,
+                    log_ref="x", new_failures=["<command>", "<timeout>"])  # fmt: skip
+    lab, why = deterministic_verdict("reproduced", [*ok_runs[:2], timed])
+    assert lab == "inconclusive" and why[0].startswith("回归超时"), why
+    real = timed.model_copy(update={"new_failures": ["<timeout>", "tests/test_a.py::test_x"]})
+    lab, why = deterministic_verdict("reproduced", [*ok_runs[:2], real])
+    assert lab == "fail" and "tests/test_a.py::test_x" in why[0]  # 超时前已报出的真实新失败仍判 fail

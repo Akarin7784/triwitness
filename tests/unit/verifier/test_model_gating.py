@@ -34,7 +34,12 @@ def test_thin_signals() -> None:
     assert any(x.startswith("防作弊提示：existing_test_modified") for x in thin_evidence([run("full")], ac))
     claim = ClaimVerdict(verdict="pass", flags=["issue_underspecified"])
     assert thin_evidence([run("full")], claim=claim) == ["声明审计标记：issue_underspecified"]
-    assert thin_evidence([run("full")], open_risks=["没测负数"]) == ["Executor 自报未覆盖的风险 1 条"]
+    # 自报风险单独出现不算薄（W3-14 后续：17/17 个 pass 都自报风险）；有其他信号时作附注
+    assert thin_evidence([run("full")], open_risks=["没测负数"]) == []
+    assert thin_evidence([run("full")], claim=claim, open_risks=["没测负数"]) == [
+        "声明审计标记：issue_underspecified",
+        "Executor 自报未覆盖的风险 1 条",
+    ]
 
 
 def test_needs_model_policy() -> None:
