@@ -116,7 +116,7 @@ def test_no_sandbox_is_unverified_l2_with_banner() -> None:
 
 
 def test_skip_added_needs_human_review_l2() -> None:
-    """W3-15：单独新增 skip 从 L3 阻断降为 L2 人审——结论 inconclusive（不放行、也不判失败）。"""
+    """W3-14 后续：单独新增 skip 从 L3 阻断降为 L2 人审——结论 inconclusive（不放行、也不判失败）。"""
     cheat = PATCH + modify("tests/test_calc.py", ["def test_old():"],
                            ["@pytest.mark.skip", "def test_old():"])  # fmt: skip
     ev = evidence(patch=cheat)

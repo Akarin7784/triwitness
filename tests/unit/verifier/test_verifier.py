@@ -107,7 +107,7 @@ def test_deterministic_verdict_and_combine() -> None:
     blocked = anticheat.check(
         new_file("tests/test_a.py", ["import pytest", "@pytest.mark.skip", "def test_a():", "    pass"])
     )
-    lab, why = deterministic_verdict("reproduced", ok_runs, blocked)  # W3-15：单独加 skip → 人审，不判 fail
+    lab, why = deterministic_verdict("reproduced", ok_runs, blocked)  # W3-14 后续：单独加 skip → 人审，不判 fail
     assert lab == "inconclusive" and any(w.startswith("需人审：skip_or_xfail_added") for w in why)
     special = anticheat.check(new_file("src/a.py", ["import sys", "if 'pytest' in sys.modules:", "    X = 1"]))
     assert deterministic_verdict("reproduced", ok_runs, special)[0] == "fail"
@@ -147,7 +147,7 @@ async def test_cross_vendor_routing() -> None:
     assert res2.vendor_policy == "single_vendor" and res2.variant == "strict" and ds.models
 
 
-# ---------------------------------------------------------------- W3-15：回归盲区 + 证据缺口降级
+# ---------------------------------------------------------------- W3-14 后续：回归盲区 + 证据缺口降级
 
 
 def test_regression_blind_spot_caps_at_inconclusive() -> None:

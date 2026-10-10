@@ -38,7 +38,7 @@ KEEP_GOING = "--continue-on-collection-errors"
 
 
 def normalize_test_cmd(cmd: str) -> str:
-    """回归用的测试命令（W3-15，W3-14 发现 10/46 个补丁回归是盲区）：去掉 `-x` / `--maxfail` / `--stepwise`
+    """回归用的测试命令（W3-14 后续：W3-14 发现 10/46 个补丁回归是盲区）：去掉 `-x` / `--maxfail` / `--stepwise`
     （第一个失败或收集错误就停 → 整套没跑），pytest 加 `--continue-on-collection-errors`
     （断网沙箱里个别测试文件收集期联网报错，不该拖垮整套）。非 pytest 命令原样返回。"""
     if not _PYTEST.search(cmd):
@@ -214,7 +214,7 @@ async def regression(
     `test_cmd` 是不带路径的 pytest 调用时，可以在全量太慢（> full_limit_s）时改跑相关 + 抽样（传 related /
     all_tests，来自 verify.test_select）。基线失败集合用全量结果（或 PREPARING 传入的 baseline）。
 
-    W3-15：命令先过 `normalize_test_cmd`；基线全量一个都没通过（回归盲区）且没传 related 时，
+    W3-14 后续：命令先过 `normalize_test_cmd`；基线全量一个都没通过（回归盲区）且没传 related 时，
     自动用 test_select 选出与改动相关的测试文件，基线 / 修复后都只跑这些（scope = related）。
     """
     test_cmd = normalize_test_cmd(test_cmd)

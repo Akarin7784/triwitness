@@ -73,7 +73,7 @@ def test_extended_existing_test_is_info_only() -> None:
 def test_line_numbers_point_into_new_file() -> None:
     rep = check(modify("tests/test_calc.py", ["x = 1"], ["x = 1", "@pytest.mark.xfail"], start=10))
     f = next(f for f in rep.flags if f.code == "skip_or_xfail_added")
-    assert f.line == 11 and f.action == "review"  # W3-15：单独加 skip / xfail 降为人审（L2）
+    assert f.line == 11 and f.action == "review"  # W3-14 后续：单独加 skip / xfail 降为人审（L2）
 
 
 def test_rewritten_assert_is_modification_not_weakening() -> None:
@@ -82,7 +82,7 @@ def test_rewritten_assert_is_modification_not_weakening() -> None:
 
 
 def test_skip_with_weakened_assertions_still_blocks() -> None:
-    """W3-15：单独新增 skip 是 review（L2 人审）；同时削弱断言（净减少 assert）仍然阻断。"""
+    """W3-14 后续：单独新增 skip 是 review（L2 人审）；同时削弱断言（净减少 assert）仍然阻断。"""
     alone = check(modify("tests/test_calc.py", [], ["@pytest.mark.skip"]))
     assert not alone.blocked and alone.min_level == "L2"
     both = check(modify("tests/test_calc.py", ["    assert add(1, 2) == 3"], ["@pytest.mark.skip", "    pass"]))

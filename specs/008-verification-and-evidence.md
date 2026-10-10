@@ -117,5 +117,5 @@ W3-13 接入后新增指标：假成功率、Verifier 精确率 / 召回率（�
 ## 11. 变更记录
 
 - 2026-10-10：初稿（W3-01），同时实现 W3-05/07/09/11/12/20 的确定性部分（3d7c7f3、8e71075、5456e64、9fe0fbd）。
-- 2026-10-10：W3-14 结论落地（W3-15）：评测与 `tw run` 默认 verifier = deterministic；model 档改为 `model_policy = thin_pass`——只在确定性 pass 且证据薄（无回归 / 仅相关 + 抽样 / 非阻断防作弊提示 / 声明审计标记 / Executor 自报风险）时调用模型、判 1 次；`always` 仅供对比实验。
-- 2026-10-10：W3-15（W3-14 数据校准）：①回归盲区——回归跑了但 0 通过（收集期报错 / 断网 / `-x`）→ 结论最多 inconclusive；②回归命令去掉 `-x` / `--maxfail` / `--stepwise`、pytest 加 `--continue-on-collection-errors`，全量 0 通过时自动改跑 test_select 选出的相关测试；③单独新增 skip / xfail 从 block（L3、fail）降为 review（L2、inconclusive 需人审），与削弱断言同时出现仍 block；④Verifier 提示词 v2 + 代码兜底：pass 但证据缺口提到“Issue 未指定的名字由 Agent 假设”或“只修了一条路径”→ inconclusive。
+- 2026-10-10：W3-14 结论落地：评测与 `tw run` 默认 verifier = deterministic；model 档改为 `model_policy = thin_pass`——只在确定性 pass 且证据薄（无回归 / 仅相关 + 抽样 / 非阻断防作弊提示 / 声明审计标记 / Executor 自报风险）时调用模型、判 1 次；`always` 仅供对比实验。
+- 2026-10-10：W3-14 后续（数据校准）：①回归盲区——回归跑了但 0 通过（收集期报错 / 断网 / `-x`）→ 结论最多 inconclusive；②回归命令去掉 `-x` / `--maxfail` / `--stepwise`、pytest 加 `--continue-on-collection-errors`，全量 0 通过时自动改跑 test_select 选出的相关测试；③单独新增 skip / xfail 从 block（L3、fail）降为 review（L2、inconclusive 需人审），与削弱断言同时出现仍 block；④Verifier 提示词 v2 + 代码兜底：pass 但证据缺口提到“Issue 未指定的名字由 Agent 假设”或“只修了一条路径”→ inconclusive。

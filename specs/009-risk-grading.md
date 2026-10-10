@@ -69,4 +69,4 @@
 ## 9. 变更记录
 
 - 2026-10-10：初稿（W3-02），实现 3d7c7f3。新增 04 未列出的 `claim_audit` 因子与 floors 段。
-- 2026-10-10：W3-15：`skip_or_xfail_added` 单独出现时归入 anticheat_review（L2），与 `assertion_weakened` 同时出现才归 anticheat_block（L3）。W3-14：3 次触发 2 次是正确补丁。
+- 2026-10-10：W3-14 后续：`skip_or_xfail_added` 单独出现时归入 anticheat_review（L2），与 `assertion_weakened` 同时出现才归 anticheat_block（L3）。W3-14：3 次触发 2 次是正确补丁。

@@ -155,7 +155,7 @@ async def test_crash_without_junit_counts_as_failure(tmp_path: Path) -> None:
     assert [r.failed for r in res.test_runs] == [1, 1]
 
 
-# ---------------------------------------------------------------- W3-15：回归盲区（W3-14：46 个补丁里 10 个）
+# ---------------------------------------------------------------- W3-14 后续：回归盲区（W3-14：46 个补丁里 10 个）
 
 
 def test_normalize_test_cmd() -> None:

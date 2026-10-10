@@ -95,7 +95,7 @@ def build_evidence(
         verdict = claim.evidence_verdict
     if ac.blocked and verdict == "pass":
         verdict = "fail"
-    # W3-15：需人审的防作弊提示（单独新增 skip / xfail）与回归盲区 → 最多 inconclusive
+    # W3-14 后续：需人审的防作弊提示（单独新增 skip / xfail）与回归盲区 → 最多 inconclusive
     if verdict == "pass" and any(f.code in HUMAN_REVIEW_CODES for f in ac.flags):
         verdict = "inconclusive"
     if verdict == "pass" and regression is not None and regression_blind([regression]):
