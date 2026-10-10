@@ -33,7 +33,7 @@ jobs:
         run: uv run pytest
 
   desktop:
-    name: desktop (tsc / oxlint / vite build, no installer)
+    name: desktop (oxlint / vitest / tsc / vite build, no installer)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -49,5 +49,9 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Event types in sync with schema
+        run: npm run check:events
+      - name: Unit tests (vitest)
+        run: npm test
       - name: Build web assets (tsc -b && vite build)
         run: npm run build
