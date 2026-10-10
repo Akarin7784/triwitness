@@ -10,6 +10,7 @@ none 后端结束时把改动提交到分支 tw/<run_id>（用户仓库工作区
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -25,7 +26,7 @@ from triwitness.harness.run import TaskResult, run_task
 from triwitness.permissions.config import load_policy
 from triwitness.permissions.engine import PermissionEngine
 from triwitness.sandbox.base import SandboxBackend, SandboxSpec, select_backend
-from triwitness.telemetry.trajectory import TrajectoryRecorder
+from triwitness.telemetry.trajectory import TrajectoryEvent, TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
 from triwitness.verify.pipeline import EphemeralBackend, VerifyOptions
 
@@ -62,6 +63,7 @@ async def run_local(
     budget: Budget | None = None,
     harness: HarnessConfig | None = None,
     verify: VerifyPref = "off",
+    on_event: Callable[[TrajectoryEvent], None] | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -71,6 +73,8 @@ async def run_local(
     sb = await choice.backend.create(spec)
     run_dir = home / "runs" / run_id
     rec = TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
+    if on_event is not None:  # 桌面端桥接（tw run --jsonl）：事件写盘后同步推出去
+        rec.subscribe(on_event)
     branch: str | None = None
     result: TaskResult | None = None
     try:

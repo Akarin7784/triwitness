@@ -31,8 +31,8 @@ def doctor() -> None:
 
 @app.command("run")
 def run_cmd(
-    repo: Annotated[Path, typer.Option(help="本地 git 仓库路径")],
-    issue: Annotated[str, typer.Option(help="问题描述（Issue 正文）")],
+    repo: Annotated[Path, typer.Option(help="本地 git 仓库路径（--demo：不存在或为空时写入演示仓库）")],
+    issue: Annotated[str, typer.Option(help="问题描述（Issue 正文）；--demo 可省略")] = "",
     title: Annotated[str | None, typer.Option(help="标题（默认取描述第一行）")] = None,
     backend: Annotated[str, typer.Option(help="auto / docker / none")] = "auto",
     test_cmd: Annotated[str | None, typer.Option(help="run_tests 使用的测试命令")] = None,
@@ -41,25 +41,64 @@ def run_cmd(
     verify: Annotated[str, typer.Option(help="off / deterministic（默认，不调模型）/ model（加 Verifier 模型）")] = (
         "deterministic"
     ),
+    jsonl: Annotated[
+        bool, typer.Option("--jsonl", help="桌面端桥接：stdout 逐行输出 tw-bridge/1，stdin 收审批 / 取消")
+    ] = False,
+    demo: Annotated[bool, typer.Option("--demo", help="演示适配器：脚本化模型 + 演示仓库，¥0、不联网")] = False,
 ) -> None:
     """以 Executor 单角色修复本地仓库中的一个问题，输出 diff、FinishReport 与成本账单。"""
     import asyncio
     import os
 
+    from triwitness.config import tw_home
     from triwitness.core.errors import TriWitnessError
     from triwitness.harness.local_run import run_local
-    from triwitness.llm.router import Router
 
     if backend not in ("auto", "docker", "none"):
         raise typer.BadParameter("只能是 auto / docker / none")
     if verify not in ("off", "deterministic", "model"):
         raise typer.BadParameter("--verify 只能是 off / deterministic / model")
-    if live:
-        os.environ["TW_LLM_MODE"] = "record"
-    elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
-        raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
+    if demo:
+        from triwitness.bridge import demo as demo_mod
+
+        if live:
+            raise typer.BadParameter("--demo 与 --live 不能同时用")
+        repo = demo_mod.ensure_repo(repo)
+        issue = issue.strip() or demo_mod.ISSUE
+        backend, test_cmd = "none", test_cmd or demo_mod.test_command()
+        router = demo_mod.DemoRouter(delay_s=float(os.environ.get("TW_DEMO_DELAY_S", "0.9")))
+        if verify == "model":
+            verify = "deterministic"  # 演示不调 Verifier 模型
+    else:
+        from triwitness.llm.router import Router
+
+        if not issue.strip():
+            raise typer.BadParameter("--issue 不能为空")
+        if live:
+            os.environ["TW_LLM_MODE"] = "record"
+        elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
+            raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
+        router = Router.deepseek_default(allow_peak=allow_peak)
+    mode = "demo" if demo else "live" if live else "replay"
+
+    if jsonl:
+        from triwitness.bridge.stdio import Bridge, stdin_queue, stdout_writer
+
+        home = tw_home()
+
+        def start(approver, on_event):  # type: ignore[no-untyped-def]
+            return run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
+                             test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
+                             home=home)  # fmt: skip
+
+        async def main() -> int:
+            bridge = Bridge(stdout_writer(), mode=mode, home=home)
+            return await bridge.run(start, stdin_queue(asyncio.get_running_loop()))
+
+        raise typer.Exit(asyncio.run(main()))
+
     try:
-        out = asyncio.run(run_local(repo, issue, router=Router.deepseek_default(allow_peak=allow_peak), title=title,
+        out = asyncio.run(run_local(repo, issue, router=router, title=title,
                                     backend=backend, test_command=test_cmd, verify=verify))  # type: ignore[arg-type]  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)

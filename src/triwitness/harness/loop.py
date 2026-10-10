@@ -34,7 +34,7 @@ class RouterLike(Protocol):
 
 
 class LoopOutcome(BaseModel):
-    status: Literal["finished", "budget_exhausted", "stuck", "error", "needs_human"]
+    status: Literal["finished", "budget_exhausted", "stuck", "error", "needs_human", "cancelled"]
     finish: FinishReport | None = None
     steps: int
     reason: str | None = None

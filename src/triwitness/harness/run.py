@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass, replace
 from typing import Literal
@@ -45,6 +46,7 @@ _STATUS: dict[str, tuple[FinishStatus, TaskState, str]] = {
     "stuck": ("stuck", TaskState.FAILED, "卡住"),
     "needs_human": ("needs_human", TaskState.NEEDS_HUMAN, "等待人工"),
     "error": ("failed", TaskState.FAILED, "失败"),
+    "cancelled": ("cancelled", TaskState.CANCELLED, "已取消"),
 }
 
 
@@ -104,90 +106,102 @@ async def run_task(
                                 issue_number=issue_number, mode=mode, display=head, harness=cfg.name,
                                 harness_hash=cfg.config_hash(), prompt_versions=cfg.prompt_versions()))  # fmt: skip
     st = _States(rec)
-    st.go(TaskState.PREPARING, "准备沙箱")
-    prepared: PrepareResult | None = None
-    if prepare is not None:
-        prepared = await _prepare(rec, sandbox, prepare, test_command)
-        test_command = test_command or prepared.test_command
-        if not prepared.ok:
-            return _needs_human(rec, st, ledger, prepared)
-    base_ref = await _checkpoint(rec, sandbox, "start")
-    repro_first = "submit_repro" in registry.names
-    if repro_first:
-        st.go(TaskState.REPRODUCING, "复现")
-    else:
-        st.go(TaskState.EXECUTING, "修复")
-    role_prompt = load_prompt(cfg.prompts.get("executor", "executor")).text
-    # token 分配：AGENTS.md 摘要只能用 prefix 预算里扣掉提示与工具 schema 后的余量
-    room = (
-        cfg.context.chars(cfg.context.allocation.prefix)
-        - len(role_prompt)
-        - len(json.dumps(registry.schemas(), ensure_ascii=False))
-    )
-    loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=cfg, category=category,
-                     system_prompt=build_system_prompt(role_prompt, agents_md=agents_md, tool_names=registry.names,
-                                                       agents_md_max_chars=min(4000, max(0, room))))  # fmt: skip
-    ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
-                      tw_dir=tw_dir)  # fmt: skip
-    if repro_first:
-        ctx.state["repro_first"] = True
-        ctx.state["on_repro_accepted"] = lambda check: st.go(
-            TaskState.EXECUTING, "修复" if check.get("status") == "reproduced" else "修复（无法复现，已降级）"
+
+    async def body() -> TaskResult:
+        nonlocal test_command
+        st.go(TaskState.PREPARING, "准备沙箱")
+        prepared: PrepareResult | None = None
+        if prepare is not None:
+            prepared = await _prepare(rec, sandbox, prepare, test_command)
+            test_command = test_command or prepared.test_command
+            if not prepared.ok:
+                return _needs_human(rec, st, ledger, prepared)
+        base_ref = await _checkpoint(rec, sandbox, "start")
+        repro_first = "submit_repro" in registry.names
+        if repro_first:
+            st.go(TaskState.REPRODUCING, "复现")
+        else:
+            st.go(TaskState.EXECUTING, "修复")
+        role_prompt = load_prompt(cfg.prompts.get("executor", "executor")).text
+        # token 分配：AGENTS.md 摘要只能用 prefix 预算里扣掉提示与工具 schema 后的余量
+        room = (
+            cfg.context.chars(cfg.context.allocation.prefix)
+            - len(role_prompt)
+            - len(json.dumps(registry.schemas(), ensure_ascii=False))
         )
-    outcome = await loop.run(task_prompt, ctx)
-    check = ctx.state.get("repro_check")
-    repro_status = check.get("status") if check else ("missing" if repro_first else None)
-    status, final, label = _classify(outcome)
-    verification: PipelineResult | None = None
-    rounds = 0
-    while verify is not None and status == "done" and outcome.finish is not None:
-        patch = await _diff(sandbox, base_ref)
-        if not patch.strip():
-            break
-        rounds += 1
-        st.go(TaskState.VERIFYING, "验证" if rounds == 1 else f"验证（第 {rounds} 轮）")
-        opts = verify
-        if opts.router is not None:
-            opts = replace(opts, router=EmittingRouter(opts.router, lambda p: rec.emit(p, role="verifier")))
-        verification = await verify_task(
-            task_id=rec.task_id, issue=task_prompt, finish=outcome.finish, patch=patch, opts=opts,
-            cost=ledger.report, config_hash=config_hash, workspace=sandbox, test_command=test_command,
-            base_ref=base_ref, run_mode=mode, category=category,
-            baseline=prepared.baseline if prepared else None,
-        )  # fmt: skip
-        ev = verification.evidence
-        ref = rec.artifact(f"evidence-{rounds}.json", ev.model_dump(mode="json"))
-        rec.artifact(f"pr-{rounds}.md", verification.pr_body)
-        rec.emit(VerificationPayload(
-            verdict=ev.verdict, evidence_ref=ref, tests_passed=verification.tests_passed, risk_level=ev.risk_level,
-            clean_env=ev.clean_env, unverified_reason=verification.unverified_reason,
-            display=f"验证{_VERDICT[ev.verdict]} · 风险 {ev.risk_level}",
-        ), role="verifier")  # fmt: skip
-        if ev.verdict != "fail":
-            break
-        if rounds > verify.max_retries:
-            status, final, label = "failed", TaskState.FAILED, "验证未通过"
-            break
-        st.go(TaskState.EXECUTING, "根据验证结果返工")
-        outcome = await loop.run(f"{task_prompt}\n\n<verification_feedback>\n{verification.feedback()}\n"
-                                 "</verification_feedback>", ctx)  # fmt: skip
+        loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=cfg, category=category,
+                         system_prompt=build_system_prompt(role_prompt, agents_md=agents_md, tool_names=registry.names,
+                                                           agents_md_max_chars=min(4000, max(0, room))))  # fmt: skip
+        ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
+                          tw_dir=tw_dir)  # fmt: skip
+        if repro_first:
+            ctx.state["repro_first"] = True
+            ctx.state["on_repro_accepted"] = lambda check: st.go(
+                TaskState.EXECUTING, "修复" if check.get("status") == "reproduced" else "修复（无法复现，已降级）"
+            )
+        outcome = await loop.run(task_prompt, ctx)
+        check = ctx.state.get("repro_check")
+        repro_status = check.get("status") if check else ("missing" if repro_first else None)
         status, final, label = _classify(outcome)
-    if outcome.status in ("budget_exhausted", "error", "stuck"):
-        etype = {"budget_exhausted": "BudgetExceeded", "stuck": "Stuck", "error": "Error"}[outcome.status]
-        rec.emit(ErrorPayload(type=etype, message=outcome.reason or etype, display=_clip(outcome.reason or label)))
-    await _checkpoint(rec, sandbox, "final")
-    diff = await _diff(sandbox, base_ref)
-    if status == "done":
-        st.go(TaskState.PACKAGING, "整理结果")
-    st.go(final, label)
-    cost = ledger.report()
-    shown = f"{label} · ¥{cost.total_cny:.3f}"
-    if cost.cache_hit_rate:
-        shown += f" · 命中 {cost.cache_hit_rate:.0%}"
-    rec.emit(TaskFinishedPayload(status=status, finish_report=outcome.finish, cost_report=cost, display=shown))
-    return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish,
-                      repro_status=repro_status, verification=verification, verify_rounds=rounds,
-                      prepared=prepared)  # fmt: skip
+        verification: PipelineResult | None = None
+        rounds = 0
+        while verify is not None and status == "done" and outcome.finish is not None:
+            patch = await _diff(sandbox, base_ref)
+            if not patch.strip():
+                break
+            rounds += 1
+            st.go(TaskState.VERIFYING, "验证" if rounds == 1 else f"验证（第 {rounds} 轮）")
+            opts = verify
+            if opts.router is not None:
+                opts = replace(opts, router=EmittingRouter(opts.router, lambda p: rec.emit(p, role="verifier")))
+            verification = await verify_task(
+                task_id=rec.task_id, issue=task_prompt, finish=outcome.finish, patch=patch, opts=opts,
+                cost=ledger.report, config_hash=config_hash, workspace=sandbox, test_command=test_command,
+                base_ref=base_ref, run_mode=mode, category=category,
+                baseline=prepared.baseline if prepared else None,
+            )  # fmt: skip
+            ev = verification.evidence
+            ref = rec.artifact(f"evidence-{rounds}.json", ev.model_dump(mode="json"))
+            rec.artifact(f"pr-{rounds}.md", verification.pr_body)
+            rec.emit(VerificationPayload(
+                verdict=ev.verdict, evidence_ref=ref, tests_passed=verification.tests_passed, risk_level=ev.risk_level,
+                clean_env=ev.clean_env, unverified_reason=verification.unverified_reason,
+                display=f"验证{_VERDICT[ev.verdict]} · 风险 {ev.risk_level}",
+            ), role="verifier")  # fmt: skip
+            if ev.verdict != "fail":
+                break
+            if rounds > verify.max_retries:
+                status, final, label = "failed", TaskState.FAILED, "验证未通过"
+                break
+            st.go(TaskState.EXECUTING, "根据验证结果返工")
+            outcome = await loop.run(f"{task_prompt}\n\n<verification_feedback>\n{verification.feedback()}\n"
+                                     "</verification_feedback>", ctx)  # fmt: skip
+            status, final, label = _classify(outcome)
+        if outcome.status in ("budget_exhausted", "error", "stuck"):
+            etype = {"budget_exhausted": "BudgetExceeded", "stuck": "Stuck", "error": "Error"}[outcome.status]
+            rec.emit(ErrorPayload(type=etype, message=outcome.reason or etype, display=_clip(outcome.reason or label)))
+        await _checkpoint(rec, sandbox, "final")
+        diff = await _diff(sandbox, base_ref)
+        if status == "done":
+            st.go(TaskState.PACKAGING, "整理结果")
+        st.go(final, label)
+        cost = ledger.report()
+        shown = f"{label} · ¥{cost.total_cny:.3f}"
+        if cost.cache_hit_rate:
+            shown += f" · 命中 {cost.cache_hit_rate:.0%}"
+        rec.emit(TaskFinishedPayload(status=status, finish_report=outcome.finish, cost_report=cost, display=shown))
+        return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish,
+                          repro_status=repro_status, verification=verification, verify_rounds=rounds,
+                          prepared=prepared)  # fmt: skip
+
+    try:
+        return await body()
+    except asyncio.CancelledError:
+        # 用户取消（桌面端 / tw run --jsonl 的 cancel）：收尾写 cancelled，正常返回，让调用方保留分支与产物
+        cur = asyncio.current_task()
+        if cur is not None:
+            cur.uncancel()
+        return _cancelled(rec, st, ledger)
 
 
 async def _prepare(rec: TrajectoryRecorder, sandbox: Sandbox, opts: PrepareOptions, test_command: str | None
@@ -219,6 +233,14 @@ def _needs_human(rec: TrajectoryRecorder, st: _States, ledger: CostLedger, prepa
     rec.emit(TaskFinishedPayload(status="needs_human", cost_report=cost, display="环境构建失败 · 等待人工"))
     outcome = LoopOutcome(status="needs_human", steps=0, reason=reason)
     return TaskResult(status="needs_human", outcome=outcome, diff="", cost=cost, finish=None, prepared=prepared)
+
+
+def _cancelled(rec: TrajectoryRecorder, st: _States, ledger: CostLedger) -> TaskResult:
+    st.go(TaskState.CANCELLED, "已取消")
+    cost = ledger.report()
+    rec.emit(TaskFinishedPayload(status="cancelled", cost_report=cost, display=f"已取消 · ¥{cost.total_cny:.3f}"))
+    outcome = LoopOutcome(status="cancelled", steps=0, reason="用户取消")
+    return TaskResult(status="cancelled", outcome=outcome, diff="", cost=cost, finish=None)
 
 
 _VERDICT = {"pass": "通过", "fail": "未通过", "inconclusive": "证据不足"}

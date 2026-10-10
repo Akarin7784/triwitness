@@ -20,6 +20,7 @@ deny:
   - Read(**/id_rsa*)
   - Read(**/id_ed25519*)
   - Read(~/.triwitness/**)
+  - Read(!~/.triwitness/worktrees/**)  # none 后端的工作树（tw run 默认 home）
   # 提权与系统
   - Bash(sudo *)
   - Bash(su *)

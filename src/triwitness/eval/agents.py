@@ -159,7 +159,7 @@ class LLMAgent:
         )
         claimed = res.status == "done" and res.finish is not None and res.finish.tests_passed
         return AgentRun(
-            status=res.outcome.status,
+            status="error" if res.outcome.status == "cancelled" else res.outcome.status,
             claimed_success=claimed,
             diff=res.diff,
             cost=res.cost,

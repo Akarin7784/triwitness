@@ -100,6 +100,15 @@ def action_for(tool: Tool, params: BaseModel, ctx: ToolContext, *, shell_categor
     return None  # finish、notes（只写 .tw/，不进 diff）等
 
 
+_SCOPE = {"once": "一次", "session": "本次任务", "always": "总是"}
+
+
+def _resolved_display(d: ApprovalDecision) -> str:
+    if d.decision == "allow":
+        return f"已允许（{_SCOPE[d.scope]}）"
+    return "已拒绝" + (f"：{d.comment}" if d.comment else "")
+
+
 class PermissionGate:
     def __init__(
         self,
@@ -147,6 +156,7 @@ class PermissionGate:
             suggested_rule=suggested[0] if suggested else None,
             backend=backend,
             timeout_s=self.engine.policy.approval_timeout_s,
+            display=f"待批 · {action.tool or action.category} · {action.value[:160]}",
         )
         self.emitter.emit(req)
         decision = await self.approver(req) if self.approver is not None else None
@@ -160,7 +170,8 @@ class PermissionGate:
                 saved = "; ".join(rules)
         self.emitter.emit(ApprovalResolvedPayload(request_id=req.request_id, decision=decision.decision,
                                                   scope=decision.scope, by="user", saved_rule=saved,
-                                                  comment=decision.comment))  # fmt: skip
+                                                  comment=decision.comment,
+                                                  display=_resolved_display(decision)))  # fmt: skip
         if decision.decision == "deny":
             return self._denied(v, f"用户拒绝{'：' + decision.comment if decision.comment else ''}")
         return GateOutcome(allowed=True, permission="ask", rule=v.rule_raw)
