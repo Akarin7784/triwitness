@@ -105,7 +105,9 @@ class Router:
         base = self.route_for("executor")
         thinking = bool(executor.get("thinking", base.thinking))
         effort = executor.get("effort", base.effort) if thinking else None
-        self.routes = {**self.routes, "executor": base.model_copy(update={"thinking": thinking, "effort": effort})}
+        routes = dict(self.routes)
+        routes["executor"] = base.model_copy(update={"thinking": thinking, "effort": effort})
+        self.routes = routes
 
     def route_for(self, role: Role) -> RoleRoute:
         if role not in self.routes:
