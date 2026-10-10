@@ -49,7 +49,10 @@ def provider_from_env() -> TracerProvider | None:
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-    exporter = OTLPSpanExporter(endpoint=f"{base.rstrip('/')}/v1/traces") if base else OTLPSpanExporter()
+    # 端点不可达时每次导出最多 3s（含重试），任务结束的 force_flush 不会把评测拖慢（AC5）
+    exporter = (
+        OTLPSpanExporter(endpoint=f"{base.rstrip('/')}/v1/traces", timeout=3) if base else OTLPSpanExporter(timeout=3)
+    )
     provider = TracerProvider(resource=Resource.create({"service.name": "triwitness"}))
     provider.add_span_processor(BatchSpanProcessor(exporter))
     _PROVIDER = provider
@@ -165,6 +168,5 @@ class OtelBridge:
             span.end(end_time=_ns(ev.ts))
         self.task.end(end_time=_ns(ev.ts))
         self.task, self.agents = None, {}
-        flush = getattr(self.provider, "force_flush", None)
-        if flush is not None:
-            flush(2000)
+        # 不在每个任务结束时 force_flush：BatchSpanProcessor 后台定时导出，进程退出时 TracerProvider 的 atexit
+        # shutdown 会再刷一次；端点挂了时同步 flush 会让每个任务多等几秒（评测几十个任务就是几分钟，违背 AC5）
