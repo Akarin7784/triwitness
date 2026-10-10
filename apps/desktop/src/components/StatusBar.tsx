@@ -35,7 +35,7 @@ export function StatusBar() {
             <Wallet size={11} strokeWidth={1.7} />¥{left.toFixed(2)}
           </span>
         </Tip>
-        <span className="sb-item text-sepia-muted">v0.1</span>
+        <span className="sb-item text-sepia-muted">v0.2</span>
       </div>
     </footer>
   )

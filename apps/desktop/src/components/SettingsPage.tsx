@@ -59,7 +59,7 @@ import defaultRulesYaml from '../../../../configs/permissions.default.yaml?raw'
 import { t as tr } from '../lib/i18n'
 
 const WEEK = [tr('周日'), tr('周一'), tr('周二'), tr('周三'), tr('周四'), tr('周五'), tr('周六')]
-const VERSION = '0.1.0'
+const VERSION = '0.2.0'
 
 export type SettingsSection =
   | 'general'
