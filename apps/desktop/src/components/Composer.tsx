@@ -200,7 +200,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
                   type="button"
                   data-testid="repo-chip"
                   onClick={() => setEditingRepo(true)}
-                  className="chip max-w-[300px] truncate transition-colors duration-300 hover:text-amber"
+                  className="chip max-w-[300px] truncate transition-colors duration-300 hover:text-amber-ink"
                 >
                   <FolderGit2 size={11} strokeWidth={1.7} />
                   <span className="truncate font-mono text-[11.5px]">{repo.value || repo.placeholder}</span>
@@ -271,7 +271,7 @@ function SendSlot({
             </Tip>
           ) : (
             <Tip label={tr('语音输入')} side="top-end">
-              <button type="button" onClick={() => notYet(tr('语音输入'))} aria-label={tr('语音输入')} data-testid="mic" className={`${base} text-sepia hover:bg-panel-raised hover:text-amber`}>
+              <button type="button" onClick={() => notYet(tr('语音输入'))} aria-label={tr('语音输入')} data-testid="mic" className={`${base} text-sepia hover:bg-panel-raised hover:text-amber-ink`}>
                 <Mic size={15} strokeWidth={1.6} />
               </button>
             </Tip>

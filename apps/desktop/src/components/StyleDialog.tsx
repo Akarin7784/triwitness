@@ -69,7 +69,7 @@ function StyleBody({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={create}
           data-testid="style-new"
-          className="mt-2 flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-amber transition-colors hover:bg-panel-raised/60"
+          className="mt-2 flex w-full items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] text-amber-ink transition-colors hover:bg-panel-raised/60"
         >
           <Plus size={13} /> {t('新建风格')}
         </button>

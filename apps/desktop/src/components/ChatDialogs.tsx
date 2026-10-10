@@ -254,9 +254,9 @@ function PaletteBody({
             className="menu-item"
           >
             {r.id === '#new' ? (
-              <MessageSquarePlus size={14} strokeWidth={1.6} className="text-amber" />
+              <MessageSquarePlus size={14} strokeWidth={1.6} className="text-amber-ink" />
             ) : r.starred ? (
-              <Star size={13} strokeWidth={1.6} className="fill-amber/70 text-amber" />
+              <Star size={13} strokeWidth={1.6} className="fill-amber/70 text-amber-ink" />
             ) : (
               <span className="w-[14px]" />
             )}

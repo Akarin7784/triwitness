@@ -33,7 +33,7 @@ export function ProjectPicker({
             onDone()
           }}
         >
-          <span className="w-[14px]">{menu.projectId === p.id && <Check size={13} strokeWidth={2} className="text-amber" />}</span>
+          <span className="w-[14px]">{menu.projectId === p.id && <Check size={13} strokeWidth={2} className="text-amber-ink" />}</span>
           <span className="truncate">{p.name}</span>
         </button>
       ))}

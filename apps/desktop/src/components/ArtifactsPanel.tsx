@@ -129,7 +129,7 @@ export function ArtifactsPanel({
               aria-label={t('下载')}
               data-testid="artifact-download"
               onClick={() => void saveText(fileNameOf(artifact), content)}
-              className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber"
+              className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber-ink"
             >
               <Download size={13} strokeWidth={1.6} />
             </button>

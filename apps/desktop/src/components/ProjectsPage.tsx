@@ -185,7 +185,7 @@ function ProjectDetail({
 
   return (
     <div className="mx-auto max-w-[980px] px-12 py-8">
-      <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-[12.5px] text-sepia transition-colors hover:text-amber">
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-[12.5px] text-sepia transition-colors hover:text-amber-ink">
         <ArrowLeft size={13} /> {tr('全部项目')}
       </button>
       <div className="mt-3 flex items-start gap-3">
@@ -215,7 +215,7 @@ function ProjectDetail({
             onClick={onNewChat}
             className="paper-card flex w-full items-center gap-2.5 rounded-2xl px-4 py-3.5 text-left text-[13.5px] text-sepia transition-colors duration-300 hover:border-border hover:text-ink"
           >
-            <MessageSquarePlus size={15} strokeWidth={1.6} className="text-amber" />
+            <MessageSquarePlus size={15} strokeWidth={1.6} className="text-amber-ink" />
             {tr('在这个项目里开新会话')}
           </button>
           <h2 className="mt-6 text-[11px] tracking-[0.14em] text-sepia-muted">{tr('会话')}</h2>
@@ -225,7 +225,7 @@ function ProjectDetail({
             <ul className="mt-2 divide-y divide-border-soft">
               {chats.map((c) => (
                 <li key={c.id}>
-                  <button type="button" data-testid="project-chat" onClick={() => onOpenChat(c.id)} className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:text-amber">
+                  <button type="button" data-testid="project-chat" onClick={() => onOpenChat(c.id)} className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:text-amber-ink">
                     <span className="min-w-0 flex-1 truncate font-serif text-[14px] text-ink">{c.title}</span>
                     {c.time && <span className="font-mono text-[10.5px] text-sepia-muted">{c.time}</span>}
                   </button>
@@ -265,7 +265,7 @@ function ProjectDetail({
           >
             <div className="flex items-center justify-between">
               <h2 className="text-[13px] text-ink">{tr('知识文件')}</h2>
-              <button type="button" onClick={() => file.current?.click()} data-testid="project-upload" className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] text-amber hover:bg-panel-raised">
+              <button type="button" onClick={() => file.current?.click()} data-testid="project-upload" className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] text-amber-ink hover:bg-panel-raised">
                 {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />} {tr('添加')}
               </button>
               <input

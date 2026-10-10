@@ -18,7 +18,7 @@ interface Layer {
 }
 const KINDS: { id: Kind; label: string; cls: string }[] = [
   { id: 'allow', label: tr('允许'), cls: 'bg-sage/15 text-sage' },
-  { id: 'ask', label: tr('询问'), cls: 'bg-amber/15 text-amber' },
+  { id: 'ask', label: tr('询问'), cls: 'bg-amber/15 text-amber-ink' },
   { id: 'deny', label: tr('拒绝'), cls: 'bg-rose-ink/12 text-rose-ink' },
 ]
 const SPRING = { type: 'spring', stiffness: 460, damping: 36 } as const

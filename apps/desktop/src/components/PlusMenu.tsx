@@ -47,8 +47,8 @@ export function PlusMenu({
           data-testid="plus-button"
           onClick={() => (open ? close() : onOpenChange(true))}
           className={clsx(
-            'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-soft text-sepia transition-all duration-300 hover:border-border hover:text-amber',
-            open && 'border-border bg-panel-raised text-amber',
+            'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-soft text-sepia transition-all duration-300 hover:border-border hover:text-amber-ink',
+            open && 'border-border bg-panel-raised text-amber-ink',
           )}
         >
           <Plus size={15} strokeWidth={1.7} className={clsx('transition-transform duration-300', open && 'rotate-45')} />
@@ -134,7 +134,7 @@ export function PlusMenu({
                     close()
                   }}
                 >
-                  <span className="w-[14px]">{prefs.style === s.id && <Check size={13} strokeWidth={2} className="text-amber" />}</span>
+                  <span className="w-[14px]">{prefs.style === s.id && <Check size={13} strokeWidth={2} className="text-amber-ink" />}</span>
                   <span className="truncate">{s.name}</span>
                 </button>
               ))}

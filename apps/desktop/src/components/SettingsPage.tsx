@@ -216,7 +216,7 @@ function Segmented<T extends string | number>({
             onClick={() => (o.disabled ? undefined : onChange(o.id))}
             className={clsx(
               'relative rounded-full px-3.5 py-1 text-[12.5px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40',
-              value === o.id ? 'text-parchment' : 'text-ink-soft hover:text-amber',
+              value === o.id ? 'text-parchment' : 'text-ink-soft hover:text-amber-ink',
             )}
           >
             {value === o.id && (
@@ -421,7 +421,7 @@ function ModelSection() {
                     p.model === m.id && 'border-amber/60 text-ink',
                   )}
                 >
-                  {p.model === m.id && <Check size={11} strokeWidth={2} className="text-amber" />}
+                  {p.model === m.id && <Check size={11} strokeWidth={2} className="text-amber-ink" />}
                   {m.name}
                 </button>
               </Tip>
@@ -489,7 +489,7 @@ function ApiKeyRow() {
             </Tip>
           )}
           {state && state !== 'unsupported' && !editing && (
-            <button type="button" onClick={() => setEditing(true)} className="chip hover:text-amber">
+            <button type="button" onClick={() => setEditing(true)} className="chip hover:text-amber-ink">
               {state === 'set' ? tr('更换') : tr('设置')}
             </button>
           )}
@@ -799,7 +799,7 @@ function Connectors() {
       <Group>
         {['GitHub', 'GitLab', 'Gitee'].map((n) => (
           <Row key={n} label={n}>
-            <button type="button" onClick={() => notYet(tr('连接 {0}', n))} className="chip hover:text-amber">
+            <button type="button" onClick={() => notYet(tr('连接 {0}', n))} className="chip hover:text-amber-ink">
               {tr('连接')}
             </button>
           </Row>
@@ -819,7 +819,7 @@ function Privacy() {
           <Lock size={14} strokeWidth={1.6} className="text-sage" />
         </Row>
         <Row label={tr('导出数据')} hint={tr('会话、项目和设置（JSON）；不含 API 密钥')}>
-          <button type="button" data-testid="export-data" onClick={() => void saveText(exportFileStamp(), collectLocalData(), 'application/json')} className="chip hover:text-amber">
+          <button type="button" data-testid="export-data" onClick={() => void saveText(exportFileStamp(), collectLocalData(), 'application/json')} className="chip hover:text-amber-ink">
             {tr('导出')}
           </button>
         </Row>
@@ -851,17 +851,17 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
           <span className="font-mono text-[12px] text-sepia">v{VERSION}</span>
         </Row>
         <Row label={tr('快捷键')}>
-          <button type="button" onClick={onShortcuts} className="chip hover:text-amber">
+          <button type="button" onClick={onShortcuts} className="chip hover:text-amber-ink">
             <Keyboard size={11} strokeWidth={1.7} /> Ctrl /
           </button>
         </Row>
         <Row label={tr('检查更新')}>
-          <button type="button" onClick={() => notYet(tr('检查更新'))} className="chip hover:text-amber">
+          <button type="button" onClick={() => notYet(tr('检查更新'))} className="chip hover:text-amber-ink">
             {tr('检查')}
           </button>
         </Row>
         <Row label={tr('开源许可')}>
-          <button type="button" data-testid="open-licenses" onClick={() => setLicenses(true)} className="chip hover:text-amber">
+          <button type="button" data-testid="open-licenses" onClick={() => setLicenses(true)} className="chip hover:text-amber-ink">
             {tr('查看')}
           </button>
         </Row>
@@ -891,7 +891,7 @@ function CoreModePicker() {
             }}
             className={clsx(
               'rounded-full px-4 py-1 text-[13px] transition-colors duration-300',
-              mode === m.id ? 'bg-ink text-parchment' : 'text-ink-soft hover:text-amber',
+              mode === m.id ? 'bg-ink text-parchment' : 'text-ink-soft hover:text-amber-ink',
             )}
           >
             {m.label}

@@ -146,7 +146,7 @@ export function ChatPanel({
               initial={{ scale: 0.94, y: 6 }}
               animate={{ scale: 1, y: 0 }}
               transition={{ type: 'spring', stiffness: 420, damping: 30 }}
-              className="flex flex-col items-center gap-2 text-amber"
+              className="flex flex-col items-center gap-2 text-amber-ink"
             >
               <Paperclip size={22} strokeWidth={1.6} />
               <span className="font-serif text-[16px] text-ink">{t('把文件放到这里')}</span>
@@ -237,7 +237,7 @@ export function ChatPanel({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ pointerEvents: 'none', opacity: 0, y: 6, scale: 0.92 }}
             transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-            className="paper-card absolute bottom-3 left-1/2 inline-flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-sepia hover:text-amber"
+            className="paper-card absolute bottom-3 left-1/2 inline-flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full text-sepia hover:text-amber-ink"
           >
             <ArrowDown size={15} strokeWidth={1.7} />
           </motion.button>
@@ -278,7 +278,7 @@ function CostChip({ run }: { run: RunView }) {
           ratio > 1 || run.phase === 'budget'
             ? 'border-rose-ink/40 text-rose-ink'
             : ratio > 0.8 || run.peakCalls > 0
-              ? 'border-amber/50 text-amber'
+              ? 'border-amber/50 text-amber-ink'
               : '',
         )}
       >
@@ -316,7 +316,7 @@ function TitleButton({ title, menu }: { title: string; menu?: TitleMenu }) {
           open && 'bg-panel-raised',
         )}
       >
-        {menu.starred && <Star size={14} strokeWidth={1.6} className="shrink-0 fill-amber/70 text-amber" />}
+        {menu.starred && <Star size={14} strokeWidth={1.6} className="shrink-0 fill-amber/70 text-amber-ink" />}
         <h2 className="min-w-0 truncate font-serif text-[20px] font-medium tracking-wide text-ink">{title}</h2>
         <ChevronDown size={14} strokeWidth={1.7} className={clsx('shrink-0 text-sepia-muted transition-transform duration-300', open && 'rotate-180')} />
       </button>
@@ -346,7 +346,7 @@ function ShareButton({ actions }: { actions: ShareActions }) {
         type="button"
         data-testid="share"
         onClick={() => setOpen((o) => !o)}
-        className={clsx('chip transition-colors duration-300 hover:text-amber', open && 'text-amber')}
+        className={clsx('chip transition-colors duration-300 hover:text-amber-ink', open && 'text-amber-ink')}
       >
         <Share size={11} strokeWidth={1.7} />
         {t('分享')}

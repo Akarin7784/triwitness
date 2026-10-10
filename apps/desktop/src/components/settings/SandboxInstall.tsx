@@ -38,7 +38,7 @@ interface InstallOut {
 
 const ICON: Record<State, { I: typeof CheckCircle2; cls: string; label: string }> = {
   ok: { I: CheckCircle2, cls: 'text-sage', label: tr('就绪') },
-  stopped: { I: AlertTriangle, cls: 'text-amber', label: tr('未运行') },
+  stopped: { I: AlertTriangle, cls: 'text-amber-ink', label: tr('未运行') },
   missing: { I: XCircle, cls: 'text-rose-ink', label: tr('未安装') },
   'n/a': { I: CircleDashed, cls: 'text-sepia-muted', label: tr('不需要') },
   unknown: { I: CircleDashed, cls: 'text-sepia-muted', label: tr('未知') },
@@ -116,7 +116,7 @@ export function SandboxInstall() {
         <p className={clsx('text-[12.5px]', report?.sandbox_ready ? 'text-sage' : 'text-sepia')}>
           {err ? <span className="text-rose-ink">{err}</span> : report ? (report.sandbox_ready ? tr('沙箱就绪') : tr('沙箱未就绪：任务会用本机工作树（无隔离）')) : tr('检测中…')}
         </p>
-        <button type="button" data-testid="sandbox-detect" onClick={() => void detect()} disabled={checking} className="chip hover:text-amber disabled:opacity-50">
+        <button type="button" data-testid="sandbox-detect" onClick={() => void detect()} disabled={checking} className="chip hover:text-amber-ink disabled:opacity-50">
           <RefreshCw size={11} className={clsx(checking && 'animate-spin')} /> {tr('重新检测')}
         </button>
       </div>
@@ -138,7 +138,7 @@ export function SandboxInstall() {
               </span>
               <span className={clsx('shrink-0 text-[11.5px]', st.cls)}>{c ? st.label : ''}</span>
               {canInstall && target && (
-                <button type="button" data-testid={`install-${target}`} onClick={() => void ask(target)} className="chip shrink-0 border-amber/50 text-amber hover:bg-amber/10">
+                <button type="button" data-testid={`install-${target}`} onClick={() => void ask(target)} className="chip shrink-0 border-amber/50 text-amber-ink hover:bg-amber/10">
                   {target === 'wsl' ? tr('启用') : tr('安装')}
                 </button>
               )}
@@ -168,7 +168,7 @@ export function SandboxInstall() {
                 </pre>
                 <ul className="mt-3 space-y-1 text-[12.5px] text-sepia">
                   <li className="flex items-center gap-1.5">
-                    <ShieldCheck size={13} className="text-amber" /> {tr('Windows 会弹出管理员确认（UAC），你点“是”才会开始')}
+                    <ShieldCheck size={13} className="text-amber-ink" /> {tr('Windows 会弹出管理员确认（UAC），你点“是”才会开始')}
                   </li>
                   {plan.reboot_hint && <li className="pl-[19px]">{plan.note}</li>}
                 </ul>
@@ -186,7 +186,7 @@ export function SandboxInstall() {
                         const active = phase === 'running' && i === step
                         return (
                           <li key={s} className="flex items-center gap-2 text-[12.5px]">
-                            {done ? <CheckCircle2 size={14} className="text-sage" /> : active ? <Loader2 size={14} className="animate-spin text-amber" /> : <CircleDashed size={14} className="text-sepia-muted" />}
+                            {done ? <CheckCircle2 size={14} className="text-sage" /> : active ? <Loader2 size={14} className="animate-spin text-amber-ink" /> : <CircleDashed size={14} className="text-sepia-muted" />}
                             <span className={clsx(done || active ? 'text-ink' : 'text-sepia-muted')}>{s}</span>
                           </li>
                         )
@@ -235,7 +235,7 @@ function Links({ urls }: { urls: string[] }) {
     <ul className="mt-3 space-y-1">
       {urls.map((u) => (
         <li key={u}>
-          <a href={u} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 truncate text-[12px] text-amber underline decoration-amber/40 underline-offset-2">
+          <a href={u} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 truncate text-[12px] text-amber-ink underline decoration-amber/40 underline-offset-2">
             <ExternalLink size={11} className="shrink-0" /> <span className="truncate">{u}</span>
           </a>
         </li>

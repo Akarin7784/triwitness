@@ -64,7 +64,7 @@ export function ModelPicker({
               <span className={clsx(m.available ? 'text-ink' : 'text-sepia-muted')}>{m.name}</span>
               <span className="text-[11px] text-sepia-muted">{m.note}</span>
             </span>
-            {m.id === prefs.model && <Check size={14} strokeWidth={1.8} className="mt-0.5 text-amber" />}
+            {m.id === prefs.model && <Check size={14} strokeWidth={1.8} className="mt-0.5 text-amber-ink" />}
           </button>
         ))}
         <MenuDivider />
@@ -106,7 +106,7 @@ export function ModelPicker({
                   >
                     <span className="flex-1">{t.label}</span>
                     {t.id === DEFAULT_THINKING && <span className="text-[10.5px] text-sepia-muted">{tr('默认')}</span>}
-                    {t.id === prefs.thinking && <Check size={13} strokeWidth={1.8} className="text-amber" />}
+                    {t.id === prefs.thinking && <Check size={13} strokeWidth={1.8} className="text-amber-ink" />}
                   </button>
                 ))}
               </motion.div>

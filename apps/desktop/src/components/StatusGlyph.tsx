@@ -11,7 +11,7 @@ export function StatusGlyph({ phase, className }: { phase: Phase; className?: st
     case 'failed':
       return <X size={12} strokeWidth={2} className={clsx(cls, 'text-rose-ink')} />
     case 'budget':
-      return <Coins size={12} strokeWidth={1.8} className={clsx(cls, 'text-amber')} />
+      return <Coins size={12} strokeWidth={1.8} className={clsx(cls, 'text-amber-ink')} />
     case 'waiting':
       return <Hourglass size={11} strokeWidth={1.8} className={clsx(cls, 'text-sepia')} />
     case 'cancelled':

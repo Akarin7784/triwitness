@@ -86,7 +86,7 @@ export function Sidebar(p: SidebarProps) {
       className="flex h-full shrink-0 flex-col overflow-hidden border-r border-border-soft bg-panel/70"
     >
       <div className={clsx('space-y-px pb-2 pt-3', p.collapsed ? 'px-2' : 'px-3')}>
-        <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber" />} label={t('新会话')} kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
+        <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber-ink" />} label={t('新会话')} kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
         <NavButton collapsed={p.collapsed} icon={<Search size={15} strokeWidth={1.6} />} label={t('搜索')} kbd="Ctrl K" onClick={p.onSearch} testId="nav-search" />
         <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label={t('会话')} onClick={p.onSearch} />
         <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label={t('项目')} onClick={p.onProjects} testId="nav-projects" active={p.view === 'projects'} />
@@ -161,7 +161,7 @@ function ProjectGroup({ name, onOpen, defaultOpen, children }: { name: string; o
           <ChevronRight size={12} strokeWidth={1.8} className={clsx('transition-transform duration-300', open && 'rotate-90')} />
         </button>
         <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-[12.5px] text-ink-soft">
-          {open ? <FolderOpen size={13} strokeWidth={1.6} className="shrink-0 text-amber" /> : <FolderClosed size={13} strokeWidth={1.6} className="shrink-0 text-sepia" />}
+          {open ? <FolderOpen size={13} strokeWidth={1.6} className="shrink-0 text-amber-ink" /> : <FolderClosed size={13} strokeWidth={1.6} className="shrink-0 text-sepia" />}
           <span className="truncate">{name}</span>
         </button>
       </div>

@@ -45,7 +45,7 @@ export function TitleBar({
           </button>
         </Tip>
         <span data-tauri-drag-region className="ml-1.5 flex items-center gap-2 text-ink">
-          <Feather size={13} strokeWidth={1.6} className="pointer-events-none text-amber" />
+          <Feather size={13} strokeWidth={1.6} className="pointer-events-none text-amber-ink" />
           <span data-tauri-drag-region className="font-serif text-[14px] font-semibold tracking-[0.18em]">
             {t('三证')}
           </span>

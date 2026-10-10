@@ -214,7 +214,7 @@ function IconButton({ onClick, label, children }: { onClick: () => void; label: 
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border-soft bg-panel-raised/80 text-sepia transition-colors duration-500 hover:border-amber-soft hover:text-amber"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border-soft bg-panel-raised/80 text-sepia transition-colors duration-500 hover:border-amber-soft hover:text-amber-ink"
     >
       {children}
     </button>

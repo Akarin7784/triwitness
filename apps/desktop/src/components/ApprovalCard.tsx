@@ -39,7 +39,7 @@ export function ApprovalCard({
   }
   return (
     <article data-testid="approval-card" className="paper-card fade-in mr-auto max-w-[720px] rounded-2xl border-amber/40 px-4 py-3.5">
-      <div className="flex items-center gap-2 text-[12px] text-amber">
+      <div className="flex items-center gap-2 text-[12px] text-amber-ink">
         <ShieldQuestion size={14} strokeWidth={1.7} />
         <span className="tracking-[0.12em]">{t('待批')}</span>
         <span className="text-sepia-muted">· {req.tool}</span>

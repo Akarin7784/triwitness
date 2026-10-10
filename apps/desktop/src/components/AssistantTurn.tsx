@@ -64,7 +64,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ pointerEvents: 'none', opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
-                className="rounded-2xl bg-ink px-4 py-3 text-parchment shadow-md"
+                className="user-bubble rounded-2xl bg-ink px-4 py-3 text-parchment shadow-md"
               >
                 <p className="selectable whitespace-pre-wrap text-[14px] leading-[1.8]">{turn.user.text}</p>
               </motion.div>

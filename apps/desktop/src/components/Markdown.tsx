@@ -27,7 +27,7 @@ export function CopyButton({ text, label = t('复制'), className }: { text: str
       }}
       className={
         className ??
-        'inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber'
+        'inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber-ink'
       }
     >
       {done ? <Check size={12} strokeWidth={1.8} /> : <Copy size={12} strokeWidth={1.6} />}
@@ -52,7 +52,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
               aria-label={t('在作品栏打开')}
               data-testid="code-open-artifact"
               onClick={() => window.dispatchEvent(new CustomEvent('tw:open-artifact', { detail: code }))}
-              className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber"
+              className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber-ink"
             >
               <PanelRight size={12} strokeWidth={1.6} />
             </button>
@@ -76,7 +76,7 @@ const COMPONENTS: Components = {
       <code className="rounded bg-parchment-deep/70 px-1 py-px font-mono text-[0.88em] text-espresso">{children}</code>
     ),
   a: ({ children, href }) => (
-    <a href={href} target="_blank" rel="noreferrer" className="text-amber underline decoration-amber/40 underline-offset-2">
+    <a href={href} target="_blank" rel="noreferrer" className="text-amber-ink underline decoration-amber/40 underline-offset-2">
       {children}
     </a>
   ),

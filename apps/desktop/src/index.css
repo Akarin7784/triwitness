@@ -11,6 +11,8 @@
   --color-border: #d4c4a8;
   --color-border-soft: #e4d7c0;
   --color-amber: #c4843a;
+  /* 文字用琥珀：比 amber 深一档，小字也够对比度（UI 审查 2026-10-11） */
+  --color-amber-ink: #9a6326;
   --color-amber-soft: #d4a574;
   --color-amber-glow: #e8c9a0;
   --color-espresso: #4a3428;
@@ -266,7 +268,7 @@ body {
   gap: 6px;
   border-radius: 999px;
   border: 1px solid var(--color-border-soft);
-  background: rgb(250 246 238 / 0.8);
+  background: color-mix(in srgb, var(--color-cream) 80%, transparent);
   padding: 3px 10px;
   font-size: 11px;
   color: var(--color-sepia);
@@ -500,10 +502,11 @@ html {
   --color-ink: #efe3cf;
   --color-ink-soft: #ddcdb5;
   --color-sepia: #b49c80;
-  --color-sepia-muted: #8a7560;
+  --color-sepia-muted: #9c8670;
   --color-border: #4a3c30;
   --color-border-soft: #3a2f26;
   --color-amber: #d79a52;
+  --color-amber-ink: #d79a52;
   --color-amber-soft: #c08a55;
   --color-amber-glow: #6b4a2a;
   --color-espresso: #d8c6ab;
@@ -519,6 +522,10 @@ html {
   background: var(--color-panel-raised);
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px var(--color-shadow);
 }
+:root[data-theme='dark'] .tool-pre { background: var(--color-cream); }
+:root[data-theme='dark'] .stream-paper { background: radial-gradient(ellipse at 50% 0%, rgb(215 154 82 / 0.05), transparent 60%); }
+:root[data-theme='dark'] .ctx-menu { background: rgb(44 35 28 / 0.97); box-shadow: 0 12px 32px rgb(0 0 0 / 0.5); }
+:root[data-theme='dark'] .user-bubble { background: #3a2d22; color: var(--color-ink); }
 :root[data-theme='dark'] .menu-card {
   background: var(--color-panel-raised);
   box-shadow: 0 14px 40px -12px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);

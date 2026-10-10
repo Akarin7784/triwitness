@@ -22,7 +22,7 @@ export function ThinkingBlock({ block }: { block: Block }) {
         onClick={() => !live && setOpen((o) => !o)}
         className={clsx(
           'group inline-flex items-center gap-1.5 rounded-md py-0.5 pr-1.5 text-[12.5px] transition-colors duration-300',
-          live ? 'cursor-default text-amber' : 'text-sepia-muted hover:text-ink-soft',
+          live ? 'cursor-default text-amber-ink' : 'text-sepia-muted hover:text-ink-soft',
         )}
       >
         <Sparkle size={12} strokeWidth={1.7} className={clsx(live && 'pulse-dot')} />
