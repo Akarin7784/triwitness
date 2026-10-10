@@ -28,9 +28,19 @@ def main(
 
 
 @app.command()
-def doctor() -> None:
-    """环境自检（占位；W2-02 实现，只检查不调用 API）。"""
-    typer.echo("tw doctor：尚未实现（W2-02）")
+def doctor(as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（桌面端用）")] = False) -> None:
+    """环境自检：Docker / WSL2 / winget 状态与建议安装项。只读，不联网，不调用 API。"""
+    import json
+
+    from triwitness.sandbox.doctor import detect
+
+    r = detect()
+    if as_json:
+        typer.echo(json.dumps(r.to_dict(), ensure_ascii=False))
+        return
+    for name, c in (("Docker", r.docker), ("WSL2", r.wsl), ("winget", r.winget)):
+        typer.echo(f"{name:7} {c.state:8} {c.detail}{f'（{c.version}）' if c.version else ''}")
+    typer.echo("沙箱就绪" if r.sandbox_ready else f"建议安装：{' / '.join(r.recommended) or '启动 Docker Desktop'}")
 
 
 @app.command("run")
@@ -60,6 +70,12 @@ def run_cmd(
     confirm_unrestricted: Annotated[
         str | None, typer.Option(help="unrestricted（勇士模式）的确认短语；只在 --jsonl 交互运行中有效")
     ] = None,
+    attach: Annotated[
+        list[Path] | None, typer.Option(help="附件（可多次）：文本内联进任务描述，图片 / 二进制只列文件名")
+    ] = None,
+    guidance_file: Annotated[
+        Path | None, typer.Option(help="用户说明文件（个人偏好 / 风格 / 项目说明，UTF-8），放在任务描述前")
+    ] = None,
 ) -> None:
     """以 Executor 单角色修复本地仓库中的一个问题，输出 diff、FinishReport 与成本账单。"""
     import asyncio
@@ -81,6 +97,7 @@ def run_cmd(
     except ValueError as e:
         raise typer.BadParameter(str(e)) from None
     budget, session = _run_overrides(max_cost, permission_mode, confirm_unrestricted, interactive=jsonl)
+    files, guidance = _run_inputs(attach, guidance_file)
     if demo:
         from triwitness.bridge import demo as demo_mod
 
@@ -114,7 +131,8 @@ def run_cmd(
         def start(approver, on_event):  # type: ignore[no-untyped-def]
             return run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
-                             home=home, budget=budget, session=session)  # fmt: skip
+                             home=home, budget=budget, session=session, attachments=files,
+                             guidance=guidance)  # fmt: skip
 
         async def main() -> int:
             bridge = Bridge(stdout_writer(), mode=mode, home=home)
@@ -125,7 +143,7 @@ def run_cmd(
     try:
         out = asyncio.run(run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                                     test_command=test_cmd, verify=verify, budget=budget,  # type: ignore[arg-type]
-                                    session=session))  # fmt: skip
+                                    session=session, attachments=files, guidance=guidance))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None
@@ -141,6 +159,24 @@ def run_cmd(
             f"验证 {ev.verdict}｜风险 {ev.risk_level}（{ev.risk_score} 分）｜复现 {ev.repro_status}｜{ev.clean_env}"
         )
     typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl / evidence.json / pr.md）")
+
+
+def _run_inputs(attach: list[Path] | None, guidance_file: Path | None) -> "tuple[list[Path], str | None]":
+    from triwitness.harness.inputs import MAX_FILES
+
+    files = [p.expanduser() for p in attach or []]
+    if len(files) > MAX_FILES:
+        raise typer.BadParameter(f"--attach 最多 {MAX_FILES} 个")
+    for p in files:
+        if not p.is_file():
+            raise typer.BadParameter(f"附件不存在：{p}")
+    guidance = None
+    if guidance_file is not None:
+        g = guidance_file.expanduser()
+        if not g.is_file():
+            raise typer.BadParameter(f"说明文件不存在：{g}")
+        guidance = g.read_text(encoding="utf-8")
+    return files, guidance
 
 
 def _run_overrides(
@@ -451,6 +487,115 @@ def budget_sync() -> None:
 
 sandbox_app = typer.Typer(add_completion=False, no_args_is_help=True, help="沙箱")
 app.add_typer(sandbox_app, name="sandbox")
+
+
+@sandbox_app.command("install")
+def sandbox_install(
+    target: Annotated[str, typer.Argument(help="docker / wsl")],
+    plan: Annotated[bool, typer.Option("--plan", help="只输出安装计划（JSON），不执行")] = False,
+    yes: Annotated[bool, typer.Option("--yes", help="用户已确认：执行安装（会弹出 UAC 提权）")] = False,
+) -> None:
+    """UI-19：Windows 上一键安装 Docker Desktop（winget）或 WSL2（wsl --install）。必须 --yes 才执行。"""
+    import json
+
+    from triwitness.sandbox.doctor import detect, install_plan, run_install
+
+    if target not in ("docker", "wsl"):
+        raise typer.BadParameter("只能是 docker / wsl")
+    p = install_plan(target, report=detect())  # type: ignore[arg-type]
+    if plan or not yes:
+        typer.echo(json.dumps(p.to_dict(), ensure_ascii=False))
+        if not plan:
+            typer.echo("未执行：需要用户确认后加 --yes", err=True)
+            raise typer.Exit(2)
+        return
+    if not p.supported:
+        typer.echo(json.dumps({"ok": False, "error": p.note, "plan": p.to_dict()}, ensure_ascii=False))
+        raise typer.Exit(2)
+    rc, tail = run_install(p)
+    after = detect()
+    typer.echo(json.dumps({"ok": rc == 0, "exit_code": rc, "output": tail, "plan": p.to_dict(),
+                           "after": after.to_dict()}, ensure_ascii=False))  # fmt: skip
+    raise typer.Exit(0 if rc == 0 else 1)
+
+
+perm_app = typer.Typer(add_completion=False, no_args_is_help=True, help="权限规则（桌面端规则编辑器）")
+app.add_typer(perm_app, name="permissions")
+_LayerOpt = Annotated[str, typer.Option(help="user（~/.triwitness/permissions.yaml）/ local（仓库本地）")]
+_RepoOpt = Annotated[Path | None, typer.Option(help="仓库路径（local 层需要）")]
+
+
+def _perm_call(fn):  # type: ignore[no-untyped-def]
+    import json
+
+    from triwitness.core.errors import ConfigError
+
+    try:
+        out = fn()
+    except ConfigError as e:
+        typer.echo(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        raise typer.Exit(2) from None
+    typer.echo(json.dumps({"ok": True, **out}, ensure_ascii=False))
+
+
+@perm_app.command("list")
+def permissions_list(repo: _RepoOpt = None) -> None:
+    """列出用户层（和仓库本地层）规则，JSON。"""
+    from triwitness.permissions.user_rules import list_rules
+
+    _perm_call(lambda: {"layers": list_rules(repo=repo.expanduser() if repo else None)})
+
+
+@perm_app.command("validate")
+def permissions_validate(kind: Annotated[str, typer.Option()], rule: Annotated[str, typer.Option()]) -> None:
+    """用运行时同一个解析器校验一条规则。"""
+    from triwitness.core.errors import ConfigError
+    from triwitness.permissions.user_rules import validate
+
+    def go() -> dict[str, object]:
+        err = validate(rule, kind)
+        if err:
+            raise ConfigError(err)
+        return {}
+
+    _perm_call(go)
+
+
+@perm_app.command("add")
+def permissions_add(
+    kind: Annotated[str, typer.Option()],
+    rule: Annotated[str, typer.Option()],
+    layer: _LayerOpt = "user",
+    repo: _RepoOpt = None,
+    replace: Annotated[str | None, typer.Option(help="编辑：先校验新规则，再替换这条旧规则")] = None,
+) -> None:
+    """添加（或 --replace 编辑）一条规则；写入前校验。"""
+    from triwitness.core.errors import ConfigError
+    from triwitness.permissions.user_rules import add_rule, remove_rule, validate
+
+    def go() -> dict[str, object]:
+        if layer not in ("user", "local"):
+            raise ConfigError("--layer 只能是 user / local")
+        err = validate(rule, kind)
+        if err:
+            raise ConfigError(err)
+        r = repo.expanduser() if repo else None
+        if replace is not None:
+            remove_rule(replace, kind, layer=layer, repo=r)  # type: ignore[arg-type]
+        return {"path": str(add_rule(rule, kind, layer=layer, repo=r))}  # type: ignore[arg-type]
+
+    _perm_call(go)
+
+
+@perm_app.command("remove")
+def permissions_remove(
+    kind: Annotated[str, typer.Option()], rule: Annotated[str, typer.Option()], layer: _LayerOpt = "user",
+    repo: _RepoOpt = None,
+) -> None:  # fmt: skip
+    """删除一条规则。"""
+    from triwitness.permissions.user_rules import remove_rule
+
+    _perm_call(lambda: {"removed": remove_rule(rule, kind, layer=layer, repo=repo.expanduser() if repo else None)})  # type: ignore[arg-type]
 
 
 @sandbox_app.command("gc")

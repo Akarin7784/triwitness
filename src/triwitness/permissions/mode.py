@@ -73,6 +73,15 @@ class ModeController:
         self.activation = activation
         return p
 
+    def adopt(self, to: Mode, *, task_id: str, reason: str) -> ModeChangedPayload | None:
+        """`tw run --permission-mode` 等任务级设置：load_policy 已校验过（含勇士模式两步确认），
+        这里只记录切换并在任务结束时自动回退；与基础模式相同则不发事件。"""
+        if to == self.mode:
+            return None
+        p = self._emit(to, scope="task", by="user", reason=reason)
+        self._override, self._scope, self._task_id = to, "task", task_id
+        return p
+
     def revert(
         self, *, by: Literal["user", "auto_revert"] = "user", reason: str | None = None
     ) -> ModeChangedPayload | None:

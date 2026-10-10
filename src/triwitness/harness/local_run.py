@@ -21,10 +21,12 @@ from triwitness.core.models import Budget
 from triwitness.cost.report import render_cost_markdown
 from triwitness.harness.approvals import Approver, PermissionGate
 from triwitness.harness.config import HarnessConfig
+from triwitness.harness.inputs import archive_attachments, compose_task
 from triwitness.harness.loop import RouterLike
 from triwitness.harness.run import TaskResult, run_task
 from triwitness.permissions.config import SessionOverrides, load_policy
 from triwitness.permissions.engine import PermissionEngine
+from triwitness.permissions.mode import ModeController
 from triwitness.sandbox.base import SandboxBackend, SandboxSpec, select_backend
 from triwitness.telemetry.trajectory import TrajectoryEvent, TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
@@ -65,6 +67,8 @@ async def run_local(
     verify: VerifyPref = "off",
     on_event: Callable[[TrajectoryEvent], None] | None = None,
     session: SessionOverrides | None = None,
+    attachments: list[Path] | None = None,
+    guidance: str | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -78,9 +82,19 @@ async def run_local(
         rec.subscribe(on_event)
     branch: str | None = None
     result: TaskResult | None = None
+    composed = compose_task(issue, guidance=guidance, attachments=attachments)
+    if attachments:
+        archive_attachments(attachments, run_dir)
+    modes: ModeController | None = None
     try:
         policy = load_policy(repo, backend=choice.backend.name, interactive=approver is not None, home=home,
                              session=session)  # fmt: skip
+        if session is not None and (session.mode is not None or session.unrestricted is not None):
+            base = load_policy(repo, backend=choice.backend.name, interactive=approver is not None, home=home)
+            modes = ModeController(base_mode=base.mode, backend=choice.backend.name, interactive=approver is not None)
+            changed = modes.adopt(policy.mode, task_id=rec.task_id, reason="本次任务设置")
+            if changed is not None:  # 桌面端横幅以这条事件为准（勇士模式 risk=high）
+                rec.emit(changed)
         engine = PermissionEngine(policy, workspace=sb.spec.workdir)
         gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo)
         shell = getattr(getattr(sb, "shell", None), "kind", "bash")
@@ -97,7 +111,7 @@ async def run_local(
             registry=registry,
             sandbox=sb,
             issue_title=title or issue.strip().splitlines()[0][:80],
-            task_prompt=issue,
+            task_prompt=composed.prompt,
             repo=repo.name,
             budget=budget or Budget.for_run(),
             config_hash="tw-run",
@@ -110,6 +124,8 @@ async def run_local(
             stream=on_event is not None,  # 桌面端：写流式增量（model_delta / reasoning_delta）
         )
     finally:
+        if modes is not None and (back := modes.on_task_finished(rec.task_id)) is not None:
+            rec.emit(back)
         finish = getattr(sb, "finish", None)
         if finish is not None:  # none 后端：有改动则提交到 tw/<run_id> 分支保留，没有就连分支一起丢弃
             changed = result is not None and bool(result.diff.strip())
