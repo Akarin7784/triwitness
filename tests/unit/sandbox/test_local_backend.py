@@ -161,6 +161,23 @@ async def test_background_leftovers_killed_after_exit(backend: LocalSandboxBacke
         await sb.finish("discard")
 
 
+async def test_background_holding_stdout_does_not_hang(backend: LocalSandboxBackend, repo: Path) -> None:
+    """后台进程继承了 stdout（如 `npm start &`）时，命令应在主进程退出后立即返回，而不是等到超时。"""
+    sb = await make(backend, repo)
+    try:
+        await sb.write_file("spawn.py", SPAWN)
+        t0 = asyncio.get_running_loop().time()
+        r = await sb.exec(f'"{PY}" spawn.py bg2.pid & while [ ! -s bg2.pid ]; do sleep 0.1; done; echo started',
+                          timeout_s=60)  # fmt: skip
+        assert not r.timed_out and r.exit_code == 0 and "started" in r.stdout
+        assert asyncio.get_running_loop().time() - t0 < 30
+        pid = await _pid(sb.worktree / "bg2.pid")
+        await asyncio.sleep(0.5)
+        assert not _alive(pid)
+    finally:
+        await sb.finish("discard")
+
+
 async def test_output_truncation(backend: LocalSandboxBackend, repo: Path) -> None:
     sb = await make(backend, repo, max_output_bytes=10_000)
     try:

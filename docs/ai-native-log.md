@@ -12,3 +12,4 @@
 - 2026-10-10｜W1-15/16/39/40｜AI 实现沙箱后端协议与选择、docker 后端、规则解析、权限引擎（分层配置、默认规则、审计），并按 Eva 新增的 `unrestricted`（勇士模式）补规格、引擎与 `mode_changed` 事件。AI 写测试时发现并修复：解析器遇 `f() {` 死循环、8.3 短名正则漏判 `PROGRA~1\x`、路径转义规则无法匹配、Bearer 短令牌未脱敏、超时标记竞态。无真实调用（¥0）。
 - 2026-10-10｜W1-41/17/18～21/42｜AI 实现无沙箱本地后端（worktree + 环境白名单 + 进程树终止 + Git Bash 探测）、快照 / 回滚 / diff、工具与 AgentLoop、审批事件接线。AI 写测试时发现并修复：run_tests 记录里 pytest 的 `passed` 计数覆盖了“是否通过”标志（finish 会放过失败测试）、worktree 里的 `.git` 文件被 list_files 列出、改名变量泄露密钥、docker 打包路径。无真实调用（¥0）。
 - 2026-10-10｜W1-24/23/18、W2-33｜AI 实现轨迹记录与回放、单角色任务驱动、“无进展”信号、沙箱池与 `tw sandbox gc`，并把 Windows CI 提前。审查 Windows 路径时发现并修复：Job Object 入作业前的竞态、句柄被截成 32 位的隐患、Windows 上 gc 把所有 worktree 当孤儿、8.3 短名让工作区本身被判为可疑路径、CRLF 文件 edit_file 永远匹配不上。无真实调用（¥0）。
+- 2026-10-10｜W2-33 首轮 Windows CI｜真机暴露 3 个产品问题，已修：Windows 无 IANA 时区库（加 tzdata 依赖，否则 Asia/Shanghai 全部报错）；无法展开的 8.3 短名被当作已展开而丢失标记；后台进程继承 stdout 时命令要等到超时才返回（Linux 同样存在，改为只等主进程退出）。

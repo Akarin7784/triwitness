@@ -127,7 +127,9 @@ def windows_long_name(p: str) -> str | None:
         n = fn(cur, buf, 32768)
         if 0 < n < 32768:
             out = buf.value
-            return out.rstrip("\\") + "\\" + "\\".join(reversed(tail)) if tail else out
+            out = out.rstrip("\\") + "\\" + "\\".join(reversed(tail)) if tail else out
+            # 不存在的尾部里仍有短名形式 → 无法确认真实名字，交给调用方标记 short_name
+            return None if _SHORT_NAME_RE.search(out.replace("\\", "/")) else out
         head, _, leaf = cur.rpartition("\\")
         if not leaf:  # 已到盘符根仍不存在
             return None

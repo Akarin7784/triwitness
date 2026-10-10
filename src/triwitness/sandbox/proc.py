@@ -182,6 +182,13 @@ def _kill_tree(proc: asyncio.subprocess.Process, job: _Job) -> None:
             os.killpg(proc.pid, signal.SIGKILL)
 
 
+async def _exited(proc: asyncio.subprocess.Process) -> None:
+    delay = 0.005
+    while proc.returncode is None:
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 0.05)
+
+
 async def run_tree(
     argv: Sequence[str],
     *,
@@ -225,7 +232,9 @@ async def run_tree(
     timed_out = False
     pumps = asyncio.gather(pump(proc.stdout, out), pump(proc.stderr, err))
     try:
-        await asyncio.wait_for(proc.wait(), timeout_s)
+        # 不用 proc.wait()：它要等所有管道关闭，后台残留进程（`npm start &`）继承了 stdout 时会一直等到超时。
+        # 只看主进程是否已退出（returncode 由子进程监视器设置，与管道无关），退出后再清掉整棵树。
+        await asyncio.wait_for(_exited(proc), timeout_s)
     except TimeoutError:
         timed_out = True
     finally:
