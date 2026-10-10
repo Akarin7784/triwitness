@@ -1,0 +1,366 @@
+@import "tailwindcss";
+
+@theme {
+  --color-parchment: #f7f0e4;
+  --color-parchment-deep: #efe4d0;
+  --color-cream: #faf6ee;
+  --color-ink: #2a1c14;
+  --color-ink-soft: #3c2a1e;
+  --color-sepia: #7a6550;
+  --color-sepia-muted: #a08b74;
+  --color-border: #d4c4a8;
+  --color-border-soft: #e4d7c0;
+  --color-amber: #c4843a;
+  --color-amber-soft: #d4a574;
+  --color-amber-glow: #e8c9a0;
+  --color-espresso: #4a3428;
+  --color-sage: #6b8f71;
+  --color-teal: #5a7d7c;
+  --color-plum: #8b6b7a;
+  --color-rose-ink: #a67c6d;
+  --color-panel: #f3ead9;
+  --color-panel-raised: #faf6ee;
+  --color-shadow: rgb(42 28 20 / 0.08);
+
+  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-sans: "Noto Sans SC", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", ui-monospace, monospace;
+
+  --ease-tender: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-ink: cubic-bezier(0.33, 0.0, 0.2, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-parchment);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-amber) 35%, transparent);
+  color: var(--color-ink);
+}
+
+/* Soft parchment grain */
+.app-grain {
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgb(196 132 58 / 0.06), transparent 50%),
+    radial-gradient(ellipse at 90% 100%, rgb(139 107 122 / 0.05), transparent 45%),
+    linear-gradient(180deg, var(--color-cream), var(--color-parchment) 40%, var(--color-parchment-deep));
+}
+
+.scroll-soft {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.scroll-soft::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll-soft::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ───────── 书写感 ───────── */
+
+/* 行入场：极轻的淡入与左移，像笔尖落到新的一行 */
+.stream-line {
+  animation: lineEnter 520ms var(--ease-tender) both;
+}
+@keyframes lineEnter {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 单字：先以湿润的琥珀浅墨出现，随后沉淀成深墨（“随写随干”） */
+.ink-char {
+  animation: inkSettle 900ms var(--ease-ink) both;
+}
+@keyframes inkSettle {
+  0%   { opacity: 0; color: #c9955a; filter: blur(0.7px); transform: translateY(1.5px); }
+  22%  { opacity: 0.75; color: #b07a3e; filter: blur(0.2px); transform: translateY(0.3px); }
+  60%  { opacity: 1; color: #6b4a33; filter: blur(0); transform: none; }
+  100% { opacity: 1; color: inherit; }
+}
+
+/* 行首墨晕：一次，缓慢散开 */
+.ink-bloom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border-radius: 999px;
+  pointer-events: none;
+  animation: bloomFade 1400ms var(--ease-tender) both;
+}
+@keyframes bloomFade {
+  0%   { opacity: 0.9; transform: scale(0.3); }
+  100% { opacity: 0;   transform: scale(1.6); }
+}
+
+/* 光标：细笔尖，缓慢呼吸；暂停时变淡静止 */
+.caret-ink {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--color-amber);
+  border-radius: 1px;
+  box-shadow: 0 0 6px rgb(196 132 58 / 0.35);
+  animation: caretBreath 1.8s ease-in-out infinite;
+}
+.caret-rest {
+  animation: none;
+  opacity: 0.35;
+}
+@keyframes caretBreath {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.95; }
+}
+
+/* 推流区：顶部轻微晕影，让字像写在纸页里 */
+.stream-paper {
+  background: radial-gradient(ellipse at 50% 0%, rgb(255 250 240 / 0.6), transparent 60%);
+}
+
+.fade-in {
+  animation: lineEnter 480ms var(--ease-tender) both;
+}
+
+/* 减少动态效果：保留内容，去掉所有运动 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ink-bloom { display: none; }
+  .caret-ink { opacity: 0.7; }
+}
+
+.paper-card {
+  background: color-mix(in srgb, var(--color-panel-raised) 92%, white);
+  border: 1px solid var(--color-border-soft);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.55) inset,
+    0 8px 24px var(--color-shadow);
+}
+
+.role-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* ───────── 标题栏 ───────── */
+.titlebar {
+  background: linear-gradient(180deg, rgb(250 246 238 / 0.85), rgb(243 234 217 / 0.6));
+  -webkit-user-select: none;
+}
+.tb-icon {
+  display: inline-flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--color-sepia);
+  transition: background-color 300ms var(--ease-tender), color 300ms var(--ease-tender);
+}
+.tb-icon:hover {
+  background: rgb(212 196 168 / 0.35);
+  color: var(--color-ink);
+}
+.win-btn {
+  display: inline-flex;
+  width: 46px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-sepia);
+  transition: background-color 260ms var(--ease-tender), color 260ms var(--ease-tender);
+}
+.win-btn:hover {
+  background: rgb(212 196 168 / 0.38);
+  color: var(--color-ink);
+}
+.win-btn:active {
+  background: rgb(212 196 168 / 0.55);
+}
+/* 关闭：柔和的赭红，不刺眼 */
+.win-btn-close:hover {
+  background: #b9695a;
+  color: #fbf3ea;
+}
+.win-btn-close:active {
+  background: #a65c4f;
+}
+
+/* ───────── 悬停提示 ───────── */
+.tip {
+  pointer-events: none;
+  position: absolute;
+  z-index: 50;
+  white-space: nowrap;
+  border-radius: 8px;
+  background: var(--color-ink);
+  color: var(--color-parchment);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  padding: 5px 9px;
+  box-shadow: 0 6px 18px rgb(42 28 20 / 0.18);
+  opacity: 0;
+  transition: opacity 220ms var(--ease-tender), transform 220ms var(--ease-tender);
+  transition-delay: 0ms;
+}
+.tip-host:hover > .tip,
+.tip-host:focus-within > .tip {
+  opacity: 1;
+  transition-delay: 380ms;
+}
+.tip-top { bottom: calc(100% + 7px); left: 50%; transform: translate(-50%, 3px); }
+.tip-bottom { top: calc(100% + 7px); left: 50%; transform: translate(-50%, -3px); }
+.tip-left { right: calc(100% + 7px); top: 50%; transform: translate(3px, -50%); }
+.tip-right { left: calc(100% + 7px); top: 50%; transform: translate(-3px, -50%); }
+.tip-host:hover > .tip-top, .tip-host:hover > .tip-bottom { transform: translate(-50%, 0); }
+.tip-host:hover > .tip-left, .tip-host:hover > .tip-right { transform: translate(0, -50%); }
+
+/* 状态小圆点的呼吸 */
+.pulse-dot {
+  animation: caretBreath 2.4s ease-in-out infinite;
+}
+.tip-top-end { bottom: calc(100% + 7px); right: 0; transform: translateY(3px); }
+.tip-top-start { bottom: calc(100% + 7px); left: 0; transform: translateY(3px); }
+.tip-host:hover > .tip-top-end, .tip-host:hover > .tip-top-start { transform: none; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-soft);
+  background: rgb(250 246 238 / 0.8);
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--color-sepia);
+  white-space: nowrap;
+}
+.sb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  padding: 2px 8px;
+  transition: background-color 300ms var(--ease-tender);
+}
+.sb-item:hover { background: rgb(212 196 168 / 0.3); }
+
+/* ───────── 桌面应用：UI 不可选，内容可选 ───────── */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.selectable,
+.selectable *:not(.select-none),
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img,
+svg,
+a {
+  -webkit-user-drag: none;
+}
+html {
+  overscroll-behavior: none;
+}
+
+/* ───────── 自绘右键菜单 ───────── */
+.ctx-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 168px;
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-soft);
+  background: rgb(251 247 240 / 0.97);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.7) inset,
+    0 12px 32px rgb(42 28 20 / 0.16),
+    0 2px 6px rgb(42 28 20 / 0.06);
+  animation: ctxIn 160ms var(--ease-tender) both;
+  transform-origin: top left;
+}
+@keyframes ctxIn {
+  from { opacity: 0; transform: translateY(-3px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.ctx-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--color-ink-soft);
+  transition: background-color 180ms var(--ease-tender), color 180ms var(--ease-tender);
+}
+.ctx-item:disabled {
+  color: var(--color-sepia-muted);
+  opacity: 0.55;
+}
+.ctx-item-active:not(:disabled) {
+  background: rgb(196 132 58 / 0.14);
+  color: var(--color-ink);
+}
+.ctx-item-sep {
+  margin-top: 4px;
+  position: relative;
+}
+.ctx-item-sep::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -3px;
+  height: 1px;
+  background: var(--color-border-soft);
+}
+.ctx-keys {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-sepia-muted);
+}
