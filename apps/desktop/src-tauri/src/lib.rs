@@ -1,4 +1,5 @@
 mod core;
+mod files;
 mod secrets;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -12,6 +13,10 @@ pub fn run() {
             core::core_cancel,
             core::core_read_run,
             core::core_alive,
+            files::attach_save,
+            files::save_download,
+            files::core_read_artifact,
+            files::core_tool,
             secrets::secret_status,
             secrets::secret_set,
             secrets::secret_clear

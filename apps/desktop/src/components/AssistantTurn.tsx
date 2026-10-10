@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Pencil, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Paperclip, Pencil, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 import type { Turn } from '../data/turns'
@@ -33,7 +33,7 @@ export interface TurnActions {
 }
 
 /** 一轮对话：用户消息（气泡）+ 助手（无气泡）：思考块 · 正文 · 工具行交错，收尾摘要与操作条 */
-export function AssistantTurn({ turn, actions }: { turn: Turn; actions?: TurnActions }) {
+export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; actions?: TurnActions; attachments?: string[] }) {
   const [editing, setEditing] = useState(false)
   const [fb, setFb] = useState<Rating | null>(null)
   const last = turn.blocks[turn.blocks.length - 1]
@@ -69,6 +69,16 @@ export function AssistantTurn({ turn, actions }: { turn: Turn; actions?: TurnAct
               </motion.div>
             )}
           </AnimatePresence>
+          {attachments && attachments.length > 0 && (
+            <div data-testid="sent-attachments" className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+              {attachments.map((n) => (
+                <span key={n} className="chip max-w-[200px] truncate">
+                  <Paperclip size={10} strokeWidth={1.7} />
+                  <span className="truncate">{n}</span>
+                </span>
+              ))}
+            </div>
+          )}
           {!editing && (
             <div
               className={clsx(

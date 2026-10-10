@@ -27,6 +27,8 @@ export interface LiveSnapshot {
   error: string | null
   exited: boolean
   exitCode: number | null
+  /** 当前权限模式（核心 mode_changed 事件）；risk=high 时界面常驻红色横幅 */
+  permission: { mode: string; risk: 'normal' | 'high' } | null
 }
 
 export interface TaskMeta {
@@ -43,6 +45,10 @@ export interface TaskMeta {
   issue?: string
   model?: string
   thinking?: string
+  /** 随任务交给核心的附件名（界面显示用） */
+  attachments?: string[]
+  /** 附件落盘路径（重试 / 编辑后重发时原样带上） */
+  attachmentPaths?: string[]
   /** 结束时写入：终态与结论，侧栏用 */
   status?: string | null
   verdict?: string | null
@@ -67,6 +73,7 @@ export class LiveTask implements EventSource {
     error: null,
     exited: false,
     exitCode: null,
+    permission: null,
   }
 
   constructor(id: string) {
@@ -140,6 +147,9 @@ export class LiveTask implements EventSource {
         approvals: this.snapshot.approvals.filter((a) => a.requestId !== rid),
         resolved: { ...this.snapshot.resolved, [rid]: text },
       })
+    } else if (e.kind === 'mode_changed') {
+      const p = e.payload as Record<string, unknown>
+      this.update({ permission: { mode: String(p.to_mode ?? ''), risk: p.risk === 'high' ? 'high' : 'normal' } })
     } else if (e.kind === 'task_finished') {
       this.update({ approvals: [] })
     }

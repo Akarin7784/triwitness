@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ArrowDown, ChevronDown, FileDown, FolderGit2, FolderPlus, Link2, Pencil, Share, ShieldAlert, Star, StarOff, Trash2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { ArrowDown, ChevronDown, ClipboardCopy, FileDown, FolderGit2, FolderPlus, Paperclip, Pencil, Printer, Share, ShieldAlert, Star, StarOff, Trash2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 import type { ChatMessage } from '../types'
@@ -13,7 +13,10 @@ import type { ApprovalScope, ResultMsg } from '../bridge/protocol'
 import type { Turn } from '../data/turns'
 import { AssistantTurn, type TurnActions } from './AssistantTurn'
 import { MenuDivider, MenuItem, Popover } from './Popover'
-import { notYet } from '../lib/toast'
+import { dispatchFiles, type Attachment } from '../lib/attachments'
+import type { Artifact } from '../lib/artifacts'
+import { ArtifactCards } from './ArtifactsPanel'
+import { ProjectPicker } from './ProjectPicker'
 import { useStickToBottom } from '../hooks/useStickToBottom'
 import { Tip } from './Tip'
 import { PHASE_DOT } from './phase'
@@ -22,7 +25,7 @@ interface ChatPanelProps {
   title: string
   run: RunView | null
   messages: ChatMessage[]
-  onSend: (text: string) => void
+  onSend: (text: string, attachments: Attachment[]) => void
   /** 真实任务（UI-10） */
   approvals?: PendingApproval[]
   onApprove?: (requestId: string, decision: 'allow' | 'deny', scope: ApprovalScope) => Promise<void>
@@ -39,8 +42,18 @@ interface ChatPanelProps {
   turnActions?: TurnActions
   /** 标题下拉（星标 / 重命名 / 加入项目 / 删除） */
   titleMenu?: TitleMenu
-  /** 本任务以勇士模式运行：常驻红色横幅 */
+  /** 本任务以勇士模式运行（核心 mode_changed 事件，risk=high）：常驻红色横幅 */
   unrestricted?: boolean
+  /** 分享 / 导出（只在本机） */
+  share?: ShareActions
+  /** 作品卡 */
+  artifacts?: Artifact[]
+  activeArtifact?: string | null
+  onOpenArtifact?: (id: string) => void
+  /** 会话所属项目名（输入框项目签） */
+  project?: string
+  /** 用户这轮带的附件名 */
+  sentAttachments?: string[]
 }
 
 export interface TitleMenu {
@@ -48,6 +61,15 @@ export interface TitleMenu {
   onStar: () => void
   onRename: () => void
   onDelete: () => void
+  projects: { id: string; name: string }[]
+  projectId: string | null
+  onProject: (id: string | null) => void
+}
+
+export interface ShareActions {
+  copyMarkdown: () => void
+  exportMarkdown: () => void
+  exportPdf: () => void
 }
 
 export function ChatPanel({
@@ -68,13 +90,70 @@ export function ChatPanel({
   turnActions,
   titleMenu,
   unrestricted,
+  share,
+  artifacts = [],
+  activeArtifact = null,
+  onOpenArtifact,
+  project,
+  sentAttachments,
 }: ChatPanelProps) {
   const { scrollRef, contentRef, atBottom, toBottom } = useStickToBottom<HTMLDivElement, HTMLDivElement>()
+  const [dropping, setDropping] = useState(false)
+  const depth = useRef(0)
 
   const pending = approvals.length > 0 && !result
+  const hasFiles = (e: React.DragEvent) => [...e.dataTransfer.types].includes('Files')
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col">
+    <section
+      className="relative flex min-w-0 flex-1 flex-col"
+      onDragEnter={(e) => {
+        if (!hasFiles(e)) return
+        e.preventDefault()
+        depth.current++
+        setDropping(true)
+      }}
+      onDragOver={(e) => {
+        if (!hasFiles(e)) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+      }}
+      onDragLeave={(e) => {
+        if (!hasFiles(e)) return
+        depth.current = Math.max(0, depth.current - 1)
+        if (!depth.current) setDropping(false)
+      }}
+      onDrop={(e) => {
+        if (!hasFiles(e)) return
+        e.preventDefault()
+        depth.current = 0
+        setDropping(false)
+        dispatchFiles([...e.dataTransfer.files])
+      }}
+    >
+      <AnimatePresence>
+        {dropping && (
+          <motion.div
+            data-testid="drop-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="pointer-events-none absolute inset-3 z-30 flex items-center justify-center rounded-3xl border-2 border-dashed border-amber/60 bg-parchment/80 backdrop-blur-[2px]"
+          >
+            <motion.div
+              initial={{ scale: 0.94, y: 6 }}
+              animate={{ scale: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+              className="flex flex-col items-center gap-2 text-amber"
+            >
+              <Paperclip size={22} strokeWidth={1.6} />
+              <span className="font-serif text-[16px] text-ink">把文件放到这里</span>
+              <span className="text-[12px] text-sepia-muted">文本会一起交给模型；图片只附文件</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <header className="flex items-center justify-between gap-4 px-8 pb-3 pt-5">
         <TitleButton title={title} menu={titleMenu} />
         <div className="flex shrink-0 items-center gap-2">
@@ -102,7 +181,7 @@ export function ChatPanel({
             )}
           </>
         )}
-        {titleMenu && <ShareButton />}
+        {share && <ShareButton actions={share} />}
         </div>
       </header>
       <AnimatePresence initial={false}>
@@ -132,7 +211,12 @@ export function ChatPanel({
       <div className="relative min-h-0 flex-1">
       <div ref={scrollRef} data-testid="chat-scroll" className="h-full overflow-y-auto scroll-soft px-8 py-5">
       <div ref={contentRef} className="chat-zoom mx-auto max-w-[760px] space-y-3">
-        {turn ? <AssistantTurn key={draftKey} turn={turn} actions={turnActions} /> : messages.map((m) => <MessageBubble key={m.id} message={m} />)}
+        {turn ? (
+          <AssistantTurn key={draftKey} turn={turn} actions={turnActions} attachments={sentAttachments} />
+        ) : (
+          messages.map((m) => <MessageBubble key={m.id} message={m} />)
+        )}
+        {onOpenArtifact && <ArtifactCards items={artifacts} activeId={activeArtifact} onOpen={onOpenArtifact} />}
         {onApprove &&
           approvals.map((a) => (
             <ApprovalCard key={a.requestId} req={a} onDecide={(c) => onApprove(a.requestId, c.decision, c.scope)} />
@@ -168,6 +252,7 @@ export function ChatPanel({
         running={running}
         onStop={onStop}
         allowEmpty={allowEmpty}
+        project={project}
       />
     </section>
   )
@@ -213,8 +298,12 @@ function CostChip({ run }: { run: RunView }) {
 
 function TitleButton({ title, menu }: { title: string; menu?: TitleMenu }) {
   const [open, setOpen] = useState(false)
+  const [page, setPage] = useState<'main' | 'project'>('main')
   if (!menu) return <h2 className="min-w-0 truncate font-serif text-[20px] font-medium tracking-wide text-ink">{title}</h2>
-  const close = () => setOpen(false)
+  const close = () => {
+    setOpen(false)
+    window.setTimeout(() => setPage('main'), 200)
+  }
   return (
     <div className="relative min-w-0">
       <button
@@ -230,18 +319,24 @@ function TitleButton({ title, menu }: { title: string; menu?: TitleMenu }) {
         <h2 className="min-w-0 truncate font-serif text-[20px] font-medium tracking-wide text-ink">{title}</h2>
         <ChevronDown size={14} strokeWidth={1.7} className={clsx('shrink-0 text-sepia-muted transition-transform duration-300', open && 'rotate-180')} />
       </button>
-      <Popover open={open} onClose={close} side="down" className="w-[180px]" testId="title-popover">
-        <MenuItem icon={menu.starred ? StarOff : Star} label={menu.starred ? '取消星标' : '星标'} onClick={() => (close(), menu.onStar())} />
-        <MenuItem icon={Pencil} label="重命名" onClick={() => (close(), menu.onRename())} />
-        <MenuItem icon={FolderPlus} label="加入项目" onClick={() => (close(), notYet('项目'))} />
-        <MenuDivider />
-        <MenuItem icon={Trash2} label="删除" danger onClick={() => (close(), menu.onDelete())} />
+      <Popover open={open} onClose={close} side="down" className="w-[200px]" testId="title-popover">
+        {page === 'main' ? (
+          <>
+            <MenuItem icon={menu.starred ? StarOff : Star} label={menu.starred ? '取消星标' : '星标'} onClick={() => (close(), menu.onStar())} />
+            <MenuItem icon={Pencil} label="重命名" onClick={() => (close(), menu.onRename())} />
+            <MenuItem icon={FolderPlus} label={menu.projectId ? '更换项目' : '加入项目'} testId="title-project" onClick={() => setPage('project')} />
+            <MenuDivider />
+            <MenuItem icon={Trash2} label="删除" danger onClick={() => (close(), menu.onDelete())} />
+          </>
+        ) : (
+          <ProjectPicker menu={menu} onBack={() => setPage('main')} onDone={close} />
+        )}
       </Popover>
     </div>
   )
 }
 
-function ShareButton() {
+function ShareButton({ actions }: { actions: ShareActions }) {
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
   return (
@@ -255,10 +350,12 @@ function ShareButton() {
         <Share size={11} strokeWidth={1.7} />
         分享
       </button>
-      <Popover open={open} onClose={close} side="down" align="right" className="w-[188px]" testId="share-popover">
-        <MenuItem icon={Link2} label="复制分享链接" onClick={() => (close(), notYet('分享'))} />
-        <MenuItem icon={FileDown} label="导出为 Markdown" onClick={() => (close(), notYet('导出'))} />
-        <MenuItem icon={FileDown} label="导出为 PDF" onClick={() => (close(), notYet('导出'))} />
+      <Popover open={open} onClose={close} side="down" align="right" className="w-[236px]" testId="share-popover">
+        <p className="px-3 pb-1.5 pt-1 text-[11.5px] leading-relaxed text-sepia-muted">只在本机：不上传、不生成公开链接</p>
+        <MenuItem icon={ClipboardCopy} label="复制为 Markdown" testId="share-copy" onClick={() => (close(), actions.copyMarkdown())} />
+        <MenuDivider />
+        <MenuItem icon={FileDown} label="导出为 Markdown" testId="share-md" onClick={() => (close(), actions.exportMarkdown())} />
+        <MenuItem icon={Printer} label="导出为 PDF" testId="share-pdf" onClick={() => (close(), actions.exportPdf())} />
       </Popover>
     </div>
   )

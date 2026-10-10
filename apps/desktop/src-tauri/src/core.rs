@@ -49,6 +49,10 @@ pub struct Choices {
     pub permission_mode: Option<String>,
     pub confirm_unrestricted: Option<String>,
     pub allow_peak: Option<bool>,
+    /// `attach_save` 返回的路径（只接受 `<tw_home>/attachments/` 之内）
+    pub attachments: Option<Vec<String>>,
+    /// 个人偏好 + 风格 + 项目说明（纯文本，写成临时文件交给 --guidance-file）
+    pub guidance: Option<String>,
 }
 
 pub const UNRESTRICTED_PHRASE: &str = "我了解风险";
@@ -83,6 +87,22 @@ pub fn choice_args(c: &Choices) -> Vec<String> {
     }
     if c.allow_peak == Some(true) {
         a.push("--allow-peak".to_string());
+    }
+    a
+}
+
+/// 附件 / 用户说明 → `--attach` / `--guidance-file`；不在附件目录内的路径直接丢弃
+pub fn input_args(home: &std::path::Path, c: &Choices, guidance_file: Option<&str>) -> Vec<String> {
+    let mut a = Vec::new();
+    for p in c.attachments.iter().flatten().take(20) {
+        if crate::files::attachment_ok(home, p) {
+            a.push("--attach".to_string());
+            a.push(p.clone());
+        }
+    }
+    if let Some(g) = guidance_file {
+        a.push("--guidance-file".into());
+        a.push(g.to_string());
     }
     a
 }
@@ -157,7 +177,20 @@ pub fn core_start(
         return Err(format!("未知运行方式：{mode}"));
     }
     let mut args = run_args(repo.trim(), &issue, &mode);
-    args.extend(choice_args(&choices.unwrap_or_default()));
+    let choices = choices.unwrap_or_default();
+    args.extend(choice_args(&choices));
+    let home = crate::files::tw_home();
+    let guidance_file = match choices.guidance.as_deref().map(str::trim).filter(|g| !g.is_empty()) {
+        Some(g) => {
+            let dir = home.join("attachments").join("guidance");
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            let f = dir.join(format!("g{}-{}.md", std::process::id(), state.next.load(Ordering::Relaxed)));
+            std::fs::write(&f, g.chars().take(8000).collect::<String>()).map_err(|e| e.to_string())?;
+            Some(f.to_string_lossy().to_string())
+        }
+        None => None,
+    };
+    args.extend(input_args(&home, &choices, guidance_file.as_deref()));
     // 真实模式：凭据库里有密钥就注入；没有则沿用环境变量 DEEPSEEK_API_KEY
     let api_key = if mode == "live" { crate::secrets::read_key() } else { None };
     let tw_core = std::env::var("TW_CORE").ok();
@@ -294,17 +327,31 @@ mod tests {
     fn choices_are_whitelisted() {
         let s = |v: &str| Some(v.to_string());
         let ok = Choices { model: s("deepseek-flash"), thinking: s("high"), backend: s("none"), max_cost: Some(0.5),
-                           permission_mode: s("ask"), confirm_unrestricted: None, allow_peak: Some(true) };
+                           permission_mode: s("ask"), allow_peak: Some(true), ..Default::default() };
         assert_eq!(choice_args(&ok), ["--model", "deepseek-flash", "--thinking", "high", "--backend", "none",
                                       "--max-cost", "0.50", "--permission-mode", "ask", "--allow-peak"]);
         let bad = Choices { model: s("deepseek-v4-pro"), thinking: s("ultra"), backend: s("vm"), max_cost: Some(9.0),
-                            permission_mode: s("unrestricted"), confirm_unrestricted: s("ok"), allow_peak: Some(false) };
+                            permission_mode: s("unrestricted"), confirm_unrestricted: s("ok"), allow_peak: Some(false),
+                            ..Default::default() };
         assert!(choice_args(&bad).is_empty());
         assert!(choice_args(&Choices { max_cost: Some(f64::NAN), ..Default::default() }).is_empty());
         let warrior = Choices { permission_mode: s("unrestricted"), confirm_unrestricted: s(UNRESTRICTED_PHRASE), ..Default::default() };
         assert_eq!(choice_args(&warrior), ["--permission-mode", "unrestricted", "--confirm-unrestricted", UNRESTRICTED_PHRASE]);
         let parsed: Choices = serde_json::from_str(r#"{"maxCost":0.3,"permissionMode":"plan"}"#).unwrap();
         assert_eq!(choice_args(&parsed), ["--max-cost", "0.30", "--permission-mode", "plan"]);
+    }
+
+    #[test]
+    fn inputs_only_from_attachment_folder() {
+        let home = std::env::temp_dir().join(format!("tw-inputs-{}", std::process::id()));
+        let ok = crate::files::save_attachment(&home, "a.md", b"x").unwrap();
+        let c: Choices = serde_json::from_value(serde_json::json!({
+            "attachments": [serde_json::to_value(&ok).unwrap()["path"], "/etc/passwd"], "guidance": "g"
+        })).unwrap();
+        let a = input_args(&home, &c, Some("G.md"));
+        assert_eq!(a.len(), 4);
+        assert_eq!((a[0].as_str(), a[2].as_str(), a[3].as_str()), ("--attach", "--guidance-file", "G.md"));
+        std::fs::remove_dir_all(&home).unwrap();
     }
 
     #[test]

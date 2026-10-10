@@ -110,18 +110,23 @@ function wire(t: LiveTask, transport: CoreTransport, key: string, id: string) {
     .then((un) => detach.set(id, un))
 }
 
-export async function startTask(opts: { repo: string; issue: string; mode: CoreMode } & RunChoices): Promise<string> {
+export async function startTask(
+  opts: { repo: string; issue: string; mode: CoreMode; attachmentNames?: string[]; userAttachments?: string[] } & RunChoices,
+): Promise<string> {
   const transport = await getTransport()
   if (!transport) throw new Error('未连接核心')
   const repo = opts.repo.trim() || (opts.mode === 'demo' ? defaultDemoRepo() : '')
   if (!repo) throw new Error('先选仓库')
-  const key = await transport.start({ ...opts, repo })
+  const { attachmentNames, userAttachments, ...run } = opts
+  const key = await transport.start({ ...run, repo })
   const id = `${Date.now().toString(36)}-${key}`
   const t = new LiveTask(id)
   registry.set(id, t)
   const title = opts.issue.trim().split(/\r?\n/)[0].slice(0, 60) || (opts.mode === 'demo' ? '演示任务' : '新任务')
   setMetas([
-    { id, title, repo, mode: opts.mode, key, startedAt: Date.now(), issue: opts.issue, model: opts.model, thinking: opts.thinking },
+    { id, title, repo, mode: opts.mode, key, startedAt: Date.now(), issue: opts.issue, model: opts.model, thinking: opts.thinking,
+      attachments: attachmentNames?.length ? attachmentNames : undefined,
+      attachmentPaths: userAttachments?.length ? userAttachments : undefined },
     ...metas,
   ])
   if (opts.repo.trim()) storage()?.setItem(REPO_KEY, opts.repo.trim())

@@ -10,6 +10,10 @@ export interface RunChoices {
   permissionMode?: string
   confirmUnrestricted?: string
   allowPeak?: boolean
+  /** attach_save 返回的路径；桥那边只接受 ~/.triwitness/attachments/ 之内 */
+  attachments?: string[]
+  /** 个人偏好 + 风格 + 项目说明（纯文本） */
+  guidance?: string
 }
 
 export const UNRESTRICTED_PHRASE = '我了解风险'

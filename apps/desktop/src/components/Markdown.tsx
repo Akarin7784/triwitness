@@ -1,7 +1,7 @@
 import { memo, useState, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, PanelRight } from 'lucide-react'
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)
@@ -44,7 +44,20 @@ function CodeBlock({ children }: { children?: ReactNode }) {
     <div className="md-code group/code my-3 overflow-hidden rounded-xl border border-border-soft">
       <div className="flex h-7 items-center justify-between bg-parchment-deep/60 pl-3 pr-1">
         <span className="font-mono text-[10.5px] tracking-wide text-sepia-muted">{lang}</span>
-        <CopyButton text={code} label="复制代码" />
+        <span className="flex items-center">
+          {code.split('\n').length >= 6 && (
+            <button
+              type="button"
+              aria-label="在作品栏打开"
+              data-testid="code-open-artifact"
+              onClick={() => window.dispatchEvent(new CustomEvent('tw:open-artifact', { detail: code }))}
+              className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber"
+            >
+              <PanelRight size={12} strokeWidth={1.6} />
+            </button>
+          )}
+          <CopyButton text={code} label="复制代码" />
+        </span>
       </div>
       <pre className="selectable overflow-x-auto scroll-soft bg-cream/80 px-3.5 py-2.5 font-mono text-[12.5px] leading-relaxed text-ink">
         <code>{code}</code>

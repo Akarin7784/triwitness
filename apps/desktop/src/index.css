@@ -584,3 +584,19 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
   background: var(--color-amber);
   border: 2px solid var(--color-cream);
 }
+
+/* 不定进度条（安装中） */
+@keyframes indeterminate {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(330%); }
+}
+.indeterminate {
+  animation: indeterminate 1.4s var(--ease-tender) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}

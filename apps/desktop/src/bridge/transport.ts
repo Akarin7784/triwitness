@@ -13,6 +13,18 @@ export interface StartOptions extends RunChoices {
   mode: CoreMode
 }
 
+export interface SavedAttachment {
+  path: string
+  name: string
+  size: number
+}
+
+export interface ToolOut {
+  code: number | null
+  stdout: string
+  stderr: string
+}
+
 export interface CoreTransport {
   readonly kind: 'tauri' | 'dev'
   start(opts: StartOptions): Promise<string>
@@ -23,6 +35,14 @@ export interface CoreTransport {
   alive(key: string): Promise<boolean>
   /** 订阅某任务的输出行与退出；返回退订 */
   attach(key: string, onLine: (line: string) => void, onExit: (code: number | null) => void): Promise<() => void>
+  /** 附件落盘到 ~/.triwitness/attachments/，返回路径（传给 start 的 attachments） */
+  saveAttachment(name: string, dataB64: string): Promise<SavedAttachment>
+  /** 读任务产物（patch.diff / pr.md / cost.md / finish.json / summary.json）；不存在返回 null */
+  readArtifact(runDir: string, name: string): Promise<string | null>
+  /** 白名单内的核心子命令（doctor / sandbox install / permissions） */
+  tool(args: string[]): Promise<ToolOut>
+  /** 写到“下载”文件夹，返回路径；开发桥返回 null（由浏览器下载） */
+  saveDownload(name: string, dataB64: string): Promise<string | null>
 }
 
 function inTauri(): boolean {
@@ -45,8 +65,26 @@ class TauriTransport implements CoreTransport {
         permissionMode: o.permissionMode,
         confirmUnrestricted: o.confirmUnrestricted,
         allowPeak: o.allowPeak,
+        attachments: o.attachments,
+        guidance: o.guidance,
       },
     })
+  }
+
+  async saveAttachment(name: string, dataB64: string) {
+    return invoke<SavedAttachment>('attach_save', { name, dataB64 })
+  }
+
+  async readArtifact(runDir: string, name: string) {
+    return invoke<string | null>('core_read_artifact', { runDir, name })
+  }
+
+  async tool(args: string[]) {
+    return invoke<ToolOut>('core_tool', { args })
+  }
+
+  async saveDownload(name: string, dataB64: string) {
+    return invoke<string>('save_download', { name, dataB64 })
   }
 
   async send(key: string, line: string) {
@@ -111,6 +149,22 @@ class DevTransport implements CoreTransport {
 
   async alive(key: string) {
     return (await this.post<{ alive: boolean }>('alive', { key })).alive
+  }
+
+  async saveAttachment(name: string, dataB64: string) {
+    return this.post<SavedAttachment>('attach', { name, dataB64 })
+  }
+
+  async readArtifact(runDir: string, name: string) {
+    return (await this.post<{ text: string | null }>('artifact', { runDir, name })).text
+  }
+
+  async tool(args: string[]) {
+    return this.post<ToolOut>('tool', { args })
+  }
+
+  async saveDownload() {
+    return null
   }
 
   async attach(key: string, onLine: (l: string) => void, onExit: (c: number | null) => void) {

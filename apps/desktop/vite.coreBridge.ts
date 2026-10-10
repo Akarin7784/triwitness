@@ -5,15 +5,61 @@
  *   POST /__tw/start {repo,issue,mode,...RunChoices} → { key }
  *   GET  /__tw/stream?key=       → SSE：每行一条 message；结束发 event: exit
  *   POST /__tw/send {key,line} · /__tw/cancel {key} · /__tw/alive {key} · /__tw/read {runDir,afterSeq}
+ *   POST /__tw/attach {name,dataB64} → {path,name,size} · /__tw/artifact {runDir,name} → {text|null}
+ *   POST /__tw/tool {args} → {code,stdout,stderr}（白名单同 Rust tool_args_ok）
  * 核心命令：TW_CORE（JSON 数组），默认 `uv run --project <仓库根> tw`。
  */
-import { spawn, type ChildProcess } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, sep } from 'node:path'
 import { createInterface } from 'node:readline'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import { choiceArgs } from './src/bridge/choices.ts'
+import { toolArgsOk } from './src/bridge/toolArgs.ts'
+
+const ARTIFACTS = ['patch.diff', 'pr.md', 'cost.md', 'finish.json', 'summary.json']
+const twHome = () => process.env.TW_HOME?.trim() || join(homedir(), '.triwitness')
+
+export function cleanName(name: string): string {
+  let s = [...(name.split(/[\\/]/).pop() ?? '')]
+    .map((c) => (c.charCodeAt(0) < 32 || '<>:"|?*'.includes(c) ? '_' : c))
+    .join('')
+    .trim()
+    .replace(/^\.+|\.+$/g, '')
+  if ([...s].length > 120) s = [...s].slice(0, 100).join('') + (/(\.[^.]{1,10})$/.exec(name)?.[1] ?? '')
+  const up = (s.split('.')[0] ?? '').toUpperCase()
+  if (!s || ['CON', 'PRN', 'AUX', 'NUL'].includes(up) || /^(COM|LPT)\d$/.test(up)) return s ? `file_${s}` : 'file'
+  return s
+}
+
+function inside(root: string, p: string): boolean {
+  try {
+    const r = realpathSync(root)
+    const f = realpathSync(p)
+    return (f + sep).startsWith(r + sep) && f !== r && statSync(f).isFile()
+  } catch {
+    return false
+  }
+}
+
+/** 附件 / 用户说明 → --attach / --guidance-file（与 Rust input_args 一致） */
+function inputArgs(b: Record<string, unknown>, key: string): string[] {
+  const a: string[] = []
+  const root = join(twHome(), 'attachments')
+  const list = Array.isArray(b.attachments) ? b.attachments.slice(0, 20) : []
+  for (const p of list) if (typeof p === 'string' && inside(root, p)) a.push('--attach', p)
+  const g = typeof b.guidance === 'string' ? b.guidance.trim() : ''
+  if (g) {
+    const dir = join(root, 'guidance')
+    mkdirSync(dir, { recursive: true })
+    const f = join(dir, `dev-${process.pid}-${key}.md`)
+    writeFileSync(f, [...g].slice(0, 8000).join(''), 'utf8')
+    a.push('--guidance-file', f)
+  }
+  return a
+}
 
 interface Task {
   child: ChildProcess
@@ -89,12 +135,13 @@ export function coreBridge(repoRoot: string): Plugin {
           if (url.pathname === '/start' && req.method === 'POST') {
             const b = await body(req)
             const [cmd, ...pre] = core()
-            const child = spawn(cmd, [...pre, ...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo')), ...choiceArgs(b)], {
+            const key = `d${++n}`
+            const args = [...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo')), ...choiceArgs(b), ...inputArgs(b, key)]
+            const child = spawn(cmd, [...pre, ...args], {
               env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
               stdio: ['pipe', 'pipe', 'pipe'],
               windowsHide: true,
             })
-            const key = `d${++n}`
             const t: Task = { child, lines: [], exit: undefined, subs: new Set() }
             tasks.set(key, t)
             createInterface({ input: child.stdout! }).on('line', (line) => {
@@ -151,6 +198,40 @@ export function coreBridge(repoRoot: string): Plugin {
           if (url.pathname === '/read' && req.method === 'POST') {
             const b = await body(req)
             return json(res, 200, { lines: readRun(String(b.runDir), Number(b.afterSeq ?? -1)) })
+          }
+          if (url.pathname === '/attach' && req.method === 'POST') {
+            const b = await body(req)
+            const bytes = Buffer.from(String(b.dataB64 ?? ''), 'base64')
+            if (bytes.length > 10 * 1024 * 1024) return json(res, 413, { error: '附件超过 10 MB' })
+            const name = cleanName(String(b.name ?? ''))
+            const dir = join(twHome(), 'attachments', `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+            mkdirSync(dir, { recursive: true })
+            const path = join(dir, name)
+            writeFileSync(path, bytes)
+            return json(res, 200, { path, name, size: bytes.length })
+          }
+          if (url.pathname === '/artifact' && req.method === 'POST') {
+            const b = await body(req)
+            const name = String(b.name)
+            if (!ARTIFACTS.includes(name)) return json(res, 403, { error: '不允许读取该文件' })
+            const runDir = String(b.runDir)
+            const runs = join(twHome(), 'runs')
+            const f = join(runDir, name)
+            if (!existsSync(f)) return json(res, 200, { text: null })
+            if (!inside(runs, f)) return json(res, 403, { error: '不在任务目录内' })
+            return json(res, 200, { text: readFileSync(f, 'utf8') })
+          }
+          if (url.pathname === '/tool' && req.method === 'POST') {
+            const b = await body(req)
+            if (!toolArgsOk(b.args)) return json(res, 403, { error: '不允许的核心命令' })
+            const [cmd, ...pre] = core()
+            const r = spawnSync(cmd, [...pre, ...b.args], {
+              env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
+              encoding: 'utf8',
+              windowsHide: true,
+              timeout: 30 * 60_000,
+            })
+            return json(res, 200, { code: r.status, stdout: r.stdout ?? '', stderr: (r.stderr ?? '').slice(-2000) })
           }
           return json(res, 404, { error: 'not found' })
         } catch (e) {

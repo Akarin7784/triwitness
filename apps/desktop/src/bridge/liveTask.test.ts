@@ -81,3 +81,23 @@ describe('LiveTask：回放录制的核心输出（e2e replay）', () => {
     expect(prSummary('# 标题\n\n<!-- x -->\n- a\n- b\n', 2)).toEqual(['# 标题', '- a'])
   })
 })
+
+describe('LiveTask：勇士模式（核心 mode_changed 事件驱动横幅）', () => {
+  it('进入 unrestricted 时 risk=high，任务结束自动回退', () => {
+    const lines = readFileSync(fileURLToPath(new URL('./__fixtures__/demo-warrior.jsonl', import.meta.url)), 'utf8')
+      .split('\n')
+      .filter(Boolean)
+    const t = new LiveTask('w')
+    let high = false
+    for (const line of lines) {
+      t.push(line)
+      if (t.snapshot.permission?.risk === 'high') {
+        high = true
+        expect(t.snapshot.permission.mode).toBe('unrestricted')
+      }
+    }
+    expect(high).toBe(true)
+    expect(t.snapshot.permission?.risk).toBe('normal')
+    expect(t.snapshot.approvals).toEqual([])
+  })
+})

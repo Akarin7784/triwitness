@@ -4,6 +4,7 @@ import clsx from 'clsx'
 import type { PendingApproval } from '../bridge/liveTask'
 import type { ApprovalScope } from '../bridge/protocol'
 import { Tip } from './Tip'
+import { toast } from '../lib/toast'
 
 type Choice = { decision: 'allow' | 'deny'; scope: ApprovalScope }
 
@@ -29,6 +30,7 @@ export function ApprovalCard({
     setErr(null)
     try {
       await onDecide(c)
+      if (c.scope === 'always') toast(`已写入此仓库规则${req.suggestedRule ? `：${req.suggestedRule}` : ''} · 设置 → 权限可编辑`)
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e))
       setBusy(false)
@@ -46,7 +48,7 @@ export function ApprovalCard({
       {req.reason && <p className="mt-1 text-[12px] text-sepia-muted">{req.reason}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         {CHOICES.map((c) => (
-          <Tip key={c.label} label={c.tip}>
+          <Tip key={c.label} label={c.choice.scope === 'always' && req.suggestedRule ? `写入规则 ${req.suggestedRule}` : c.tip}>
             <button
               type="button"
               disabled={busy}

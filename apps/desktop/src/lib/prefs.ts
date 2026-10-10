@@ -37,6 +37,22 @@ export type ChatFont = 'serif' | 'sans' | 'system'
 export const FONT_SCALES = [0.9, 1, 1.1, 1.2] as const
 export type SavedMode = Exclude<PermissionMode, 'unrestricted'>
 
+export type Language = 'zh' | 'en'
+export interface CustomStyle {
+  id: string
+  name: string
+  prompt: string
+}
+/** 预设风格（与 Claude 的 Normal / Concise / Explanatory / Formal 对应） */
+export const PRESET_STYLES = [
+  { id: 'standard', name: '标准', prompt: '' },
+  { id: 'concise', name: '简洁', prompt: '回答简短直接：只给结论与必要步骤，不重复题意，不写客套话。' },
+  { id: 'detailed', name: '详细', prompt: '回答详细：解释思路与取舍，给出背景、步骤和例子，便于学习。' },
+  { id: 'formal', name: '正式', prompt: '用正式、清晰、结构化的书面语回答，适合直接放进文档或评审。' },
+] as const
+export const MAX_ARTIFACT_W = 900
+export const MIN_ARTIFACT_W = 340
+
 export interface Prefs {
   model: string
   thinking: Thinking
@@ -45,7 +61,12 @@ export interface Prefs {
   theme: Theme
   chatFont: ChatFont
   fontScale: number
-  language: 'zh'
+  language: Language
+  /** 当前风格：预设 id 或自定义风格 id */
+  style: string
+  customStyles: CustomStyle[]
+  /** 作品侧栏宽度（px，可拖动） */
+  artifactWidth: number
   /** 个人资料：怎么称呼你、偏好（本机保存） */
   name: string
   about: string
@@ -66,6 +87,9 @@ export const DEFAULTS: Prefs = {
   chatFont: 'serif',
   fontScale: 1,
   language: 'zh',
+  style: 'standard',
+  customStyles: [],
+  artifactWidth: 520,
   name: '',
   about: '',
   backend: 'auto',
@@ -83,7 +107,18 @@ function sanitize(p: Prefs, fallback: Prefs = DEFAULTS): Prefs {
   if (!['light', 'auto', 'dark'].includes(q.theme)) q.theme = fallback.theme
   if (!['serif', 'sans', 'system'].includes(q.chatFont)) q.chatFont = fallback.chatFont
   if (!(FONT_SCALES as readonly number[]).includes(q.fontScale)) q.fontScale = fallback.fontScale
-  q.language = 'zh'
+  if (q.language !== 'en') q.language = 'zh'
+  q.customStyles = Array.isArray(q.customStyles)
+    ? q.customStyles
+        .filter((c) => c && typeof c.id === 'string' && typeof c.name === 'string' && typeof c.prompt === 'string')
+        .slice(0, 20)
+        .map((c) => ({ id: c.id.slice(0, 40), name: c.name.slice(0, 30), prompt: c.prompt.slice(0, 2000) }))
+    : []
+  if (typeof q.style !== 'string' || !(PRESET_STYLES.some((s) => s.id === q.style) || q.customStyles.some((c) => c.id === q.style))) {
+    q.style = fallback.style
+  }
+  if (typeof q.artifactWidth !== 'number' || !Number.isFinite(q.artifactWidth)) q.artifactWidth = fallback.artifactWidth
+  q.artifactWidth = Math.round(Math.min(MAX_ARTIFACT_W, Math.max(MIN_ARTIFACT_W, q.artifactWidth)))
   if (typeof q.name !== 'string') q.name = ''
   if (typeof q.about !== 'string') q.about = ''
   q.name = q.name.slice(0, 40)

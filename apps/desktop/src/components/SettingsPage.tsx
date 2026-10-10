@@ -21,6 +21,8 @@ import {
 import clsx from 'clsx'
 import { Tip } from './Tip'
 import { UnrestrictedDialog } from './ChatDialogs'
+import { RulesEditor } from './settings/RulesEditor'
+import { SandboxInstall } from './settings/SandboxInstall'
 import {
   BUDGET_TOTAL,
   PEAK_WINDOWS,
@@ -43,6 +45,7 @@ import {
   usePrefs,
   useUnrestrictedArmed,
   type ChatFont,
+  type Language,
   type SavedMode,
   type Theme,
 } from '../lib/prefs'
@@ -338,13 +341,18 @@ function General() {
       </Group>
       <Group title="语言">
         <Row label="界面语言">
-          <Segmented
-            value="zh"
-            onChange={() => {}}
+          <Segmented<Language>
+            value={p.language}
+            onChange={(language) => {
+              if (language === p.language) return
+              setPrefs({ language })
+              window.setTimeout(() => window.location.reload(), 120)
+            }}
             options={[
               { id: 'zh', label: '简体中文' },
-              { id: 'en', label: 'English', disabled: true, tip: '即将推出' },
+              { id: 'en', label: 'English' },
             ]}
+            testId="language"
           />
         </Row>
       </Group>
@@ -690,7 +698,11 @@ function Permissions() {
       </Group>
       <UnrestrictedDialog open={dlg} onClose={() => setDlg(false)} onArm={armUnrestricted} />
 
-      <Group title="规则">
+      <Group title="自定义规则">
+        <RulesEditor />
+      </Group>
+
+      <Group title="内置规则">
         <div className="flex items-center justify-between gap-3 border-b border-border-soft/70 py-3">
           <Segmented<RuleKind>
             value={kind}
@@ -698,9 +710,7 @@ function Permissions() {
             options={(['deny', 'ask', 'allow'] as RuleKind[]).map((k) => ({ id: k, label: `${RULE_LABEL[k]} ${RULES[k].length}` }))}
             testId="rule-kind"
           />
-          <button type="button" onClick={() => notYet('编辑规则')} className="chip hover:text-amber">
-            添加规则
-          </button>
+          <span className="text-[11.5px] text-sepia-muted">只读 · 自定义规则优先</span>
         </div>
         <ul data-testid="rule-list" className="selectable max-h-[300px] overflow-y-auto scroll-soft py-2">
           {RULES[kind].map((r) => (
@@ -769,17 +779,8 @@ function Sandbox() {
           ))}
         </div>
       </Group>
-      <Group title="一键安装">
-        <Row label="Docker Desktop" hint="Windows / macOS">
-          <button type="button" onClick={() => notYet('一键安装 Docker')} className="chip hover:text-amber">
-            安装
-          </button>
-        </Row>
-        <Row label="WSL2" hint="Windows">
-          <button type="button" onClick={() => notYet('一键启用 WSL2')} className="chip hover:text-amber">
-            启用
-          </button>
-        </Row>
+      <Group title="环境与一键安装">
+        <SandboxInstall />
       </Group>
     </>
   )

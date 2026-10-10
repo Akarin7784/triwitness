@@ -15,12 +15,15 @@ import {
   StarOff,
   Trash2,
   FolderPlus,
+  ChevronRight,
+  FolderOpen,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 import type { Phase } from '../data/mapEvent'
 import { notYet } from '../lib/toast'
 import { MenuDivider, MenuItem, Popover } from './Popover'
+import { ProjectPicker } from './ProjectPicker'
 import { Tip } from './Tip'
 import { StatusGlyph } from './StatusGlyph'
 
@@ -31,7 +34,11 @@ export interface SidebarItem {
   label?: string
   time?: string
   starred?: boolean
+  /** 所属项目 id */
+  projectId?: string | null
 }
+
+export type SidebarView = 'chat' | 'settings' | 'projects' | 'artifacts'
 
 interface SidebarProps {
   items: SidebarItem[]
@@ -47,6 +54,12 @@ interface SidebarProps {
   onDelete: (id: string) => void
   onStar: (id: string) => void
   settingsActive?: boolean
+  view: SidebarView
+  onProjects: () => void
+  onArtifacts: () => void
+  onOpenProject: (id: string) => void
+  projects: { id: string; name: string }[]
+  onProject: (chat: string, project: string | null) => void
 }
 
 const SPRING = { type: 'spring', stiffness: 380, damping: 36, mass: 0.9 } as const
@@ -57,7 +70,11 @@ const SPRING = { type: 'spring', stiffness: 380, damping: 36, mass: 0.9 } as con
  */
 export function Sidebar(p: SidebarProps) {
   const starred = p.items.filter((c) => c.starred)
-  const recents = p.items.filter((c) => !c.starred)
+  const inProject = (c: SidebarItem) => !!c.projectId && p.projects.some((x) => x.id === c.projectId)
+  const recents = p.items.filter((c) => !c.starred && !inProject(c))
+  const groups = p.projects
+    .map((pr) => ({ ...pr, chats: p.items.filter((c) => !c.starred && c.projectId === pr.id) }))
+    .filter((g) => g.chats.length > 0)
   return (
     <motion.aside
       data-testid="sidebar"
@@ -71,8 +88,8 @@ export function Sidebar(p: SidebarProps) {
         <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber" />} label="新会话" kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
         <NavButton collapsed={p.collapsed} icon={<Search size={15} strokeWidth={1.6} />} label="搜索" kbd="Ctrl K" onClick={p.onSearch} testId="nav-search" />
         <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label="会话" onClick={p.onSearch} />
-        <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label="项目" onClick={() => notYet('项目')} testId="nav-projects" />
-        <NavButton collapsed={p.collapsed} icon={<Boxes size={15} strokeWidth={1.6} />} label="作品" onClick={() => notYet('作品（Artifacts）')} testId="nav-artifacts" />
+        <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label="项目" onClick={p.onProjects} testId="nav-projects" active={p.view === 'projects'} />
+        <NavButton collapsed={p.collapsed} icon={<Boxes size={15} strokeWidth={1.6} />} label="作品" onClick={p.onArtifacts} testId="nav-artifacts" active={p.view === 'artifacts'} />
       </div>
 
       <AnimatePresence initial={false}>
@@ -92,6 +109,18 @@ export function Sidebar(p: SidebarProps) {
                     <ChatRow key={c.id} c={c} {...p} />
                   ))}
                 </motion.div>
+              </>
+            )}
+            {groups.length > 0 && (
+              <>
+                <SectionLabel>项目</SectionLabel>
+                {groups.map((g) => (
+                  <ProjectGroup key={g.id} name={g.name} onOpen={() => p.onOpenProject(g.id)} defaultOpen={g.chats.some((c) => c.id === p.activeId)}>
+                    {g.chats.map((c) => (
+                      <ChatRow key={c.id} c={c} {...p} nested />
+                    ))}
+                  </ProjectGroup>
+                ))}
               </>
             )}
             <SectionLabel>近期</SectionLabel>
@@ -116,6 +145,42 @@ function SectionLabel({ children }: { children: ReactNode }) {
   return <p className="px-4 pb-1.5 pt-4 text-[10.5px] tracking-[0.14em] text-sepia-muted">{children}</p>
 }
 
+function ProjectGroup({ name, onOpen, defaultOpen, children }: { name: string; onOpen: () => void; defaultOpen: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div data-testid="project-group">
+      <div className="group flex items-center rounded-lg pr-1.5 transition-colors duration-300 hover:bg-panel-raised/60">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={open ? `收起 ${name}` : `展开 ${name}`}
+          onClick={() => setOpen((o) => !o)}
+          className="flex h-8 w-7 shrink-0 items-center justify-center pl-2 text-sepia-muted"
+        >
+          <ChevronRight size={12} strokeWidth={1.8} className={clsx('transition-transform duration-300', open && 'rotate-90')} />
+        </button>
+        <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-[12.5px] text-ink-soft">
+          {open ? <FolderOpen size={13} strokeWidth={1.6} className="shrink-0 text-amber" /> : <FolderClosed size={13} strokeWidth={1.6} className="shrink-0 text-sepia" />}
+          <span className="truncate">{name}</span>
+        </button>
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={SPRING}
+            className="space-y-px overflow-hidden"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 function NavButton({
   collapsed,
   icon,
@@ -123,6 +188,7 @@ function NavButton({
   kbd,
   onClick,
   testId,
+  active,
 }: {
   collapsed: boolean
   icon: ReactNode
@@ -130,6 +196,7 @@ function NavButton({
   kbd?: string
   onClick: () => void
   testId?: string
+  active?: boolean
 }) {
   const btn = (
     <button
@@ -140,7 +207,9 @@ function NavButton({
       className={clsx(
         'group flex h-9 items-center gap-2.5 rounded-xl text-[13px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised',
         collapsed ? 'w-9 justify-center' : 'w-full px-3',
+        active && 'bg-panel-raised text-ink',
       )}
+      aria-current={active ? 'page' : undefined}
     >
       <span className="flex w-4 shrink-0 justify-center">{icon}</span>
       {!collapsed && (
@@ -172,15 +241,24 @@ function ChatRow({
   onRename,
   onDelete,
   onStar,
-}: { c: SidebarItem } & SidebarProps) {
+  view,
+  projects,
+  onProject,
+  nested,
+}: { c: SidebarItem; nested?: boolean } & SidebarProps) {
   const [menu, setMenu] = useState(false)
-  const active = !settingsActive && c.id === activeId
+  const [page, setPage] = useState<'main' | 'project'>('main')
+  const closeMenu = () => {
+    setMenu(false)
+    window.setTimeout(() => setPage('main'), 200)
+  }
+  const active = !settingsActive && view === 'chat' && c.id === activeId
   return (
     <motion.div
       layout="position"
       initial={{ opacity: 0, x: -6 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, height: 0, transition: { duration: 0.18 } }}
+      exit={{ opacity: 0, pointerEvents: 'none', height: 0, transition: { duration: 0.18 } }}
       transition={SPRING}
       className="relative"
     >
@@ -192,7 +270,8 @@ function ChatRow({
         onClick={() => onSelect(c.id)}
         onKeyDown={(e) => e.key === 'Enter' && onSelect(c.id)}
         className={clsx(
-          'group flex w-full cursor-default items-center gap-2 rounded-lg py-2 pl-4 pr-1.5 text-left outline-none transition-colors duration-300 focus-visible:ring-1 focus-visible:ring-amber/40',
+          nested ? 'pl-8' : 'pl-4',
+          'group flex w-full cursor-default items-center gap-2 rounded-lg py-2 pr-1.5 text-left outline-none transition-colors duration-300 focus-visible:ring-1 focus-visible:ring-amber/40',
           active || menu ? 'bg-panel-raised shadow-[0_1px_0_rgb(212_196_168/0.6)]' : 'hover:bg-panel-raised/60',
         )}
       >
@@ -217,7 +296,8 @@ function ChatRow({
           data-testid="chat-more"
           onClick={(e) => {
             e.stopPropagation()
-            setMenu((m) => !m)
+            if (menu) closeMenu()
+            else setMenu(true)
           }}
           className={clsx(
             'h-6 w-6 shrink-0 items-center justify-center rounded-md text-sepia transition-colors duration-200 hover:bg-parchment-deep hover:text-ink',
@@ -227,12 +307,22 @@ function ChatRow({
           <MoreHorizontal size={14} strokeWidth={1.7} />
         </button>
       </div>
-      <Popover open={menu} onClose={() => setMenu(false)} side="down" align="right" className="w-[176px]" testId="chat-menu">
-        <MenuItem icon={c.starred ? StarOff : Star} label={c.starred ? '取消星标' : '星标'} onClick={() => (setMenu(false), onStar(c.id))} />
-        <MenuItem icon={Pencil} label="重命名" onClick={() => (setMenu(false), onRename(c.id))} testId="menu-rename" />
-        <MenuItem icon={FolderPlus} label="加入项目" onClick={() => (setMenu(false), notYet('项目'))} />
-        <MenuDivider />
-        <MenuItem icon={Trash2} label="删除" danger onClick={() => (setMenu(false), onDelete(c.id))} testId="menu-delete" />
+      <Popover open={menu} onClose={closeMenu} side="down" align="right" className="w-[196px]" testId="chat-menu">
+        {page === 'main' ? (
+          <>
+            <MenuItem icon={c.starred ? StarOff : Star} label={c.starred ? '取消星标' : '星标'} onClick={() => (closeMenu(), onStar(c.id))} />
+            <MenuItem icon={Pencil} label="重命名" onClick={() => (closeMenu(), onRename(c.id))} testId="menu-rename" />
+            <MenuItem icon={FolderPlus} label={c.projectId ? '更换项目' : '加入项目'} onClick={() => setPage('project')} testId="menu-project" />
+            <MenuDivider />
+            <MenuItem icon={Trash2} label="删除" danger onClick={() => (closeMenu(), onDelete(c.id))} testId="menu-delete" />
+          </>
+        ) : (
+          <ProjectPicker
+            menu={{ projects, projectId: c.projectId ?? null, onProject: (pid) => onProject(c.id, pid) }}
+            onBack={() => setPage('main')}
+            onDone={closeMenu}
+          />
+        )}
       </Popover>
     </motion.div>
   )

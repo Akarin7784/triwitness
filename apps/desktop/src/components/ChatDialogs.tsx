@@ -5,9 +5,8 @@ import { Btn, Dialog, DialogActions } from './Dialog'
 import { SHORTCUTS, keyLabel } from '../lib/shortcuts'
 import { UNRESTRICTED_PHRASE } from '../bridge/choices'
 import type { Rating } from '../lib/chats'
+import { FIELD } from '../lib/ui'
 
-const FIELD =
-  'w-full rounded-xl border border-border-soft bg-cream/70 px-3 py-2 text-[13.5px] text-ink outline-none transition-colors duration-300 placeholder:text-sepia-muted/70 focus:border-amber/60'
 
 export function RenameDialog({
   open,
@@ -60,14 +59,16 @@ export function ConfirmDeleteDialog({
   title,
   onClose,
   onConfirm,
+  heading = '删除会话',
 }: {
   open: boolean
   title: string
   onClose: () => void
   onConfirm: () => void
+  heading?: string
 }) {
   return (
-    <Dialog open={open} onClose={onClose} title="删除会话" testId="delete-dialog">
+    <Dialog open={open} onClose={onClose} title={heading} testId="delete-dialog">
       <p className="text-[13.5px] leading-relaxed text-ink-soft">
         确定删除<span className="font-serif text-ink">「{title}」</span>？
       </p>

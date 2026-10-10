@@ -1,10 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ArrowUp, FolderGit2, Mic, ShieldAlert, Square, X } from 'lucide-react'
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
+import { ArrowUp, FolderGit2, FolderKanban, Mic, Palette, ShieldAlert, Square, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { disarmUnrestricted, getDraft, setDraft, useUnrestrictedArmed } from '../lib/prefs'
-import { notYet } from '../lib/toast'
+import { PRESET_STYLES, disarmUnrestricted, getDraft, setDraft, setPrefs, usePrefs, useUnrestrictedArmed } from '../lib/prefs'
+import { ATTACH_EVENT, MAX_FILES, newAttachment, saveFile, type Attachment } from '../lib/attachments'
+import { notYet, toast } from '../lib/toast'
+import { AttachmentChips } from './Attachments'
 import { ModelPicker } from './ModelPicker'
 import { PlusMenu } from './PlusMenu'
+import { StyleDialog } from './StyleDialog'
 import { Tip } from './Tip'
 
 export interface ComposerRepo {
@@ -14,7 +17,9 @@ export interface ComposerRepo {
 }
 
 interface ComposerProps {
-  onSend: (text: string) => void
+  onSend: (text: string, attachments: Attachment[]) => void
+  /** 会话所属项目（显示项目签） */
+  project?: string
   /** 新会话里显示仓库签 */
   repo?: ComposerRepo
   /** 任务进行中：发送键变成停止键 */
@@ -32,12 +37,36 @@ const MAX_H = 240
  * Claude 式输入框：上面是自动增高的文本区；下面一行左边 +、仓库签，右边模型选择与发送 / 停止。
  * Enter 发送、Shift+Enter 换行、Esc 停止；草稿按会话保存。
  */
-export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey = 'default' }: ComposerProps) {
+export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey = 'default', project }: ComposerProps) {
   const [value, setValue] = useState(() => getDraft(draftKey))
   const [menu, setMenu] = useState<'plus' | 'model' | 'effort' | null>(null)
   const armed = useUnrestrictedArmed()
+  const prefs = usePrefs()
   const [editingRepo, setEditingRepo] = useState(false)
+  const [atts, setAtts] = useState<Attachment[]>([])
+  const [styles, setStyles] = useState(false)
   const ta = useRef<HTMLTextAreaElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const addFiles = (files: File[]) => {
+    setAtts((cur) => {
+      const room = MAX_FILES - cur.length
+      if (files.length > room) toast(`最多 ${MAX_FILES} 个附件`)
+      const fresh = files.slice(0, Math.max(0, room)).map((f) => ({ f, a: newAttachment(f) }))
+      for (const { f, a } of fresh) {
+        void saveFile(f, a).then((done) => setAtts((list) => list.map((x) => (x.id === a.id ? done : x))))
+      }
+      return [...cur, ...fresh.map((x) => x.a)]
+    })
+    ta.current?.focus()
+  }
+  const onFiles = useEffectEvent((files: File[]) => addFiles(files))
+  const removeAtt = (id: string) =>
+    setAtts((list) => {
+      const gone = list.find((a) => a.id === id)
+      if (gone?.preview?.startsWith('blob:')) URL.revokeObjectURL(gone.preview)
+      return list.filter((a) => a.id !== id)
+    })
 
   useLayoutEffect(() => {
     const el = ta.current
@@ -56,23 +85,35 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
     const focus = () => ta.current?.focus()
     const model = () => setMenu('model')
     const effort = () => setMenu('effort')
+    const pick = () => fileInput.current?.click()
+    const files = (e: Event) => onFiles((e as CustomEvent<File[]>).detail ?? [])
     window.addEventListener('tw:focus-composer', focus)
     window.addEventListener('tw:model-menu', model)
     window.addEventListener('tw:effort-menu', effort)
+    window.addEventListener('tw:attach-pick', pick)
+    window.addEventListener(ATTACH_EVENT, files)
     return () => {
       window.removeEventListener('tw:focus-composer', focus)
       window.removeEventListener('tw:model-menu', model)
       window.removeEventListener('tw:effort-menu', effort)
+      window.removeEventListener('tw:attach-pick', pick)
+      window.removeEventListener(ATTACH_EVENT, files)
     }
   }, [])
 
-  const canSend = !running && (!!value.trim() || !!allowEmpty)
+  const saving = atts.some((a) => a.status === 'saving')
+  const canSend = !running && !saving && (!!value.trim() || !!allowEmpty)
   const submit = () => {
     if (!canSend) return
-    onSend(value.trim())
+    onSend(value.trim(), atts.filter((a) => a.status === 'ready'))
     setValue('')
     setDraft(draftKey, '')
+    setAtts([])
   }
+  const styleName =
+    prefs.style === 'standard'
+      ? null
+      : (PRESET_STYLES.find((p) => p.id === prefs.style)?.name ?? prefs.customStyles.find((c) => c.id === prefs.style)?.name)
 
   return (
     <div className="px-8 pb-6 pt-2">
@@ -80,10 +121,29 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
         data-testid="composer"
         className="paper-card mx-auto max-w-[760px] rounded-[22px] px-3 pb-2.5 pt-3 transition-shadow duration-500 focus-within:shadow-[0_6px_28px_-10px_rgb(122_101_80/0.35)]"
       >
+        {atts.length > 0 && <AttachmentChips items={atts} onRemove={removeAtt} />}
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          hidden
+          data-testid="file-input"
+          onChange={(e) => {
+            addFiles([...(e.target.files ?? [])])
+            e.target.value = ''
+          }}
+        />
         <textarea
           ref={ta}
           value={value}
           onChange={(e) => setValue(e.target.value)}
+          onPaste={(e) => {
+            const files = [...e.clipboardData.files]
+            if (files.length) {
+              e.preventDefault()
+              addFiles(files)
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault()
@@ -99,7 +159,27 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
           className="block max-h-[240px] min-h-[44px] w-full resize-none bg-transparent px-1.5 py-1 font-serif text-[15px] leading-relaxed text-ink outline-none placeholder:text-sepia-muted/80"
         />
         <div className="mt-1.5 flex items-center gap-2">
-          <PlusMenu open={menu === 'plus'} onOpenChange={(o) => setMenu(o ? 'plus' : null)} />
+          <PlusMenu
+            open={menu === 'plus'}
+            onOpenChange={(o) => setMenu(o ? 'plus' : null)}
+            onAttach={() => fileInput.current?.click()}
+            onEditStyles={() => setStyles(true)}
+          />
+          {project && (
+            <span data-testid="project-chip" className="chip max-w-[180px] truncate">
+              <FolderKanban size={11} strokeWidth={1.7} />
+              <span className="truncate">{project}</span>
+            </span>
+          )}
+          {styleName && (
+            <span data-testid="style-chip" className="chip fade-in">
+              <Palette size={11} strokeWidth={1.7} />
+              {styleName}
+              <button type="button" aria-label="恢复标准风格" onClick={() => setPrefs({ style: 'standard' })} className="-mr-1 rounded-full p-0.5 hover:bg-panel-raised">
+                <X size={10} strokeWidth={2} />
+              </button>
+            </span>
+          )}
           {repo &&
             (editingRepo ? (
               <input
@@ -145,6 +225,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
           </div>
         </div>
       </div>
+      <StyleDialog open={styles} onClose={() => setStyles(false)} />
     </div>
   )
 }
