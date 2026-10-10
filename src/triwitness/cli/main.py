@@ -106,7 +106,8 @@ def eval_estimate(
 
 @eval_app.command("run")
 def eval_run(
-    suite: Annotated[str, typer.Option(help="evals/tasks/<suite>")] = "dev",
+    suite: Annotated[str, typer.Option(help="evals/suites/<suite>.yaml（dev / test / dev-smoke）")] = "dev",
+    allow_test: Annotated[bool, typer.Option("--allow-test", help="test 集只用于出报告，跑它必须显式确认")] = False,
     config: Annotated[list[Path] | None, typer.Option(help="RunConfig YAML（llm Agent），可多次")] = None,
     agent: Annotated[list[str] | None, typer.Option(help="免费假 Agent：null / oracle / tamper，可多次")] = None,
     attempts: Annotated[int | None, typer.Option(help="覆盖配置里的 attempts")] = None,
@@ -127,7 +128,7 @@ def eval_run(
     from triwitness.eval.grade import Grader
     from triwitness.eval.report import render_markdown, write_report
     from triwitness.eval.runner import DEFAULT_RESULTS, EvalRunner, RunConfig, run_stamp
-    from triwitness.eval.task import discover, load_task
+    from triwitness.eval.task import load_task
     from triwitness.harness.config import HarnessConfig
     from triwitness.llm.gate import PeakGate
 
@@ -140,11 +141,15 @@ def eval_run(
         raise typer.BadParameter("至少给一个 --config 或 --agent")
     import fnmatch
 
-    tasks = [load_task(d) for d in discover(Path("evals/tasks") / suite)]
+    from triwitness.eval.suites import REPORT_ONLY, suite_dirs
+
+    if suite in REPORT_ONLY and not allow_test:
+        raise typer.BadParameter(f"{suite} 集只用于出报告（不要拿来调参）；确认要跑请加 --allow-test")
+    tasks = [load_task(d) for d in suite_dirs(suite)]
     if task:
         tasks = [t for t in tasks if any(fnmatch.fnmatchcase(t.id, pat) for pat in task)]
     if not tasks:
-        raise typer.BadParameter(f"evals/tasks/{suite} 下没有匹配的任务")
+        raise typer.BadParameter(f"套件 {suite} 没有匹配的任务")
     if live:
         os.environ["TW_LLM_MODE"] = "live"  # 每次都真调（尝试之间互不回放），同时写入回放缓存，之后可离线复现
 
