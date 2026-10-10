@@ -171,3 +171,14 @@ async def test_end_to_end_local(tmp_path: Path, backend_cls: type[LocalSandboxBa
         assert (ev.clean_env, ev.risk_level) == ("unverified", "L2")
     assert [r.scope for r in ev.test_runs] == ["repro_base", "repro_patched", "full"]
     assert "### 复现" in render_pr(ev)
+
+
+def test_static_report_feeds_checks_and_risk() -> None:
+    from triwitness.verify.static_checks import SecretHit, StaticReport
+
+    st = StaticReport(checks={"ruff": "pass", "bandit": "fail", "secrets": "fail"}, bandit_medium_high=1,
+                      secrets=[SecretHit(path="calc.py", line=1, kind="aws_access_key")])  # fmt: skip
+    ev = evidence(static=st, static_checks=None)
+    assert ev.static_checks == {"ruff": "pass", "bandit": "fail", "secrets": "fail"}
+    assert ev.risk_level == "L3" and {"security_scan", "floor:secrets"} <= {f.code for f in ev.risk_factors}
+    assert "secrets ❌" in render_pr(ev)

@@ -48,6 +48,7 @@ class RiskInputs(BaseModel):
     bandit_medium_high: int = 0
     clean_env: Literal["verified", "unverified"] = "verified"
     claim_flags: list[str] = Field(default_factory=list)
+    secrets_found: int = 0  # 静态检查的密钥扫描命中数
 
 
 class RiskResult(BaseModel):
@@ -146,6 +147,8 @@ def assess(inp: RiskInputs, policy: RiskPolicy | None = None) -> RiskResult:
     elif ac.min_level == "L2":
         floors.append(("anticheat_review", p.floors.get("anticheat_review", "L2"),
                        "防作弊需复核：" + ", ".join(c for c in ac.codes if c != "existing_test_extended")))  # fmt: skip
+    if inp.secrets_found:
+        floors.append(("secrets", p.floors.get("secrets", "L3"), f"diff 里疑似有密钥（{inp.secrets_found} 处）"))
     if inp.clean_env == "unverified":
         floors.append(("clean_env_unverified", p.floors.get("clean_env_unverified", "L2"),
                        "未在干净环境复跑（无沙箱），禁止自动合并"))  # fmt: skip

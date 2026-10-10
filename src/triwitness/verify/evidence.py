@@ -20,6 +20,7 @@ from triwitness.verify.claim import ClaimVerdict
 from triwitness.verify.diffutil import added_lines, removed_lines, split_patch
 from triwitness.verify.rerun import RerunResult
 from triwitness.verify.risk import RiskInputs, RiskPolicy, RiskResult, assess
+from triwitness.verify.static_checks import StaticReport
 
 Check = Literal["pass", "fail", "skipped"]
 
@@ -65,6 +66,7 @@ def build_evidence(
     regression: TestRun | None = None,
     root_cause: str = "",
     static_checks: dict[str, Check] | None = None,
+    static: StaticReport | None = None,
     verdict: Literal["pass", "fail", "inconclusive"],
     verifier_model: str,
     verifier_confidence: float = 1.0,
@@ -82,6 +84,9 @@ def build_evidence(
     policy: RiskPolicy | None = None,
 ) -> tuple[Evidence, RiskResult]:
     findings = findings or []
+    if static is not None:
+        static_checks = {**static.checks, **(static_checks or {})}
+        bandit_medium_high = max(bandit_medium_high, static.bandit_medium_high)
     ac = anticheat.check(patch)
     claim_flags = list(claim.flags) if claim else []
     # 声明审计判为证据不足时，整体结论不能高于 inconclusive
@@ -101,6 +106,7 @@ def build_evidence(
             bandit_medium_high=bandit_medium_high,
             clean_env=rerun.clean_env,
             claim_flags=claim_flags,
+            secrets_found=len(static.secrets) if static else 0,
         ),
         policy,
     )
