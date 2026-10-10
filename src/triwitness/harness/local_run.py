@@ -2,7 +2,8 @@
 
 select_backend（auto：docker → none）→ 创建沙箱（none：git worktree，分支 tw/<run_id>；docker：copy_in）
 → 权限引擎把关每个工具调用（非交互：ask 视为 deny）→ run_task
-→ 产出 patch.diff、finish.json、cost.md、trajectory.jsonl。
+→ （verify ≠ off）VERIFYING：从同一后端新建一次性沙箱复跑复现 / 回归 + 静态检查（+ Verifier 模型）
+→ 产出 patch.diff、finish.json、cost.md、trajectory.jsonl、evidence.json、pr.md。
 none 后端结束时把改动提交到分支 tw/<run_id>（用户仓库工作区与当前分支不动），由用户决定是否合并。
 """
 
@@ -26,8 +27,10 @@ from triwitness.permissions.engine import PermissionEngine
 from triwitness.sandbox.base import SandboxBackend, SandboxSpec, select_backend
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
+from triwitness.verify.pipeline import EphemeralBackend, VerifyOptions
 
 BackendPref = Literal["auto", "docker", "none"]
+VerifyPref = Literal["off", "deterministic", "model"]
 
 
 @dataclass
@@ -58,6 +61,7 @@ async def run_local(
     approver: Approver | None = None,
     budget: Budget | None = None,
     harness: HarnessConfig | None = None,
+    verify: VerifyPref = "off",
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -77,6 +81,10 @@ async def run_local(
         registry = ToolRegistry(default_tools(shell=shell, names=(harness or HarnessConfig.load()).tools), gate=gate)
         tw_dir = str(getattr(sb, "tw_dir", "/workspace/.tw"))
         agents_md = repo / "AGENTS.md"
+        opts = None
+        if verify != "off":
+            opts = VerifyOptions(backend=EphemeralBackend(choice.backend), spec=SandboxSpec(repo=repo, network="none"),
+                                 mode=verify, router=router if verify == "model" else None)  # type: ignore[arg-type]  # fmt: skip
         result = await run_task(
             recorder=rec,
             router=router,
@@ -92,6 +100,7 @@ async def run_local(
             config=harness,
             tw_dir=tw_dir,
             category="dogfood",
+            verify=opts,
         )
     finally:
         finish = getattr(sb, "finish", None)
@@ -104,10 +113,15 @@ async def run_local(
     assert result is not None
     (run_dir / "patch.diff").write_text(result.diff, encoding="utf-8")
     (run_dir / "cost.md").write_text(render_cost_markdown(result.cost), encoding="utf-8")
+    if result.verification is not None:
+        (run_dir / "evidence.json").write_text(result.verification.evidence.model_dump_json(indent=2), encoding="utf-8")
+        (run_dir / "pr.md").write_text(result.verification.pr_body, encoding="utf-8")
     if result.finish is not None:
         (run_dir / "finish.json").write_text(result.finish.model_dump_json(indent=2), encoding="utf-8")
     (run_dir / "summary.json").write_text(json.dumps({"status": result.status, "backend": choice.backend.name,
                                                       "branch": branch, "steps": result.outcome.steps,
+                                                      "verdict": result.verification.evidence.verdict
+                                                      if result.verification else None,
                                                       "reason": result.outcome.reason}, ensure_ascii=False,
                                                      indent=2), encoding="utf-8")  # fmt: skip
     return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch)

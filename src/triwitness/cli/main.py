@@ -38,6 +38,9 @@ def run_cmd(
     test_cmd: Annotated[str | None, typer.Option(help="run_tests 使用的测试命令")] = None,
     live: Annotated[bool, typer.Option("--live", help="真实调用模型（录制到回放缓存）；默认只回放")] = False,
     allow_peak: Annotated[bool, typer.Option("--allow-peak", help="允许高峰时段（2× 价）")] = False,
+    verify: Annotated[str, typer.Option(help="off / deterministic（默认，不调模型）/ model（加 Verifier 模型）")] = (
+        "deterministic"
+    ),
 ) -> None:
     """以 Executor 单角色修复本地仓库中的一个问题，输出 diff、FinishReport 与成本账单。"""
     import asyncio
@@ -49,13 +52,15 @@ def run_cmd(
 
     if backend not in ("auto", "docker", "none"):
         raise typer.BadParameter("只能是 auto / docker / none")
+    if verify not in ("off", "deterministic", "model"):
+        raise typer.BadParameter("--verify 只能是 off / deterministic / model")
     if live:
         os.environ["TW_LLM_MODE"] = "record"
     elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
         raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
     try:
         out = asyncio.run(run_local(repo, issue, router=Router.deepseek_default(allow_peak=allow_peak), title=title,
-                                    backend=backend, test_command=test_cmd))  # type: ignore[arg-type]  # fmt: skip
+                                    backend=backend, test_command=test_cmd, verify=verify))  # type: ignore[arg-type]  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None
@@ -65,7 +70,12 @@ def run_cmd(
         typer.echo(f"原因：{r.outcome.reason}")
     if out.branch:
         typer.echo(f"改动在分支 {out.branch}（工作区未动）")
-    typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl）")
+    if r.verification is not None:
+        ev = r.verification.evidence
+        typer.echo(
+            f"验证 {ev.verdict}｜风险 {ev.risk_level}（{ev.risk_score} 分）｜复现 {ev.repro_status}｜{ev.clean_env}"
+        )
+    typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl / evidence.json / pr.md）")
 
 
 DEFAULT_RESULTS_DIR = Path("evals/results")

@@ -63,8 +63,12 @@ async def test_tw_run_fixes_toy_repo(toy: Path, tmp_path: Path) -> None:
         backends=[LocalSandboxBackend(home=home)],
         home=home,
         test_command=f'"{Path(sys.executable).as_posix()}" -m pytest -q -p no:cacheprovider',
+        verify="deterministic",
     )
     assert out.result.status == "done", (out.result.outcome, out.result.outcome.reason)
+    ev = json.loads((out.run_dir / "evidence.json").read_text(encoding="utf-8"))
+    assert ev["clean_env"] == "unverified" and ev["risk_level"] in ("L2", "L3")  # none 后端：无干净环境
+    assert "TriWitness 证据包" in (out.run_dir / "pr.md").read_text(encoding="utf-8")
     assert out.backend == "none" and out.branch and out.branch.startswith("tw/")
     # 用户工作区与当前分支不动；改动在 tw/<run_id> 分支上
     assert (toy / "rows.py").read_text() == BUGGY
