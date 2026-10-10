@@ -18,6 +18,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -185,8 +186,18 @@ NOT_FOUND = re.compile(r"ERROR: not found: /workspace/repo/(\S+)")
 FREEZE_LINE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.\-]*(\[[\w,\-]+\])?==[\w.\-+!]+")
 
 
+MIN_FREE_GB = 15  # 磁盘守卫：低于此值不再开始新构建（2026-10-10 vfs 驱动把 126G 共享盘写满两次）
+
+
+def free_gb() -> float:
+    return shutil.disk_usage("/var/lib/docker" if Path("/var/lib/docker").exists() else "/").free / 2**30
+
+
 def build_one(cand: dict, row: dict, staging: str) -> dict:
     t0 = time.monotonic()
+    if free_gb() < MIN_FREE_GB:
+        rec = {k: cand[k] for k in ("instance_id", "source", "created_at")}
+        return rec | {"status": "error", "log": f"disk guard: free {free_gb():.1f}G < {MIN_FREE_GB}G", "seconds": 0}
     rec = _build_one(cand, row, staging)
     # 磁盘：每个任务做完就删镜像（tag 是内容哈希，评测时按需重建；rmi 连带删掉未被共享的父层）。
     # 不能无条件 prune：旧构建器的中间层是悬空镜像，并发 prune 会删掉别的构建正在用的层
@@ -271,6 +282,12 @@ def build(cands_path: Path, ids: list[str], workers: int, log_path: Path, stagin
     with ThreadPoolExecutor(workers) as ex:
         futs = {ex.submit(build_one, cands[i], rows[i], staging): i for i in todo}
         for f in as_completed(futs):
+            if free_gb() < MIN_FREE_GB:  # 已排队的不再开始（正在构建的跑完）；状态记为 error，下次 --retry error 续上
+                for other in futs:
+                    other.cancel()
+                print(f"磁盘守卫：剩余 {free_gb():.1f}G < {MIN_FREE_GB}G，停止排队中的构建", flush=True)
+            if f.cancelled():
+                continue
             r = f.result()
             done[r["instance_id"]] = r
             log_path.write_text(json.dumps(done, ensure_ascii=False, indent=1) + "\n")
@@ -298,7 +315,6 @@ def _set_meta(toml: Path, key: str, value: str) -> None:
 
 def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
     """冻结切分：test = 最新的 leaderboard 任务（污染风险最低）；dev = W1 的 10 个 + filtered 拆分里最新的若干个。"""
-    import shutil
     import tomllib
 
     sys.path.insert(0, str(ROOT / "src"))
