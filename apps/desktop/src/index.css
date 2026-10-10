@@ -364,3 +364,43 @@ html {
   font-size: 10.5px;
   color: var(--color-sepia-muted);
 }
+
+/* ───────── 推流语气 ───────── */
+.tone-error { color: #a65c4f; }
+.tone-warn { color: #9a6a2e; }
+.tone-final {
+  font-family: var(--font-serif);
+  font-size: 13.5px;
+  color: var(--color-ink);
+}
+.stream-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 12px;
+}
+.stream-rule-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-soft);
+}
+.stream-rule-text {
+  white-space: nowrap;
+  max-width: 75%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stream-chapter .stream-rule-text {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  color: var(--color-sepia);
+}
+.stream-divider .stream-rule-line {
+  background: none;
+  border-top: 1px dashed rgb(196 132 58 / 0.45);
+}
+.stream-divider .stream-rule-text {
+  font-size: 11px;
+  color: var(--color-amber);
+}

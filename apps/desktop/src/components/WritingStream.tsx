@@ -12,8 +12,12 @@ interface WritingStreamProps {
   className?: string
   autoStart?: boolean
   title?: string
-  /** 重播时通知数据源从头推送（流式 mock 用） */
+  /** 重播时通知数据源从头推送 */
   onRestart?: () => void
+  /** 笔尖开始写某一行时回调该行（用于让状态 / 对话 / 费用与书写同步）；清空时传 null */
+  onReveal?: (line: StreamLine | null) => void
+  /** 外部给定的当前角色（事件驱动时由 RunView 提供） */
+  activeRole?: StreamLine['role'] | null
 }
 
 export function WritingStream({
@@ -22,6 +26,8 @@ export function WritingStream({
   autoStart = true,
   title = 'SSH',
   onRestart,
+  onReveal,
+  activeRole: roleOverride,
 }: WritingStreamProps) {
   const reduced = useReducedMotion()
   const { chars, visibleCount, playing, done, toggle, restart, progress } = useWritingStream({
@@ -40,6 +46,21 @@ export function WritingStream({
     el.scrollTo({ top: el.scrollHeight, behavior: reduced ? 'auto' : 'smooth' })
   }, [visibleCount, reduced])
 
+  const lineById = useMemo(() => new Map(lines.map((l) => [l.id, l])), [lines])
+
+  // 与书写同步：笔尖进入新的一行时通知外部
+  const revealedRef = useRef<string | null>(null)
+  const onRevealRef = useRef(onReveal)
+  useEffect(() => {
+    onRevealRef.current = onReveal
+  }, [onReveal])
+  useEffect(() => {
+    const id = visibleCount > 0 ? chars[visibleCount - 1]?.lineId ?? null : null
+    if (id === revealedRef.current) return
+    revealedRef.current = id
+    onRevealRef.current?.(id ? lineById.get(id) ?? null : null)
+  }, [visibleCount, chars, lineById])
+
   const grouped = useMemo(() => {
     const out: { lineId: string; role: StreamLine['role']; items: WrittenChar[] }[] = []
     for (let i = 0; i < visibleCount; i++) {
@@ -51,7 +72,9 @@ export function WritingStream({
     return out
   }, [chars, visibleCount])
 
-  const activeRole = grouped[grouped.length - 1]?.role
+  const lastRole = grouped[grouped.length - 1]?.role
+  const activeRole =
+    roleOverride !== undefined ? roleOverride : lastRole && lastRole !== 'system' ? lastRole : null
   const state: 'writing' | 'paused' | 'idle' | 'done' = done
     ? 'done'
     : !playing
@@ -134,8 +157,30 @@ export function WritingStream({
         <div className="selectable font-mono text-[12.5px] leading-[1.85] text-ink-soft">
           {grouped.map((line, li) => {
             const isLast = li === grouped.length - 1
+            const meta = lineById.get(line.lineId)
+            const tone = meta?.tone ?? 'normal'
+            const caret = isLast && !done && (
+              <span className={clsx('caret-ink', !playing && 'caret-rest')} aria-hidden />
+            )
+            const glyphs = line.items.map((c) => (
+              <span key={c.key} className="ink-char">
+                {c.ch}
+              </span>
+            ))
+            if (tone === 'chapter' || tone === 'divider') {
+              return (
+                <div key={line.lineId} className={clsx('stream-line stream-rule', tone === 'chapter' ? 'stream-chapter' : 'stream-divider')}>
+                  <span className="stream-rule-line" />
+                  <span className="stream-rule-text">
+                    {glyphs}
+                    {caret}
+                  </span>
+                  <span className="stream-rule-line" />
+                </div>
+              )
+            }
             return (
-              <div key={line.lineId} className="stream-line relative mb-3 flex gap-3">
+              <div key={line.lineId} className={clsx('stream-line relative mb-3 flex gap-3', `tone-${tone}`)}>
                 <span className="relative mt-[0.62em] flex h-[7px] w-[7px] shrink-0">
                   <span className="ink-bloom" style={{ background: `radial-gradient(circle, ${roleColor[line.role]}55, transparent 70%)` }} />
                   <span className="role-dot" style={{ background: roleColor[line.role] }} />
@@ -147,12 +192,8 @@ export function WritingStream({
                   >
                     {roleLabel[line.role]}
                   </span>
-                  {line.items.map((c) => (
-                    <span key={c.key} className="ink-char">
-                      {c.ch}
-                    </span>
-                  ))}
-                  {isLast && !done && <span className={clsx('caret-ink', !playing && 'caret-rest')} aria-hidden />}
+                  {glyphs}
+                  {caret}
                 </p>
               </div>
             )

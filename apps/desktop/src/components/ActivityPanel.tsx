@@ -1,12 +1,24 @@
 import { WritingStream } from './WritingStream'
-import type { ActivitySession } from '../types'
-import { useMockFeed } from '../hooks/useMockFeed'
+import type { RoleId, StreamLine } from '../types'
 
-export function ActivityPanel({ session }: { session: ActivitySession }) {
-  const feed = useMockFeed(session.lines)
+interface ActivityPanelProps {
+  title: string
+  lines: StreamLine[]
+  activeRole: RoleId | null
+  onRestart: () => void
+  onReveal: (line: StreamLine | null) => void
+}
+
+export function ActivityPanel({ title, lines, activeRole, onRestart, onReveal }: ActivityPanelProps) {
   return (
     <aside className="flex h-full w-[392px] shrink-0 flex-col border-l border-border-soft bg-panel/60">
-      <WritingStream lines={feed.lines} onRestart={feed.restart} title={session.title} />
+      <WritingStream
+        lines={lines}
+        title={title}
+        activeRole={activeRole}
+        onRestart={onRestart}
+        onReveal={onReveal}
+      />
     </aside>
   )
 }

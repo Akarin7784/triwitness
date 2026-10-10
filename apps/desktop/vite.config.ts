@@ -2,6 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
+import { fileURLToPath } from 'node:url'
+
+// 仓库根：fixture 直接从 evals/fixtures/events 导入（?raw），不复制
+const repoRoot = fileURLToPath(new URL('../..', import.meta.url))
 
 // WebView2 / 现代浏览器都支持 woff2：去掉 fontsource 的 woff 回退，安装包少一半体积
 function woff2Only(): Plugin {
@@ -21,6 +25,7 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    fs: { allow: ['.', repoRoot] },
   },
   envPrefix: ['VITE_', 'TAURI_'],
   build: {

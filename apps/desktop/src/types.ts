@@ -17,10 +17,16 @@ export interface ChatMessage {
   timestamp: string
 }
 
+export type StreamTone = 'normal' | 'error' | 'warn' | 'chapter' | 'divider' | 'final'
+
 export interface StreamLine {
   id: string
   role: RoleId
   text: string
+  /** 视觉语气：失败赭红、警示琥珀、状态切换为章节标记、checkpoint 为细分隔线 */
+  tone?: StreamTone
+  /** 对应事件的 seq（事件驱动时） */
+  seq?: number
   /** Optional delay before this line starts (ms) */
   pauseBefore?: number
 }

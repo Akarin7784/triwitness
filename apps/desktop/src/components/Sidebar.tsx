@@ -1,10 +1,19 @@
 import { PenLine, Settings } from 'lucide-react'
 import clsx from 'clsx'
-import type { Conversation } from '../types'
+import type { Phase } from '../data/mapEvent'
 import { Tip } from './Tip'
+import { StatusGlyph } from './StatusGlyph'
+
+export interface SidebarItem {
+  id: string
+  title: string
+  phase?: Phase
+  label?: string
+  time?: string
+}
 
 interface SidebarProps {
-  items: Conversation[]
+  items: SidebarItem[]
   activeId: string
   onSelect: (id: string) => void
   onNew: () => void
@@ -41,6 +50,13 @@ export function Sidebar({ items, activeId, onSelect, onNew, onSettings, settings
                 active ? 'bg-panel-raised shadow-[0_1px_0_rgb(212_196_168/0.6)]' : 'hover:bg-panel-raised/60',
               )}
             >
+              {c.phase && (
+                <Tip label={c.label ?? ''} side="right">
+                  <span className="flex h-4 w-3.5 items-center justify-center">
+                    <StatusGlyph phase={c.phase} />
+                  </span>
+                </Tip>
+              )}
               <span
                 className={clsx(
                   'min-w-0 flex-1 truncate font-serif text-[13px]',
@@ -49,9 +65,9 @@ export function Sidebar({ items, activeId, onSelect, onNew, onSettings, settings
               >
                 {c.title}
               </span>
-              <span className="shrink-0 text-[10px] text-sepia-muted opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                {c.updatedAt}
-              </span>
+              {c.time && (
+                <span className="shrink-0 font-mono text-[10px] tabular-nums text-sepia-muted">{c.time}</span>
+              )}
             </button>
           )
         })}
