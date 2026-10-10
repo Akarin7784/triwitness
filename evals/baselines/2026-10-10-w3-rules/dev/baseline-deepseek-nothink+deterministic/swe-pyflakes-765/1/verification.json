@@ -1,0 +1,62 @@
+{
+  "mode": "deterministic",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [],
+  "reasons": [],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest tests/tw_repro/test_issue_760.py -q",
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.542,
+      "log_ref": "7e98bc89efc9:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest tests/tw_repro/test_issue_760.py -q",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.409,
+      "log_ref": "02a8267a8b95:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest --continue-on-collection-errors -q",
+      "passed": 702,
+      "failed": 0,
+      "skipped": 23,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.554,
+      "log_ref": "a671a3bdc72d:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [
+    "防作弊提示：existing_test_extended",
+    "Executor 自报未覆盖的风险 2 条"
+  ],
+  "model_skipped": null
+}

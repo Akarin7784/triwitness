@@ -1,0 +1,62 @@
+{
+  "mode": "deterministic",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 50,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_modified",
+    "skip_or_xfail_added"
+  ],
+  "claim_flags": [],
+  "reasons": [
+    "需人审：skip_or_xfail_added"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_81.py",
+      "passed": 5,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.878,
+      "log_ref": "5e3f55a4d41b:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_81.py",
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.729,
+      "log_ref": "f8fe0ec1fdb0:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest --continue-on-collection-errors -q",
+      "passed": 706,
+      "failed": 0,
+      "skipped": 1,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 4.858,
+      "log_ref": "a0e426f08050:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [],
+  "model_skipped": null
+}

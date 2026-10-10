@@ -1,0 +1,61 @@
+{
+  "mode": "deterministic",
+  "verdict": "pass",
+  "deterministic": "pass",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "39 个失败在基线上就存在，不计回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_mi_claims.py",
+      "passed": 0,
+      "failed": 5,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.949,
+      "log_ref": "4bed99af6387:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_mi_claims.py",
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 0.654,
+      "log_ref": "d78fae4d1bef:repro_patched"
+    },
+    {
+      "scope": "full",
+      "command": "python -m pytest --continue-on-collection-errors -q",
+      "passed": 103,
+      "failed": 26,
+      "skipped": 12,
+      "errors": 13,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 41.973,
+      "log_ref": "ff5003d0447a:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [
+    "Executor 自报未覆盖的风险 6 条"
+  ],
+  "model_skipped": null
+}

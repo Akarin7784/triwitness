@@ -1,0 +1,5 @@
+{
+  "baseline-deepseek-nothink+deterministic/lru-get-refresh/1": "APIError: 409 Client Error for http+docker://localhost/v1.45/containers/ea170c619e1f0922b57bd62919b6b5e3cc5510542c0c8c75ec6e880da48d5d06?v=False&link=False&force=True: Conflict (\"removal of container ea170c619e1f0922b57bd62919b6b5e3cc5510542c0c8c75ec6e880da48d5d06 is already in progress\")",
+  "baseline-deepseek-nothink+deterministic/duration-minutes/1": "APIError: 409 Client Error for http+docker://localhost/v1.45/containers/b659c207e71489630048d26886d7640b38eeb072b3a2d82db2cdf0e47065c19e?v=False&link=False&force=True: Conflict (\"removal of container b659c207e71489630048d26886d7640b38eeb072b3a2d82db2cdf0e47065c19e is already in progress\")",
+  "baseline-deepseek-nothink+deterministic/csv-blank-line/1": "NotFound: 404 Client Error for http+docker://localhost/v1.45/exec/f38e4c902f687a4d065e2f4eb576feb9651b6ddcd5002c9582ece1c0255c441b/json: Not Found (\"No such exec instance: f38e4c902f687a4d065e2f4eb576feb9651b6ddcd5002c9582ece1c0255c441b\")"
+}

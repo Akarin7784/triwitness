@@ -1,0 +1,180 @@
+{
+  "old": {
+    "n": 48,
+    "verified_pass": 20,
+    "true_pass": 17,
+    "resolved": 28,
+    "precision": 0.85,
+    "recall": 0.6071,
+    "false_pass": 3,
+    "false_alarm": 11,
+    "known_false_success": 8,
+    "false_success_caught": 5,
+    "false_success_missed": [
+      "swe-canvasapi-716",
+      "swe-conan-19750",
+      "swe-microsoft-authentication-library-for-python-730"
+    ],
+    "blind_regression": [
+      "swe-dymos-1021",
+      "swe-huggingface_hub-4056",
+      "swe-isort-2491",
+      "swe-leanclient-24",
+      "swe-lilio-58",
+      "swe-marimo-8401",
+      "swe-microsoft-authentication-library-for-python-730",
+      "swe-opensandbox-816",
+      "swe-spikeinterface-3047",
+      "swe-spikeinterface-3778"
+    ],
+    "related_scope": [],
+    "skip_flagged": [
+      "swe-copier-2646",
+      "swe-llm-sandbox-101",
+      "swe-spikeinterface-3047"
+    ],
+    "by_risk": {
+      "L0": "14/18",
+      "L1": "3/9",
+      "L2": "9/18",
+      "L3": "2/3"
+    },
+    "verdicts": {
+      "inconclusive": 21,
+      "pass": 20,
+      "fail": 7
+    }
+  },
+  "new": {
+    "n": 48,
+    "verified_pass": 17,
+    "true_pass": 15,
+    "resolved": 28,
+    "precision": 0.8824,
+    "recall": 0.5357,
+    "false_pass": 2,
+    "false_alarm": 13,
+    "known_false_success": 8,
+    "false_success_caught": 6,
+    "false_success_missed": [
+      "swe-canvasapi-716",
+      "swe-microsoft-authentication-library-for-python-730"
+    ],
+    "blind_regression": [
+      "swe-conan-19750",
+      "swe-copier-2646",
+      "swe-faststream-2701",
+      "swe-huggingface_hub-4056",
+      "swe-marimo-6819",
+      "swe-marimo-8401",
+      "swe-spikeinterface-3047",
+      "swe-spikeinterface-3778",
+      "swe-stumpy-1015"
+    ],
+    "related_scope": [
+      "swe-scrapy-7351_interface"
+    ],
+    "skip_flagged": [
+      "swe-copier-2646",
+      "swe-llm-sandbox-101",
+      "swe-spikeinterface-3047"
+    ],
+    "by_risk": {
+      "L0": "13/17",
+      "L1": "5/11",
+      "L2": "10/20",
+      "L3": "0/0"
+    },
+    "verdicts": {
+      "inconclusive": 24,
+      "pass": 17,
+      "fail": 7
+    }
+  },
+  "changes": [
+    {
+      "task": "swe-conan-19750",
+      "set": "test",
+      "resolved": false,
+      "false_success": true,
+      "old": "pass/L0",
+      "new": "fail/L0",
+      "new_reasons": [
+        "新增失败 2 个：<command>, <timeout>"
+      ]
+    },
+    {
+      "task": "swe-copier-2646",
+      "set": "test",
+      "resolved": true,
+      "false_success": false,
+      "old": "fail/L3",
+      "new": "fail/L2",
+      "new_reasons": [
+        "新增失败 2 个：<command>, <timeout>",
+        "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1"
+      ]
+    },
+    {
+      "task": "swe-faststream-2701",
+      "set": "test",
+      "resolved": true,
+      "false_success": false,
+      "old": "pass/L0",
+      "new": "inconclusive/L1",
+      "new_reasons": [
+        "回归盲区：full 一个测试都没通过（失败 1 / 错误 0），测试套件没真正跑起来，无回归证据",
+        "2 个失败在基线上就存在，不计回归"
+      ]
+    },
+    {
+      "task": "swe-llm-sandbox-101",
+      "set": "test",
+      "resolved": false,
+      "false_success": true,
+      "old": "fail/L3",
+      "new": "inconclusive/L2",
+      "new_reasons": [
+        "需人审：skip_or_xfail_added"
+      ]
+    },
+    {
+      "task": "swe-ro-crate-py-171",
+      "set": "dev",
+      "resolved": true,
+      "false_success": false,
+      "old": "inconclusive/L2",
+      "new": "fail/L1",
+      "new_reasons": [
+        "新增失败 1 个：tests/tw_repro/test_issue_103.py::test_issue_workflow[False]",
+        "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+        "11 个失败在基线上就存在，不计回归"
+      ]
+    },
+    {
+      "task": "swe-spikeinterface-3047",
+      "set": "test",
+      "resolved": true,
+      "false_success": false,
+      "old": "fail/L3",
+      "new": "inconclusive/L2",
+      "new_reasons": [
+        "回归盲区：full 一个测试都没通过（失败 1 / 错误 0），测试套件没真正跑起来，无回归证据",
+        "需人审：skip_or_xfail_added",
+        "复现状态 not_applicable"
+      ]
+    },
+    {
+      "task": "swe-spikeinterface-3778",
+      "set": "test",
+      "resolved": true,
+      "false_success": false,
+      "old": "pass/L2",
+      "new": "inconclusive/L2",
+      "new_reasons": [
+        "回归盲区：full 一个测试都没通过（失败 1 / 错误 0），测试套件没真正跑起来，无回归证据",
+        "2 个失败在基线上就存在，不计回归"
+      ]
+    }
+  ]
+}

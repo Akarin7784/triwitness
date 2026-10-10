@@ -1,0 +1,42 @@
+{
+  "mode": "deterministic",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 60,
+  "risk_level": "L2",
+  "anticheat_flags": [
+    "existing_test_extended"
+  ],
+  "claim_flags": [
+    "repro_missing"
+  ],
+  "reasons": [
+    "复现状态 not_applicable",
+    "声明审计：repro_missing",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "121 个失败在基线上就存在，不计回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest --continue-on-collection-errors -q",
+      "passed": 50,
+      "failed": 1,
+      "skipped": 9,
+      "errors": 120,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 6.556,
+      "log_ref": "136c8be3402c:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [],
+  "model_skipped": null
+}

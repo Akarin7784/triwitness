@@ -1,0 +1,22 @@
+{
+  "mode": "deterministic",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 0,
+  "risk_level": "L0",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "没有改动"
+  ],
+  "test_runs": [],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [],
+  "model_skipped": null
+}

@@ -1,0 +1,62 @@
+{
+  "mode": "deterministic",
+  "verdict": "inconclusive",
+  "deterministic": "inconclusive",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "reproduced",
+  "clean_env": "verified",
+  "risk_score": 35,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [
+    "repro_not_tied_to_issue"
+  ],
+  "reasons": [
+    "声明审计：repro_not_tied_to_issue",
+    "全量基线一个测试都没通过（收集期报错 / 断网）：改跑与改动相关的 5 个测试文件"
+  ],
+  "test_runs": [
+    {
+      "scope": "repro_base",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_7246.py",
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 2.309,
+      "log_ref": "28956516a735:repro_base"
+    },
+    {
+      "scope": "repro_patched",
+      "command": "python -m pytest -q tests/tw_repro/test_issue_7246.py",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 1.732,
+      "log_ref": "0da4cc4becc7:repro_patched"
+    },
+    {
+      "scope": "related",
+      "command": "python -m pytest --continue-on-collection-errors -q tests/test_dupefilters.py tests/test_engine.py tests/test_pqueues.py tests/test_scheduler.py tests/test_scheduler_base.py",
+      "passed": 77,
+      "failed": 0,
+      "skipped": 2,
+      "errors": 0,
+      "new_failures": [],
+      "flaky": [],
+      "duration_s": 10.059,
+      "log_ref": "c05211dfbeeb:related"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [],
+  "model_skipped": null
+}

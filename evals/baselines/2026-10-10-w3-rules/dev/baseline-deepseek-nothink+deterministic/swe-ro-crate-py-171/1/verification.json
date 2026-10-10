@@ -1,0 +1,44 @@
+{
+  "mode": "deterministic",
+  "verdict": "fail",
+  "deterministic": "fail",
+  "model_verdict": null,
+  "model_confidence": null,
+  "verifier_path": null,
+  "repro_status": "not_applicable",
+  "clean_env": "verified",
+  "risk_score": 25,
+  "risk_level": "L1",
+  "anticheat_flags": [],
+  "claim_flags": [],
+  "reasons": [
+    "新增失败 1 个：tests/tw_repro/test_issue_103.py::test_issue_workflow[False]",
+    "没有复现测试（repro_status = not_applicable）：证据改为行为对比 / 静态论证，风险至少 L1",
+    "11 个失败在基线上就存在，不计回归"
+  ],
+  "test_runs": [
+    {
+      "scope": "full",
+      "command": "python -m pytest --continue-on-collection-errors -q",
+      "passed": 138,
+      "failed": 12,
+      "skipped": 0,
+      "errors": 4,
+      "new_failures": [
+        "tests/tw_repro/test_issue_103.py::test_issue_workflow[False]"
+      ],
+      "flaky": [
+        "tests/tw_repro/test_issue_103.py::test_add_dataset_copies_into_crate",
+        "tests/tw_repro/test_issue_103.py::test_add_file_and_dataset_errors",
+        "tests/tw_repro/test_issue_103.py::test_add_file_copies_into_crate",
+        "tests/tw_repro/test_issue_103.py::test_issue_workflow[True]"
+      ],
+      "duration_s": 5.055,
+      "log_ref": "4fd2975d61c6:full"
+    }
+  ],
+  "cost_cny": 0.0,
+  "model_judgments": [],
+  "thin_evidence": [],
+  "model_skipped": null
+}
