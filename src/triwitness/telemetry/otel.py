@@ -2,7 +2,7 @@
 
 span 树：`tw.task` → `invoke_agent {role}` → `chat {model}` / `execute_tool {tool}`。
 - 时间取自事件本身：chat 的开始 = ts − latency_ms，工具的开始 = ts − duration_ms；
-- 属性用 OTel GenAI 语义约定（gen_ai.*，见 SEMCONV）+ tw.* 自定义属性；
+- 属性用 OTel GenAI 语义约定（gen_ai.*，版本见 SEMCONV_URL）+ tw.* 自定义属性；
 - 默认不记录任何消息内容；`TW_TRACE_CONTENT=1` 时只附加已脱敏的 `display`；
 - 没配置端点（TW_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_[TRACES_]ENDPOINT）时 `bridge_from_env()` 返回 None，零开销；
 - 导出出错只记日志，绝不影响任务（AC5）。
@@ -24,7 +24,7 @@ from triwitness.core.events import TrajectoryEvent
 
 log = logging.getLogger(__name__)
 
-SEMCONV = "gen_ai semantic conventions（OTel 1.37，development）"
+SEMCONV_URL = "https://opentelemetry.io/schemas/1.44.0"  # gen_ai.* 属性按此版本（GenAI 约定仍为 development 状态）
 _PROVIDER: TracerProvider | None = None
 
 
@@ -65,7 +65,7 @@ class OtelBridge:
     """TrajectoryRecorder 的订阅者：`rec.subscribe(bridge.observe)`。"""
 
     def __init__(self, provider: trace.TracerProvider, *, content: bool | None = None) -> None:
-        self.tracer = provider.get_tracer("triwitness")
+        self.tracer = provider.get_tracer("triwitness", schema_url=SEMCONV_URL)
         self.provider = provider
         self.content = os.environ.get("TW_TRACE_CONTENT") == "1" if content is None else content
         self.task: Span | None = None

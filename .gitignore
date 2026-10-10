@@ -38,3 +38,6 @@ apps/desktop/src-tauri/gen/schemas/
 .vscode/*
 !.vscode/extensions.json
 .DS_Store
+evals/tasks/_staging/
+deploy/langfuse/.env
+deploy/langfuse/.last_trace
