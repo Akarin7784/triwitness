@@ -7,8 +7,9 @@ import tarfile
 
 from docker.errors import DockerException
 
+from triwitness.sandbox.base import OutputCollector as _Collector
 from triwitness.sandbox.base import SandboxBackend
-from triwitness.sandbox.docker import DockerSandboxBackend, _Collector, _tar_bytes
+from triwitness.sandbox.docker import DockerSandboxBackend, _tar_bytes
 
 
 def test_collector_small_passthrough() -> None:

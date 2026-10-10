@@ -198,3 +198,4 @@ while True:
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：工具名（list_files/grep/bash）、Tool 协议（side_effects/refetchable/terminal）、finish 契约（04）、Budget 默认（0.8 等）。
 - 2026-10-10：按 ADR-0005 修订：工具调用前经权限引擎判定（spec 006）；Windows 无沙箱且无 Git Bash 时以 `powershell` 工具替代 `bash`（工具列表随平台变化仅此一处）；被拒绝的调用以工具结果返回拒绝原因。
+- 2026-10-10：W1-18～W1-21 实现（工具注册表、文件/命令工具、finish 契约、AgentLoop）。偏差：list_files / grep 在宿主机后端用 Python 遍历，其他后端用 find / grep，不依赖 ripgrep；死循环检测只实现“重复动作”和“连续失败”，“无进展”与二级回滚待 W1-25；轨迹先用最小 EventEmitter（W1-24 TrajectoryRecorder 未做）。AC1–AC7 用 FakeRouter / FakeSandbox 离线覆盖；finish 在最近一次 run_tests 失败后拒绝 `tests_passed=true`。

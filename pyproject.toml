@@ -24,6 +24,8 @@ dev = [
     "pytest-asyncio>=0.24",
     "types-pyyaml>=6.0.12.20260906",
     "types-docker>=7.2.0.20261006",
+    "jsonschema>=4.26.0",
+    "types-jsonschema>=4.26.0.20261006",
 ]
 
 [build-system]

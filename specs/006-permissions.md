@@ -267,3 +267,4 @@ def parse_rule(raw: str, kind: Decision, source: str) -> Rule: ...  # 语法错�
 - 2026-10-10：初稿（ADR-0005）。`tw-events/1` 已加入 `approval_requested` / `approval_resolved` 与可选字段（schema 桩，引擎未实现）。
 - 2026-10-10：记录已采纳默认值（装依赖 ask、英文模式 ID + 中文标签、审批不超时）；W1-39/W1-40 实现。
 - 2026-10-10：新增 `unrestricted`（勇士模式，§6.1、AC12）与 `mode_changed` 事件；实现 `permissions/{shell,paths,rules,config,engine,audit,mode}.py`。AC1–AC12 单测覆盖（AC6 的轨迹事件部分待 W1-41 接入工具层）。
+- 2026-10-10：W1-42 接线：工具执行前经 `PermissionGate`；非交互 ask→deny 写 `approval_resolved(by="policy")`，交互 ask 写 `approval_requested` / `approval_resolved(by="user")`，拒绝附言回传模型，本次任务 / 总是允许分别加会话规则 / 写 permissions.local.yaml，无审批通道时任务进入 needs_human。AC6 已完整覆盖。

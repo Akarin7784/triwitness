@@ -19,8 +19,8 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture(scope="module")
-def backend() -> DockerSandboxBackend:
-    b = DockerSandboxBackend()
+def backend(tmp_path_factory: pytest.TempPathFactory) -> DockerSandboxBackend:
+    b = DockerSandboxBackend(home=tmp_path_factory.mktemp("twhome"))
     probe = asyncio.run(b.probe())
     if not probe.available:
         pytest.skip(f"Docker 不可用：{probe.reason}")
@@ -155,3 +155,30 @@ async def test_gc_removes_orphans(backend: DockerSandboxBackend) -> None:
     )
     assert await backend.gc() >= 1
     assert orphan.id not in {c.id for c in backend.client().containers.list(all=True)}
+
+
+async def test_ac5_ac6_snapshot_restore_diff(backend: DockerSandboxBackend, repo: Path) -> None:
+    sb = await make(backend, repo)
+    try:
+        await sb.write_file("hello.py", b"print('s1')\n")
+        await sb.write_file("added.txt", b"new\n")
+        assert await sb.snapshot("s1") == f"refs/tw/ckpt/{sb.id}/s1"
+        await sb.write_file("hello.py", b"print('after')\n")
+        await sb.exec("echo later > later.txt && rm added.txt && mkdir -p .tw && echo n > .tw/NOTES.md")
+        await sb.restore("s1")
+        assert await sb.read_file("hello.py") == b"print('s1')\n"
+        assert await sb.read_file("added.txt") == b"new\n"
+        ls = await sb.exec("ls -A; id -u; stat -c %u hello.py")
+        assert "later.txt" not in ls.stdout
+        uid = ls.stdout.split()[-1]
+        assert uid != "0"  # 推回后仍归非 root 用户所有
+        w = await sb.exec("echo ok > hello.py && cat hello.py")
+        assert w.stdout.strip() == "ok"
+        await sb.exec("mkdir -p .tw && echo n > .tw/NOTES.md")
+        d = await sb.diff()
+        assert "added.txt" in d and "hello.py" in d
+        assert "NOTES.md" not in d
+        assert (await sb.diff("s1")).count("diff --git") == 1  # 只有 hello.py 变了
+        assert repo.joinpath("hello.py").read_text() == "print('hi')\n"  # 宿主仓库不变
+    finally:
+        await sb.close()

@@ -14,11 +14,11 @@ import atexit
 import contextlib
 import io
 import posixpath
+import shutil
 import subprocess
 import tarfile
 import time
 import uuid
-from collections import deque
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -26,18 +26,20 @@ from typing import Any
 import docker
 from docker.errors import DockerException, ImageNotFound, NotFound
 
+from triwitness.config import tw_home
 from triwitness.core.errors import SandboxError
 from triwitness.sandbox.base import (
     BackendName,
     Capabilities,
     ExecResult,
+    OutputCollector,
     Probe,
     Sandbox,
     SandboxSpec,
     check_sandbox_path,
-    truncate_output,
     validate_sandbox_env,
 )
+from triwitness.sandbox.gitsnap import GitSnapshotter, git
 
 DEFAULT_IMAGE = "python:3.12-slim"
 LABEL = "tw.managed"
@@ -92,39 +94,6 @@ def _repo_tar(repo: Path, base_ref: str, prefix: str) -> bytes:
     return out.getvalue()
 
 
-class _Collector:
-    """流式收集输出：保留头部 max/2 与尾部 max/2 字节。"""
-
-    def __init__(self, max_bytes: int) -> None:
-        self.half = max_bytes // 2
-        self.head = bytearray()
-        self.tail: deque[bytes] = deque()
-        self.tail_len = 0
-        self.total = 0
-
-    def add(self, chunk: bytes) -> None:
-        self.total += len(chunk)
-        room = self.half - len(self.head)
-        if room > 0:
-            self.head += chunk[:room]
-            chunk = chunk[room:]
-        if chunk:
-            self.tail.append(chunk)
-            self.tail_len += len(chunk)
-            while self.tail and self.tail_len - len(self.tail[0]) >= self.half:
-                self.tail_len -= len(self.tail.popleft())
-
-    def result(self) -> tuple[str, bool]:
-        tail = b"".join(self.tail)
-        if self.total <= 2 * self.half:
-            return truncate_output(bytes(self.head) + tail, 2 * self.half)
-        tail = tail[-self.half :]
-        omitted = self.total - len(self.head) - len(tail)
-        head_s = bytes(self.head).decode("utf-8", "ignore")
-        tail_s = tail.decode("utf-8", "ignore")
-        return f"{head_s}\n...[省略 {omitted} 字节]...\n{tail_s}", True
-
-
 class DockerSandbox:
     backend: BackendName = "docker"
 
@@ -164,7 +133,7 @@ class DockerSandbox:
                 workdir=workdir,
                 environment=full_env,
             )
-            out, err = _Collector(self.spec.max_output_bytes), _Collector(self.spec.max_output_bytes)
+            out, err = OutputCollector(self.spec.max_output_bytes), OutputCollector(self.spec.max_output_bytes)
             for o, e in api.exec_start(ex["Id"], stream=True, demux=True):
                 if o:
                     out.add(o)
@@ -256,15 +225,90 @@ class DockerSandbox:
         if not ok:
             raise SandboxError(f"写入失败：{path}")
 
-    # ------------------------------------------------------------ W1-17
+    # ------------------------------------------------------------ 快照（W1-17）
+    # 容器镜像里不一定有 git：在宿主上维护一个“镜像目录”（GIT_DIR 在外），快照前把容器 workdir 同步过来，
+    # 用与 none 后端相同的 GitSnapshotter；restore 后再把镜像目录推回容器。
+    async def init_mirror(self, home: Path) -> None:
+        self.mirror_root = home / "runs" / f"docker-{self.id}"
+        self.mirror = self.mirror_root / "tree"
+        self.mirror_git = self.mirror_root / "tree.git"
+        shutil.rmtree(self.mirror_root, ignore_errors=True)
+        self.mirror.mkdir(parents=True)
+        env = {"GIT_DIR": str(self.mirror_git), "GIT_WORK_TREE": str(self.mirror)}
+        await git("init", "-q", "--bare", str(self.mirror_git), cwd=self.mirror_root)
+        await git("config", "core.bare", "false", cwd=self.mirror, env=env)
+        await self._pull()
+        await git("add", "-A", cwd=self.mirror, env=env)
+        await git("commit", "-q", "--allow-empty", "--no-verify", "-m", "tw base", cwd=self.mirror, env=env)
+        _, sha, _ = await git("rev-parse", "HEAD", cwd=self.mirror, env=env)
+        self.snap = GitSnapshotter(self.mirror, self.id, base=sha.decode().strip(), env=env)
+
+    async def _pull(self) -> None:
+        """容器 workdir → 镜像目录（整目录替换；跳过 .git / .tw；tarfile data 过滤器防逃逸）。"""
+        wd = self.spec.workdir.rstrip("/")
+
+        def run() -> None:
+            stream, _ = self.container.get_archive(wd)
+            data = b"".join(stream)
+            for child in self.mirror.iterdir():
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            with tarfile.open(fileobj=io.BytesIO(data)) as tf:
+                for m in tf.getmembers():
+                    parts = [x for x in m.name.split("/") if x not in ("", ".")][1:]
+                    if not parts or parts[0] in (".git", ".tw"):
+                        continue
+                    m.name = "/".join(parts)
+                    try:
+                        tf.extract(m, self.mirror, filter="data")
+                    except tarfile.FilterError as e:
+                        raise SandboxError(f"同步工作区失败（不安全的条目 {m.name}）：{e}") from e
+
+        await asyncio.to_thread(run)
+
+    async def _push(self) -> None:
+        """镜像目录 → 容器 workdir（先清空 workdir，再以 uid 1000 放回）。"""
+        wd = self.spec.workdir.rstrip("/")
+        code, out = await self._raw(["find", wd, "-mindepth", "1", "-delete"])
+        if code != 0:
+            raise SandboxError(f"清空工作区失败：{out.decode(errors='replace')[:300]}")
+
+        def owned(ti: tarfile.TarInfo) -> tarfile.TarInfo:
+            ti.uid = ti.gid = SANDBOX_UID
+            ti.uname = ti.gname = "tw"
+            return ti
+
+        def run() -> None:
+            buf = io.BytesIO()
+            with tarfile.open(fileobj=buf, mode="w") as tf:
+                tf.add(self.mirror, arcname=posixpath.basename(wd), filter=owned)
+            self.container.put_archive(posixpath.dirname(wd) or "/", buf.getvalue())
+
+        await asyncio.to_thread(run)
+
+    def _snap(self) -> GitSnapshotter:
+        snap = getattr(self, "snap", None)
+        if snap is None:
+            raise SandboxError("快照未初始化")
+        return snap
+
     async def snapshot(self, label: str) -> str:
-        raise NotImplementedError("snapshot 在 W1-17 实现")
+        snap = self._snap()
+        await self._pull()
+        return await snap.snapshot(label)
 
     async def restore(self, ref: str) -> None:
-        raise NotImplementedError("restore 在 W1-17 实现")
+        snap = self._snap()
+        await self._pull()
+        await snap.restore(ref)
+        await self._push()
 
-    async def diff(self, base: str) -> str:
-        raise NotImplementedError("diff 在 W1-17 实现")
+    async def diff(self, base: str = "base") -> str:
+        snap = self._snap()
+        await self._pull()
+        return await snap.diff(base)
 
     async def close(self) -> None:
         if self._closed:
@@ -273,6 +317,9 @@ class DockerSandbox:
         _LIVE.pop(self.container.id, None)
         with contextlib.suppress(NotFound):
             await asyncio.to_thread(self.container.remove, force=True)
+        root = getattr(self, "mirror_root", None)
+        if root is not None:
+            shutil.rmtree(root, ignore_errors=True)
 
 
 class DockerSandboxBackend:
@@ -281,8 +328,9 @@ class DockerSandboxBackend:
         isolation="container", network_enforced=True, clean_env=True, host_fs_visible=False, allows_full_access=True
     )
 
-    def __init__(self, client: Any | None = None) -> None:
+    def __init__(self, client: Any | None = None, *, home: Path | None = None) -> None:
         self._client = client
+        self._home = home
 
     def client(self) -> Any:
         if self._client is None:
@@ -353,6 +401,11 @@ class DockerSandboxBackend:
         except DockerException as e:
             raise SandboxError(f"创建 docker 沙箱失败：{e}") from e
         _LIVE[sb.container.id] = sb
+        try:
+            await sb.init_mirror(self._home or tw_home())
+        except Exception:
+            await sb.close()
+            raise
         return sb
 
     async def gc(self) -> int:

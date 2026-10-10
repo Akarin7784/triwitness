@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import posixpath
 import re
+from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -65,6 +66,9 @@ class SandboxSpec(BaseModel):
     env: dict[str, str] = Field(default_factory=dict)
     user: str = "1000:1000"
     max_output_bytes: int = Field(default=200_000, gt=0)
+    run_id: str | None = None  # none 后端：worktree / 分支名 tw/<run_id>；缺省时自动生成
+    env_passthrough: list[str] = Field(default_factory=list)  # none 后端：任务配置显式声明可继承的宿主变量名
+    additional_directories: list[Path] = Field(default_factory=list)  # none 后端：文件工具可访问的额外目录
 
 
 class Probe(BaseModel):
@@ -202,16 +206,55 @@ def validate_sandbox_env(env: Mapping[str, str]) -> None:
 
 
 def scrub_host_env(environ: Mapping[str, str], extra: Sequence[str] = ()) -> dict[str, str]:
-    """none 后端子进程环境：只留白名单 + 显式声明的变量；像密钥的键一律剔除（AC11）。"""
+    """none 后端子进程环境（硬底线，任何模式都不可关闭，AC11）。
+
+    - 只留白名单 + `extra` 显式声明的变量 + `LC_*`；
+    - 键名像密钥（KEY / TOKEN / SECRET / PASSWORD / CREDENTIAL）的一律剔除，`extra` 也带不走；
+    - 值与任何密钥变量的值相同的变量也剔除（防 `FOO=$DEEPSEEK_API_KEY` 改名带出）。
+    """
     allowed = {k.upper() for k in HOST_ENV_ALLOWLIST} | {k.upper() for k in extra}
+    secret_values = {v for k, v in environ.items() if SECRET_KEY_RE.search(k) and len(v) >= 8}
     out: dict[str, str] = {}
     for k, v in environ.items():
         up = k.upper()
-        if SECRET_KEY_RE.search(up):
+        if SECRET_KEY_RE.search(up) or v in secret_values:
             continue
         if up in allowed or up.startswith("LC_"):
             out[k] = v
     return out
+
+
+class OutputCollector:
+    """流式收集输出：只保留头部 max/2 与尾部 max/2 字节（spec 002 §5.2-2）。"""
+
+    def __init__(self, max_bytes: int) -> None:
+        self.half = max_bytes // 2
+        self.head = bytearray()
+        self.tail: deque[bytes] = deque()
+        self.tail_len = 0
+        self.total = 0
+
+    def add(self, chunk: bytes) -> None:
+        self.total += len(chunk)
+        room = self.half - len(self.head)
+        if room > 0:
+            self.head += chunk[:room]
+            chunk = chunk[room:]
+        if chunk:
+            self.tail.append(chunk)
+            self.tail_len += len(chunk)
+            while self.tail and self.tail_len - len(self.tail[0]) >= self.half:
+                self.tail_len -= len(self.tail.popleft())
+
+    def result(self) -> tuple[str, bool]:
+        tail = b"".join(self.tail)
+        if self.total <= 2 * self.half:
+            return truncate_output(bytes(self.head) + tail, 2 * self.half)
+        tail = tail[-self.half :]
+        omitted = self.total - len(self.head) - len(tail)
+        head_s = bytes(self.head).decode("utf-8", "ignore")
+        tail_s = tail.decode("utf-8", "ignore")
+        return f"{head_s}\n...[省略 {omitted} 字节]...\n{tail_s}", True
 
 
 def check_sandbox_path(

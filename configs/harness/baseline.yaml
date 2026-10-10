@@ -1,0 +1,15 @@
+# Harness 基线参数（spec 003 §5、§8）。全部是消融变量；W2-15 扩充。
+loop:
+  stuck_after_no_tool: 3          # 连续 N 次没有工具调用 → stuck
+  tool_result_max_chars: 32000    # ≈ 8K token（4 字符 / token）；超过则头 60% 尾 40% 截断，全文写 .tw/outputs/
+  head_ratio: 0.6
+loop_detection:
+  window: 8
+  repeat_threshold: 3             # 窗口内相同工具 + 相同参数 ≥ N 次
+  failure_threshold: 5            # 连续失败 N 次
+  max_warnings: 3                 # 第 3 次 → stuck
+reminders:
+  no_tool: "请调用工具继续，或调用 finish 结束。"
+  wrap_up: "预算已用到警戒线，请尽快收尾：运行测试并调用 finish。"
+  repeat: "你在重复同样的动作（{detail}）。换个思路：先读相关代码或运行测试定位问题。"
+  failures: "连续多次工具调用失败（{detail}）。停下来检查错误信息，换一种做法。"

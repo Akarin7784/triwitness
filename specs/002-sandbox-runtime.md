@@ -245,3 +245,4 @@ none 后端（单测 + 本机集成，CI 的 Linux 与 Windows runner 都跑）�
 - 2026-10-10：按 ADR-0001 / ADR-0002 修订：`.tw/` 统一为沙箱 /workspace/.tw/（ADR-0001 #7）。
 - 2026-10-10：按 ADR-0005 重写：`SandboxBackend` 协议 + none / docker / wsl2 / remote 四后端、后端选择、一键安装流程、无沙箱时干净复跑证人记为 unverified。原 `SandboxProvider` 更名为 `SandboxBackend`；`copy_in` 变为 docker 后端内部细节。
 - 2026-10-10：记录已采纳默认（只装 Docker Desktop、国内镜像后备）；W1-15 实现 SandboxBackend 协议与后端选择。
+- 2026-10-10：W1-41 / W1-17 实现。none 后端 = `LocalSandbox`：git worktree（分支 `tw/<run_id>`，目录在 TW_HOME/runs 下）、环境变量白名单（另丢弃值等于任一密钥值的变量，防改名泄露）、进程树终止（POSIX 进程组 + killpg；Windows Job Object，未在 CI 验证，留 W2-33）、Git Bash 探测（找不到时用 PowerShell，不用 System32\bash.exe / cmd）、孤儿 worktree 回收。快照引用改为 `refs/tw/ckpt/<run_id>/<label>`（worktree 共享引用，需带 run_id）；还原保留被忽略文件（如 .venv）。docker 镜像无 git，快照用宿主机镜像目录（TW_HOME/runs/docker-<id>）。AC10–AC14 在 POSIX 单测覆盖，AC15 用模拟测试。
