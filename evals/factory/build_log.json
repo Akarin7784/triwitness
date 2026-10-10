@@ -1,0 +1,618 @@
+{
+ "macbre__sql-metadata-625_interface": {
+  "instance_id": "macbre__sql-metadata-625_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-05-07",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sql-metadata-625_interface",
+  "image": "tw-task/swe-sql-metadata-625_interface:c1e4f0abf723",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\n\nno tests ran in 0.10s\nERROR: not found: /workspace/repo/test/test_mssql_server.py::test_simple_queries_tables\n(no match in any of [<Module test_mssql_server.py>])\n\nERROR: not found: /workspace/repo/test/test_mssql_server.py::test_simple_queries_tables\n(no match in any of [<Module test_mssql_server.py>])\n\n",
+  "seconds": 174
+ },
+ "astronomy-commons__lsdb-1349": {
+  "instance_id": "astronomy-commons__lsdb-1349",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-29",
+  "status": "build_failed",
+  "log": "k to frontend: Teletype\n\u001b[0m\u001b[91mdebconf: unable to initialize frontend: Teletype\ndebconf: (This frontend requires a controlling tty.)\ndebconf: falling back to frontend: Noninteractive\n\u001b[0mgit version 2.47.3\n ---> Removed intermediate container f810cc01b3a5\n ---> 22dc3de51ac0\nStep 4/10 : ADD https://github.com/astronomy-commons/lsdb/archive/ba11985ca7940dabb77d4f7db731d516e6527d47.tar.gz /tmp/src.tar.gz\n\n\n ---> 6350eb7c4ef7\nStep 5/10 : RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz\n ---> Running in 7a5753a298e1\n ---> Removed intermediate container 7a5753a298e1\n ---> 7c209d241c60\nStep 6/10 : WORKDIR /workspace/repo\n ---> Running in cd74183e10de\n ---> Removed intermediate container cd74183e10de\n ---> 33748e692814\nStep 7/10 : RUN pip install -e . --quiet && pip install -r requirements.txt --quiet && pip install pytest --quiet\n ---> Running in db86918dcca8\n\u001b[91mERROR: Cannot install -r requirements.txt (line 1) and nested-pandas 0.0.0 (from git+https://github.com/lincc-frameworks/nested-pandas.git@main) because these package versions have conflicting dependencies.\n\u001b[0m\u001b[91mERROR: ResolutionImpossible: for help visit https://pip.pypa.io/en/latest/topics/dependency-resolution/#dealing-with-dependency-conflicts\n\u001b[0m ---> Removed intermediate container db86918dcca8\nThe command '/bin/sh -c pip install -e . --quiet && pip install -r requirements.txt --quiet && pip install pytest --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-lsdb-1349",
+  "seconds": 148
+ },
+ "olofk__fusesoc-776_interface": {
+  "instance_id": "olofk__fusesoc-776_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-05-07",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-fusesoc-776_interface",
+  "image": "tw-task/swe-fusesoc-776_interface:e0a7c60fc367",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nig.get(\"version\", \"master\")\n    \n        # TODO : Sanitize URL\n        url = URL.format(user=user, repo=repo, version=version)\n        logger.info(f\"Downloading {user}/{repo} from github\")\n        try:\n            (filename, headers) = urllib.urlretrieve(url)\n        except URLError as e:\n>           raise RuntimeError(f\"Failed to download '{url}'. '{e.reason}'\")\nE           RuntimeError: Failed to download 'https://github.com/bmartini/verilog-arbiter/archive/b79f89e17f0be3b70a513c1a0b456f734a79273a.tar.gz'. '[Errno -3] Temporary failure in name resolution'\n\nfusesoc/provider/github.py:40: RuntimeError\n=========================== short test summary info ============================\nFAILED tests/test_coremanager.py::test_export - RuntimeError: Failed to downl...\n1 failed, 14 passed in 2.41s\n",
+  "seconds": 186
+ },
+ "python-wheel-build__fromager-1106": {
+  "instance_id": "python-wheel-build__fromager-1106",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-05-04",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-fromager-1106",
+  "image": "tw-task/swe-fromager-1106:5594919d0887",
+  "status": "ok",
+  "seconds": 192
+ },
+ "copier-org__copier-2646": {
+  "instance_id": "copier-org__copier-2646",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-30",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-copier-2646",
+  "image": "tw-task/swe-copier-2646:5b1ff3f75875",
+  "status": "ok",
+  "seconds": 202
+ },
+ "apache__iceberg-python-3295": {
+  "instance_id": "apache__iceberg-python-3295",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-28",
+  "status": "build_failed",
+  "log": "p-ephem-wheel-cache-srhwb6i7/wheels/08/f9/ea/ab586570f4f6e21f724bcbe9b49f12be14122727aeebbfb6b6/tmp416uvs0b/.tmp-frmg1xzk/pyiceberg.egg-info/SOURCES.txt'\n      creating '/tmp/pip-ephem-wheel-cache-srhwb6i7/wheels/08/f9/ea/ab586570f4f6e21f724bcbe9b49f12be14122727aeebbfb6b6/tmp416uvs0b/.tmp-frmg1xzk/pyiceberg-0.11.0.dist-info'\n      creating /tmp/pip-ephem-wheel-cache-srhwb6i7/wheels/08/f9/ea/ab586570f4f6e21f724bcbe9b49f12be14122727aeebbfb6b6/tmp416uvs0b/.tmp-frmg1xzk/pyiceberg-0.11.0.dist-info/WHEEL\n      running build_py\n      running build_ext\n      building 'pyiceberg.avro.decoder_fast' extension\n      gcc -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -Ipyiceberg/avro -I/usr/local/include/python3.13 -c pyiceberg/avro/decoder_fast.c -o /tmp/tmp287tad8t.build-temp/pyiceberg/avro/decoder_fast.o -O3\n      error: [Errno 2] No such file or directory: 'gcc'\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91m  ERROR: Failed building editable for pyiceberg\n\u001b[0m\u001b[91merror: failed-wheel-build-for-install\n\n× Failed to build installable wheels for some pyproject.toml based projects\n╰─> pyiceberg\n\u001b[0m ---> Removed intermediate container a7887f6d9d75\nThe command '/bin/sh -c pip install -q -e \".[pyarrow,pandas,hive,s3fs,glue,adlfs,dynamodb,bigquery,datafusion]\" pytest pytest-mock pytest-lazy-fixtures requests-mock moto fastavro coverage pytz sqlalchemy google-cloud-bigquery' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-iceberg-python-3295",
+  "seconds": 144
+ },
+ "pypa__twine-1309": {
+  "instance_id": "pypa__twine-1309",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-twine-1309",
+  "image": "tw-task/swe-twine-1309:2468923cb990",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nERROR: not found: /workspace/repo/tests/test_main.py::test_http_exception_handling\n(no match in any of [<Module test_main.py>])\n\nERROR: not found: /workspace/repo/tests/test_main.py::test_http_exception_handling\n(no match in any of [<Module test_main.py>])\n\n\nno tests ran in 0.01s\n",
+  "seconds": 52
+ },
+ "ultraplot__ultraplot-696": {
+  "instance_id": "ultraplot__ultraplot-696",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-ultraplot-696",
+  "image": "tw-task/swe-ultraplot-696:b8abe5d5a271",
+  "status": "ok",
+  "seconds": 319
+ },
+ "deltares__hydrolib-core-1049_interface": {
+  "instance_id": "deltares__hydrolib-core-1049_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-13",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-hydrolib-core-1049_interface",
+  "status": "build_failed",
+  "log": "   pycparser==3.0     pydantic-settings==2.13.1     pydantic==2.12.5     pydantic_core==2.41.5     pyfakefs==6.1.6     Pygments==2.20.0     pymdown-extensions==10.21.2     pyogrio==0.12.1     pyparsing==3.3.2     pyproj==3.7.2     pyproject_hooks==1.3.3     pytest-cov==7.1.0     pytest==9.0.3     python-dateutil==2.9.0.post0     python-discovery==1.6.2     python-dotenv==1.2.2     python-json-logger==4.1.0     PyYAML==6.0.3     pyyaml_env_tag==1.1     pyzmq==27.1.0     questionary==2.1.1     RapidFuzz==3.14.6     referencing==0.37.0     requests-toolbelt==1.0.0     requests==2.33.1     rfc3339-validator==0.1.4     rfc3986-validator==0.1.1     rfc3987-syntax==1.1.0     rpds-py==0.30.0     s==3.0.2     SecretStorage==3.5.0     Send2Trash==2.1.0     setuptools==82.0.1     shapely==2.1.2     shellingham==1.5.4     six==1.17.0     soupsieve==2.8.3     stack-data==0.6.3     StrEnum==0.4.15     super_collections==0.6.2     tabulate==0.10.0     termcolor==3.3.0     terminado==0.18.1     tinycss2==1.4.0     tomlkit==0.14.0     tornado==6.5.5     tqdm==4.67.3     traitlets==5.14.3     trove-classifiers==2026.9.21.13     typing-inspection==0.4.2     typing_extensions==4.15.0     tzdata==2026.1     uri-template==1.3.0     urllib3==2.6.3     verspec==0.1.0     virtualenv==21.14.6     watchdog==6.0.0     wcwidth==0.6.0     webcolors==25.10.0     webencodings==0.5.1     websocket-client==1.9.0     widgetsnbextension==4.0.15     wrapt==2.1.2     xarray==2026.2.0' returned a non-zero code: 1\n",
+  "seconds": 102
+ },
+ "pyinfra-dev__pyinfra-1665": {
+  "instance_id": "pyinfra-dev__pyinfra-1665",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-14",
+  "status": "build_failed",
+  "log": "e \"/tmp/pip-build-env-evz5nao6/overlay/lib/python3.13/site-packages/hatchling/metadata/core.py\", line 151, in version\n          self._version = self._get_version()\n                          ~~~~~~~~~~~~~~~~~^^\n        File \"/tmp/pip-build-env-evz5nao6/overlay/lib/python3.13/site-packages/hatchling/metadata/core.py\", line 264, in _get_version\n          version = self.hatch.version.cached\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-evz5nao6/overlay/lib/python3.13/site-packages/hatchling/metadata/core.py\", line 1550, in cached\n          raise type(e)(message) from None\n      RuntimeError: Error getting the version from source `uv-dynamic-versioning`: Unable to detect version control system. Checked: Git. Not installed: Mercurial, Darcs, Subversion, Bazaar, Fossil, Pijul.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> from file:///workspace/repo\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container a8c822a4693d\nThe command '/bin/sh -c pip install -e . --quiet && pip install \"pytest>=8.3.5,<9\" \"coverage>=7.7.1,<8\" \"pytest-cov>=7.0.0,<8\" \"pytest-testinfra>=10.2.2,<11\" \"pyyaml>=6.0.2,<7\" --quiet && pip install freezegun --quiet && pip install pyinfra-testgen==0.1.1 --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pyinfra-1665",
+  "seconds": 14
+ },
+ "tobymao__sqlglot-7479": {
+  "instance_id": "tobymao__sqlglot-7479",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-09",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sqlglot-7479",
+  "image": "tw-task/swe-sqlglot-7479:9d5a7247062b",
+  "status": "ok",
+  "seconds": 136
+ },
+ "azure-samples__azure-search-openai-demo-3025": {
+  "instance_id": "azure-samples__azure-search-openai-demo-3025",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-azure-search-openai-demo-3025",
+  "status": "build_failed",
+  "log": "dk==1.39.0     opentelemetry-semantic-conventions-ai==0.4.13     opentelemetry-semantic-conventions==0.60b0     opentelemetry-util-http==0.60b0     packaging==24.1     pathspec==1.1.1     pillow==12.1.1     pip-tools==7.6.2     platformdirs==4.12.4     playwright==1.63.0     pluggy==1.6.0     pre_commit==4.6.2     priority==2.0.0     propcache==0.2.0     psutil==7.1.2     pycparser==2.22     pydantic==2.12.5     pydantic_core==2.41.5     pyee==13.0.1     Pygments==2.20.0     PyJWT==2.12.0     PyMuPDF==1.26.0     pypdf==6.9.2     pyproject_hooks==1.3.3     pytest-asyncio==1.4.0     pytest-cov==7.1.0     pytest-playwright==0.10.0     pytest-snapshot==0.9.0     pytest==9.1.1     python-discovery==1.6.2     python-dotenv==1.1.1     python-slugify==9.1.3     pytokens==0.4.1     PyYAML==6.0.3     quart-cors==0.7.0     Quart==0.20.0     regex==2025.7.34     requests-oauthlib==2.0.0     requests==2.33.0     rich==14.1.0     ruff==0.17.0     setuptools==84.0.0     sniffio==1.3.1     soupsieve==2.7     std-uritemplate==2.0.8     tenacity==9.1.2     text-unidecode==1.3     tiktoken==0.12.0     tqdm==4.66.5     ty==0.0.21     types-beautifulsoup4==4.12.0.20250516     types-html5lib==1.1.11.20251014     types-Pillow==10.2.0.20240822     typing-inspection==0.4.2     typing_extensions==4.15.0     urllib3==2.6.3     uvicorn==0.30.6     virtualenv==21.14.5     Werkzeug==3.1.6     wheel==0.48.0     wrapt==1.16.0     wsproto==1.3.2     yarl==1.17.2     zipp==3.23.0' returned a non-zero code: 1\n",
+  "seconds": 189
+ },
+ "huggingface__huggingface_hub-4056": {
+  "instance_id": "huggingface__huggingface_hub-4056",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-huggingface_hub-4056",
+  "image": "tw-task/swe-huggingface_hub-4056:80b39a28a359",
+  "status": "ok",
+  "seconds": 109
+ },
+ "tobymao__sqlglot-7457": {
+  "instance_id": "tobymao__sqlglot-7457",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sqlglot-7457",
+  "image": "tw-task/swe-sqlglot-7457:e7d0fe037f31",
+  "status": "ok",
+  "seconds": 89
+ },
+ "ucfopen__canvasapi-716": {
+  "instance_id": "ucfopen__canvasapi-716",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-31",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-canvasapi-716",
+  "image": "tw-task/swe-canvasapi-716:2af12729e1e0",
+  "status": "ok",
+  "seconds": 59
+ },
+ "holoviz__param-1117": {
+  "instance_id": "holoviz__param-1117",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-25",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-param-1117",
+  "image": "tw-task/swe-param-1117:4003cc48ac21",
+  "status": "ok",
+  "seconds": 78
+ },
+ "delgan__loguru-1451": {
+  "instance_id": "delgan__loguru-1451",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-25",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-loguru-1451",
+  "image": "tw-task/swe-loguru-1451:c770e9029898",
+  "dropped_p2p": [
+   "tests/test_add_option_format.py::test_format[a-Message:",
+   "tests/test_add_option_format.py::test_format[c-{level}",
+   "tests/test_add_option_format.py::test_format[d-{message}",
+   "tests/test_add_option_format.py::test_format[f-<lambda>-f"
+  ],
+  "status": "ok",
+  "seconds": 106
+ },
+ "scrapy__scrapy-7351_interface": {
+  "instance_id": "scrapy__scrapy-7351_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-24",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-scrapy-7351_interface",
+  "image": "tw-task/swe-scrapy-7351_interface:783d7da09db2",
+  "status": "ok",
+  "seconds": 126
+ },
+ "pyinfra-dev__pyinfra-1630": {
+  "instance_id": "pyinfra-dev__pyinfra-1630",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-24",
+  "status": "build_failed",
+  "log": "e \"/tmp/pip-build-env-kmpf8ftz/overlay/lib/python3.13/site-packages/hatchling/metadata/core.py\", line 151, in version\n          self._version = self._get_version()\n                          ~~~~~~~~~~~~~~~~~^^\n        File \"/tmp/pip-build-env-kmpf8ftz/overlay/lib/python3.13/site-packages/hatchling/metadata/core.py\", line 264, in _get_version\n          version = self.hatch.version.cached\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-kmpf8ftz/overlay/lib/python3.13/site-packages/hatchling/metadata/core.py\", line 1550, in cached\n          raise type(e)(message) from None\n      RuntimeError: Error getting the version from source `uv-dynamic-versioning`: Unable to detect version control system. Checked: Git. Not installed: Mercurial, Darcs, Subversion, Bazaar, Fossil, Pijul.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> from file:///workspace/repo\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container f984ae93a2e0\nThe command '/bin/sh -c pip install -e . --quiet && pip install \"pytest>=8.3.5,<9\" \"coverage>=7.7.1,<8\" \"pytest-cov>=7.0.0,<8\" \"pytest-testinfra>=10.2.2,<11\" \"pyyaml>=6.0.2,<7\" --quiet && pip install freezegun --quiet && pip install pyinfra-testgen==0.1.1 --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pyinfra-1630",
+  "seconds": 13
+ },
+ "alibaba__opensandbox-816": {
+  "instance_id": "alibaba__opensandbox-816",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-29",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-opensandbox-816",
+  "image": "tw-task/swe-opensandbox-816:bafe2d2deae1",
+  "status": "ok",
+  "seconds": 199
+ },
+ "beever-ai__beever-atlas-102": {
+  "instance_id": "beever-ai__beever-atlas-102",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-04-29",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-beever-atlas-102",
+  "image": "tw-task/swe-beever-atlas-102:2d5077328168",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n_init__.py:88: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/agents/ingestion/test_cross_batch_no_weaviate_fallback.py:18: in <module>\n    from beever_atlas.agents.ingestion import preprocessor as pre_mod\nsrc/beever_atlas/agents/ingestion/__init__.py:5: in <module>\n    from beever_atlas.agents.ingestion.pipeline import create_ingestion_pipeline\nsrc/beever_atlas/agents/ingestion/pipeline.py:5: in <module>\n    from google.adk.agents import SequentialAgent, ParallelAgent\nE   ModuleNotFoundError: No module named 'google.adk'\n=========================== short test summary info ============================\nERROR tests/agents/ingestion/test_cross_batch_no_weaviate_fallback.py\n1 error in 0.05s\n",
+  "seconds": 284
+ },
+ "getmoto__moto-9903": {
+  "instance_id": "getmoto__moto-9903",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-23",
+  "status": "error",
+  "log": "TimeoutError: The read operation timed out",
+  "seconds": 123
+ },
+ "pgmpy__pgmpy-3137": {
+  "instance_id": "pgmpy__pgmpy-3137",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-22",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pgmpy-3137",
+  "status": "error",
+  "log": "c_compatibility[PC(return_type='dag',show_progress=False)-check_dict_unchanged]；test.sh 没有运行 pgmpy/tests/test_causal_discovery/test_PC.py::test_pc_compatibility[PC(return_type='dag',show_progress=False)-check_fit_idempotent]；test.sh 没有运行 pgmpy/tests/test_causal_discovery/test_PC.py::test_pc_compatibility[PC(return_type='dag',show_progress=False)-check_fit_check_is_fitted]；test.sh 没有运行 pgmpy/tests/test_causal_discovery/test_PC.py::test_pc_compatibility[PC(return_type='dag',show_progress=False)-check_n_features_in]；test.sh 没有运行 pgmpy/tests/test_causal_discovery/test_PC.py::test_pc_compatibility[PC(return_type='dag',show_progress=False)-check_fit1d]；test.sh 没有运行 pgmpy/tests/test_causal_discovery/test_PC.py::test_pc_compatibility[PC(return_type='dag',show_progress=False)-check_fit2d_predict1d]",
+  "seconds": 70
+ },
+ "psd-tools__psd-tools-593": {
+  "instance_id": "psd-tools__psd-tools-593",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-17",
+  "status": "build_failed",
+  "log": "0tsj4_j/psd_tools.egg-info/SOURCES.txt'\n      adding license file 'LICENSE'\n      writing manifest file '/tmp/pip-ephem-wheel-cache-xf2mcw7n/wheels/08/f9/ea/ab586570f4f6e21f724bcbe9b49f12be14122727aeebbfb6b6/tmp8dwsfxx4/.tmp-30tsj4_j/psd_tools.egg-info/SOURCES.txt'\n      creating '/tmp/pip-ephem-wheel-cache-xf2mcw7n/wheels/08/f9/ea/ab586570f4f6e21f724bcbe9b49f12be14122727aeebbfb6b6/tmp8dwsfxx4/.tmp-30tsj4_j/psd_tools-1.14.0.dist-info'\n      creating /tmp/pip-ephem-wheel-cache-xf2mcw7n/wheels/08/f9/ea/ab586570f4f6e21f724bcbe9b49f12be14122727aeebbfb6b6/tmp8dwsfxx4/.tmp-30tsj4_j/psd_tools-1.14.0.dist-info/WHEEL\n      running build_py\n      running build_ext\n      building 'psd_tools.compression._rle' extension\n      g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -DPy_LIMITED_API=51183616 -I/usr/local/include/python3.13 -c src/psd_tools/compression/_rle.cpp -o /tmp/tmp420im_gu.build-temp/src/psd_tools/compression/_rle.o\n      error: [Errno 2] No such file or directory: 'g++'\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91m  ERROR: Failed building editable for psd-tools\n\u001b[0m\u001b[91merror: failed-wheel-build-for-install\n\n× Failed to build installable wheels for some pyproject.toml based projects\n╰─> psd-tools\n\u001b[0m ---> Removed intermediate container de6146c0ed6f\nThe command '/bin/sh -c pip install -e \".[composite]\" --quiet && pip install pytest pytest-cov --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-psd-tools-593",
+  "seconds": 20
+ },
+ "dagster-io__dagster-33605": {
+  "instance_id": "dagster-io__dagster-33605",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-15",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-dagster-33605",
+  "status": "build_failed",
+  "log": "    grpcio-health-checking==1.81.1     grpcio==1.84.0     humanfriendly==10.0     idna==3.20     iniconfig==2.3.1     Jinja2==3.1.6     jsonschema-specifications==2025.9.1     jsonschema==4.26.0     Mako==1.4.3     markdown-it-py==4.2.0     Markdown==3.11     MarkupSafe==3.0.4     mdurl==0.1.2     multidict==7.1.0     objgraph==3.6.2     packaging==26.3     pathlib_abc==0.5.2     platformdirs==4.12.4     pluggy==1.6.0     prompt_toolkit==3.0.53     propcache==0.5.4     protobuf==6.33.6     psutil==7.2.2     pycparser==3.11     pydantic==2.14.0     pydantic_core==2.50.0     Pygments==2.21.0     PyJWT==2.15.1     pytest-cov==7.1.0     pytest-mock==3.16.0     pytest-xdist==3.8.0     pytest==9.1.1     python-dateutil==2.9.0.post0     python-dotenv==1.2.4     pytz==2026.5     PyYAML==6.0.3     questionary==2.1.1     referencing==0.37.0     requests-toolbelt==1.0.0     requests==2.34.2     rich==15.0.0     rpds-py==2026.9.1     setuptools==81.0.0     shellingham==1.5.4     six==1.17.0     SQLAlchemy==2.1.4     structlog==26.1.0     tabulate==0.10.0     tenacity==9.2.1     termcolor==3.3.0     tlr4-python3-runtime==4.13.2     tomli==2.5.0     tomlkit==0.13.2     toposort==1.10     tqdm==4.70.1     typer==0.27.3     typing-inspection==0.4.4     typing_extensions==4.16.0     tzdata==2026.5     universal_pathlib==0.3.10     uritemplate==4.2.0     urllib3==2.8.0     validators==0.35.0     watchdog==6.0.0     wcwidth==0.9.2     yarl==1.25.1     yaspin==3.5.1' returned a non-zero code: 1\n",
+  "seconds": 168
+ },
+ "sqlfluff__sqlfluff-7615": {
+  "instance_id": "sqlfluff__sqlfluff-7615",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-15",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sqlfluff-7615",
+  "image": "tw-task/swe-sqlfluff-7615:ef5d952ca0d9",
+  "status": "ok",
+  "seconds": 118
+ },
+ "conan-io__conan-19750": {
+  "instance_id": "conan-io__conan-19750",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-13",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-conan-19750",
+  "image": "tw-task/swe-conan-19750:5359ecf76b42",
+  "status": "ok",
+  "seconds": 78
+ },
+ "pycqa__isort-2491": {
+  "instance_id": "pycqa__isort-2491",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-12",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-isort-2491",
+  "image": "tw-task/swe-isort-2491:254dc6a0589b",
+  "status": "ok",
+  "seconds": 57
+ },
+ "conan-io__conan-19735_interface": {
+  "instance_id": "conan-io__conan-19735_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-10",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-conan-19735_interface",
+  "image": "tw-task/swe-conan-19735_interface:f97b565c91f5",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n_compiler-Sun\n(no name '/workspace/repo/test/unittests/util/detect_test.py::test_detect_compiler[detect_suncc_compiler-Sun' in any of [<Module detect_test.py>])\n\nERROR: not found: /workspace/repo/test/unittests/util/detect_test.py::test_detect_compiler[detect_intel_compiler-Intel\n(no name '/workspace/repo/test/unittests/util/detect_test.py::test_detect_compiler[detect_intel_compiler-Intel' in any of [<Module detect_test.py>])\n\nERROR: not found: /workspace/repo/test/unittests/util/detect_test.py::test_detect_compiler[detect_emcc_compiler-emcc\n(no name '/workspace/repo/test/unittests/util/detect_test.py::test_detect_compiler[detect_emcc_compiler-emcc' in any of [<Module detect_test.py>])\n\n\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\nno tests ran in 0.68s\n",
+  "seconds": 58
+ },
+ "getmoto__moto-9841": {
+  "instance_id": "getmoto__moto-9841",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-03-09",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-moto-9841",
+  "image": "tw-task/swe-moto-9841:552dc99e45ae",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nERROR: not found: /workspace/repo/tests/test_kms/test_kms.py::test_sign_happy\n(no match in any of [<Module test_kms.py>])\n\nERROR: not found: /workspace/repo/tests/test_kms/test_kms.py::test_verify_happy\n(no match in any of [<Module test_kms.py>])\n\n\n\u001b[33m\u001b[33mno tests ran\u001b[0m\u001b[33m in 0.21s\u001b[0m\u001b[0m\n",
+  "seconds": 78
+ },
+ "skypilot-org__skypilot-8908": {
+  "instance_id": "skypilot-org__skypilot-8908",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-24",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-skypilot-8908",
+  "image": "tw-task/swe-skypilot-8908:2dba48d34699",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nERROR: Missing required plugins: buildkite-test-collector\n\n",
+  "seconds": 284
+ },
+ "psd-tools__psd-tools-551": {
+  "instance_id": "psd-tools__psd-tools-551",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-24",
+  "status": "build_failed",
+  "log": "  writing requirements to /tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools.egg-info/requires.txt\n      writing top-level names to /tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools.egg-info/top_level.txt\n      writing manifest file '/tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools.egg-info/SOURCES.txt'\n      reading manifest file '/tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools.egg-info/SOURCES.txt'\n      adding license file 'LICENSE'\n      writing manifest file '/tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools.egg-info/SOURCES.txt'\n      creating '/tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools-1.12.1.dist-info'\n      creating /tmp/pip-wheel-qy5gzjku/.tmp-o7t3pgc5/psd_tools-1.12.1.dist-info/WHEEL\n      running build_py\n      running build_ext\n      building 'psd_tools.compression._rle' extension\n      g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -I/usr/local/include/python3.12 -c src/psd_tools/compression/_rle.cpp -o /tmp/tmpfzhjp2of.build-temp/src/psd_tools/compression/_rle.o\n      error: [Errno 2] No such file or directory: 'g++'\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91m  ERROR: Failed building editable for psd-tools\n\u001b[0m\u001b[91mERROR: Failed to build installable wheels for some pyproject.toml based projects (psd-tools)\n\u001b[0m ---> Removed intermediate container 196e5283f17d\nThe command '/bin/sh -c pip install -e . -q && pip install pytest pytest-cov -q' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-psd-tools-551",
+  "seconds": 87
+ },
+ "aws__bedrock-agentcore-sdk-python-279_interface": {
+  "instance_id": "aws__bedrock-agentcore-sdk-python-279_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-23",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-bedrock-agentcore-sdk-python-279_interface",
+  "image": "tw-task/swe-bedrock-agentcore-sdk-python-279_interface:712f4e501de1",
+  "status": "ok",
+  "seconds": 361
+ },
+ "marimo-team__marimo-8401": {
+  "instance_id": "marimo-team__marimo-8401",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-20",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-marimo-8401",
+  "image": "tw-task/swe-marimo-8401:c74d1e9e956b",
+  "status": "ok",
+  "seconds": 186
+ },
+ "strands-agents__sdk-python-1734": {
+  "instance_id": "strands-agents__sdk-python-1734",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-19",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sdk-python-1734",
+  "image": "tw-task/swe-sdk-python-1734:f8faba76aea6",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nts/strands/agent/test_agent.py:16: in <module>\n    import strands\nsrc/strands/__init__.py:3: in <module>\n    from . import agent, models, telemetry, types\nsrc/strands/agent/__init__.py:12: in <module>\n    from ..event_loop._retry import ModelRetryStrategy\nsrc/strands/event_loop/__init__.py:7: in <module>\n    from . import event_loop\nsrc/strands/event_loop/event_loop.py:21: in <module>\n    from ..tools._validator import validate_and_prepare_tools\nsrc/strands/tools/__init__.py:6: in <module>\n    from .decorator import tool\nsrc/strands/tools/decorator.py:61: in <module>\n    import docstring_parser\nE   ModuleNotFoundError: No module named 'docstring_parser'\n=========================== short test summary info ============================\nERROR tests/strands/agent/test_agent.py\n1 error in 0.44s\n",
+  "seconds": 122
+ },
+ "tox-dev__sphinx-autodoc-typehints-607": {
+  "instance_id": "tox-dev__sphinx-autodoc-typehints-607",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sphinx-autodoc-typehints-607",
+  "image": "tw-task/swe-sphinx-autodoc-typehints-607:5fbb92629336",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nhints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_formatter\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\n\nno tests ran in 0.21s\n",
+  "seconds": 64
+ },
+ "tox-dev__sphinx-autodoc-typehints-606": {
+  "instance_id": "tox-dev__sphinx-autodoc-typehints-606",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-sphinx-autodoc-typehints-606",
+  "image": "tw-task/swe-sphinx-autodoc-typehints-606:8a6485e8a235",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nhints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_defaults\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\nERROR: not found: /workspace/repo/tests/test_sphinx_autodoc_typehints.py::test_sphinx_output_formatter\n(no match in any of [<Module test_sphinx_autodoc_typehints.py>])\n\n\nno tests ran in 0.21s\n",
+  "seconds": 68
+ },
+ "narwhals-dev__narwhals-3478": {
+  "instance_id": "narwhals-dev__narwhals-3478",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-16",
+  "status": "build_failed",
+  "log": "CTION=ignore\n ---> Using cache\n ---> fe96ce51ff9f\nStep 3/10 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> bc042894a049\nStep 4/10 : ADD https://github.com/narwhals-dev/narwhals/archive/9ba58053305673582706004813777dfb260885fa.tar.gz /tmp/src.tar.gz\n\n\n ---> 531e5e82e9d8\nStep 5/10 : RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz\n ---> Running in db5c2f711202\n ---> Removed intermediate container db5c2f711202\n ---> 93ac62746633\nStep 6/10 : WORKDIR /workspace/repo\n ---> Running in 182732f1902d\n ---> Removed intermediate container 182732f1902d\n ---> 671a357e0fdd\nStep 7/10 : RUN pip install -q -e \".[duckdb,pandas,polars,pyarrow,sqlframe,sql]\" --group core-tests\n ---> Running in 7ad7a267353d\n\u001b[91m\nUsage:   \n  pip install [options] <requirement specifier> [package-index-options] ...\n  pip install [options] -r <requirements file> [package-index-options] ...\n  pip install [options] [-e] <vcs project url> ...\n  pip install [options] [-e] <local project path> ...\n  pip install [options] <archive url/path> ...\n\nno such option: --group\n\u001b[0m ---> Removed intermediate container 7ad7a267353d\nThe command '/bin/sh -c pip install -q -e \".[duckdb,pandas,polars,pyarrow,sqlframe,sql]\" --group core-tests' returned a non-zero code: 2\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-narwhals-3478",
+  "seconds": 9
+ },
+ "koxudaxi__datamodel-code-generator-2998": {
+  "instance_id": "koxudaxi__datamodel-code-generator-2998",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-14",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-datamodel-code-generator-2998",
+  "image": "tw-task/swe-datamodel-code-generator-2998:d080dfdd26e9",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\ndict\nFAILED tests/main/openapi/test_main_openapi.py::test_query_parameters_with_model_config\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_use_default_with_default_values_parameters\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_include_paths\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_include_paths_without_leading_slash\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_deprecated_field\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_recursive_ref_discriminator\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_recursive_ref_discriminator_pydantic_v2\nFAILED tests/main/openapi/test_main_openapi.py::test_main_openapi_allof_array_ref_no_duplicate_model\n291 failed, 20 passed in 23.77s\n",
+  "seconds": 142
+ },
+ "a2aproject__a2a-python-682_interface": {
+  "instance_id": "a2aproject__a2a-python-682_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-11",
+  "status": "build_failed",
+  "log": "ld-env-94r5kt5p/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 282, in validate_fields\n          _ = self.version\n              ^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-94r5kt5p/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 151, in version\n          self._version = self._get_version()\n                          ^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-94r5kt5p/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 264, in _get_version\n          version = self.hatch.version.cached\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-94r5kt5p/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 1550, in cached\n          raise type(e)(message) from None\n      RuntimeError: Error getting the version from source `uv-dynamic-versioning`: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container b4d432dbf07a\nThe command '/bin/sh -c pip install -e \".[all]\" --quiet && pip install pytest pytest-asyncio pytest-cov pytest-mock pytest-xdist respx ruff pytest-timeout trio uvicorn --quiet' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-a2a-python-682_interface",
+  "seconds": 11
+ },
+ "aws-cloudformation__cfn-python-lint-4368": {
+  "instance_id": "aws-cloudformation__cfn-python-lint-4368",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-10",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-cfn-python-lint-4368",
+  "image": "tw-task/swe-cfn-python-lint-4368:4481f4a1486f",
+  "status": "ok",
+  "seconds": 162
+ },
+ "optuna__optuna-6428": {
+  "instance_id": "optuna__optuna-6428",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-09",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-optuna-6428",
+  "status": "build_failed",
+  "log": "a2==3.1.6     jmespath==1.1.0     joblib==1.6.0     kaleido==0.2.1     kiwisolver==1.5.1     lupa==2.8     Mako==1.4.3     MarkupSafe==3.0.4     matplotlib==3.11.2     moto==5.2.3     mpmath==1.3.0     narwhals==2.27.1     networkx==3.7     numpy==2.5.3     nvidia-cublas==13.1.1.3     nvidia-cuda-cupti==13.0.85     nvidia-cuda-nvrtc==13.0.88     nvidia-cuda-runtime==13.0.96     nvidia-cudnn-cu13==9.24.0.43     nvidia-cufft==12.0.0.61     nvidia-cufile==1.15.1.6     nvidia-curand==10.4.0.35     nvidia-cusolver==12.0.4.66     nvidia-cusparse==12.6.3.3     nvidia-cusparselt-cu13==0.8.1     nvidia-nccl-cu13==2.30.7     nvidia-nvjitlink==13.4.92     nvidia-nvshmem-cu13==3.4.5     nvidia-nvtx==13.0.85     opentelemetry-api==1.45.1     packaging==26.3     pandas==3.0.6     pillow==12.3.0     plotly==7.1.0     pluggy==1.6.0     proto-plus==1.29.0     protobuf==7.36.2     pyasn1==0.6.4     pyasn1_modules==0.4.2     pycparser==3.11     Pygments==2.21.0     pyparsing==3.3.3     pytest-xdist==3.8.0     pytest==9.1.1     python-dateutil==2.9.0.post0     PyYAML==6.0.3     redis==8.1.0     requests==2.34.2     responses==0.26.3     s3transfer==0.19.2     scikit-learn==1.9.1     scipy==1.18.1     setuptools==84.0.0     six==1.17.0     sortedcontainers==2.4.0     SQLAlchemy==2.1.4     sympy==1.14.0     threadpoolctl==3.7.0     torch==2.14.1     tqdm==4.70.1     triton==3.8.0     typing_extensions==4.16.0     urllib3==2.8.0     Werkzeug==3.1.9     xmltodict==1.0.4' returned a non-zero code: 2\n",
+  "seconds": 261
+ },
+ "litestar-org__advanced-alchemy-673_interface": {
+  "instance_id": "litestar-org__advanced-alchemy-673_interface",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-advanced-alchemy-673_interface",
+  "status": "build_failed",
+  "log": "metry-api==1.45.1     opentelemetry-resourcedetector-gcp==1.14.0     opentelemetry-sdk==1.45.1     opentelemetry-semantic-conventions==0.66b1     oracledb==26.0.1     packaging==26.3     pgvector==0.5.1     pluggy==1.6.0     polyfactory==3.3.0     propcache==0.5.4     proto-plus==1.29.0     protobuf==7.36.2     psycopg-binary==3.3.6     psycopg-pool==3.3.3     psycopg==3.3.6     pyasn1==0.6.4     pyasn1_modules==0.4.2     pycparser==3.11     pycryptodome==3.24.0     pydantic-extra-types==2.11.1     pydantic==2.14.0     pydantic_core==2.50.0     Pygments==2.21.0     pymssql==2.4.4     pytest-asyncio==1.4.0     pytest-click==1.1.0     pytest-cov==7.1.0     pytest-databases==0.19.0     pytest-lazy-fixtures==1.4.1     pytest-mock==3.16.0     pytest-rerunfailures==16.7     pytest-sugar==1.1.1     pytest-xdist==3.8.0     pytest==9.1.1     python-dateutil==2.9.0.post0     python-dotenv==1.2.4     PyYAML==6.0.3     requests==2.34.2     rich-click==1.9.9     rich==15.0.0     s3fs==2026.9.0     s==2.2.0     sanic-routing==23.12.0     sanic==25.12.1     six==1.17.0     sniffio==1.3.1     SQLAlchemy==2.1.4     sqlparse==0.6.0     starlette==1.7.0     stevedore==5.9.1     termcolor==3.3.0     time-machine==3.5.1     tracerite==2.6.5     typing-inspection==0.4.4     typing_extensions==4.16.0     ujson==6.0.0     urllib3==2.8.0     uvicorn==0.54.0     uvloop==0.23.0     watchfiles==1.3.0     websockets==17.2     Werkzeug==3.1.9     wrapt==2.5.0     yarl==1.25.1' returned a non-zero code: 1\n",
+  "seconds": 105
+ },
+ "nolar__kopf-1225": {
+  "instance_id": "nolar__kopf-1225",
+  "source": "nebius/SWE-rebench-leaderboard:2026_01",
+  "created_at": "2026-01-30",
+  "status": "build_failed",
+  "log": "ETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore\n ---> Using cache\n ---> 885f8b6bcebf\nStep 3/10 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> 125976cd5df6\nStep 4/10 : ADD https://github.com/nolar/kopf/archive/5c55b89a16354595239234a12fb439db4195f9e0.tar.gz /tmp/src.tar.gz\n\n\n ---> fd972e021f1d\nStep 5/10 : RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz\n ---> Running in e58bcd200371\n ---> Removed intermediate container e58bcd200371\n ---> 5a3b133c3943\nStep 6/10 : WORKDIR /workspace/repo\n ---> Running in 866376f9064b\n ---> Removed intermediate container 866376f9064b\n ---> 07f50494c049\nStep 7/10 : RUN pip install -q --group test -e . && pip install -q -e .\n ---> Running in 3cacd6703eec\n\u001b[91m\nUsage:   \n  pip install [options] <requirement specifier> [package-index-options] ...\n  pip install [options] -r <requirements file> [package-index-options] ...\n  pip install [options] [-e] <vcs project url> ...\n  pip install [options] [-e] <local project path> ...\n  pip install [options] <archive url/path> ...\n\nno such option: --group\n\u001b[0m ---> Removed intermediate container 3cacd6703eec\nThe command '/bin/sh -c pip install -q --group test -e . && pip install -q -e .' returned a non-zero code: 2\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-kopf-1225",
+  "seconds": 10
+ },
+ "pydap__pydap-624": {
+  "instance_id": "pydap__pydap-624",
+  "source": "nebius/SWE-rebench-leaderboard:2026_01",
+  "created_at": "2026-01-26",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pydap-624",
+  "status": "error",
+  "log": "/test_open_dap4_url.py::test_structs_and_sequences_warns[dap4://test.opendap.org/opendap/dap4/d4ts/test_struct1.nc.h5-s.x-expected_value0]）；tests/ 下缺少 test_open_dap4_url.py（src/pydap/tests/test_open_dap4_url.py::test_structs_and_sequences_warns[dap4://test.opendap.org/opendap/data/ff/avhrr.dat-URI_Avhrr.day-expected_value1]）；tests/ 下缺少 test_open_dap4_url.py（src/pydap/tests/test_open_dap4_url.py::test_structs_and_sequences_unflat[dap4://test.opendap.org/opendap/dap4/d4ts/test_struct1.nc.h5-s.x-StructureType-val0]）；tests/ 下缺少 test_open_dap4_url.py（src/pydap/tests/test_open_dap4_url.py::test_structs_and_sequences_unflat[dap4://test.opendap.org/opendap/data/ff/avhrr.dat-URI_Avhrr.day-SequenceType-nan]）；tests/ 下缺少 test_open_dap4_url.py（src/pydap/tests/test_open_dap4_url.py::test_sequence_warns）",
+  "seconds": 47
+ },
+ "scipp__plopp-513": {
+  "instance_id": "scipp__plopp-513",
+  "source": "nebius/SWE-rebench-leaderboard:2026_01",
+  "created_at": "2026-01-22",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpr05va7ky'",
+  "seconds": 0
+ },
+ "modelcontextprotocol__python-sdk-1864": {
+  "instance_id": "modelcontextprotocol__python-sdk-1864",
+  "source": "nebius/SWE-rebench-leaderboard:2026_01",
+  "created_at": "2026-01-15",
+  "status": "build_failed",
+  "log": "_fields()\n        File \"/tmp/pip-build-env-jbi3scc6/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 282, in validate_fields\n          _ = self.version\n              ^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-jbi3scc6/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 151, in version\n          self._version = self._get_version()\n                          ^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-jbi3scc6/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 264, in _get_version\n          version = self.hatch.version.cached\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-jbi3scc6/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 1550, in cached\n          raise type(e)(message) from None\n      RuntimeError: Error getting the version from source `uv-dynamic-versioning`: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 55eb5c08e6fc\nThe command '/bin/sh -c pip install -q -e .[cli,rich,ws] && pip install -q pytest pytest-xdist inline-snapshot dirty-equals pytest-examples' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-python-sdk-1864",
+  "seconds": 16
+ },
+ "sciunto-org__python-bibtexparser-515": {
+  "instance_id": "sciunto-org__python-bibtexparser-515",
+  "source": "nebius/SWE-rebench-leaderboard:2026_01",
+  "created_at": "2026-01-17",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpeicxh8b5'",
+  "seconds": 0
+ },
+ "pyfar__pyrato-113": {
+  "instance_id": "pyfar__pyrato-113",
+  "source": "nebius/SWE-rebench-leaderboard:2026_01",
+  "created_at": "2026-01-06",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpvw0ruy5e'",
+  "seconds": 0
+ },
+ "openai__openai-agents-python-2144": {
+  "instance_id": "openai__openai-agents-python-2144",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-03",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpbz8jzhgc'",
+  "seconds": 0
+ },
+ "oOo0oOo__leanclient-24": {
+  "instance_id": "oOo0oOo__leanclient-24",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-14",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpls5dg15e'",
+  "seconds": 0
+ },
+ "DiamondLightSource__mx-bluesky-1519": {
+  "instance_id": "DiamondLightSource__mx-bluesky-1519",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-11",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpfa72tii3'",
+  "seconds": 0
+ },
+ "UXARRAY__uxarray-1423": {
+  "instance_id": "UXARRAY__uxarray-1423",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-10",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp6tuc0r2k'",
+  "seconds": 0
+ },
+ "a2aproject__a2a-python-576": {
+  "instance_id": "a2aproject__a2a-python-576",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-03",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpa0su_tjy'",
+  "seconds": 0
+ },
+ "ag2ai__faststream-2701": {
+  "instance_id": "ag2ai__faststream-2701",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-02",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmptu5ah5r6'",
+  "seconds": 0
+ },
+ "VRSEN__agency-swarm-468": {
+  "instance_id": "VRSEN__agency-swarm-468",
+  "source": "nebius/SWE-rebench-leaderboard:2025_12",
+  "created_at": "2025-12-01",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpbilws8ac'",
+  "seconds": 0
+ },
+ "BrianPugh__cyclopts-701": {
+  "instance_id": "BrianPugh__cyclopts-701",
+  "source": "nebius/SWE-rebench-leaderboard:2025_11",
+  "created_at": "2025-11-22",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpoh52x9t7'",
+  "seconds": 0
+ },
+ "bas-amop__PolarRoute-server-159": {
+  "instance_id": "bas-amop__PolarRoute-server-159",
+  "source": "nebius/SWE-rebench-leaderboard:2025_11",
+  "created_at": "2025-11-14",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp62ffg5lr'",
+  "seconds": 0
+ },
+ "marimo-team__marimo-6819": {
+  "instance_id": "marimo-team__marimo-6819",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-16",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmptvmtbe1v'",
+  "seconds": 0
+ },
+ "cpp-linter__cpp-linter-hooks-142": {
+  "instance_id": "cpp-linter__cpp-linter-hooks-142",
+  "source": "nebius/SWE-rebench-leaderboard:2025_11",
+  "created_at": "2025-11-04",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpmtui_t0n'",
+  "seconds": 0
+ },
+ "BrianPugh__cyclopts-633": {
+  "instance_id": "BrianPugh__cyclopts-633",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-24",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpjt01xce0'",
+  "seconds": 0
+ },
+ "scikit-rf__scikit-rf-1336": {
+  "instance_id": "scikit-rf__scikit-rf-1336",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-14",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpeyxdkim1'",
+  "seconds": 0
+ },
+ "openai__openai-agents-python-1965": {
+  "instance_id": "openai__openai-agents-python-1965",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-21",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpvq23r126'",
+  "seconds": 0
+ },
+ "yt-project__unyt-593": {
+  "instance_id": "yt-project__unyt-593",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-08",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpvh_sghrb'",
+  "seconds": 0
+ },
+ "stanfordnlp__dspy-8890": {
+  "instance_id": "stanfordnlp__dspy-8890",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-02",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp153r094g'",
+  "seconds": 0
+ },
+ "strands-agents__sdk-python-994": {
+  "instance_id": "strands-agents__sdk-python-994",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-07",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmp5265_vwy'",
+  "seconds": 0
+ },
+ "vndee__llm-sandbox-101": {
+  "instance_id": "vndee__llm-sandbox-101",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-07",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpde1olh1g'",
+  "seconds": 0
+ },
+ "google__adk-python-3088": {
+  "instance_id": "google__adk-python-3088",
+  "source": "nebius/SWE-rebench-leaderboard:2025_10",
+  "created_at": "2025-10-03",
+  "status": "error",
+  "log": "OSError: [Errno 28] No space left on device: '/tmp/tmpdwbmdo6l'",
+  "seconds": 0
+ },
+ "cs-si__eodag-2176": {
+  "instance_id": "cs-si__eodag-2176",
+  "source": "nebius/SWE-rebench-leaderboard:2026_03",
+  "created_at": "2026-05-11",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-eodag-2176",
+  "image": "tw-task/swe-eodag-2176:7af5f2b133e8",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n   ModuleNotFoundError: No module named 'owslib'\n_____________ ERROR collecting tests/units/test_search_plugins.py ______________\nImportError while importing test module '/workspace/repo/tests/units/test_search_plugins.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/usr/local/lib/python3.13/importlib/__init__.py:88: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/__init__.py:31: in <module>\n    from owslib.etree import etree\nE   ModuleNotFoundError: No module named 'owslib'\n=========================== short test summary info ============================\nERROR tests/units/test_search_plugins.py\nERROR tests/units/test_search_plugins.py\n2 errors in 0.20s\n",
+  "seconds": 343
+ }
+}

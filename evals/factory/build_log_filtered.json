@@ -1,0 +1,296 @@
+{
+ "Delgan__loguru-1306": {
+  "instance_id": "Delgan__loguru-1306",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2025-02-20",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-loguru-1306",
+  "image": "tw-task/swe-loguru-1306:bb4c250b6c6e",
+  "status": "ok",
+  "seconds": 193
+ },
+ "IAMconsortium__nomenclature-442": {
+  "instance_id": "IAMconsortium__nomenclature-442",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-12-18",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-nomenclature-442",
+  "status": "build_failed",
+  "log": "ion_from_dunamai(vcs, pattern, config)\n        File \"/tmp/pip-build-env-z8qd8gte/overlay/lib/python3.10/site-packages/poetry_dynamic_versioning/__init__.py\", line 510, in _get_version_from_dunamai\n          return Version.from_vcs(\n        File \"/tmp/pip-build-env-z8qd8gte/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n        File \"/tmp/pip-build-env-z8qd8gte/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n        File \"/tmp/pip-build-env-z8qd8gte/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 1179, in from_git\n          _detect_vcs(vcs, path)\n        File \"/tmp/pip-build-env-z8qd8gte/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 399, in _detect_vcs\n          raise RuntimeError(\"This does not appear to be a {} project\".format(expected_vcs.value.title()))\n      RuntimeError: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container f7501e5723a3\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 162
+ },
+ "Point72__ccflow-24": {
+  "instance_id": "Point72__ccflow-24",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2025-01-29",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-ccflow-24",
+  "image": "tw-task/swe-ccflow-24:5cb0f4238bf9",
+  "status": "ok",
+  "seconds": 196
+ },
+ "OCHA-DAP__hdx-python-country-63": {
+  "instance_id": "OCHA-DAP__hdx-python-country-63",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-11-19",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-hdx-python-country-63",
+  "status": "build_failed",
+  "log": "  filelock==3.16.1     frictionless==5.18.0     hdx-python-utilities==3.7.4     humanize==4.11.0     identify==2.6.2     idna==3.10     ijson==3.3.0     iniconfig==2.0.0     isodate==0.7.2     Jinja2==3.1.4     jsonlines==4.0.0     jsonpath-ng==1.7.0     jsonschema-specifications==2024.10.1     jsonschema==4.23.0     libhxl==5.2.2     loguru==0.7.2     markdown-it-py==3.0.0     marko==2.1.2     MarkupSafe==3.0.2     mdurl==0.1.2     nodeenv==1.9.1     openpyxl==3.1.5     packaging==24.2     petl==1.7.15     platformdirs==4.3.6     pluggy==1.5.0     ply==3.11     pre_commit==4.0.1     pydantic==2.9.2     pydantic_core==2.23.4     Pygments==2.18.0     pyphonetics==0.5.3     pytest-cov==6.0.0     pytest==8.3.3     python-dateutil==2.9.0.post0     python-io-wrapper==0.3.1     python-slugify==8.0.4     PyYAML==6.0.2     ratelimit==2.2.1     referencing==0.35.1     requests-file==2.1.0     requests==2.32.3     rfc3986==2.0.0     rich==13.9.4     rpds-py==0.21.0     ruamel.yaml.clib==0.2.12     ruamel.yaml==0.18.6     shellingham==1.5.4     simpleeval==1.0.3     six==1.16.0     stringcase==1.2.0     structlog==24.4.0     tableschema-to-template==0.0.13     tabulate==0.9.0     tenacity==9.0.0     text-unidecode==1.3     tomli==2.2.1     typer==0.13.0     typing_extensions==4.12.2     Unidecode==1.3.8     urllib3==2.2.3     validators==0.34.0     virtualenv==20.27.1     xlrd3==1.1.0     xlrd==2.0.1     xlsx2csv==0.8.3     XlsxWriter==3.2.0     xlwt==1.3.0' returned a non-zero code: 1\n",
+  "seconds": 31
+ },
+ "PEtab-dev__libpetab-python-327": {
+  "instance_id": "PEtab-dev__libpetab-python-327",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-12-03",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-libpetab-python-327",
+  "image": "tw-task/swe-libpetab-python-327:6e7a190fac94",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nd(), req.selector, req.data, headers,\n                          encode_chunked=req.has_header('Transfer-encoding'))\n            except OSError as err: # timeout error\n>               raise URLError(err)\nE               urllib.error.URLError: <urlopen error [Errno -3] Temporary failure in name resolution>\n\n/usr/local/lib/python3.10/urllib/request.py:1364: URLError\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nFAILED tests/v1/test_petab.py::test_load_remote - urllib.error.URLError: <url...\nFAILED tests/v2/test_problem.py::test_load_remote - urllib.error.URLError: <u...\nFAILED tests/v2/test_problem.py::test_auto_upgrade - urllib.error.URLError: <...\n3 failed, 13 passed in 2.41s\n",
+  "seconds": 184
+ },
+ "IAMconsortium__nomenclature-418": {
+  "instance_id": "IAMconsortium__nomenclature-418",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-10-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-nomenclature-418",
+  "status": "build_failed",
+  "log": "ion_from_dunamai(vcs, pattern, config)\n        File \"/tmp/pip-build-env-anichwgv/overlay/lib/python3.10/site-packages/poetry_dynamic_versioning/__init__.py\", line 510, in _get_version_from_dunamai\n          return Version.from_vcs(\n        File \"/tmp/pip-build-env-anichwgv/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n        File \"/tmp/pip-build-env-anichwgv/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n        File \"/tmp/pip-build-env-anichwgv/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 1179, in from_git\n          _detect_vcs(vcs, path)\n        File \"/tmp/pip-build-env-anichwgv/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 399, in _detect_vcs\n          raise RuntimeError(\"This does not appear to be a {} project\".format(expected_vcs.value.title()))\n      RuntimeError: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 90425dde948a\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 98
+ },
+ "All-Hands-AI__openhands-resolver-123": {
+  "instance_id": "All-Hands-AI__openhands-resolver-123",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-28",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-openhands-resolver-123",
+  "image": "tw-task/swe-openhands-resolver-123:93c242b4b90b",
+  "status": "ok",
+  "seconds": 268
+ },
+ "PennLINC__xcp_d-1433": {
+  "instance_id": "PennLINC__xcp_d-1433",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2025-04-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-xcp_d-1433",
+  "image": "tw-task/swe-xcp_d-1433:6b0d53fd02a0",
+  "status": "ok",
+  "seconds": 284
+ },
+ "SpikeInterface__spikeinterface-3778": {
+  "instance_id": "SpikeInterface__spikeinterface-3778",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2025-03-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-spikeinterface-3778",
+  "image": "tw-task/swe-spikeinterface-3778:f1469f4c8a89",
+  "status": "ok",
+  "seconds": 498
+ },
+ "PrefectHQ__prefect-17123": {
+  "instance_id": "PrefectHQ__prefect-17123",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2025-02-13",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-prefect-17123",
+  "image": "tw-task/swe-prefect-17123:01e48a0133ab",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nib/python3.9/site-packages/pydantic_settings/main.py:176: in __init__\n    super().__init__(\n/usr/local/lib/python3.9/site-packages/pydantic_settings/main.py:176: in __init__\n    super().__init__(\n/usr/local/lib/python3.9/site-packages/pydantic_settings/main.py:176: in __init__\n    super().__init__(\nE   pydantic_core._pydantic_core.ValidationError: 1 validation error for LoggingToAPISettings\nE     Value error, Error calling function `ser_model`: PydanticDeprecatedSince211: Accessing the 'model_fields' attribute on the instance is deprecated. Instead, you should access this attribute from the model class. Deprecated in Pydantic V2.11 to be removed in V3.0. [type=value_error, input_value={}, input_type=dict]\nE       For further information visit https://errors.pydantic.dev/2.11/v/value_error\n",
+  "seconds": 219
+ },
+ "BoboTiG__ebook-reader-dict-2151": {
+  "instance_id": "BoboTiG__ebook-reader-dict-2151",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-22",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-ebook-reader-dict-2151",
+  "status": "error",
+  "log": "TaskFormatError: /workspace/triwitness/evals/tasks/_staging/swe-ebook-reader-dict-2151：test.sh 没有运行 tests/test_en.py::test_parse_word[it's-pronunciations4-etymology4-definitions4-variants4]",
+  "seconds": 3
+ },
+ "BoboTiG__ebook-reader-dict-2145": {
+  "instance_id": "BoboTiG__ebook-reader-dict-2145",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-20",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-ebook-reader-dict-2145",
+  "status": "error",
+  "log": "TaskFormatError: /workspace/triwitness/evals/tasks/_staging/swe-ebook-reader-dict-2145：test.sh 没有运行 tests/test_en.py::test_parse_word[it's-pronunciations4-etymology4-definitions4-variants4]",
+  "seconds": 5
+ },
+ "Peter-van-Tol__pydantic-shapely-11": {
+  "instance_id": "Peter-van-Tol__pydantic-shapely-11",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-22",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pydantic-shapely-11",
+  "status": "build_failed",
+  "log": "nfig)\n        File \"/tmp/pip-build-env-u9velmlw/overlay/lib/python3.9/site-packages/poetry_dynamic_versioning/__init__.py\", line 510, in _get_version_from_dunamai\n          return Version.from_vcs(\n        File \"/tmp/pip-build-env-u9velmlw/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n        File \"/tmp/pip-build-env-u9velmlw/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n        File \"/tmp/pip-build-env-u9velmlw/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 2133, in from_any_vcs\n          vcs = _detect_vcs(None, path)\n        File \"/tmp/pip-build-env-u9velmlw/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 420, in _detect_vcs\n          raise RuntimeError(\" \".join(error_parts))\n      RuntimeError: Unable to detect version control system. Checked: Git. Not installed: Mercurial, Darcs, Subversion, Bazaar, Fossil, Pijul.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 588c7e146d6a\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 93
+ },
+ "ResearchObject__ro-crate-py-193": {
+  "instance_id": "ResearchObject__ro-crate-py-193",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-ro-crate-py-193",
+  "image": "tw-task/swe-ro-crate-py-193:1f5d15c4f5c8",
+  "status": "ok",
+  "seconds": 36
+ },
+ "Parquery__icontract-297": {
+  "instance_id": "Parquery__icontract-297",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-20",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-icontract-297",
+  "image": "tw-task/swe-icontract-297:1a1429128c94",
+  "status": "ok",
+  "seconds": 53
+ },
+ "CrossGL__crosstl-98": {
+  "instance_id": "CrossGL__crosstl-98",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-25",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-crosstl-98",
+  "image": "tw-task/swe-crosstl-98:e0bfd0587c53",
+  "status": "ok",
+  "seconds": 19
+ },
+ "AzureAD__microsoft-authentication-library-for-python-730": {
+  "instance_id": "AzureAD__microsoft-authentication-library-for-python-730",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-07",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-microsoft-authentication-library-for-python-730",
+  "image": "tw-task/swe-microsoft-authentication-library-for-python-730:cd87c3db93d0",
+  "status": "ok",
+  "seconds": 33
+ },
+ "Qiskit__qiskit-bot-48": {
+  "instance_id": "Qiskit__qiskit-bot-48",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-07-29",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-qiskit-bot-48",
+  "status": "build_failed",
+  "log": "r/local/lib/python3.9/site-packages/pbr/hooks/metadata.py\", line 25, in hook\n          self.config['version'] = packaging.get_version(\n        File \"/usr/local/lib/python3.9/site-packages/pbr/packaging.py\", line 866, in get_version\n          raise Exception(\"Versioning for this project requires either an sdist\"\n      Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name qiskit-bot was given, but was not able to be found.\n      error in setup command: Error parsing /workspace/repo/setup.cfg: Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name qiskit-bot was given, but was not able to be found.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 799dda990f87\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 20
+ },
+ "PicnicSupermarket__dbt-score-74": {
+  "instance_id": "PicnicSupermarket__dbt-score-74",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-22",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-dbt-score-74",
+  "status": "build_failed",
+  "log": "xt)\n        File \"/tmp/pip-build-env-3_oehz8p/overlay/lib/python3.10/site-packages/pdm/backend/base.py\", line 187, in initialize\n          self.call_hook(\"pdm_build_initialize\", context)\n        File \"/tmp/pip-build-env-3_oehz8p/overlay/lib/python3.10/site-packages/pdm/backend/base.py\", line 145, in call_hook\n          getattr(hook, hook_name)(context, *args, **kwargs)\n        File \"/tmp/pip-build-env-3_oehz8p/overlay/lib/python3.10/site-packages/pdm/backend/hooks/version/__init__.py\", line 69, in pdm_build_initialize\n          getattr(self, f\"resolve_version_from_{source}\")(context, **options)\n        File \"/tmp/pip-build-env-3_oehz8p/overlay/lib/python3.10/site-packages/pdm/backend/hooks/version/__init__.py\", line 135, in resolve_version_from_scm\n          raise ConfigError(\n      pdm.backend.exceptions.ConfigError: Cannot find the version from SCM or SCM isn't detected.\n      You can still specify the version via environment variable `PDM_BUILD_SCM_VERSION`, or specify `fallback_version` config.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 194bbc0db838\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 99
+ },
+ "AzureAD__microsoft-authentication-library-for-python-723": {
+  "instance_id": "AzureAD__microsoft-authentication-library-for-python-723",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-07-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-microsoft-authentication-library-for-python-723",
+  "image": "tw-task/swe-microsoft-authentication-library-for-python-723:e8953a40e6c2",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n::TestApplicationForRefreshInBehaviors::test_expired_token_and_unavailable_aad_should_return_error\nERROR tests/test_application.py::TestTelemetryOnClientApplication::test_acquire_token_by_auth_code_flow\nERROR tests/test_application.py::TestTelemetryOnClientApplication::test_acquire_token_by_refresh_token\nERROR tests/test_application.py::TestTelemetryOnPublicClientApplication::test_acquire_token_by_device_flow\nERROR tests/test_application.py::TestTelemetryOnPublicClientApplication::test_acquire_token_by_username_password\nERROR tests/test_application.py::TestTelemetryOnConfidentialClientApplication::test_acquire_token_for_client\nERROR tests/test_application.py::TestTelemetryOnConfidentialClientApplication::test_acquire_token_on_behalf_of\n19 failed, 28 passed, 23 warnings, 11 errors in 3.84s\n",
+  "seconds": 28
+ },
+ "TDAmeritrade__stumpy-1015": {
+  "instance_id": "TDAmeritrade__stumpy-1015",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-07-23",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-stumpy-1015",
+  "image": "tw-task/swe-stumpy-1015:525cf759a369",
+  "status": "ok",
+  "seconds": 97
+ },
+ "EmilStenstrom__django-components-489": {
+  "instance_id": "EmilStenstrom__django-components-489",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-05-07",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-django-components-489",
+  "image": "tw-task/swe-django-components-489:0d950573aaa9",
+  "status": "ok",
+  "seconds": 49
+ },
+ "Fatal1ty__mashumaro-220": {
+  "instance_id": "Fatal1ty__mashumaro-220",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-04-28",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-mashumaro-220",
+  "image": "tw-task/swe-mashumaro-220:bbfecd2cbf44",
+  "status": "ok",
+  "seconds": 58
+ },
+ "SpikeInterface__spikeinterface-3047": {
+  "instance_id": "SpikeInterface__spikeinterface-3047",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-06-19",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-spikeinterface-3047",
+  "image": "tw-task/swe-spikeinterface-3047:8904c6462bdc",
+  "status": "ok",
+  "seconds": 148
+ },
+ "Lucas-C__pre-commit-hooks-98": {
+  "instance_id": "Lucas-C__pre-commit-hooks-98",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-01-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-pre-commit-hooks-98",
+  "image": "tw-task/swe-pre-commit-hooks-98:156e684671c6",
+  "dropped_p2p": [
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\n-module_with_fuzzy_matched_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\n-module_with_license_todo.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\n-module_without_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\r\\n-module_with_fuzzy_matched_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\r\\n-module_with_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\r\\n-module_with_license_and_few_words.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\r\\n-module_with_license_todo.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\r\\n-module_without_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\n-module_with_fuzzy_matched_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\n-module_with_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\n-module_with_license_and_few_words.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\n-module_with_license_todo.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\n-module_without_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_with_fuzzy_matched_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_with_license.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_with_license_and_few_words.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_with_license_todo.css-/*|",
+   "tests/insert_license_test.py::test_remove_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_without_license.css-/*|"
+  ],
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\ny_match_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_with_fuzzy_matched_license.css-/*|\n(no match in any of [<Module insert_license_test.py>])\n\nERROR: not found: /workspace/repo/tests/insert_license_test.py::test_fuzzy_match_license[LICENSE_without_trailing_newline.txt-\\r\\n-module_with_license_todo.css-/*|\n(no match in any of [<Module insert_license_test.py>])\n\nERROR: not found: /workspace/repo/tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\n-module_with_license.css-/*|\n(no match in any of [<Module insert_license_test.py>])\n\nERROR: not found: /workspace/repo/tests/insert_license_test.py::test_remove_license[LICENSE_with_trailing_newline.txt-\\n-module_with_license_and_few_words.css-/*|\n(no match in any of [<Module insert_license_test.py>])\n\n",
+  "seconds": 38
+ },
+ "ResearchObject__ro-crate-py-171": {
+  "instance_id": "ResearchObject__ro-crate-py-171",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-01-09",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-ro-crate-py-171",
+  "image": "tw-task/swe-ro-crate-py-171:d6cf4fcd87c4",
+  "status": "ok",
+  "seconds": 36
+ },
+ "PyCQA__flake8-bugbear-424": {
+  "instance_id": "PyCQA__flake8-bugbear-424",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-11-23",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-flake8-bugbear-424",
+  "image": "tw-task/swe-flake8-bugbear-424:259d37b7d955",
+  "status": "ok",
+  "seconds": 112
+ },
+ "RemDelaporteMathurin__h-transport-materials-224": {
+  "instance_id": "RemDelaporteMathurin__h-transport-materials-224",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-07-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-h-transport-materials-224",
+  "image": "tw-task/swe-h-transport-materials-224:70d10b662382",
+  "status": "ok",
+  "seconds": 70
+ },
+ "OpenMDAO__dymos-1021": {
+  "instance_id": "OpenMDAO__dymos-1021",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-11-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-dymos-1021",
+  "image": "tw-task/swe-dymos-1021:3fad66eb42d0",
+  "status": "ok",
+  "seconds": 240
+ },
+ "AI4S2S__lilio-58": {
+  "instance_id": "AI4S2S__lilio-58",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-05-30",
+  "dir": "/workspace/triwitness/evals/tasks/_staging/swe-lilio-58",
+  "image": "tw-task/swe-lilio-58:ca656a4e9e1a",
+  "status": "ok",
+  "seconds": 127
+ }
+}
