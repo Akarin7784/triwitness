@@ -114,6 +114,10 @@ function fallbackText(e: TwEvent): string {
       return STATE_LABEL[e.payload.status as TaskState] ?? e.payload.status
     case 'error':
       return `${e.payload.type}：${e.payload.message}`
+    case 'environment_prepared':
+      return e.payload.ok
+        ? `环境就绪 · 基线失败 ${e.payload.baseline_failure_count ?? 0}`
+        : '环境构建失败'
   }
 }
 
@@ -136,6 +140,8 @@ function toneOf(e: TwEvent): StreamTone {
       return e.payload.verdict === 'pass' ? 'normal' : e.payload.verdict === 'fail' ? 'error' : 'warn'
     case 'error':
       return 'error'
+    case 'environment_prepared':
+      return e.payload.ok === false ? 'error' : 'chapter'
     case 'task_finished':
       return 'final'
     default:
