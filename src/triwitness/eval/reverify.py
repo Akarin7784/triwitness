@@ -6,6 +6,9 @@
 - 每个档位写成一个新配置 `<原配置>+<档位>`：<out>/<原配置>+<档位>/<task>/<attempt>/{result.json, verification.json}，
   report.md 里三档并排（none 档 = 原结果，不验证）。
 - 续跑：已有 result.json 的跳过。model 档真实调用需显式 live，并过高峰闸门 + 预估上限（verify_estimate）。
+- 档位按 none → deterministic → model 顺序跑；model 档优先复用同一输出目录里 deterministic 档的 verification.json
+  （同一份复跑证据，只加模型判读，不再重跑沙箱）。`model_repeats` > 1 时每个补丁独立判多次（W3-14 测稳定性），
+  多数票（并列取保守）；运行中 Verifier 累计花费达到 `max_total_cny` 就不再派发新的模型判读（硬上限）。
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ from triwitness.core.models import FinishReport
 from triwitness.eval.report import load_results
 from triwitness.eval.runner import AttemptResult, EstimateTooHigh, _write_json_atomic
 from triwitness.eval.task import EvalTask
-from triwitness.eval.verification import VerificationOutcome, VerifierMode, verify_run
+from triwitness.eval.verification import VerificationOutcome, VerifierMode, judge_with_model, verify_run
 from triwitness.eval.verify_estimate import estimate, sizes_from_results
 from triwitness.llm.gate import PeakGate
 from triwitness.sandbox.base import Sandbox
@@ -50,6 +53,9 @@ class ReverifySummary:
     errors: dict[str, str] = field(default_factory=dict)
     estimate_cny: float = 0.0
     verifier_cost_cny: float = 0.0
+    reused_deterministic: int = 0
+    capped: list[str] = field(default_factory=list)  # 因花费硬上限没派发的 attempt
+    model_judged: int = 0
 
 
 def _finish_from(d: Path) -> FinishReport | None:
@@ -107,6 +113,8 @@ async def reverify(
     concurrency: int = 2,
     limit: int | None = None,
     configs: list[str] | None = None,
+    model_repeats: int = 1,
+    reuse_deterministic: bool = True,
 ) -> ReverifySummary:
     if src.resolve() == out.resolve():
         raise ConfigError("输出目录不能和原结果目录相同（原结果只读）")
@@ -121,11 +129,12 @@ async def reverify(
             (gate or PeakGate()).check_start("reverify（Verifier 模型）")
             wanted = {s.result.task_id for s in saved}
             sizes = [z for z in sizes_from_results(src) if z.task_id in wanted]
-            summary.estimate_cny = estimate(sizes).high_cny if sizes else 0.0
+            summary.estimate_cny = estimate(sizes * model_repeats).high_cny if sizes else 0.0
             if summary.estimate_cny > max_total_cny:
                 raise EstimateTooHigh(f"预估（保守）¥{summary.estimate_cny:.2f} 超过上限 ¥{max_total_cny:g}，不开始")
     out.mkdir(parents=True, exist_ok=True)
     meta = {"source": str(src), "modes": list(modes), "live": live, "estimate_cny": summary.estimate_cny,
+            "model_repeats": model_repeats, "max_total_cny": max_total_cny,
             "configs": [{"name": f"{c}+{m}", "attempts": max(s.result.attempt for s in saved if s.result.config == c)}
                         for c in sorted({s.result.config for s in saved}) for m in modes],
             "tasks": sorted({s.result.task_id for s in saved})}  # fmt: skip
@@ -148,13 +157,25 @@ async def reverify(
         if mode != "none":
             assert task is not None
             async with sem:
+                if mode == "model" and _over_cap(summary, max_total_cny):
+                    summary.capped.append(key)
+                    return
                 try:
-                    ver = await verify_run(
-                        issue=task.instruction, diff=s.diff, finish=s.finish,
-                        new_sandbox=_factory(grader, task), mode=mode, test_cmd=task.tw.test_cmd,
-                        run_regression=regression, router=_router(router_factory, mode),
-                        task_id=task.id,
-                    )  # fmt: skip
+                    base = _det_outcome(out, r) if mode == "model" and reuse_deterministic and s.diff.strip() else None
+                    if base is not None:
+                        summary.reused_deterministic += 1
+                        ver = await judge_with_model(
+                            base, issue=task.instruction, diff=s.diff, finish=s.finish,
+                            router=_router(router_factory, mode),  # type: ignore[arg-type]
+                            repeats=model_repeats, task_id=task.id,
+                        )  # fmt: skip
+                    else:
+                        ver = await verify_run(
+                            issue=task.instruction, diff=s.diff, finish=s.finish,
+                            new_sandbox=_factory(grader, task), mode=mode, test_cmd=task.tw.test_cmd,
+                            run_regression=regression, router=_router(router_factory, mode),
+                            task_id=task.id, model_repeats=model_repeats,
+                        )  # fmt: skip
                 except Exception as e:  # 单个 attempt 出错不影响其他
                     log.exception("reverify 失败：%s", key)
                     err = f"{type(e).__name__}: {e}"[:500]
@@ -163,13 +184,31 @@ async def reverify(
         if ver is not None:
             _write_json_atomic(d / "verification.json", ver.model_dump(mode="json"))
             summary.verifier_cost_cny += ver.cost_cny
+            if mode == "model" and ver.model_judgments:
+                summary.model_judged += 1
         _write_json_atomic(d / "result.json", _row(r, mode, ver, err).model_dump())
         summary.done += 1
 
-    await asyncio.gather(*(one(s, m) for m in modes for s in saved))
+    for m in MODES:  # 按顺序：deterministic 先跑完，model 档才能复用它的证据
+        if m in modes:
+            await asyncio.gather(*(one(s, m) for s in saved))
     if summary.errors:
         (out / "errors.json").write_text(json.dumps(summary.errors, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
+
+
+def _over_cap(s: ReverifySummary, cap: float) -> bool:
+    """硬上限：已花 + 按已完成均值 ×1.5 预留下一个 attempt 的花费，超过上限就不再派发。"""
+    nxt = 1.5 * s.verifier_cost_cny / s.model_judged if s.model_judged else 0.0
+    return s.verifier_cost_cny + nxt > cap
+
+
+def _det_outcome(out: Path, r: AttemptResult) -> VerificationOutcome | None:
+    p = out / f"{r.config}+deterministic" / r.task_id / str(r.attempt) / "verification.json"
+    if not p.is_file():
+        return None
+    v = VerificationOutcome.model_validate_json(p.read_text(encoding="utf-8"))
+    return v if v.mode == "deterministic" else None
 
 
 def _router(factory: Callable[[], RouterLike] | None, mode: VerifierMode) -> RouterLike | None:

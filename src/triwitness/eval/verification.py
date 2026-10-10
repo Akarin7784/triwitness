@@ -52,6 +52,23 @@ class FactoryBackend:
         return await self.factory()
 
 
+class ModelJudgment(BaseModel):
+    """model 档的一次独立判读（W3-14：每个补丁判多次测稳定性）。"""
+
+    verdict: VerdictLabel
+    confidence: float | None = None
+    path: str | None = None
+    cost_cny: float = 0.0
+    gaps: list[str] = Field(default_factory=list)
+
+
+def majority(labels: list[VerdictLabel]) -> VerdictLabel:
+    """多数票；并列时取更保守的（fail > inconclusive > pass）。"""
+    top = max(labels.count(lb) for lb in labels)
+    tied: list[VerdictLabel] = [lb for lb in labels if labels.count(lb) == top]
+    return combine(*tied)
+
+
 class VerificationOutcome(BaseModel):
     mode: VerifierMode
     verdict: VerdictLabel
@@ -68,6 +85,7 @@ class VerificationOutcome(BaseModel):
     reasons: list[str] = Field(default_factory=list)
     test_runs: list[TestRun] = Field(default_factory=list)
     cost_cny: float = 0.0
+    model_judgments: list[ModelJudgment] = Field(default_factory=list)
 
 
 async def verify_attempt(
@@ -82,6 +100,7 @@ async def verify_attempt(
     router: RouterLike | None = None,
     task_id: str | None = None,
     timeout_s: int = 600,
+    model_repeats: int = 1,
 ) -> VerificationOutcome:
     assert mode != "none"
     spec = SandboxSpec()
@@ -104,27 +123,61 @@ async def verify_attempt(
             reasons.append(str(e)[:300])
     det, why = deterministic_verdict(repro_status, runs, ac, claim)
     reasons = why + reasons
-    out_model: VerdictLabel | None = None
-    conf, path, cost = None, None, 0.0
+    base = VerificationOutcome(mode="deterministic", verdict=det, deterministic=det, repro_status=repro_status,
+                               clean_env=clean_env, risk_score=0, risk_level="L0", anticheat_flags=ac.codes,
+                               claim_flags=claim.flags if claim else [], reasons=reasons, test_runs=runs)  # fmt: skip
     if mode == "model":
         if router is None:
             raise ValueError("verifier=model 需要 router")
-        vr = await run_verifier(router, VerifierInput(
-            issue=issue, diff=diff, repro_status=repro_status, test_runs=runs, notes=reasons,
-            anticheat_flags=ac.codes, claim_flags=claim.flags if claim else [],
-            executor_summary=finish.summary if finish else "", executor_open_risks=finish.open_risks if finish else [],
-        ), mode="eval", task_id=task_id)  # fmt: skip
-        out_model, conf, path, cost = vr.verdict.verdict, vr.verdict.confidence, vr.path, vr.cost_cny
-        reasons += [f"Verifier 缺口：{g}" for g in vr.verdict.evidence_gaps[:3]]
-    final = combine(det, out_model) if out_model else det
-    risk = assess(RiskInputs(patch=diff, anticheat=ac, repro_status=repro_status, verdict=final,  # type: ignore[arg-type]
-                             verifier_confidence=conf if conf is not None else 1.0, clean_env=clean_env,  # type: ignore[arg-type]
-                             claim_flags=claim.flags if claim else []))  # fmt: skip
-    return VerificationOutcome(mode=mode, verdict=final, deterministic=det, model_verdict=out_model,
-                               model_confidence=conf, verifier_path=path, repro_status=repro_status,
-                               clean_env=clean_env, risk_score=risk.score, risk_level=risk.level,
-                               anticheat_flags=ac.codes, claim_flags=claim.flags if claim else [],
-                               reasons=reasons, test_runs=runs, cost_cny=cost)  # fmt: skip
+        return await judge_with_model(base, issue=issue, diff=diff, finish=finish, router=router,
+                                      repeats=model_repeats, task_id=task_id)  # fmt: skip
+    return _finalize(base, diff=diff, ac=ac, claim_flags=base.claim_flags, final=det, conf=None)
+
+
+def _finalize(
+    base: VerificationOutcome, *, diff: str, ac: anticheat.AntiCheatReport, claim_flags: list[str],
+    final: VerdictLabel, conf: float | None, **update: object,
+) -> VerificationOutcome:  # fmt: skip
+    risk = assess(RiskInputs(patch=diff, anticheat=ac, repro_status=base.repro_status, verdict=final,  # type: ignore[arg-type]
+                             verifier_confidence=conf if conf is not None else 1.0, clean_env=base.clean_env,  # type: ignore[arg-type]
+                             claim_flags=claim_flags))  # fmt: skip
+    return base.model_copy(update={"verdict": final, "risk_score": risk.score, "risk_level": risk.level,
+                                   "model_confidence": conf, **update})  # fmt: skip
+
+
+async def judge_with_model(
+    base: VerificationOutcome,
+    *,
+    issue: str,
+    diff: str,
+    finish: FinishReport | None,
+    router: RouterLike,
+    repeats: int = 1,
+    task_id: str | None = None,
+) -> VerificationOutcome:
+    """在已有的确定性证据（base）上做 model 档判读：独立判 `repeats` 次，多数票（并列取保守），
+    最终结论 = combine(确定性结论, 模型多数票)。W3-14 reverify 用它复用 deterministic 档的复跑结果，不再重跑沙箱。"""
+    if repeats < 1:
+        raise ValueError("repeats 至少为 1")
+    ac = anticheat.check(diff)
+    inp = VerifierInput(
+        issue=issue, diff=diff, repro_status=base.repro_status, test_runs=base.test_runs, notes=base.reasons,
+        anticheat_flags=ac.codes, claim_flags=base.claim_flags,
+        executor_summary=finish.summary if finish else "", executor_open_risks=finish.open_risks if finish else [],
+    )  # fmt: skip
+    js: list[ModelJudgment] = []
+    for _ in range(repeats):
+        vr = await run_verifier(router, inp, mode="eval", task_id=task_id)
+        js.append(ModelJudgment(verdict=vr.verdict.verdict, confidence=vr.verdict.confidence, path=vr.path,
+                                cost_cny=vr.cost_cny, gaps=vr.verdict.evidence_gaps[:3]))  # fmt: skip
+    mv = majority([j.verdict for j in js])
+    agree = [j for j in js if j.verdict == mv]
+    conf = round(sum(j.confidence or 0.0 for j in agree) / len(agree), 4)
+    final = combine(base.deterministic, mv)
+    reasons = list(base.reasons) + [f"Verifier 缺口：{g}" for g in agree[0].gaps]
+    return _finalize(base, diff=diff, ac=ac, claim_flags=base.claim_flags, final=final, conf=conf, mode="model",
+                     model_verdict=mv, verifier_path=agree[0].path, reasons=reasons, model_judgments=js,
+                     cost_cny=round(sum(j.cost_cny for j in js), 6))  # fmt: skip
 
 
 async def verify_run(
@@ -138,6 +191,7 @@ async def verify_run(
     run_regression: bool = True,
     router: RouterLike | None = None,
     task_id: str | None = None,
+    model_repeats: int = 1,
 ) -> VerificationOutcome:
     """评测一次 attempt 的验证（`tw eval run` 与 `tw eval reverify` 共用）。没有改动直接判 fail。"""
     if not diff.strip():
@@ -147,7 +201,7 @@ async def verify_run(
         )  # fmt: skip
     return await verify_attempt(
         issue=issue, diff=diff, finish=finish, backend=FactoryBackend(new_sandbox), mode=mode, test_cmd=test_cmd,
-        run_regression=run_regression, router=router, task_id=task_id,
+        run_regression=run_regression, router=router, task_id=task_id, model_repeats=model_repeats,
     )  # fmt: skip
 
 
@@ -189,9 +243,12 @@ def verifier_metrics(rows: list[tuple[bool, bool, str | None, str | None]]) -> V
 
 __all__ = [
     "FactoryBackend",
+    "ModelJudgment",
     "VerificationOutcome",
     "VerifierMetrics",
     "VerifierMode",
+    "judge_with_model",
+    "majority",
     "verifier_metrics",
     "verify_attempt",
     "verify_run",

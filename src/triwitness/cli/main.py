@@ -247,7 +247,15 @@ def eval_reverify(
     config: Annotated[list[str] | None, typer.Option(help="只验证这些原配置，可多次")] = None,
     live: bool = typer.Option(False, "--live", help="model 档真实调用 Verifier（过高峰闸门与预估上限）"),
     allow_peak: bool = typer.Option(False, "--allow-peak", help="允许高峰时段"),
-    max_total_cny: float = typer.Option(3.0, help="model 档保守预估超过此值则不开始（W3-14 上限 ¥3）"),
+    max_total_cny: float = typer.Option(
+        3.0, help="model 档：保守预估超过此值则不开始；运行中累计花费逼近此值就停止派发（硬上限）"
+    ),
+    model_repeats: int = typer.Option(1, help="model 档每个补丁独立判几次（测稳定性；多数票，并列取保守）"),
+    reuse_deterministic: bool = typer.Option(
+        True,
+        "--reuse-deterministic/--no-reuse-deterministic",
+        help="model 档复用同一输出目录里 deterministic 档的复跑证据（不再重跑沙箱）",
+    ),
     regression: bool = typer.Option(True, "--regression/--no-regression", help="是否跑回归对比"),
     concurrency: int = typer.Option(2, help="并发沙箱数"),
     limit: int | None = typer.Option(None, help="只取前 N 个 attempt"),
@@ -288,13 +296,15 @@ def eval_reverify(
         s = asyncio.run(reverify(results, dest, tasks=tasks, grader=Grader(), modes=modes,  # type: ignore[arg-type]
                                  router_factory=router, regression=regression, live=live,
                                  gate=PeakGate(allow_peak=allow_peak), max_total_cny=max_total_cny,
-                                 concurrency=concurrency, limit=limit, configs=config))  # fmt: skip
+                                 concurrency=concurrency, limit=limit, configs=config,
+                                 model_repeats=model_repeats, reuse_deterministic=reuse_deterministic))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未开始：{e}", err=True)
         raise typer.Exit(2) from None
     typer.echo(render_markdown(write_report(dest)))
     typer.echo(f"结果：{dest}｜新完成 {s.done}｜跳过 {s.skipped_existing}｜验证错误 {len(s.errors)}"
-               f"｜缺任务 {len(s.missing_task)}｜Verifier ¥{s.verifier_cost_cny:.4f}")  # fmt: skip
+               f"｜缺任务 {len(s.missing_task)}｜Verifier ¥{s.verifier_cost_cny:.4f}"
+               f"｜复用确定性证据 {s.reused_deterministic}｜因上限未派发 {len(s.capped)}")  # fmt: skip
 
 
 @eval_app.command("report")

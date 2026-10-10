@@ -124,3 +124,65 @@ def test_cli_none_tier_and_bad_mode(tmp_path: Path, tasks: list[EvalTask]) -> No
     assert "w2+none" in res.output and (out / "report.md").exists()
     bad = CliRunner().invoke(app, ["eval", "reverify", "--results", str(saved), "--mode", "maybe"])
     assert bad.exit_code != 0
+
+
+# ---------------------------------------------------------------- W3-14：每个补丁判多次 + 复用确定性证据 + 硬上限
+
+
+class CountingGrader(VerifyingGrader):
+    def __init__(self) -> None:
+        super().__init__()
+        self.sandboxes = 0
+
+    async def new_sandbox(self, task: EvalTask):  # type: ignore[no-untyped-def, override]
+        self.sandboxes += 1
+        return await super().new_sandbox(task)
+
+
+def test_majority_ties_are_conservative() -> None:
+    from triwitness.eval.verification import majority
+
+    assert majority(["pass", "pass", "fail"]) == "pass"
+    assert majority(["pass", "fail", "inconclusive"]) == "fail"
+    assert majority(["pass", "inconclusive"]) == "inconclusive"
+    assert majority(["fail"]) == "fail"
+
+
+def split_router():  # type: ignore[no-untyped-def]
+    from triwitness.harness.testing import FakeRouter, call, say
+
+    verdicts = ["pass", "fail", "pass"]  # 三次里一次翻转：多数票 pass
+    return FakeRouter([say(call("submit_verdict", verdict=v, confidence=c, rationale="x"))
+                       for v, c in zip(verdicts, (0.9, 0.6, 0.7), strict=True)])  # fmt: skip
+
+
+async def test_model_repeats_reuse_deterministic_evidence(saved: Path, tmp_path: Path, tasks: list[EvalTask]) -> None:
+    g = CountingGrader()
+    out = tmp_path / "rep"
+    s = await reverify(saved, out, tasks=by_id(tasks), grader=g, modes=("deterministic", "model"),
+                       router_factory=split_router, configs=["w2"], model_repeats=3)  # fmt: skip
+    n = len(tasks)
+    det_boxes = g.sandboxes
+    assert det_boxes > 0 and s.reused_deterministic == n and not s.errors
+    import json
+
+    t = tasks[0].id
+    v = json.loads((out / "w2+model" / t / "1" / "verification.json").read_text(encoding="utf-8"))
+    det = json.loads((out / "w2+deterministic" / t / "1" / "verification.json").read_text(encoding="utf-8"))
+    assert [j["verdict"] for j in v["model_judgments"]] == ["pass", "fail", "pass"]
+    assert v["model_verdict"] == "pass" and v["model_confidence"] == 0.8  # 多数一方的平均置信度
+    assert v["test_runs"] == det["test_runs"] and v["repro_status"] == det["repro_status"]  # 同一份复跑证据
+    assert abs(v["cost_cny"] - 0.003) < 1e-9  # 三次判读的花费都记上
+    # 只有 deterministic 档建了沙箱：model 档完全复用
+    g2 = CountingGrader()
+    await reverify(saved, tmp_path / "rep2", tasks=by_id(tasks), grader=g2, modes=("deterministic",), configs=["w2"])
+    assert g2.sandboxes == det_boxes
+
+
+async def test_hard_cap_stops_dispatch(saved: Path, tmp_path: Path, tasks: list[EvalTask]) -> None:
+    s = await reverify(saved, tmp_path / "cap", tasks=by_id(tasks), grader=VerifyingGrader(),
+                       modes=("deterministic", "model"), router_factory=split_router, configs=["w2"],
+                       model_repeats=3, max_total_cny=0.004, concurrency=1)  # fmt: skip
+    # 每个 attempt ¥0.003：第一个之后“已花 + 1.5×均值” = 0.0075 > 0.004，后面都不派发
+    assert s.model_judged == 1 and len(s.capped) == len(tasks) - 1
+    assert s.verifier_cost_cny <= 0.004
