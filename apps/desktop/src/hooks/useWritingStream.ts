@@ -51,7 +51,7 @@ function gapAfter(ch: string, next: string | undefined, i: number, lineId: strin
   return (isCjk(ch) ? 52 : 30) * k
 }
 
-function schedule(
+export function schedule(
   lines: StreamLine[],
   startAt: number,
   reduced: boolean,
@@ -86,7 +86,8 @@ export function useWritingStream({
 }: UseWritingStreamOptions) {
   const [visibleCount, setVisibleCount] = useState(0)
   const [playing, setPlaying] = useState(autoStart)
-  const [, force] = useState(0)
+  // 渲染只读 state；ref 只在 effect / 回调 / rAF 里读写（react(refs) 规则）
+  const [chars, setChars] = useState<WrittenChar[]>([])
 
   const charsRef = useRef<WrittenChar[]>([])
   const endAtRef = useRef(0)
@@ -94,7 +95,9 @@ export function useWritingStream({
   const clockRef = useRef(0)
   const visibleRef = useRef(0)
   const speedRef = useRef(speed)
-  speedRef.current = speed
+  useEffect(() => {
+    speedRef.current = speed
+  }, [speed])
 
   const reset = useCallback(() => {
     charsRef.current = []
@@ -103,6 +106,7 @@ export function useWritingStream({
     clockRef.current = 0
     visibleRef.current = 0
     setVisibleCount(0)
+    setChars([])
   }, [])
 
   // 处理 lines 变化：追加 or 重置
@@ -114,11 +118,12 @@ export function useWritingStream({
     const fresh = lines.slice(isAppend ? seen.length : 0)
     if (fresh.length === 0) return
     const startAt = Math.max(endAtRef.current, clockRef.current)
-    const { chars, endAt } = schedule(fresh, startAt, reducedMotion)
-    charsRef.current = charsRef.current.concat(chars)
+    const { chars: added, endAt } = schedule(fresh, startAt, reducedMotion)
+    const next = charsRef.current.concat(added)
+    charsRef.current = next
     endAtRef.current = endAt
     linesSeenRef.current = lines.slice()
-    force((n) => n + 1)
+    setChars(next)
   }, [lines, reducedMotion, reset])
 
   // 虚拟时钟
@@ -130,9 +135,9 @@ export function useWritingStream({
       const dt = Math.min(now - last, 64) // 切后台回来不突然倾泻
       last = now
       clockRef.current += dt * speedRef.current
-      const chars = charsRef.current
+      const all = charsRef.current
       let n = visibleRef.current
-      while (n < chars.length && chars[n].at <= clockRef.current) n++
+      while (n < all.length && all[n].at <= clockRef.current) n++
       if (n !== visibleRef.current) {
         visibleRef.current = n
         setVisibleCount(n)
@@ -143,18 +148,18 @@ export function useWritingStream({
     return () => cancelAnimationFrame(raf)
   }, [playing])
 
-  const total = charsRef.current.length
+  const total = chars.length
   const done = total > 0 && visibleCount >= total
 
   const restart = useCallback(() => {
     const keep = linesSeenRef.current
     reset()
-    const { chars, endAt } = schedule(keep, 0, reducedMotion)
-    charsRef.current = chars
+    const { chars: replay, endAt } = schedule(keep, 0, reducedMotion)
+    charsRef.current = replay
     endAtRef.current = endAt
     linesSeenRef.current = keep
     setPlaying(true)
-    force((n) => n + 1)
+    setChars(replay)
   }, [reset, reducedMotion])
 
   const toggle = useCallback(() => {
@@ -163,7 +168,7 @@ export function useWritingStream({
   }, [done, restart])
 
   return {
-    chars: charsRef.current,
+    chars,
     visibleCount,
     playing,
     done,
