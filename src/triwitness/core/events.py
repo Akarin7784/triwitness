@@ -35,6 +35,7 @@ EventKind = Literal[
     "review",
     "task_finished",
     "error",
+    "environment_prepared",
 ]
 RoleHint = Literal["planner", "executor", "verifier", "reviewer", "system"]
 PermissionDecision = Literal["allow", "ask", "deny"]
@@ -186,6 +187,21 @@ class VerificationPayload(Payload):
     unverified_reason: Literal["no_sandbox", "backend_unavailable", "skipped"] | None = None
 
 
+class EnvironmentPreparedPayload(Payload):
+    """PREPARING 结束（W3-03）：依赖来源、安装结果、修改前就失败的测试集合（回归对比的基线）。"""
+
+    setup_source: Literal["repo", "cache", "model", "heuristic", "none"]
+    install_commands: list[str] = Field(default_factory=list)
+    installed: bool = False  # 实际执行了安装命令
+    ok: bool = True
+    test_command: str | None = None
+    baseline_failures: list[str] = Field(default_factory=list)  # 最多 200 个；完整列表见 baseline_ref
+    baseline_failure_count: int = Field(default=0, ge=0)
+    baseline_duration_s: float | None = None
+    baseline_ref: str | None = None
+    notes: list[str] = Field(default_factory=list)
+
+
 class ReviewPayload(Payload):
     model: str
     variant: str  # v0.1 同厂商异构评审的变体名
@@ -221,6 +237,7 @@ PAYLOADS: dict[str, type[Payload]] = {
     "review": ReviewPayload,
     "task_finished": TaskFinishedPayload,
     "error": ErrorPayload,
+    "environment_prepared": EnvironmentPreparedPayload,
 }
 
 

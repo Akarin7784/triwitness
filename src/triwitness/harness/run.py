@@ -16,6 +16,7 @@ from typing import Literal
 from triwitness.core.errors import SandboxError
 from triwitness.core.events import (
     CheckpointPayload,
+    EnvironmentPreparedPayload,
     ErrorPayload,
     StateChangePayload,
     TaskFinishedPayload,
@@ -26,6 +27,7 @@ from triwitness.core.models import Budget, CostReport, FinishReport, TaskState
 from triwitness.cost.report import CostLedger
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import AgentLoop, LoopOutcome, RouterLike, build_system_prompt
+from triwitness.harness.prepare import PrepareOptions, PrepareResult, prepare_env
 from triwitness.llm.pricing import pricing_version
 from triwitness.prompts import load_prompt
 from triwitness.sandbox.base import Sandbox
@@ -56,6 +58,7 @@ class TaskResult:
     repro_status: str | None = None  # repro-first：reproduced / not_applicable / missing；未启用为 None
     verification: PipelineResult | None = None  # 传了 verify 且进入了 VERIFYING 才有
     verify_rounds: int = 0
+    prepared: PrepareResult | None = None
 
 
 class _States:
@@ -87,6 +90,7 @@ async def run_task(
     tw_dir: str = "/workspace/.tw",
     category: str = "dev",
     verify: VerifyOptions | None = None,
+    prepare: PrepareOptions | None = None,
 ) -> TaskResult:
     rec = recorder
     cfg = config or HarnessConfig.load()
@@ -101,6 +105,12 @@ async def run_task(
                                 harness_hash=cfg.config_hash(), prompt_versions=cfg.prompt_versions()))  # fmt: skip
     st = _States(rec)
     st.go(TaskState.PREPARING, "准备沙箱")
+    prepared: PrepareResult | None = None
+    if prepare is not None:
+        prepared = await _prepare(rec, sandbox, prepare, test_command)
+        test_command = test_command or prepared.test_command
+        if not prepared.ok:
+            return _needs_human(rec, st, ledger, prepared)
     base_ref = await _checkpoint(rec, sandbox, "start")
     repro_first = "submit_repro" in registry.names
     if repro_first:
@@ -143,6 +153,7 @@ async def run_task(
             task_id=rec.task_id, issue=task_prompt, finish=outcome.finish, patch=patch, opts=opts,
             cost=ledger.report, config_hash=config_hash, workspace=sandbox, test_command=test_command,
             base_ref=base_ref, run_mode=mode, category=category,
+            baseline=prepared.baseline if prepared else None,
         )  # fmt: skip
         ev = verification.evidence
         ref = rec.artifact(f"evidence-{rounds}.json", ev.model_dump(mode="json"))
@@ -175,7 +186,39 @@ async def run_task(
         shown += f" · 命中 {cost.cache_hit_rate:.0%}"
     rec.emit(TaskFinishedPayload(status=status, finish_report=outcome.finish, cost_report=cost, display=shown))
     return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish,
-                      repro_status=repro_status, verification=verification, verify_rounds=rounds)  # fmt: skip
+                      repro_status=repro_status, verification=verification, verify_rounds=rounds,
+                      prepared=prepared)  # fmt: skip
+
+
+async def _prepare(rec: TrajectoryRecorder, sandbox: Sandbox, opts: PrepareOptions, test_command: str | None
+                   ) -> PrepareResult:  # fmt: skip
+    if opts.router is not None:  # 模型推断 setup 的调用也记入账本 / 轨迹
+        opts = opts.model_copy(update={"router": EmittingRouter(opts.router, lambda p: rec.emit(p, role="classifier"))})
+    res = await prepare_env(sandbox, opts=opts, test_command=test_command)
+    fails = sorted(res.baseline.failures) if res.baseline else []
+    ref = None
+    if res.baseline:
+        ref = rec.artifact("baseline.json", {"failures": fails, "duration_s": res.baseline.duration_s})
+    shown = f"环境就绪（{res.setup_source_label()}）" if res.ok else "环境构建失败"
+    if res.baseline:
+        shown += f" · 基线失败 {len(fails)}"
+    rec.emit(EnvironmentPreparedPayload(
+        setup_source=res.source, install_commands=res.setup.install, installed=bool(res.installed), ok=res.ok,
+        test_command=res.test_command, baseline_failures=fails[:200], baseline_failure_count=len(fails),
+        baseline_duration_s=res.baseline.duration_s if res.baseline else None, baseline_ref=ref,
+        notes=res.notes[:10], display=shown,
+    ))  # fmt: skip
+    return res
+
+
+def _needs_human(rec: TrajectoryRecorder, st: _States, ledger: CostLedger, prepared: PrepareResult) -> TaskResult:
+    reason = prepared.notes[-1] if prepared.notes else "环境构建失败"
+    rec.emit(ErrorPayload(type="EnvironmentSetupFailed", message=reason, display="环境构建失败"))
+    st.go(TaskState.NEEDS_HUMAN, "环境构建失败")
+    cost = ledger.report()
+    rec.emit(TaskFinishedPayload(status="needs_human", cost_report=cost, display="环境构建失败 · 等待人工"))
+    outcome = LoopOutcome(status="needs_human", steps=0, reason=reason)
+    return TaskResult(status="needs_human", outcome=outcome, diff="", cost=cost, finish=None, prepared=prepared)
 
 
 _VERDICT = {"pass": "通过", "fail": "未通过", "inconclusive": "证据不足"}

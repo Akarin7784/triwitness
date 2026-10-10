@@ -906,6 +906,224 @@
       "title": "CostReport",
       "type": "object"
     },
+    "EnvironmentPreparedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "environment_prepared",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EnvironmentPreparedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "EnvironmentPreparedEvent",
+      "type": "object"
+    },
+    "EnvironmentPreparedPayload": {
+      "additionalProperties": true,
+      "description": "PREPARING 结束（W3-03）：依赖来源、安装结果、修改前就失败的测试集合（回归对比的基线）。",
+      "properties": {
+        "baseline_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline Duration S"
+        },
+        "baseline_failure_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Baseline Failure Count",
+          "type": "integer"
+        },
+        "baseline_failures": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Baseline Failures",
+          "type": "array"
+        },
+        "baseline_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline Ref"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "install_commands": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Install Commands",
+          "type": "array"
+        },
+        "installed": {
+          "default": false,
+          "title": "Installed",
+          "type": "boolean"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "ok": {
+          "default": true,
+          "title": "Ok",
+          "type": "boolean"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "setup_source": {
+          "enum": [
+            "repo",
+            "cache",
+            "model",
+            "heuristic",
+            "none"
+          ],
+          "title": "Setup Source",
+          "type": "string"
+        },
+        "test_command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test Command"
+        }
+      },
+      "required": [
+        "setup_source"
+      ],
+      "title": "EnvironmentPreparedPayload",
+      "type": "object"
+    },
     "ErrorEvent": {
       "additionalProperties": false,
       "properties": {
@@ -3316,6 +3534,7 @@
       "approval_resolved": "#/$defs/ApprovalResolvedEvent",
       "checkpoint": "#/$defs/CheckpointEvent",
       "context_event": "#/$defs/ContextEventEvent",
+      "environment_prepared": "#/$defs/EnvironmentPreparedEvent",
       "error": "#/$defs/ErrorEvent",
       "hitl_request": "#/$defs/HitlRequestEvent",
       "hitl_response": "#/$defs/HitlResponseEvent",
@@ -3379,6 +3598,9 @@
     },
     {
       "$ref": "#/$defs/ErrorEvent"
+    },
+    {
+      "$ref": "#/$defs/EnvironmentPreparedEvent"
     }
   ],
   "title": "tw-events/1"

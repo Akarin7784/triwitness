@@ -22,6 +22,7 @@ export type TwEvents1 =
   | ReviewEvent
   | TaskFinishedEvent
   | ErrorEvent
+  | EnvironmentPreparedEvent
 export type Kind = 'task_started'
 export type ConfigHash = string
 export type Display = string | null
@@ -338,6 +339,27 @@ export type TaskId16 = string
 export type TraceId15 = string | null
 export type Ts15 = string
 export type V15 = 1
+export type Kind17 = 'environment_prepared'
+export type BaselineDurationS = number | null
+export type BaselineFailureCount = number
+export type BaselineFailures = string[]
+export type BaselineRef = string | null
+export type Display16 = string | null
+export type InstallCommands = string[]
+export type Installed = boolean
+export type Notes = string[]
+export type Ok1 = boolean
+export type RoleHint16 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type SetupSource = 'repo' | 'cache' | 'model' | 'heuristic' | 'none'
+export type TestCommand = string | null
+export type Role17 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId16 = string
+export type Seq16 = number
+export type SpanId16 = string | null
+export type TaskId17 = string
+export type TraceId16 = string | null
+export type Ts16 = string
+export type V16 = 1
 
 export interface TaskStartedEvent {
   kind: Kind
@@ -761,5 +783,35 @@ export interface ErrorPayload {
   message: Message1
   role_hint?: RoleHint15
   type: Type
+  [k: string]: unknown
+}
+export interface EnvironmentPreparedEvent {
+  kind: Kind17
+  payload: EnvironmentPreparedPayload
+  role?: Role17
+  run_id: RunId16
+  seq: Seq16
+  span_id?: SpanId16
+  task_id: TaskId17
+  trace_id?: TraceId16
+  ts: Ts16
+  v?: V16
+}
+/**
+ * PREPARING 结束（W3-03）：依赖来源、安装结果、修改前就失败的测试集合（回归对比的基线）。
+ */
+export interface EnvironmentPreparedPayload {
+  baseline_duration_s?: BaselineDurationS
+  baseline_failure_count?: BaselineFailureCount
+  baseline_failures?: BaselineFailures
+  baseline_ref?: BaselineRef
+  display?: Display16
+  install_commands?: InstallCommands
+  installed?: Installed
+  notes?: Notes
+  ok?: Ok1
+  role_hint?: RoleHint16
+  setup_source: SetupSource
+  test_command?: TestCommand
   [k: string]: unknown
 }

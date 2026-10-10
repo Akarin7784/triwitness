@@ -233,3 +233,6 @@ async def regression(
         res.notes.append(f"{len(pre)} 个失败在基线上就存在，不计回归")
     res.test_runs.append(run)
     return run, res
+
+
+run_once = _run  # PREPARING 阶段的基线测试复用同一套 junit 解析
