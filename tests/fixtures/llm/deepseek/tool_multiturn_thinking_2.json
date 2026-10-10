@@ -1,0 +1,104 @@
+{
+  "format": "tw-llm-fixture/1",
+  "key": "9b9ac47e4c4e69bafff4473ce5304565a095aa19b34f4c50c9f5f3ee350a60f9",
+  "recorded_at": "2026-10-10T03:11:38+00:00",
+  "request": {
+    "max_tokens": 1024,
+    "messages": [
+      {
+        "content": "今天是 2026-10-10。需要天气时必须调用 get_weather，拿到结果后用一句话回答。",
+        "role": "system"
+      },
+      {
+        "content": "广州明天天气怎么样？",
+        "role": "user"
+      },
+      {
+        "content": "",
+        "reasoning_content": "The user asks about Guangzhou's weather tomorrow. Today is 2026-10-10, so tomorrow is 2026-10-11. Let me call get_weather.",
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "function": {
+              "arguments": "{\"city\": \"广州\", \"date\": \"2026-10-11\"}",
+              "name": "get_weather"
+            },
+            "id": "call_00_k2sGqw5T7DvHjgbMFTXa5494",
+            "type": "function"
+          }
+        ]
+      },
+      {
+        "content": "多云，18~24°C",
+        "role": "tool",
+        "tool_call_id": "call_00_k2sGqw5T7DvHjgbMFTXa5494"
+      }
+    ],
+    "model": "deepseek-flash",
+    "reasoning_effort": "low",
+    "stream": false,
+    "thinking": {
+      "type": "enabled"
+    },
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "function": {
+          "description": "查询某城市某天的天气。",
+          "name": "get_weather",
+          "parameters": {
+            "properties": {
+              "city": {
+                "description": "城市名",
+                "type": "string"
+              },
+              "date": {
+                "description": "YYYY-MM-DD",
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "date"
+            ],
+            "type": "object"
+          }
+        },
+        "type": "function"
+      }
+    ]
+  },
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "广州明天（2026-10-11）多云，气温 18~24°C。",
+          "reasoning_content": "",
+          "role": "assistant"
+        }
+      }
+    ],
+    "created": 1791601897,
+    "id": "534afed4-dd52-41b5-ad80-be0b65d3dd3a",
+    "model": "deepseek-flash",
+    "object": "chat.completion",
+    "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+    "usage": {
+      "completion_tokens": 21,
+      "completion_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "prompt_cache_hit_tokens": 256,
+      "prompt_cache_miss_tokens": 206,
+      "prompt_tokens": 462,
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      },
+      "total_tokens": 483
+    }
+  },
+  "vendor": "deepseek"
+}

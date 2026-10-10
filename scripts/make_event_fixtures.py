@@ -90,14 +90,10 @@ class Run:
         self.events.append(ev)
 
     def go(self, to: TaskState, display: str) -> None:
-        self.emit(
-            None, StateChangePayload(**{"from": self.state}, to=to, display=display, role_hint="system")
-        )
+        self.emit(None, StateChangePayload(**{"from": self.state}, to=to, display=display, role_hint="system"))
         self.state = to
 
-    def call(
-        self, role: Role, u: Usage, display: str, *, thinking: bool = True, latency_ms: int = 6000
-    ) -> None:
+    def call(self, role: Role, u: Usage, display: str, *, thinking: bool = True, latency_ms: int = 6000) -> None:
         cost = price(u)
         self.lines[role].append(u)
         self.costs[role] += cost
@@ -119,9 +115,7 @@ class Run:
             dt=latency_ms / 1000,
         )
 
-    def tool(
-        self, role: Role, tool: str, ok: bool, display: str, *, exit_code: int | None = 0, ms: int = 300
-    ) -> None:
+    def tool(self, role: Role, tool: str, ok: bool, display: str, *, exit_code: int | None = 0, ms: int = 300) -> None:
         seq = len(self.events)
         self.emit(
             role,
@@ -150,9 +144,7 @@ class Run:
             )
             for role, us in self.lines.items()
         ]
-        return CostReport.from_lines(
-            self.task_id, lines, budget_cny=self.budget_cny, pricing_version=PRICING_VERSION
-        )
+        return CostReport.from_lines(self.task_id, lines, budget_cny=self.budget_cny, pricing_version=PRICING_VERSION)
 
 
 def started(r: Run) -> None:
@@ -244,9 +236,7 @@ def success() -> list[TrajectoryEvent]:
             FileChange(path="src/auth/session.py", kind="modified", note="单飞锁"),
             FileChange(path="tests/tw_repro/test_issue_87.py", kind="added", note="复现测试"),
         ],
-        repro=ReproRef(
-            path="tests/tw_repro/test_issue_87.py", cmd="pytest -q tests/tw_repro/test_issue_87.py"
-        ),
+        repro=ReproRef(path="tests/tw_repro/test_issue_87.py", cmd="pytest -q tests/tw_repro/test_issue_87.py"),
         tests_run=["pytest -q"],
         tests_passed=True,
         confidence=0.82,
@@ -338,9 +328,7 @@ def budget_exceeded() -> list[TrajectoryEvent]:
     r.call("executor", usage(24_000, 0.1, 1_800, 1_000), "继续阅读（前缀不稳定，命中率低）")
     r.emit(
         "executor",
-        LoopWarningPayload(
-            signal="no_progress", level=1, detail="6 步无修改", display="⚠ 无进展", role_hint="system"
-        ),
+        LoopWarningPayload(signal="no_progress", level=1, detail="6 步无修改", display="⚠ 无进展", role_hint="system"),
     )
     r.call("executor", usage(26_000, 0.1, 1_600, 900), "尝试修复")
     r.emit(

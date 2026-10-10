@@ -37,6 +37,8 @@ TriWitness 只用 DeepSeek、Qwen、GLM 三家模型。三家都提供 OpenAI �
 
 来源：DeepSeek [价格](https://api-docs.deepseek.com/zh-cn/quick_start/pricing)、[思考模式](https://api-docs.deepseek.com/guides/thinking_mode)；百炼 [OpenAI 兼容](https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope)、[Function Calling](https://help.aliyun.com/zh/model-studio/qwen-function-calling)；智谱 [GLM-5.3](https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3)、[OpenAI 兼容](https://docs.bigmodel.cn/cn/guide/develop/openai/introduction)；LiteLLM [DeepSeek](https://docs.litellm.ai/docs/providers/deepseek)、[Z.AI](https://docs.litellm.ai/docs/providers/zai)、[QwenCloud](https://docs.litellm.ai/docs/providers/qwencloud)。
 
+**实测（2026-10-10 周六，空闲价，6 次调用共 ¥0.0054）**：`/models` 只列出 `deepseek-flash`（DeepSeek-V4.1-Flash，1M 上下文）与 `deepseek-v4-pro`；`served_model` 返回 `deepseek-flash`；用量字段为 `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`（同时有 OpenAI 风格 `prompt_tokens_details.cached_tokens`），推理 token 在 `completion_tokens_details.reasoning_tokens`（非思考模式不返回）；约 3.5K token 的稳定前缀第二次请求命中 3328/3523（94%）。录制见 `tests/fixtures/llm/deepseek/`。
+
 **实现时必须先用真实调用验证上表**（尤其是 GLM 和 Qwen 的推理内容回传规则、各家缓存命中字段名），并把响应录制为 fixture。
 
 ## 5. 接口
@@ -182,3 +184,4 @@ constraints:
 
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：只做 DeepSeek；白名单拒 v4-pro；vendor_policy；高峰窗口与节假日表；AC1/AC5/AC6 修订，AC3/AC4 推迟。
+- 2026-10-10：W1-07/08/11/12 落地（types、ModelAdapter、DeepSeekAdapter、录制/回放、pricing + 节假日表、单任务守卫 + 全局账本）；记录实测字段名；调休上班的周末按官方字面视为空闲（`adjusted_workdays_are_peak: false` 可切换）。

@@ -3,7 +3,9 @@ verified_at: "2026-10-10"
 timezone: Asia/Shanghai
 deepseek:
   source: https://api-docs.deepseek.com/zh-cn/quick_start/pricing
-  peak_windows:            # 周一至周五，不含法定节假日（节假日表：configs/cn_holidays.yaml，W1-11 补齐）
+  holidays: configs/cn_holidays.yaml
+  adjusted_workdays_are_peak: false   # 官方字面：周末（含调休上班的周末）全天空闲
+  peak_windows:            # 周一至周五，不含法定节假日
     - ["09:00", "12:00"]
     - ["14:00", "18:00"]
   models:

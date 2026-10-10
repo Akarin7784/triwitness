@@ -15,9 +15,7 @@ def _version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    version: bool = typer.Option(
-        False, "--version", callback=_version_callback, is_eager=True, help="显示版本"
-    ),
+    version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True, help="显示版本"),
 ) -> None:
     """TriWitness 命令行。"""
 

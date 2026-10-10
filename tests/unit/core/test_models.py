@@ -10,9 +10,7 @@ U = m.Usage(input_tokens=100, cache_hit_tokens=90, cache_miss_tokens=10, output_
 
 
 def _cost_report() -> m.CostReport:
-    line = m.CostLine(
-        role="executor", vendor="deepseek", model="deepseek-flash", calls=2, usage=U, cost_cny=0.01
-    )
+    line = m.CostLine(role="executor", vendor="deepseek", model="deepseek-flash", calls=2, usage=U, cost_cny=0.01)
     return m.CostReport.from_lines("t_x", [line], budget_cny=0.8, pricing_version="2026-10-10")
 
 
@@ -21,9 +19,7 @@ def _samples() -> list[BaseModel]:
     fr = m.FinishReport(
         summary="fix",
         changes=[m.FileChange(path="a.py", kind="modified")],
-        repro=m.ReproRef(
-            path="tests/tw_repro/test_issue_1.py", cmd="pytest -q tests/tw_repro/test_issue_1.py"
-        ),
+        repro=m.ReproRef(path="tests/tw_repro/test_issue_1.py", cmd="pytest -q tests/tw_repro/test_issue_1.py"),
         tests_passed=True,
         confidence=0.7,
     )
@@ -44,11 +40,7 @@ def _samples() -> list[BaseModel]:
         summary="s",
         root_cause="r",
         repro_status="reproduced",
-        test_runs=[
-            m.TestRun(
-                scope="full", command="pytest", passed=1, failed=0, skipped=0, duration_s=1, log_ref="l"
-            )
-        ],
+        test_runs=[m.TestRun(scope="full", command="pytest", passed=1, failed=0, skipped=0, duration_s=1, log_ref="l")],
         static_checks={"ruff": "pass"},
         verdict="pass",
         verifier_model="deepseek-flash",

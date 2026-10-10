@@ -1,0 +1,95 @@
+{
+  "format": "tw-llm-fixture/1",
+  "key": "416852259ad86de6fd941a1be4d247061d74f7da8c9e8ee64739e344fd62552a",
+  "recorded_at": "2026-10-10T03:11:36+00:00",
+  "request": {
+    "max_tokens": 1024,
+    "messages": [
+      {
+        "content": "今天是 2026-10-10。需要天气时必须调用 get_weather，拿到结果后用一句话回答。",
+        "role": "system"
+      },
+      {
+        "content": "广州明天天气怎么样？",
+        "role": "user"
+      }
+    ],
+    "model": "deepseek-flash",
+    "reasoning_effort": "low",
+    "stream": false,
+    "thinking": {
+      "type": "enabled"
+    },
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "function": {
+          "description": "查询某城市某天的天气。",
+          "name": "get_weather",
+          "parameters": {
+            "properties": {
+              "city": {
+                "description": "城市名",
+                "type": "string"
+              },
+              "date": {
+                "description": "YYYY-MM-DD",
+                "type": "string"
+              }
+            },
+            "required": [
+              "city",
+              "date"
+            ],
+            "type": "object"
+          }
+        },
+        "type": "function"
+      }
+    ]
+  },
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "tool_calls",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "",
+          "reasoning_content": "The user asks about Guangzhou's weather tomorrow. Today is 2026-10-10, so tomorrow is 2026-10-11. Let me call get_weather.",
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "function": {
+                "arguments": "{\"city\": \"广州\", \"date\": \"2026-10-11\"}",
+                "name": "get_weather"
+              },
+              "id": "call_00_k2sGqw5T7DvHjgbMFTXa5494",
+              "index": 0,
+              "type": "function"
+            }
+          ]
+        }
+      }
+    ],
+    "created": 1791601895,
+    "id": "3124a33f-d586-466e-9538-3abf100b1026",
+    "model": "deepseek-flash",
+    "object": "chat.completion",
+    "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+    "usage": {
+      "completion_tokens": 97,
+      "completion_tokens_details": {
+        "reasoning_tokens": 37
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 346,
+      "prompt_tokens": 346,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 443
+    }
+  },
+  "vendor": "deepseek"
+}

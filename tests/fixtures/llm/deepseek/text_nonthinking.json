@@ -1,0 +1,48 @@
+{
+  "format": "tw-llm-fixture/1",
+  "key": "c7b886990ed8a687a39eaa6a2358f425a6ef9cf5023b55f5c107eff389aa0740",
+  "recorded_at": "2026-10-10T03:11:32+00:00",
+  "request": {
+    "max_tokens": 16,
+    "messages": [
+      {
+        "content": "只回答一个数字：1+1 等于几？",
+        "role": "user"
+      }
+    ],
+    "model": "deepseek-flash",
+    "stream": false,
+    "thinking": {
+      "type": "disabled"
+    }
+  },
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "2",
+          "role": "assistant"
+        }
+      }
+    ],
+    "created": 1791601892,
+    "id": "a4c244c4-e6c1-44b2-a780-0ab2421f8035",
+    "model": "deepseek-flash",
+    "object": "chat.completion",
+    "system_fingerprint": "aeb56401ca74e127821c4f9126dcb669",
+    "usage": {
+      "completion_tokens": 1,
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 16,
+      "prompt_tokens": 16,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 17
+    }
+  },
+  "vendor": "deepseek"
+}
