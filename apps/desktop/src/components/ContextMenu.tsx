@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import { isEditable } from '../lib/desktopGuards'
+import { t as tr } from '../lib/i18n'
 
 type Action = 'cut' | 'copy' | 'paste' | 'selectAll'
 
@@ -13,10 +14,10 @@ interface MenuState {
 }
 
 const ITEMS: { id: Action; label: string; keys: string }[] = [
-  { id: 'cut', label: '剪切', keys: 'Ctrl X' },
-  { id: 'copy', label: '复制', keys: 'Ctrl C' },
-  { id: 'paste', label: '粘贴', keys: 'Ctrl V' },
-  { id: 'selectAll', label: '全选', keys: 'Ctrl A' },
+  { id: 'cut', label: tr('剪切'), keys: 'Ctrl X' },
+  { id: 'copy', label: tr('复制'), keys: 'Ctrl C' },
+  { id: 'paste', label: tr('粘贴'), keys: 'Ctrl V' },
+  { id: 'selectAll', label: tr('全选'), keys: 'Ctrl A' },
 ]
 
 function selectionIn(el: HTMLElement): string {

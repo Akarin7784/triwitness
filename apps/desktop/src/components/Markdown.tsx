@@ -2,6 +2,7 @@ import { memo, useState, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Check, Copy, PanelRight } from 'lucide-react'
+import { t } from '../lib/i18n'
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)
@@ -12,7 +13,7 @@ function textOf(node: ReactNode): string {
   return ''
 }
 
-export function CopyButton({ text, label = '复制', className }: { text: string; label?: string; className?: string }) {
+export function CopyButton({ text, label = t('复制'), className }: { text: string; label?: string; className?: string }) {
   const [done, setDone] = useState(false)
   return (
     <button
@@ -30,7 +31,7 @@ export function CopyButton({ text, label = '复制', className }: { text: string
       }
     >
       {done ? <Check size={12} strokeWidth={1.8} /> : <Copy size={12} strokeWidth={1.6} />}
-      {done ? '已复制' : null}
+      {done ? t('已复制') : null}
     </button>
   )
 }
@@ -48,7 +49,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
           {code.split('\n').length >= 6 && (
             <button
               type="button"
-              aria-label="在作品栏打开"
+              aria-label={t('在作品栏打开')}
               data-testid="code-open-artifact"
               onClick={() => window.dispatchEvent(new CustomEvent('tw:open-artifact', { detail: code }))}
               className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber"
@@ -56,7 +57,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
               <PanelRight size={12} strokeWidth={1.6} />
             </button>
           )}
-          <CopyButton text={code} label="复制代码" />
+          <CopyButton text={code} label={t('复制代码')} />
         </span>
       </div>
       <pre className="selectable overflow-x-auto scroll-soft bg-cream/80 px-3.5 py-2.5 font-mono text-[12.5px] leading-relaxed text-ink">

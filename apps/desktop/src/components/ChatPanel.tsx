@@ -20,6 +20,7 @@ import { ProjectPicker } from './ProjectPicker'
 import { useStickToBottom } from '../hooks/useStickToBottom'
 import { Tip } from './Tip'
 import { PHASE_DOT } from './phase'
+import { t } from '../lib/i18n'
 
 interface ChatPanelProps {
   title: string
@@ -148,8 +149,8 @@ export function ChatPanel({
               className="flex flex-col items-center gap-2 text-amber"
             >
               <Paperclip size={22} strokeWidth={1.6} />
-              <span className="font-serif text-[16px] text-ink">把文件放到这里</span>
-              <span className="text-[12px] text-sepia-muted">文本会一起交给模型；图片只附文件</span>
+              <span className="font-serif text-[16px] text-ink">{t('把文件放到这里')}</span>
+              <span className="text-[12px] text-sepia-muted">{t('文本会一起交给模型；图片只附文件')}</span>
             </motion.div>
           </motion.div>
         )}
@@ -160,7 +161,7 @@ export function ChatPanel({
         {run && (
           <>
             {run.repo && (
-              <Tip label="仓库" side="bottom">
+              <Tip label={t('仓库')} side="bottom">
                 <span className="chip">
                   <FolderGit2 size={11} strokeWidth={1.7} />
                   {run.repo}
@@ -169,14 +170,14 @@ export function ChatPanel({
             )}
             <CostChip run={run} />
             {(run.label || pending) && (
-              <span className="chip fade-in" key={pending ? '待批' : run.label} data-testid="state-chip">
+              <span className="chip fade-in" key={pending ? t('待批') : run.label} data-testid="state-chip">
                 <span
                   className={clsx(
                     'h-1.5 w-1.5 rounded-full transition-colors duration-700',
                     PHASE_DOT[pending ? 'waiting' : run.phase],
                   )}
                 />
-                {pending ? '待批' : run.label}
+                {pending ? t('待批') : run.label}
               </span>
             )}
           </>
@@ -196,11 +197,11 @@ export function ChatPanel({
           >
             <div className="mx-8 mb-2 flex items-center gap-2 rounded-xl border border-rose-ink/40 bg-rose-ink/10 px-3.5 py-2 text-[12.5px] text-rose-ink">
               <ShieldAlert size={14} strokeWidth={1.7} />
-              <span className="font-medium">无限制（勇士模式）</span>
-              <span className="text-rose-ink/80">本任务不确认、不拒绝</span>
+              <span className="font-medium">{t('无限制（勇士模式）')}</span>
+              <span className="text-rose-ink/80">{t('本任务不确认、不拒绝')}</span>
               {running && onStop && (
                 <button type="button" onClick={onStop} className="ml-auto rounded-md px-2 py-0.5 hover:bg-rose-ink/15">
-                  停止
+                  {t('停止')}
                 </button>
               )}
             </div>
@@ -230,7 +231,7 @@ export function ChatPanel({
           <motion.button
             type="button"
             data-testid="jump-bottom"
-            aria-label="回到底部"
+            aria-label={t('回到底部')}
             onClick={() => toBottom()}
             initial={{ opacity: 0, y: 8, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -262,9 +263,9 @@ function CostChip({ run }: { run: RunView }) {
   const hit = cacheHitRate(run)
   const ratio = run.budgetCny > 0 ? run.costCny / run.budgetCny : 0
   const tip = [
-    hit !== null ? `命中 ${Math.round(hit * 100)}%` : null,
-    `上限 ¥${run.budgetCny.toFixed(2)}`,
-    run.peakCalls ? `高峰 ${run.peakCalls} 次` : null,
+    hit !== null ? t('命中 {0}%', Math.round(hit * 100)) : null,
+    t('上限 ¥{0}', run.budgetCny.toFixed(2)),
+    run.peakCalls ? t('高峰 {0} 次', run.peakCalls) : null,
   ]
     .filter(Boolean)
     .join(' · ')
@@ -322,11 +323,11 @@ function TitleButton({ title, menu }: { title: string; menu?: TitleMenu }) {
       <Popover open={open} onClose={close} side="down" className="w-[200px]" testId="title-popover">
         {page === 'main' ? (
           <>
-            <MenuItem icon={menu.starred ? StarOff : Star} label={menu.starred ? '取消星标' : '星标'} onClick={() => (close(), menu.onStar())} />
-            <MenuItem icon={Pencil} label="重命名" onClick={() => (close(), menu.onRename())} />
-            <MenuItem icon={FolderPlus} label={menu.projectId ? '更换项目' : '加入项目'} testId="title-project" onClick={() => setPage('project')} />
+            <MenuItem icon={menu.starred ? StarOff : Star} label={menu.starred ? t('取消星标') : t('星标')} onClick={() => (close(), menu.onStar())} />
+            <MenuItem icon={Pencil} label={t('重命名')} onClick={() => (close(), menu.onRename())} />
+            <MenuItem icon={FolderPlus} label={menu.projectId ? t('更换项目') : t('加入项目')} testId="title-project" onClick={() => setPage('project')} />
             <MenuDivider />
-            <MenuItem icon={Trash2} label="删除" danger onClick={() => (close(), menu.onDelete())} />
+            <MenuItem icon={Trash2} label={t('删除')} danger onClick={() => (close(), menu.onDelete())} />
           </>
         ) : (
           <ProjectPicker menu={menu} onBack={() => setPage('main')} onDone={close} />
@@ -348,14 +349,14 @@ function ShareButton({ actions }: { actions: ShareActions }) {
         className={clsx('chip transition-colors duration-300 hover:text-amber', open && 'text-amber')}
       >
         <Share size={11} strokeWidth={1.7} />
-        分享
+        {t('分享')}
       </button>
       <Popover open={open} onClose={close} side="down" align="right" className="w-[236px]" testId="share-popover">
-        <p className="px-3 pb-1.5 pt-1 text-[11.5px] leading-relaxed text-sepia-muted">只在本机：不上传、不生成公开链接</p>
-        <MenuItem icon={ClipboardCopy} label="复制为 Markdown" testId="share-copy" onClick={() => (close(), actions.copyMarkdown())} />
+        <p className="px-3 pb-1.5 pt-1 text-[11.5px] leading-relaxed text-sepia-muted">{t('只在本机：不上传、不生成公开链接')}</p>
+        <MenuItem icon={ClipboardCopy} label={t('复制为 Markdown')} testId="share-copy" onClick={() => (close(), actions.copyMarkdown())} />
         <MenuDivider />
-        <MenuItem icon={FileDown} label="导出为 Markdown" testId="share-md" onClick={() => (close(), actions.exportMarkdown())} />
-        <MenuItem icon={Printer} label="导出为 PDF" testId="share-pdf" onClick={() => (close(), actions.exportPdf())} />
+        <MenuItem icon={FileDown} label={t('导出为 Markdown')} testId="share-md" onClick={() => (close(), actions.exportMarkdown())} />
+        <MenuItem icon={Printer} label={t('导出为 PDF')} testId="share-pdf" onClick={() => (close(), actions.exportPdf())} />
       </Popover>
     </div>
   )

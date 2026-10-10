@@ -5,6 +5,7 @@
 import type { ResultMsg } from '../bridge/protocol'
 import type { Turn } from '../data/turns'
 import type { ChatMessage } from '../types'
+import { t } from './i18n'
 
 export interface ExportInput {
   title: string
@@ -15,7 +16,7 @@ export interface ExportInput {
   now?: Date
 }
 
-const VERDICT: Record<string, string> = { pass: '复验通过', fail: '复验未过', inconclusive: '证据不足' }
+const VERDICT: Record<string, string> = { pass: t('复验通过'), fail: t('复验未过'), inconclusive: t('证据不足') }
 
 function stamp(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0')
@@ -30,35 +31,35 @@ function quote(text: string): string {
 }
 
 export function chatToMarkdown({ title, turn, messages, result, attachments, now = new Date() }: ExportInput): string {
-  const out: string[] = [`# ${title || '三证会话'}`, '', `_导出自 三证 · ${stamp(now)}（本机文件，未上传）_`, '']
+  const out: string[] = [`# ${title || t('三证会话')}`, '', t('_导出自 三证 · {0}（本机文件，未上传）_', stamp(now)), '']
   if (turn?.user) {
-    out.push('## 你', '', turn.user.text, '')
-    if (attachments?.length) out.push(`附件：${attachments.map((a) => `\`${a}\``).join('、')}`, '')
+    out.push(t('## 你'), '', turn.user.text, '')
+    if (attachments?.length) out.push(t('附件：{0}', attachments.map((a) => `\`${a}\``).join(t('、'))), '')
   }
   if (turn && (turn.blocks.length || turn.final)) {
-    out.push('## 三证', '')
+    out.push(t('## 三证'), '')
     for (const b of turn.blocks) {
-      if (b.type === 'thinking') out.push('<details><summary>思考</summary>', '', b.text.trim(), '', '</details>', '')
+      if (b.type === 'thinking') out.push(t('<details><summary>思考</summary>'), '', b.text.trim(), '', '</details>', '')
       else if (b.type === 'text') out.push(b.text.trim(), '')
-      else out.push(`- 🔧 \`${b.tool}\` ${b.display.replace(/^\$\s*/, '')}${b.ok ? '' : '（失败）'}`, '')
+      else out.push(`- 🔧 \`${b.tool}\` ${b.display.replace(/^\$\s*/, '')}${b.ok ? '' : t('（失败）')}`, '')
     }
     if (turn.final) out.push(turn.final.text.trim(), '')
   }
   for (const m of messages) {
-    out.push(`## ${m.role === 'user' ? '你' : m.role === 'assistant' ? '三证' : '系统'}`, '', m.content.trim(), '')
+    out.push(`## ${m.role === 'user' ? t('你') : m.role === 'assistant' ? t('三证') : t('系统')}`, '', m.content.trim(), '')
   }
   if (result) {
-    const head = [result.verdict ? VERDICT[result.verdict] : result.status, result.risk_level ? `风险 ${result.risk_level}` : null,
-      `¥${result.cost_cny.toFixed(3)}`, `${result.steps} 步`].filter(Boolean).join(' · ')  // prettier-ignore
-    out.push('## 结论', '', head, '')
+    const head = [result.verdict ? VERDICT[result.verdict] : result.status, result.risk_level ? t('风险 {0}', result.risk_level) : null,
+      `¥${result.cost_cny.toFixed(3)}`, t('{0} 步', result.steps)].filter(Boolean).join(' · ')  // prettier-ignore
+    out.push(t('## 结论'), '', head, '')
     if (result.summary) out.push(quote(result.summary.trim()), '')
-    if (result.branch) out.push(`分支：\`${result.branch}\``, '')
+    if (result.branch) out.push(t('分支：`{0}`', result.branch), '')
     if (result.pr_md) out.push('### pr.md', '', result.pr_md.trim(), '')
   }
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
 }
 
 export function exportFileName(title: string, ext: string): string {
-  const base = (title || '三证会话').replace(/[\\/:*?"<>|\r\n]+/g, ' ').trim().slice(0, 60) || '三证会话'
+  const base = (title || t('三证会话')).replace(/[\\/:*?"<>|\r\n]+/g, ' ').trim().slice(0, 60) || t('三证会话')
   return `${base}.${ext}`
 }

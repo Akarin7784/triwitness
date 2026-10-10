@@ -4,6 +4,7 @@
  * 里同一作品按版本排列，侧栏可切换。纯函数，便于测试。
  */
 import type { Turn } from '../data/turns'
+import { t as tr } from './i18n'
 
 export type ArtifactKind = 'code' | 'markdown' | 'diff'
 export interface ArtifactVersion {
@@ -82,7 +83,7 @@ export function collectArtifacts(sources: VersionSource[]): Artifact[] {
       codeBlocks(turnText(s.turn)).forEach((c, i) => {
         const kind: ArtifactKind = c.lang === 'diff' ? 'diff' : c.lang === 'markdown' || c.lang === 'md' ? 'markdown' : 'code'
         const id = c.title ? `file:${c.title}` : `code:${i}`
-        add(id, c.title ?? `代码 ${i + 1}${c.lang ? ` · ${c.lang}` : ''}`, kind, c.lang, from, c.code)
+        add(id, c.title ?? tr('代码 {0}{1}', i + 1, c.lang ? ` · ${c.lang}` : ''), kind, c.lang, from, c.code)
       })
     }
     if (s.diff) add('patch.diff', 'patch.diff', 'diff', 'diff', from, s.diff)

@@ -5,14 +5,15 @@ import type { PendingApproval } from '../bridge/liveTask'
 import type { ApprovalScope } from '../bridge/protocol'
 import { Tip } from './Tip'
 import { toast } from '../lib/toast'
+import { t } from '../lib/i18n'
 
 type Choice = { decision: 'allow' | 'deny'; scope: ApprovalScope }
 
 const CHOICES: { label: string; tip: string; choice: Choice; tone?: 'primary' | 'deny' }[] = [
-  { label: '允许一次', tip: '只这一次', choice: { decision: 'allow', scope: 'once' }, tone: 'primary' },
-  { label: '本次任务', tip: '本任务内同类不再问', choice: { decision: 'allow', scope: 'session' } },
-  { label: '总是', tip: '写入本机规则', choice: { decision: 'allow', scope: 'always' } },
-  { label: '拒绝', tip: '执行方会换条路', choice: { decision: 'deny', scope: 'once' }, tone: 'deny' },
+  { label: t('允许一次'), tip: t('只这一次'), choice: { decision: 'allow', scope: 'once' }, tone: 'primary' },
+  { label: t('本次任务'), tip: t('本任务内同类不再问'), choice: { decision: 'allow', scope: 'session' } },
+  { label: t('总是'), tip: t('写入本机规则'), choice: { decision: 'allow', scope: 'always' } },
+  { label: t('拒绝'), tip: t('执行方会换条路'), choice: { decision: 'deny', scope: 'once' }, tone: 'deny' },
 ]
 
 /** 权限审批卡（UI-10）：核心在等，四个选择回传给 tw-bridge/1 */
@@ -30,7 +31,7 @@ export function ApprovalCard({
     setErr(null)
     try {
       await onDecide(c)
-      if (c.scope === 'always') toast(`已写入此仓库规则${req.suggestedRule ? `：${req.suggestedRule}` : ''} · 设置 → 权限可编辑`)
+      if (c.scope === 'always') toast(t('已写入此仓库规则{0} · 设置 → 权限可编辑', req.suggestedRule ? t('：{0}', req.suggestedRule) : ''))
     } catch (e) {
       setErr(String(e instanceof Error ? e.message : e))
       setBusy(false)
@@ -40,7 +41,7 @@ export function ApprovalCard({
     <article data-testid="approval-card" className="paper-card fade-in mr-auto max-w-[720px] rounded-2xl border-amber/40 px-4 py-3.5">
       <div className="flex items-center gap-2 text-[12px] text-amber">
         <ShieldQuestion size={14} strokeWidth={1.7} />
-        <span className="tracking-[0.12em]">待批</span>
+        <span className="tracking-[0.12em]">{t('待批')}</span>
         <span className="text-sepia-muted">· {req.tool}</span>
         {req.risk && <span className="chip ml-auto">{req.risk}</span>}
       </div>
@@ -48,7 +49,7 @@ export function ApprovalCard({
       {req.reason && <p className="mt-1 text-[12px] text-sepia-muted">{req.reason}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         {CHOICES.map((c) => (
-          <Tip key={c.label} label={c.choice.scope === 'always' && req.suggestedRule ? `写入规则 ${req.suggestedRule}` : c.tip}>
+          <Tip key={c.label} label={c.choice.scope === 'always' && req.suggestedRule ? t('写入规则 {0}', req.suggestedRule) : c.tip}>
             <button
               type="button"
               disabled={busy}

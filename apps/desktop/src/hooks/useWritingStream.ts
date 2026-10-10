@@ -18,8 +18,8 @@ export interface WrittenChar {
   role: StreamLine['role']
 }
 
-const PAUSE_AFTER_STRONG = '。！？!?'
-const PAUSE_AFTER_SOFT = '，、；：,;:·…—）〕)'
+const PAUSE_AFTER_STRONG = '。！？!?' // i18n-ignore: 标点集
+const PAUSE_AFTER_SOFT = '，、；：,;:·…—）〕)' // i18n-ignore: 标点集
 const LINE_END_BREATH = 380
 
 function hash01(s: string): number {

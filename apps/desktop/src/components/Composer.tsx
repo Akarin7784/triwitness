@@ -9,6 +9,7 @@ import { ModelPicker } from './ModelPicker'
 import { PlusMenu } from './PlusMenu'
 import { StyleDialog } from './StyleDialog'
 import { Tip } from './Tip'
+import { t as tr } from '../lib/i18n'
 
 export interface ComposerRepo {
   value: string
@@ -51,7 +52,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
   const addFiles = (files: File[]) => {
     setAtts((cur) => {
       const room = MAX_FILES - cur.length
-      if (files.length > room) toast(`最多 ${MAX_FILES} 个附件`)
+      if (files.length > room) toast(tr('最多 {0} 个附件', MAX_FILES))
       const fresh = files.slice(0, Math.max(0, room)).map((f) => ({ f, a: newAttachment(f) }))
       for (const { f, a } of fresh) {
         void saveFile(f, a).then((done) => setAtts((list) => list.map((x) => (x.id === a.id ? done : x))))
@@ -154,8 +155,8 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
             }
           }}
           rows={1}
-          placeholder="写下任务…"
-          aria-label="输入"
+          placeholder={tr('写下任务…')}
+          aria-label={tr('输入')}
           className="block max-h-[240px] min-h-[44px] w-full resize-none bg-transparent px-1.5 py-1 font-serif text-[15px] leading-relaxed text-ink outline-none placeholder:text-sepia-muted/80"
         />
         <div className="mt-1.5 flex items-center gap-2">
@@ -175,7 +176,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
             <span data-testid="style-chip" className="chip fade-in">
               <Palette size={11} strokeWidth={1.7} />
               {styleName}
-              <button type="button" aria-label="恢复标准风格" onClick={() => setPrefs({ style: 'standard' })} className="-mr-1 rounded-full p-0.5 hover:bg-panel-raised">
+              <button type="button" aria-label={tr('恢复标准风格')} onClick={() => setPrefs({ style: 'standard' })} className="-mr-1 rounded-full p-0.5 hover:bg-panel-raised">
                 <X size={10} strokeWidth={2} />
               </button>
             </span>
@@ -194,7 +195,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
                 className="chip w-full max-w-[300px] bg-transparent font-mono text-[11.5px] outline-none placeholder:text-sepia-muted/70"
               />
             ) : (
-              <Tip label="仓库路径" side="top-start">
+              <Tip label={tr('仓库路径')} side="top-start">
                 <button
                   type="button"
                   data-testid="repo-chip"
@@ -209,8 +210,8 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
           {armed && (
             <span data-testid="unrestricted-chip" className="chip fade-in border-rose-ink/40 bg-rose-ink/10 text-rose-ink">
               <ShieldAlert size={11} strokeWidth={1.8} />
-              勇士模式
-              <button type="button" aria-label="取消勇士模式" onClick={disarmUnrestricted} className="-mr-1 rounded-full p-0.5 hover:bg-rose-ink/15">
+              {tr('勇士模式')}
+              <button type="button" aria-label={tr('取消勇士模式')} onClick={disarmUnrestricted} className="-mr-1 rounded-full p-0.5 hover:bg-rose-ink/15">
                 <X size={10} strokeWidth={2} />
               </button>
             </span>
@@ -257,20 +258,20 @@ function SendSlot({
           className="absolute inset-0"
         >
           {kind === 'stop' ? (
-            <Tip label="停止 · Esc" side="top-end">
-              <button type="button" onClick={onStop} aria-label="停止" data-testid="stop" className={`${base} bg-ink text-parchment hover:bg-espresso`}>
+            <Tip label={tr('停止 · Esc')} side="top-end">
+              <button type="button" onClick={onStop} aria-label={tr('停止')} data-testid="stop" className={`${base} bg-ink text-parchment hover:bg-espresso`}>
                 <Square size={11} strokeWidth={2} fill="currentColor" />
               </button>
             </Tip>
           ) : kind === 'send' ? (
-            <Tip label="发送 · Enter" side="top-end">
-              <button type="button" onClick={onSend} aria-label="发送" data-testid="send" className={`${base} bg-amber text-cream hover:bg-[#b07433]`}>
+            <Tip label={tr('发送 · Enter')} side="top-end">
+              <button type="button" onClick={onSend} aria-label={tr('发送')} data-testid="send" className={`${base} bg-amber text-cream hover:bg-[#b07433]`}>
                 <ArrowUp size={16} strokeWidth={2} />
               </button>
             </Tip>
           ) : (
-            <Tip label="语音输入" side="top-end">
-              <button type="button" onClick={() => notYet('语音输入')} aria-label="语音输入" data-testid="mic" className={`${base} text-sepia hover:bg-panel-raised hover:text-amber`}>
+            <Tip label={tr('语音输入')} side="top-end">
+              <button type="button" onClick={() => notYet(tr('语音输入'))} aria-label={tr('语音输入')} data-testid="mic" className={`${base} text-sepia hover:bg-panel-raised hover:text-amber`}>
                 <Mic size={15} strokeWidth={1.6} />
               </button>
             </Tip>

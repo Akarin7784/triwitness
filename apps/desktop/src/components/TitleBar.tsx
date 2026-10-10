@@ -3,6 +3,7 @@ import { Feather, PanelLeft } from 'lucide-react'
 import clsx from 'clsx'
 import { appWindow, inTauri } from '../lib/appWindow'
 import { Tip } from './Tip'
+import { t } from '../lib/i18n'
 
 /**
  * 自绘标题栏（decorations: false）
@@ -38,15 +39,15 @@ export function TitleBar({
       )}
     >
       <div data-tauri-drag-region className="flex h-full w-[248px] shrink-0 items-center gap-1 pl-3">
-        <Tip label={`${sidebarOpen ? '收起侧栏' : '展开侧栏'} · Ctrl Shift S`} side="bottom">
-          <button type="button" onClick={onToggleSidebar} className="tb-icon" aria-label="侧栏">
+        <Tip label={`${sidebarOpen ? t('收起侧栏') : t('展开侧栏')} · Ctrl Shift S`} side="bottom">
+          <button type="button" onClick={onToggleSidebar} className="tb-icon" aria-label={t('侧栏')}>
             <PanelLeft size={15} strokeWidth={1.5} />
           </button>
         </Tip>
         <span data-tauri-drag-region className="ml-1.5 flex items-center gap-2 text-ink">
           <Feather size={13} strokeWidth={1.6} className="pointer-events-none text-amber" />
           <span data-tauri-drag-region className="font-serif text-[14px] font-semibold tracking-[0.18em]">
-            三证
+            {t('三证')}
           </span>
         </span>
       </div>
@@ -60,12 +61,12 @@ export function TitleBar({
       </div>
 
       <div className="flex h-full shrink-0 items-stretch">
-        <WinButton label="最小化" onClick={appWindow.minimize}>
+        <WinButton label={t('最小化')} onClick={appWindow.minimize}>
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
             <path d="M1 5.5h8" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
           </svg>
         </WinButton>
-        <WinButton label={maximized ? '还原' : '最大化'} onClick={appWindow.toggleMaximize}>
+        <WinButton label={maximized ? t('还原') : t('最大化')} onClick={appWindow.toggleMaximize}>
           {maximized ? (
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
               <rect x="1" y="3" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1" />
@@ -77,7 +78,7 @@ export function TitleBar({
             </svg>
           )}
         </WinButton>
-        <WinButton label="关闭" onClick={appWindow.close} danger>
+        <WinButton label={t('关闭')} onClick={appWindow.close} danger>
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
             <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
           </svg>

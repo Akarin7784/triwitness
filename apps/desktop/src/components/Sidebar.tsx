@@ -26,6 +26,7 @@ import { MenuDivider, MenuItem, Popover } from './Popover'
 import { ProjectPicker } from './ProjectPicker'
 import { Tip } from './Tip'
 import { StatusGlyph } from './StatusGlyph'
+import { t } from '../lib/i18n'
 
 export interface SidebarItem {
   id: string
@@ -85,11 +86,11 @@ export function Sidebar(p: SidebarProps) {
       className="flex h-full shrink-0 flex-col overflow-hidden border-r border-border-soft bg-panel/70"
     >
       <div className={clsx('space-y-px pb-2 pt-3', p.collapsed ? 'px-2' : 'px-3')}>
-        <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber" />} label="新会话" kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
-        <NavButton collapsed={p.collapsed} icon={<Search size={15} strokeWidth={1.6} />} label="搜索" kbd="Ctrl K" onClick={p.onSearch} testId="nav-search" />
-        <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label="会话" onClick={p.onSearch} />
-        <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label="项目" onClick={p.onProjects} testId="nav-projects" active={p.view === 'projects'} />
-        <NavButton collapsed={p.collapsed} icon={<Boxes size={15} strokeWidth={1.6} />} label="作品" onClick={p.onArtifacts} testId="nav-artifacts" active={p.view === 'artifacts'} />
+        <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber" />} label={t('新会话')} kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
+        <NavButton collapsed={p.collapsed} icon={<Search size={15} strokeWidth={1.6} />} label={t('搜索')} kbd="Ctrl K" onClick={p.onSearch} testId="nav-search" />
+        <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label={t('会话')} onClick={p.onSearch} />
+        <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label={t('项目')} onClick={p.onProjects} testId="nav-projects" active={p.view === 'projects'} />
+        <NavButton collapsed={p.collapsed} icon={<Boxes size={15} strokeWidth={1.6} />} label={t('作品')} onClick={p.onArtifacts} testId="nav-artifacts" active={p.view === 'artifacts'} />
       </div>
 
       <AnimatePresence initial={false}>
@@ -103,7 +104,7 @@ export function Sidebar(p: SidebarProps) {
           >
             {starred.length > 0 && (
               <>
-                <SectionLabel>星标</SectionLabel>
+                <SectionLabel>{t('星标')}</SectionLabel>
                 <motion.div layout className="space-y-px">
                   {starred.map((c) => (
                     <ChatRow key={c.id} c={c} {...p} />
@@ -113,7 +114,7 @@ export function Sidebar(p: SidebarProps) {
             )}
             {groups.length > 0 && (
               <>
-                <SectionLabel>项目</SectionLabel>
+                <SectionLabel>{t('项目')}</SectionLabel>
                 {groups.map((g) => (
                   <ProjectGroup key={g.id} name={g.name} onOpen={() => p.onOpenProject(g.id)} defaultOpen={g.chats.some((c) => c.id === p.activeId)}>
                     {g.chats.map((c) => (
@@ -123,7 +124,7 @@ export function Sidebar(p: SidebarProps) {
                 ))}
               </>
             )}
-            <SectionLabel>近期</SectionLabel>
+            <SectionLabel>{t('近期')}</SectionLabel>
             <motion.div layout className="space-y-px">
               <AnimatePresence initial={false}>
                 {recents.map((c) => (
@@ -153,7 +154,7 @@ function ProjectGroup({ name, onOpen, defaultOpen, children }: { name: string; o
         <button
           type="button"
           aria-expanded={open}
-          aria-label={open ? `收起 ${name}` : `展开 ${name}`}
+          aria-label={open ? t('收起 {0}', name) : t('展开 {0}', name)}
           onClick={() => setOpen((o) => !o)}
           className="flex h-8 w-7 shrink-0 items-center justify-center pl-2 text-sepia-muted"
         >
@@ -292,7 +293,7 @@ function ChatRow({
         )}
         <button
           type="button"
-          aria-label="更多"
+          aria-label={t('更多')}
           data-testid="chat-more"
           onClick={(e) => {
             e.stopPropagation()
@@ -310,11 +311,11 @@ function ChatRow({
       <Popover open={menu} onClose={closeMenu} side="down" align="right" className="w-[196px]" testId="chat-menu">
         {page === 'main' ? (
           <>
-            <MenuItem icon={c.starred ? StarOff : Star} label={c.starred ? '取消星标' : '星标'} onClick={() => (closeMenu(), onStar(c.id))} />
-            <MenuItem icon={Pencil} label="重命名" onClick={() => (closeMenu(), onRename(c.id))} testId="menu-rename" />
-            <MenuItem icon={FolderPlus} label={c.projectId ? '更换项目' : '加入项目'} onClick={() => setPage('project')} testId="menu-project" />
+            <MenuItem icon={c.starred ? StarOff : Star} label={c.starred ? t('取消星标') : t('星标')} onClick={() => (closeMenu(), onStar(c.id))} />
+            <MenuItem icon={Pencil} label={t('重命名')} onClick={() => (closeMenu(), onRename(c.id))} testId="menu-rename" />
+            <MenuItem icon={FolderPlus} label={c.projectId ? t('更换项目') : t('加入项目')} onClick={() => setPage('project')} testId="menu-project" />
             <MenuDivider />
-            <MenuItem icon={Trash2} label="删除" danger onClick={() => (closeMenu(), onDelete(c.id))} testId="menu-delete" />
+            <MenuItem icon={Trash2} label={t('删除')} danger onClick={() => (closeMenu(), onDelete(c.id))} testId="menu-delete" />
           </>
         ) : (
           <ProjectPicker
@@ -330,13 +331,13 @@ function ChatRow({
 
 function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive }: SidebarProps) {
   const [open, setOpen] = useState(false)
-  const name = userName.trim() || '本机'
+  const name = userName.trim() || t('本机')
   return (
     <div className="relative border-t border-border-soft/80 p-2">
       <button
         type="button"
         data-testid="user-menu"
-        aria-label="用户菜单"
+        aria-label={t('用户菜单')}
         onClick={() => setOpen((o) => !o)}
         className={clsx(
           'flex h-10 items-center gap-2.5 rounded-lg text-[12.5px] transition-colors duration-300 hover:bg-panel-raised',
@@ -350,11 +351,11 @@ function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive
         {!collapsed && <span className="truncate text-ink-soft">{name}</span>}
       </button>
       <Popover open={open} onClose={() => setOpen(false)} className="w-[220px]" testId="user-popover">
-        <MenuItem icon={Settings} label="设置" kbd="Ctrl ," onClick={() => (setOpen(false), onSettings())} testId="open-settings" />
-        <MenuItem icon={Keyboard} label="快捷键" kbd="Ctrl /" onClick={() => (setOpen(false), onShortcuts())} />
-        <MenuItem icon={CircleHelp} label="帮助" onClick={() => (setOpen(false), notYet('帮助'))} />
+        <MenuItem icon={Settings} label={t('设置')} kbd="Ctrl ," onClick={() => (setOpen(false), onSettings())} testId="open-settings" />
+        <MenuItem icon={Keyboard} label={t('快捷键')} kbd="Ctrl /" onClick={() => (setOpen(false), onShortcuts())} />
+        <MenuItem icon={CircleHelp} label={t('帮助')} onClick={() => (setOpen(false), notYet(t('帮助')))} />
         <MenuDivider />
-        <MenuItem icon={Info} label="关于三证" onClick={() => (setOpen(false), onSettings('about'))} />
+        <MenuItem icon={Info} label={t('关于三证')} onClick={() => (setOpen(false), onSettings('about'))} />
       </Popover>
     </div>
   )

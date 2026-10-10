@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { toolTitle, type ToolBlock } from '../data/turns'
+import { t } from '../lib/i18n'
 
 const ICON: Record<string, LucideIcon> = {
   read_file: FileSearch,
@@ -64,7 +65,7 @@ export function ToolRow({ block }: { block: ToolBlock }) {
         <div className="fade-in mb-1.5 ml-7 mr-1 mt-0.5 space-y-1.5">
           {block.args && <pre className="tool-pre selectable">{block.args}</pre>}
           {block.output && <pre className="tool-pre selectable max-h-56">{block.output}</pre>}
-          {block.permission && <p className="text-[10.5px] text-sepia-muted">权限 · {block.permission}</p>}
+          {block.permission && <p className="text-[10.5px] text-sepia-muted">{t('权限 · {0}', block.permission)}</p>}
         </div>
       )}
     </div>

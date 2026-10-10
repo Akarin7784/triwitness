@@ -63,6 +63,7 @@ import {
   useLiveTask,
   useTaskMetas,
 } from './bridge/liveStore'
+import { locale, t as tr } from './lib/i18n'
 
 /** 真实任务尚未注册（续上中）时的占位 key，注册后换成真 key 触发重新订阅 */
 const PENDING = '#pending'
@@ -88,12 +89,12 @@ function livePhase(m: TaskMeta): Phase {
 }
 
 const LIVE_LABEL: Record<string, string> = {
-  done: '已完成',
-  failed: '未完成',
-  stuck: '卡住',
-  budget_exceeded: '超预算',
-  cancelled: '已停止',
-  error: '出错',
+  done: tr('已完成'),
+  failed: tr('未完成'),
+  stuck: tr('卡住'),
+  budget_exceeded: tr('超预算'),
+  cancelled: tr('已停止'),
+  error: tr('出错'),
 }
 
 /** 设置 → 本次任务的选择；勇士模式“上膛”时只给这一个任务 */
@@ -195,10 +196,10 @@ export default function App() {
         id: `live:${m.id}` as SourceKey,
         title: m.title,
         phase: livePhase(m),
-        label: m.status ? (LIVE_LABEL[m.status] ?? m.status) : '进行中',
+        label: m.status ? (LIVE_LABEL[m.status] ?? m.status) : tr('进行中'),
         time: new Date(m.startedAt).toTimeString().slice(0, 5),
       })),
-      ...(source === 'mock' ? [{ id: 'mock' as SourceKey, title: '演示' }] : []),
+      ...(source === 'mock' ? [{ id: 'mock' as SourceKey, title: tr('演示') }] : []),
       ...catalog.map((c) => ({
         id: `fixture:${c.id}` as SourceKey,
         title: c.title,
@@ -234,7 +235,7 @@ export default function App() {
       (snap?.error
         ? snap.error
         : snap?.exited && !snap.result && live.phase === 'active'
-          ? '进程已结束'
+          ? tr('进程已结束')
           : null))
 
   /** 起一个真实任务；返回 live: key。个人资料 + 风格 + 项目说明进“用户设置”，项目知识文件随附件一起交给核心 */
@@ -277,7 +278,7 @@ export default function App() {
       [display]: [
         ...(prev[display] ?? []),
         { id: `u-${Date.now()}`, role: 'user', content: text, timestamp: stamp },
-        { id: `a-${Date.now()}`, role: 'assistant', content: '收到。', meta: 'mock', timestamp: stamp },
+        { id: `a-${Date.now()}`, role: 'assistant', content: tr('收到。'), meta: 'mock', timestamp: stamp },
       ],
     }))
   }
@@ -305,13 +306,13 @@ export default function App() {
     feedback: chats.feedback[display]?.rating,
     onFeedback: (rating: 'up' | 'down' | null, note?: string) => {
       setFeedback(display, rating ? { rating, note } : null)
-      if (rating) toast('谢谢，已记下')
+      if (rating) toast(tr('谢谢，已记下'))
     },
   }
 
   const onNew = (projectId?: string) => {
     const id = `local:${Date.now()}` as SourceKey
-    setLocals((prev) => [{ id, title: '新会话' }, ...prev])
+    setLocals((prev) => [{ id, title: tr('新会话') }, ...prev])
     if (projectId) setChatProject(id, projectId)
     select(id)
     window.setTimeout(() => window.dispatchEvent(new Event('tw:focus-composer')), 60)
@@ -326,7 +327,7 @@ export default function App() {
       if (next) select(next.id as SourceKey)
       else onNew()
     }
-    toast('已删除')
+    toast(tr('已删除'))
   }
 
   const openSettings = (s?: string) => {
@@ -337,7 +338,7 @@ export default function App() {
   const copyLast = () => {
     const text = [...turn.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])), ...(turn.final ? [turn.final.text] : [])].join('\n\n')
     if (!text) return
-    void navigator.clipboard?.writeText(text).then(() => toast('已复制最后一条回复'), () => toast('复制失败'))
+    void navigator.clipboard?.writeText(text).then(() => toast(tr('已复制最后一条回复')), () => toast(tr('复制失败')))
   }
 
   const onKey = useEffectEvent((e: KeyboardEvent) => {
@@ -435,9 +436,9 @@ export default function App() {
       attachments: meta?.attachments,
     })
   const share = {
-    copyMarkdown: () => void copyText(exportMd(), '已复制为 Markdown'),
+    copyMarkdown: () => void copyText(exportMd(), tr('已复制为 Markdown')),
     exportMarkdown: () => void saveText(exportFileName(title, 'md'), exportMd(), 'text/markdown'),
-    exportPdf: () => printMarkdown(exportMd(), title || '三证会话'),
+    exportPdf: () => printMarkdown(exportMd(), title || tr('三证会话')),
   }
 
   // ---- 作品页：所有任务的 pr.md / patch.diff ----
@@ -445,7 +446,7 @@ export default function App() {
     .filter((m) => m.result && !chats.overlay[`live:${m.id}`]?.deleted)
     .flatMap((m) => {
       const chat = rootOf(`live:${m.id}`, chats)
-      const t = new Date(m.startedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      const t = new Date(m.startedAt).toLocaleString(locale(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
       const chatTitle = chats.overlay[chat]?.title || m.title
       const out: ArtifactEntry[] = []
       if (m.result?.branch) out.push({ chat, chatTitle, artifact: 'patch.diff', title: 'patch.diff', kind: 'diff', time: t })
@@ -464,7 +465,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
     <div className="app-grain flex h-full flex-col">
       <TitleBar
-        title={view === 'settings' ? '设置' : title}
+        title={view === 'settings' ? tr('设置') : title}
         sidebarOpen={!prefs.sidebarCollapsed}
         onToggleSidebar={() => setPrefs({ sidebarCollapsed: !prefs.sidebarCollapsed })}
       />
@@ -490,7 +491,7 @@ export default function App() {
           projects={projects.projects.map((x) => ({ id: x.id, name: x.name }))}
           onProject={(chat, pid) => {
             setChatProject(chat, pid)
-            toast(pid ? `已加入「${projects.projects.find((x) => x.id === pid)?.name ?? ''}」` : '已移出项目')
+            toast(pid ? tr('已加入「{0}」', projects.projects.find((x) => x.id === pid)?.name ?? '') : tr('已移出项目'))
           }}
         />
         {view === 'settings' ? (
@@ -514,7 +515,7 @@ export default function App() {
         ) : (
           <>
             <ChatPanel
-              title={title || '三证'}
+              title={title || tr('三证')}
               run={isLocal ? null : live}
               turn={isLocal ? null : turn}
               draftKey={display}
@@ -526,7 +527,7 @@ export default function App() {
               notice={notice}
               repo={
                 isLocal && coreOk
-                  ? { value: repo, onChange: setRepo, placeholder: coreMode() === 'demo' ? '演示仓库' : '仓库路径' }
+                  ? { value: repo, onChange: setRepo, placeholder: coreMode() === 'demo' ? tr('演示仓库') : tr('仓库路径') }
                   : undefined
               }
               allowEmpty={isLocal && !!coreOk && coreMode() === 'demo'}
@@ -545,7 +546,7 @@ export default function App() {
                       projectId: project?.id ?? null,
                       onProject: (pid) => {
                         setChatProject(source, pid)
-                        toast(pid ? `已加入「${projects.projects.find((x) => x.id === pid)?.name ?? ''}」` : '已移出项目')
+                        toast(pid ? tr('已加入「{0}」', projects.projects.find((x) => x.id === pid)?.name ?? '') : tr('已移出项目'))
                       },
                     }
               }

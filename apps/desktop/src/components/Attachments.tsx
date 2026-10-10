@@ -5,6 +5,7 @@ import clsx from 'clsx'
 import { formatSize, type Attachment } from '../lib/attachments'
 import { Dialog } from './Dialog'
 import { Tip } from './Tip'
+import { t } from '../lib/i18n'
 
 /** 输入框上方的附件签：缩略图 / 文件名 / 大小，× 移除，点开预览；进出用弹簧 */
 export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRemove?: (id: string) => void }) {
@@ -55,10 +56,10 @@ export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRe
                 </span>
               </button>
               {onRemove && (
-                <Tip label="移除">
+                <Tip label={t('移除')}>
                   <button
                     type="button"
-                    aria-label={`移除 ${a.name}`}
+                    aria-label={t('移除 {0}', a.name)}
                     data-testid="attachment-remove"
                     onClick={() => onRemove(a.id)}
                     className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-parchment text-sepia shadow-sm transition-colors hover:text-rose-ink"
@@ -73,7 +74,7 @@ export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRe
       </div>
       {hasImage && onRemove && (
         <p data-testid="image-note" className="px-2 pb-2 text-[11.5px] text-sepia-muted">
-          当前模型只读文字：图片会作为文件附上，但看不到内容。
+          {t('当前模型只读文字：图片会作为文件附上，但看不到内容。')}
         </p>
       )}
       <Dialog open={!!open} onClose={() => setOpen(null)} title={open?.name} width={640} testId="attachment-preview">
@@ -84,7 +85,7 @@ export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRe
             ) : open.kind === 'text' && open.preview ? (
               <pre className="selectable whitespace-pre-wrap p-3 font-mono text-[12px] leading-relaxed text-ink-soft">{open.preview}</pre>
             ) : (
-              <p className="p-4 text-[13px] text-sepia">{formatSize(open.size)} · 无法预览</p>
+              <p className="p-4 text-[13px] text-sepia">{t('{0} · 无法预览', formatSize(open.size))}</p>
             )}
           </div>
         )}

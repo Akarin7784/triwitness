@@ -6,6 +6,7 @@ import { coreTool } from '../../lib/coreTool'
 import { coreMode, defaultDemoRepo, lastRepo } from '../../bridge/liveStore'
 import { toast } from '../../lib/toast'
 import { FIELD } from '../../lib/ui'
+import { t as tr } from '../../lib/i18n'
 
 type Kind = 'allow' | 'ask' | 'deny'
 type LayerId = 'user' | 'local'
@@ -16,9 +17,9 @@ interface Layer {
   deny: string[]
 }
 const KINDS: { id: Kind; label: string; cls: string }[] = [
-  { id: 'allow', label: '允许', cls: 'bg-sage/15 text-sage' },
-  { id: 'ask', label: '询问', cls: 'bg-amber/15 text-amber' },
-  { id: 'deny', label: '拒绝', cls: 'bg-rose-ink/12 text-rose-ink' },
+  { id: 'allow', label: tr('允许'), cls: 'bg-sage/15 text-sage' },
+  { id: 'ask', label: tr('询问'), cls: 'bg-amber/15 text-amber' },
+  { id: 'deny', label: tr('拒绝'), cls: 'bg-rose-ink/12 text-rose-ink' },
 ]
 const SPRING = { type: 'spring', stiffness: 460, damping: 36 } as const
 
@@ -65,8 +66,8 @@ export function RulesEditor() {
   const initial = useEffectEvent(() => void load())
   useEffect(() => initial(), [])
 
-  if (offline) return <p className="py-4 text-[12.5px] text-sepia-muted">连接核心后可以编辑规则（浏览器预览里只读）。</p>
-  if (!layers) return <p className="flex items-center gap-2 py-4 text-[12.5px] text-sepia-muted">{err ?? <><Loader2 size={12} className="animate-spin" /> 读取中…</>}</p>
+  if (offline) return <p className="py-4 text-[12.5px] text-sepia-muted">{tr('连接核心后可以编辑规则（浏览器预览里只读）。')}</p>
+  if (!layers) return <p className="flex items-center gap-2 py-4 text-[12.5px] text-sepia-muted">{err ?? <><Loader2 size={12} className="animate-spin" /> {tr('读取中…')}</>}</p>
 
   const run = async (args: string[], ok: string) => {
     const r = await coreTool(args)
@@ -80,7 +81,7 @@ export function RulesEditor() {
 
   return (
     <div data-testid="rules-editor" className="space-y-5 py-3">
-      <AddRule onAdd={(kind, rule) => run(['permissions', 'add', '--kind', kind, '--rule', rule], '已添加规则')} />
+      <AddRule onAdd={(kind, rule) => run(['permissions', 'add', '--kind', kind, '--rule', rule], tr('已添加规则'))} />
       {(['user', 'local'] as LayerId[]).map((id) => {
         const l = layers[id]
         if (!l) return null
@@ -88,7 +89,7 @@ export function RulesEditor() {
         return (
           <div key={id} data-testid={`rules-${id}`}>
             <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[12.5px] text-ink">{id === 'user' ? '我的规则（本机所有仓库）' : '此仓库（审批卡“总是”写入）'}</p>
+              <p className="text-[12.5px] text-ink">{id === 'user' ? tr('我的规则（本机所有仓库）') : tr('此仓库（审批卡“总是”写入）')}</p>
               <p className="truncate font-mono text-[10.5px] text-sepia-muted" title={l.path}>
                 {l.path}
               </p>
@@ -109,14 +110,14 @@ export function RulesEditor() {
                       kind={r.kind}
                       rule={r.rule}
                       onSave={(next) =>
-                        run(['permissions', 'add', '--kind', r.kind, '--rule', next, '--replace', r.rule, '--layer', id, ...(id === 'local' ? ['--repo', repo] : [])], '已保存')
+                        run(['permissions', 'add', '--kind', r.kind, '--rule', next, '--replace', r.rule, '--layer', id, ...(id === 'local' ? ['--repo', repo] : [])], tr('已保存'))
                       }
-                      onDelete={() => run(['permissions', 'remove', '--kind', r.kind, '--rule', r.rule, '--layer', id, ...(id === 'local' ? ['--repo', repo] : [])], '已删除')}
+                      onDelete={() => run(['permissions', 'remove', '--kind', r.kind, '--rule', r.rule, '--layer', id, ...(id === 'local' ? ['--repo', repo] : [])], tr('已删除'))}
                     />
                   </motion.li>
                 ))}
               </AnimatePresence>
-              {rows.length === 0 && <li className="px-3 py-3 text-[12px] text-sepia-muted">{id === 'user' ? '还没有自己的规则' : '还没有“总是允许”的记录'}</li>}
+              {rows.length === 0 && <li className="px-3 py-3 text-[12px] text-sepia-muted">{id === 'user' ? tr('还没有自己的规则') : tr('还没有“总是允许”的记录')}</li>}
             </ul>
           </div>
         )
@@ -142,7 +143,7 @@ function AddRule({ onAdd }: { onAdd: (k: Kind, r: string) => Promise<string | nu
   return (
     <div>
       <div className="flex items-center gap-2">
-        <div role="radiogroup" aria-label="规则类型" className="flex shrink-0 rounded-lg border border-border-soft p-0.5">
+        <div role="radiogroup" aria-label={tr('规则类型')} className="flex shrink-0 rounded-lg border border-border-soft p-0.5">
           {KINDS.map((k) => (
             <button
               key={k.id}
@@ -174,11 +175,11 @@ function AddRule({ onAdd }: { onAdd: (k: Kind, r: string) => Promise<string | nu
           onClick={() => void add()}
           className="inline-flex h-[38px] shrink-0 items-center gap-1 rounded-xl bg-ink px-3 text-[12.5px] text-parchment transition-colors duration-300 hover:bg-espresso disabled:opacity-40"
         >
-          {busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} 添加
+          {busy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} {tr('添加')}
         </button>
       </div>
       <p data-testid="rule-validation" className={clsx('mt-1.5 min-h-[18px] text-[11.5px]', v.error || err ? 'text-rose-ink' : 'text-sepia-muted')}>
-        {err ?? v.error ?? (v.ok ? '✓ 规则有效' : v.checking ? '校验中…' : '格式：工具 或 工具(参数)，* 匹配任意')}
+        {err ?? v.error ?? (v.ok ? tr('✓ 规则有效') : v.checking ? tr('校验中…') : tr('格式：工具 或 工具(参数)，* 匹配任意'))}
       </p>
     </div>
   )
@@ -225,19 +226,19 @@ function RuleRow({ kind, rule, onSave, onDelete }: { kind: Kind; rule: string; o
       <span className={clsx('flex shrink-0 items-center gap-0.5 transition-opacity duration-200', edit === null && 'opacity-0 group-hover:opacity-100 focus-within:opacity-100')}>
         {edit === null ? (
           <>
-            <button type="button" aria-label={`编辑 ${rule}`} data-testid="rule-edit" onClick={() => setEdit(rule)} className="rounded-md p-1 text-sepia hover:bg-panel-raised hover:text-ink">
+            <button type="button" aria-label={tr('编辑 {0}', rule)} data-testid="rule-edit" onClick={() => setEdit(rule)} className="rounded-md p-1 text-sepia hover:bg-panel-raised hover:text-ink">
               <Pencil size={12} />
             </button>
-            <button type="button" aria-label={`删除 ${rule}`} data-testid="rule-delete" onClick={() => void onDelete()} className="rounded-md p-1 text-sepia hover:bg-panel-raised hover:text-rose-ink">
+            <button type="button" aria-label={tr('删除 {0}', rule)} data-testid="rule-delete" onClick={() => void onDelete()} className="rounded-md p-1 text-sepia hover:bg-panel-raised hover:text-rose-ink">
               <Trash2 size={12} />
             </button>
           </>
         ) : (
           <>
-            <button type="button" aria-label="保存" data-testid="rule-save" disabled={edit !== rule && !v.ok} onClick={() => void save()} className="rounded-md p-1 text-sage hover:bg-panel-raised disabled:opacity-40">
+            <button type="button" aria-label={tr('保存')} data-testid="rule-save" disabled={edit !== rule && !v.ok} onClick={() => void save()} className="rounded-md p-1 text-sage hover:bg-panel-raised disabled:opacity-40">
               <Check size={13} />
             </button>
-            <button type="button" aria-label="取消" onClick={() => setEdit(null)} className="rounded-md p-1 text-sepia hover:bg-panel-raised">
+            <button type="button" aria-label={tr('取消')} onClick={() => setEdit(null)} className="rounded-md p-1 text-sepia hover:bg-panel-raised">
               <X size={13} />
             </button>
           </>

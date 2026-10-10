@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, CircleDashed, ExternalLink, Loader2, Refre
 import clsx from 'clsx'
 import { coreTool } from '../../lib/coreTool'
 import { Btn, Dialog, DialogActions } from '../Dialog'
+import { t as tr } from '../../lib/i18n'
 
 type State = 'ok' | 'stopped' | 'missing' | 'n/a' | 'unknown'
 interface Component {
@@ -36,13 +37,13 @@ interface InstallOut {
 }
 
 const ICON: Record<State, { I: typeof CheckCircle2; cls: string; label: string }> = {
-  ok: { I: CheckCircle2, cls: 'text-sage', label: '就绪' },
-  stopped: { I: AlertTriangle, cls: 'text-amber', label: '未运行' },
-  missing: { I: XCircle, cls: 'text-rose-ink', label: '未安装' },
-  'n/a': { I: CircleDashed, cls: 'text-sepia-muted', label: '不需要' },
-  unknown: { I: CircleDashed, cls: 'text-sepia-muted', label: '未知' },
+  ok: { I: CheckCircle2, cls: 'text-sage', label: tr('就绪') },
+  stopped: { I: AlertTriangle, cls: 'text-amber', label: tr('未运行') },
+  missing: { I: XCircle, cls: 'text-rose-ink', label: tr('未安装') },
+  'n/a': { I: CircleDashed, cls: 'text-sepia-muted', label: tr('不需要') },
+  unknown: { I: CircleDashed, cls: 'text-sepia-muted', label: tr('未知') },
 }
-const STEPS = ['等待管理员确认（UAC）', '下载并安装', '重新检测']
+const STEPS = [tr('等待管理员确认（UAC）'), tr('下载并安装'), tr('重新检测')]
 
 /**
  * UI-19：Docker / WSL2 检测与引导安装。只读检测随时可做；安装必须先看到命令、点“开始安装”，
@@ -95,7 +96,7 @@ export function SandboxInstall() {
     setStep(2)
     if (r.ok) {
       setReport(r.data.after)
-      setOutcome({ ok: r.data.ok, text: r.data.ok ? (plan.reboot_hint ? '安装完成。按提示重启后再回来检测。' : '安装完成。') : `安装未完成（退出码 ${r.data.exit_code}）。${r.data.output.slice(-300)}` })
+      setOutcome({ ok: r.data.ok, text: r.data.ok ? (plan.reboot_hint ? tr('安装完成。按提示重启后再回来检测。') : tr('安装完成。')) : tr('安装未完成（退出码 {0}）。{1}', r.data.exit_code, r.data.output.slice(-300)) })
     } else {
       setOutcome({ ok: false, text: r.error })
       await detect()
@@ -104,19 +105,19 @@ export function SandboxInstall() {
   }
 
   const rows: { key: 'docker' | 'wsl' | 'winget'; name: string; hint: string }[] = [
-    { key: 'docker', name: 'Docker', hint: '断网容器沙箱' },
-    { key: 'wsl', name: 'WSL2', hint: 'Docker Desktop 依赖它（Windows）' },
-    { key: 'winget', name: 'winget', hint: '用于一键安装（Windows）' },
+    { key: 'docker', name: 'Docker', hint: tr('断网容器沙箱') },
+    { key: 'wsl', name: 'WSL2', hint: tr('Docker Desktop 依赖它（Windows）') },
+    { key: 'winget', name: 'winget', hint: tr('用于一键安装（Windows）') },
   ]
 
   return (
     <div data-testid="sandbox-install" className="py-2">
       <div className="flex items-center justify-between py-2">
         <p className={clsx('text-[12.5px]', report?.sandbox_ready ? 'text-sage' : 'text-sepia')}>
-          {err ? <span className="text-rose-ink">{err}</span> : report ? (report.sandbox_ready ? '沙箱就绪' : '沙箱未就绪：任务会用本机工作树（无隔离）') : '检测中…'}
+          {err ? <span className="text-rose-ink">{err}</span> : report ? (report.sandbox_ready ? tr('沙箱就绪') : tr('沙箱未就绪：任务会用本机工作树（无隔离）')) : tr('检测中…')}
         </p>
         <button type="button" data-testid="sandbox-detect" onClick={() => void detect()} disabled={checking} className="chip hover:text-amber disabled:opacity-50">
-          <RefreshCw size={11} className={clsx(checking && 'animate-spin')} /> 重新检测
+          <RefreshCw size={11} className={clsx(checking && 'animate-spin')} /> {tr('重新检测')}
         </button>
       </div>
       <ul className="divide-y divide-border-soft/70">
@@ -138,7 +139,7 @@ export function SandboxInstall() {
               <span className={clsx('shrink-0 text-[11.5px]', st.cls)}>{c ? st.label : ''}</span>
               {canInstall && target && (
                 <button type="button" data-testid={`install-${target}`} onClick={() => void ask(target)} className="chip shrink-0 border-amber/50 text-amber hover:bg-amber/10">
-                  {target === 'wsl' ? '启用' : '安装'}
+                  {target === 'wsl' ? tr('启用') : tr('安装')}
                 </button>
               )}
             </li>
@@ -146,7 +147,7 @@ export function SandboxInstall() {
         })}
       </ul>
 
-      <Dialog open={!!plan} onClose={() => phase !== 'running' && setPlan(null)} title={plan?.target === 'wsl' ? '启用 WSL2' : '安装 Docker Desktop'} width={520} testId="install-dialog">
+      <Dialog open={!!plan} onClose={() => phase !== 'running' && setPlan(null)} title={plan?.target === 'wsl' ? tr('启用 WSL2') : tr('安装 Docker Desktop')} width={520} testId="install-dialog">
         {plan && (
           <div>
             {!plan.supported ? (
@@ -155,19 +156,19 @@ export function SandboxInstall() {
                 {plan.fallback_urls.length > 0 && <Links urls={plan.fallback_urls} />}
                 <DialogActions>
                   <Btn kind="solid" onClick={() => setPlan(null)}>
-                    知道了
+                    {tr('知道了')}
                   </Btn>
                 </DialogActions>
               </>
             ) : (
               <>
-                <p className="text-[13px] leading-relaxed text-ink-soft">将以管理员身份运行：</p>
+                <p className="text-[13px] leading-relaxed text-ink-soft">{tr('将以管理员身份运行：')}</p>
                 <pre data-testid="install-command" className="selectable mt-2 whitespace-pre-wrap rounded-xl border border-border-soft bg-cream/70 px-3 py-2 font-mono text-[12px] text-ink">
                   {plan.display}
                 </pre>
                 <ul className="mt-3 space-y-1 text-[12.5px] text-sepia">
                   <li className="flex items-center gap-1.5">
-                    <ShieldCheck size={13} className="text-amber" /> Windows 会弹出管理员确认（UAC），你点“是”才会开始
+                    <ShieldCheck size={13} className="text-amber" /> {tr('Windows 会弹出管理员确认（UAC），你点“是”才会开始')}
                   </li>
                   {plan.reboot_hint && <li className="pl-[19px]">{plan.note}</li>}
                 </ul>
@@ -207,16 +208,16 @@ export function SandboxInstall() {
                 <DialogActions>
                   {phase === 'confirm' && (
                     <>
-                      <Btn onClick={() => setPlan(null)}>取消</Btn>
+                      <Btn onClick={() => setPlan(null)}>{tr('取消')}</Btn>
                       <Btn kind="solid" onClick={() => void install()} testId="install-start">
-                        开始安装
+                        {tr('开始安装')}
                       </Btn>
                     </>
                   )}
-                  {phase === 'running' && <Btn disabled>安装中…</Btn>}
+                  {phase === 'running' && <Btn disabled>{tr('安装中…')}</Btn>}
                   {phase === 'done' && (
                     <Btn kind="solid" onClick={() => setPlan(null)}>
-                      完成
+                      {tr('完成')}
                     </Btn>
                   )}
                 </DialogActions>

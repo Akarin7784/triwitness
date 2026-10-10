@@ -1,5 +1,6 @@
 import { Check, ChevronLeft, FolderMinus } from 'lucide-react'
 import { MenuDivider, MenuItem } from './Popover'
+import { t } from '../lib/i18n'
 
 /** “加入项目”子菜单：标题下拉与侧栏菜单共用 */
 export function ProjectPicker({
@@ -15,10 +16,10 @@ export function ProjectPicker({
     <div data-testid="project-picker">
       <button type="button" className="menu-item text-sepia" onClick={onBack}>
         <ChevronLeft size={14} strokeWidth={1.6} />
-        <span>加入项目</span>
+        <span>{t('加入项目')}</span>
       </button>
       <MenuDivider />
-      {menu.projects.length === 0 && <p className="px-3 py-2 text-[12px] text-sepia-muted">还没有项目：在侧栏“项目”里新建</p>}
+      {menu.projects.length === 0 && <p className="px-3 py-2 text-[12px] text-sepia-muted">{t('还没有项目：在侧栏“项目”里新建')}</p>}
       {menu.projects.map((p) => (
         <button
           key={p.id}
@@ -39,7 +40,7 @@ export function ProjectPicker({
       {menu.projectId && (
         <>
           <MenuDivider />
-          <MenuItem icon={FolderMinus} label="移出项目" onClick={() => (menu.onProject(null), onDone())} />
+          <MenuItem icon={FolderMinus} label={t('移出项目')} onClick={() => (menu.onProject(null), onDone())} />
         </>
       )}
     </div>

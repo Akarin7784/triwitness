@@ -53,8 +53,9 @@ import { secretClear, secretSet, secretStatus, type SecretState } from '../lib/s
 import { notYet, toast } from '../lib/toast'
 import { parseRules, type RuleKind } from '../data/rules'
 import defaultRulesYaml from '../../../../configs/permissions.default.yaml?raw'
+import { t as tr } from '../lib/i18n'
 
-const WEEK = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const WEEK = [tr('周日'), tr('周一'), tr('周二'), tr('周三'), tr('周四'), tr('周五'), tr('周六')]
 const VERSION = '0.1.0'
 
 export type SettingsSection =
@@ -69,15 +70,15 @@ export type SettingsSection =
   | 'about'
 
 const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: typeof Info }[] = [
-  { id: 'general', label: '常规', icon: SlidersHorizontal },
-  { id: 'profile', label: '个人资料', icon: UserRound },
-  { id: 'model', label: '模型', icon: Sparkles },
-  { id: 'budget', label: '预算', icon: Wallet },
-  { id: 'permissions', label: '权限', icon: Shield },
-  { id: 'sandbox', label: '沙箱', icon: Box },
-  { id: 'connectors', label: '连接器', icon: Plug },
-  { id: 'privacy', label: '隐私', icon: EyeOff },
-  { id: 'about', label: '关于', icon: Info },
+  { id: 'general', label: tr('常规'), icon: SlidersHorizontal },
+  { id: 'profile', label: tr('个人资料'), icon: UserRound },
+  { id: 'model', label: tr('模型'), icon: Sparkles },
+  { id: 'budget', label: tr('预算'), icon: Wallet },
+  { id: 'permissions', label: tr('权限'), icon: Shield },
+  { id: 'sandbox', label: tr('沙箱'), icon: Box },
+  { id: 'connectors', label: tr('连接器'), icon: Plug },
+  { id: 'privacy', label: tr('隐私'), icon: EyeOff },
+  { id: 'about', label: tr('关于'), icon: Info },
 ]
 
 function useNow(ms = 30_000) {
@@ -105,12 +106,12 @@ export function SettingsPage({
     <section data-testid="settings" className="fade-in flex min-w-0 flex-1 overflow-hidden">
       <nav className="w-[208px] shrink-0 overflow-y-auto scroll-soft px-3 pb-6 pt-6">
         <div className="mb-4 flex items-center gap-2 px-2">
-          <Tip label="返回" side="bottom">
-            <button type="button" onClick={onBack} aria-label="返回" className="tb-icon">
+          <Tip label={tr('返回')} side="bottom">
+            <button type="button" onClick={onBack} aria-label={tr('返回')} className="tb-icon">
               <ArrowLeft size={15} strokeWidth={1.5} />
             </button>
           </Tip>
-          <h1 className="font-serif text-[20px] font-semibold tracking-wide text-ink">设置</h1>
+          <h1 className="font-serif text-[20px] font-semibold tracking-wide text-ink">{tr('设置')}</h1>
         </div>
         {SETTINGS_SECTIONS.map((s) => (
           <button
@@ -265,9 +266,9 @@ const FIELD =
 /* ---------------------------------------------------------------- 常规 */
 
 const THEMES: { id: Theme; label: string }[] = [
-  { id: 'light', label: '浅色' },
-  { id: 'auto', label: '跟随系统' },
-  { id: 'dark', label: '深色' },
+  { id: 'light', label: tr('浅色') },
+  { id: 'auto', label: tr('跟随系统') },
+  { id: 'dark', label: tr('深色') },
 ]
 
 function ThemeSwatch({ id, active, onClick }: { id: Theme; active: boolean; onClick: () => void }) {
@@ -311,36 +312,36 @@ function General() {
   const p = usePrefs()
   return (
     <>
-      <Title>常规</Title>
-      <Group title="外观">
+      <Title>{tr('常规')}</Title>
+      <Group title={tr('外观')}>
         <div className="flex gap-4 border-b border-border-soft/70 py-5">
           {THEMES.map((t) => (
             <ThemeSwatch key={t.id} id={t.id} active={p.theme === t.id} onClick={() => setPrefs({ theme: t.id })} />
           ))}
         </div>
-        <Row label="对话字体">
+        <Row label={tr('对话字体')}>
           <Segmented<ChatFont>
             value={p.chatFont}
             onChange={(chatFont) => setPrefs({ chatFont })}
             options={[
-              { id: 'serif', label: '宋体' },
-              { id: 'sans', label: '黑体' },
-              { id: 'system', label: '系统' },
+              { id: 'serif', label: tr('宋体') },
+              { id: 'sans', label: tr('黑体') },
+              { id: 'system', label: tr('系统') },
             ]}
             testId="chat-font"
           />
         </Row>
-        <Row label="字号">
+        <Row label={tr('字号')}>
           <Segmented<number>
             value={p.fontScale}
             onChange={(fontScale) => setPrefs({ fontScale })}
-            options={FONT_SCALES.map((s) => ({ id: s, label: ({ 0.9: '小', 1: '默认', 1.1: '大', 1.2: '特大' } as Record<number, string>)[s] }))}
+            options={FONT_SCALES.map((s) => ({ id: s, label: ({ 0.9: tr('小'), 1: tr('默认'), 1.1: tr('大'), 1.2: tr('特大') } as Record<number, string>)[s] }))}
             testId="font-scale"
           />
         </Row>
       </Group>
-      <Group title="语言">
-        <Row label="界面语言">
+      <Group title={tr('语言')}>
+        <Row label={tr('界面语言')}>
           <Segmented<Language>
             value={p.language}
             onChange={(language) => {
@@ -349,7 +350,7 @@ function General() {
               window.setTimeout(() => window.location.reload(), 120)
             }}
             options={[
-              { id: 'zh', label: '简体中文' },
+              { id: 'zh', label: tr('简体中文') },
               { id: 'en', label: 'English' },
             ]}
             testId="language"
@@ -366,18 +367,18 @@ function Profile() {
   const p = usePrefs()
   return (
     <>
-      <Title>个人资料</Title>
+      <Title>{tr('个人资料')}</Title>
       <Group>
         <div className="py-4">
           <label className="text-[13.5px] text-ink" htmlFor="pf-name">
-            怎么称呼你
+            {tr('怎么称呼你')}
           </label>
           <input id="pf-name" value={p.name} maxLength={40} onChange={(e) => setPrefs({ name: e.target.value })} className={clsx(FIELD, 'mt-2')} />
         </div>
         <div className="border-t border-border-soft/70 py-4">
           <label className="flex items-center gap-1.5 text-[13.5px] text-ink" htmlFor="pf-about">
-            偏好
-            <Tip label="只存在本机" side="right">
+            {tr('偏好')}
+            <Tip label={tr('只存在本机')} side="right">
               <Lock size={11} strokeWidth={1.8} className="text-sepia-muted" />
             </Tip>
           </label>
@@ -387,7 +388,7 @@ function Profile() {
             value={p.about}
             maxLength={2000}
             onChange={(e) => setPrefs({ about: e.target.value })}
-            placeholder="例如：提交信息用中文；先写复现测试"
+            placeholder={tr('例如：提交信息用中文；先写复现测试')}
             className={clsx(FIELD, 'mt-2 resize-none leading-relaxed')}
           />
         </div>
@@ -402,9 +403,9 @@ function ModelSection() {
   const p = usePrefs()
   return (
     <>
-      <Title>模型</Title>
-      <Group title="默认">
-        <Row label="模型">
+      <Title>{tr('模型')}</Title>
+      <Group title={tr('默认')}>
+        <Row label={tr('模型')}>
           <div className="flex gap-1.5">
             {MODELS.map((m) => (
               <Tip key={m.id} label={m.note} side="bottom">
@@ -424,7 +425,7 @@ function ModelSection() {
             ))}
           </div>
         </Row>
-        <Row label="思考强度">
+        <Row label={tr('思考强度')}>
           <Segmented
             value={p.thinking}
             onChange={(thinking) => setPrefs({ thinking })}
@@ -433,9 +434,9 @@ function ModelSection() {
           />
         </Row>
       </Group>
-      <Group title="连接">
+      <Group title={tr('连接')}>
         <ApiKeyRow />
-        <Row label="运行方式">
+        <Row label={tr('运行方式')}>
           <CoreModePicker />
         </Row>
       </Group>
@@ -457,7 +458,7 @@ function ApiKeyRow() {
       await secretSet(v)
       setState('set')
       setEditing(false)
-      toast('已存入系统凭据库')
+      toast(tr('已存入系统凭据库'))
     } catch (e) {
       toast(String(e instanceof Error ? e.message : e))
     } finally {
@@ -470,32 +471,32 @@ function ApiKeyRow() {
       <div className="flex items-center justify-between gap-4">
         <span className="flex items-center gap-2 text-[13.5px] text-ink">
           <KeyRound size={14} strokeWidth={1.6} className="text-sepia" />
-          DeepSeek API 密钥
+          {tr('DeepSeek API 密钥')}
         </span>
         <span className="flex items-center gap-2">
           {state === 'set' && (
             <span className="inline-flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] text-sage">
-              <Lock size={10} strokeWidth={2} /> 已存入凭据库
+              <Lock size={10} strokeWidth={2} /> {tr('已存入凭据库')}
             </span>
           )}
-          {state === 'unset' && <span className="text-[11.5px] text-sepia-muted">未设置</span>}
+          {state === 'unset' && <span className="text-[11.5px] text-sepia-muted">{tr('未设置')}</span>}
           {state === 'unsupported' && (
-            <Tip label="浏览器预览无法访问系统凭据库" side="top-end">
-              <span className="text-[11.5px] text-sepia-muted">仅桌面应用</span>
+            <Tip label={tr('浏览器预览无法访问系统凭据库')} side="top-end">
+              <span className="text-[11.5px] text-sepia-muted">{tr('仅桌面应用')}</span>
             </Tip>
           )}
           {state && state !== 'unsupported' && !editing && (
             <button type="button" onClick={() => setEditing(true)} className="chip hover:text-amber">
-              {state === 'set' ? '更换' : '设置'}
+              {state === 'set' ? tr('更换') : tr('设置')}
             </button>
           )}
           {state === 'set' && !editing && (
             <button
               type="button"
-              onClick={() => secretClear().then(() => (setState('unset'), toast('已清除')), (e) => toast(String(e)))}
+              onClick={() => secretClear().then(() => (setState('unset'), toast(tr('已清除'))), (e) => toast(String(e)))}
               className="chip hover:text-rose-ink"
             >
-              清除
+              {tr('清除')}
             </button>
           )}
         </span>
@@ -520,13 +521,13 @@ function ApiKeyRow() {
                 onKeyDown={(e) => e.key === 'Enter' && v.trim() && void save()}
                 placeholder="sk-…"
                 className={clsx(FIELD, 'font-mono')}
-                aria-label="API 密钥"
+                aria-label={tr('API 密钥')}
               />
               <button type="button" disabled={!v.trim() || busy} onClick={() => void save()} className="rounded-lg bg-ink px-3.5 text-[13px] text-parchment disabled:opacity-45">
-                保存
+                {tr('保存')}
               </button>
               <button type="button" onClick={() => (setEditing(false), setV(''))} className="rounded-lg px-3 text-[13px] text-ink-soft hover:bg-panel-raised">
-                取消
+                {tr('取消')}
               </button>
             </div>
           </motion.div>
@@ -547,9 +548,9 @@ function Budget() {
   const hhmm = `${String(bj.hh).padStart(2, '0')}:${String(bj.mm).padStart(2, '0')}`
   return (
     <>
-      <Title>预算</Title>
-      <Group title="上限">
-        <Row label="单任务上限" hint={`最高 ¥${MAX_COST_CAP.toFixed(2)}`} testId="max-cost-row">
+      <Title>{tr('预算')}</Title>
+      <Group title={tr('上限')}>
+        <Row label={tr('单任务上限')} hint={tr('最高 ¥{0}', MAX_COST_CAP.toFixed(2))} testId="max-cost-row">
           <input
             type="range"
             min={0.1}
@@ -557,18 +558,18 @@ function Budget() {
             step={0.05}
             value={p.maxCost}
             onChange={(e) => setPrefs({ maxCost: Math.round(Number(e.target.value) * 100) / 100 })}
-            aria-label="单任务上限"
+            aria-label={tr('单任务上限')}
             className="range-ink w-40"
           />
           <span className="w-14 text-right font-serif text-[16px] tabular-nums text-ink">¥{p.maxCost.toFixed(2)}</span>
         </Row>
-        <Row label="总预算">
+        <Row label={tr('总预算')}>
           <span className="font-serif text-[16px] tabular-nums text-ink">¥{BUDGET_TOTAL}</span>
-          <span className="text-[11.5px] text-sepia-muted">已花 ¥{spent.toFixed(2)}</span>
+          <span className="text-[11.5px] text-sepia-muted">{tr('已花 ¥{0}', spent.toFixed(2))}</span>
         </Row>
       </Group>
 
-      <Group title="高峰闸门">
+      <Group title={tr('高峰闸门')}>
         <div className="py-5">
           <div className="flex flex-wrap items-center gap-3">
             <span
@@ -578,14 +579,14 @@ function Budget() {
               )}
             >
               <span className={clsx('pulse-dot h-2 w-2 rounded-full', gate.inPeak ? 'bg-rose-ink' : 'bg-sage')} />
-              {gate.inPeak ? '高峰' : '空闲'}
+              {gate.inPeak ? tr('高峰') : tr('空闲')}
             </span>
-            <Tip label="北京时间" side="bottom">
+            <Tip label={tr('北京时间')} side="bottom">
               <span className="font-mono text-[13px] tabular-nums text-ink-soft">
                 {WEEK[bj.day]} {hhmm}
               </span>
             </Tip>
-            <Tip label="下次切换" side="bottom">
+            <Tip label={tr('下次切换')} side="bottom">
               <span className="chip">
                 <ArrowRight size={11} strokeWidth={1.7} />
                 {gate.nextShort}
@@ -595,26 +596,26 @@ function Budget() {
           <DayBar minutes={bj.minutes} weekday={gate.weekday} />
           <WeekGrid today={bj.day} />
         </div>
-        <Row label="高峰时段也允许真实调用" hint="2× 价 · 只影响真实模式">
+        <Row label={tr('高峰时段也允许真实调用')} hint={tr('2× 价 · 只影响真实模式')}>
           <Toggle on={p.allowPeak} onChange={(allowPeak) => setPrefs({ allowPeak })} danger testId="allow-peak" />
         </Row>
       </Group>
 
       <div className="paper-card overflow-hidden rounded-2xl">
         <div className="flex items-center gap-2 px-5 py-3">
-          <p className="font-serif text-[14px] text-ink-soft">账本</p>
-          <Tip label={`空闲价 · 命中 ${PRICE.idle.hit} / 未命中 ${PRICE.idle.miss} / 输出 ${PRICE.idle.out} 元每百万 token`} side="right">
+          <p className="font-serif text-[14px] text-ink-soft">{tr('账本')}</p>
+          <Tip label={tr('空闲价 · 命中 {0} / 未命中 {1} / 输出 {2} 元每百万 token', PRICE.idle.hit, PRICE.idle.miss, PRICE.idle.out)} side="right">
             <Info size={12} strokeWidth={1.6} className="text-sepia-muted" />
           </Tip>
         </div>
         <table className="w-full text-left text-[12px]">
           <thead className="border-y border-border-soft bg-parchment/60 text-[10.5px] tracking-wide text-sepia-muted">
             <tr>
-              <th className="px-5 py-2 font-normal">时间</th>
-              <th className="px-2 py-2 font-normal">任务</th>
-              <th className="px-2 py-2 font-normal">模式</th>
-              <th className="px-2 py-2 text-right font-normal">命中率</th>
-              <th className="px-5 py-2 text-right font-normal">花费</th>
+              <th className="px-5 py-2 font-normal">{tr('时间')}</th>
+              <th className="px-2 py-2 font-normal">{tr('任务')}</th>
+              <th className="px-2 py-2 font-normal">{tr('模式')}</th>
+              <th className="px-2 py-2 text-right font-normal">{tr('命中率')}</th>
+              <th className="px-5 py-2 text-right font-normal">{tr('花费')}</th>
             </tr>
           </thead>
           <tbody className="selectable text-ink-soft">
@@ -625,7 +626,7 @@ function Budget() {
                 <tr key={r.id} className="border-b border-border-soft/70 last:border-0">
                   <td className="px-5 py-2.5 font-mono text-[11px] text-sepia">{r.when}</td>
                   <td className="px-2 py-2.5">{r.task}</td>
-                  <td className="px-2 py-2.5 text-sepia">{r.mode}</td>
+                  <td className="px-2 py-2.5 text-sepia">{tr(r.mode)}</td>
                   <td className="px-2 py-2.5 text-right tabular-nums">{((r.hitM / total) * 100).toFixed(0)}%</td>
                   <td className={clsx('px-5 py-2.5 text-right tabular-nums', c > p.maxCost && 'text-rose-ink')}>¥{c.toFixed(2)}</td>
                 </tr>
@@ -641,15 +642,15 @@ function Budget() {
 /* ---------------------------------------------------------------- 权限 */
 
 const PERMISSION_OPTIONS: { id: SavedMode; label: string; note: string }[] = [
-  { id: 'plan', label: '只读规划', note: '只看不改' },
-  { id: 'ask', label: '逐项确认', note: '每次改动和命令都问' },
-  { id: 'auto_edit', label: '自动改文件', note: '改文件不问，命令按规则' },
-  { id: 'auto', label: '沙箱自动', note: '沙箱里放手做，无沙箱降为自动改文件' },
-  { id: 'full_access', label: '完全放行', note: '只在沙箱后端可用' },
+  { id: 'plan', label: tr('只读规划'), note: tr('只看不改') },
+  { id: 'ask', label: tr('逐项确认'), note: tr('每次改动和命令都问') },
+  { id: 'auto_edit', label: tr('自动改文件'), note: tr('改文件不问，命令按规则') },
+  { id: 'auto', label: tr('沙箱自动'), note: tr('沙箱里放手做，无沙箱降为自动改文件') },
+  { id: 'full_access', label: tr('完全放行'), note: tr('只在沙箱后端可用') },
 ]
 
 const RULES = parseRules(defaultRulesYaml)
-const RULE_LABEL: Record<RuleKind, string> = { deny: '拒绝', ask: '询问', allow: '允许' }
+const RULE_LABEL: Record<RuleKind, string> = { deny: tr('拒绝'), ask: tr('询问'), allow: tr('允许') }
 
 function Permissions() {
   const p = usePrefs()
@@ -658,8 +659,8 @@ function Permissions() {
   const [kind, setKind] = useState<RuleKind>('deny')
   return (
     <>
-      <Title>权限</Title>
-      <Group title="模式">
+      <Title>{tr('权限')}</Title>
+      <Group title={tr('模式')}>
         <div role="radiogroup" className="py-2">
           {PERMISSION_OPTIONS.map((o) => {
             const disabled = o.id === 'full_access' && p.backend === 'none'
@@ -691,18 +692,18 @@ function Permissions() {
           >
             <Radio on={armed} danger />
             <ShieldAlert size={14} strokeWidth={1.7} className="text-rose-ink" />
-            <span className="text-[13.5px] font-medium text-rose-ink">无限制（勇士模式）</span>
-            <span className="text-[11.5px] text-rose-ink/80">{armed ? '已就绪 · 只用于下一个任务' : '不确认、不拒绝'}</span>
+            <span className="text-[13.5px] font-medium text-rose-ink">{tr('无限制（勇士模式）')}</span>
+            <span className="text-[11.5px] text-rose-ink/80">{armed ? tr('已就绪 · 只用于下一个任务') : tr('不确认、不拒绝')}</span>
           </button>
         </div>
       </Group>
       <UnrestrictedDialog open={dlg} onClose={() => setDlg(false)} onArm={armUnrestricted} />
 
-      <Group title="自定义规则">
+      <Group title={tr('自定义规则')}>
         <RulesEditor />
       </Group>
 
-      <Group title="内置规则">
+      <Group title={tr('内置规则')}>
         <div className="flex items-center justify-between gap-3 border-b border-border-soft/70 py-3">
           <Segmented<RuleKind>
             value={kind}
@@ -710,17 +711,17 @@ function Permissions() {
             options={(['deny', 'ask', 'allow'] as RuleKind[]).map((k) => ({ id: k, label: `${RULE_LABEL[k]} ${RULES[k].length}` }))}
             testId="rule-kind"
           />
-          <span className="text-[11.5px] text-sepia-muted">只读 · 自定义规则优先</span>
+          <span className="text-[11.5px] text-sepia-muted">{tr('只读 · 自定义规则优先')}</span>
         </div>
         <ul data-testid="rule-list" className="selectable max-h-[300px] overflow-y-auto scroll-soft py-2">
           {RULES[kind].map((r) => (
             <li key={r.rule + (r.backends ?? []).join()} className="flex items-center gap-2 py-1 font-mono text-[11.5px] text-ink-soft">
-              {r.exception && <span className="rounded bg-sage/15 px-1 text-[10px] text-sage">例外</span>}
+              {r.exception && <span className="rounded bg-sage/15 px-1 text-[10px] text-sage">{tr('例外')}</span>}
               <span className="truncate">{r.rule}</span>
-              {r.backends && <span className="ml-auto shrink-0 text-[10.5px] text-sepia-muted">仅 {r.backends.join(' / ')}</span>}
+              {r.backends && <span className="ml-auto shrink-0 text-[10.5px] text-sepia-muted">{tr('仅 {0}', r.backends.join(' / '))}</span>}
             </li>
           ))}
-          {RULES[kind].length === 0 && <li className="py-3 text-center text-[12px] text-sepia-muted">无</li>}
+          {RULES[kind].length === 0 && <li className="py-3 text-center text-[12px] text-sepia-muted">{tr('无')}</li>}
         </ul>
       </Group>
     </>
@@ -748,17 +749,17 @@ function Radio({ on, danger }: { on: boolean; danger?: boolean }) {
 /* ---------------------------------------------------------------- 沙箱 */
 
 const BACKEND_OPTIONS: { id: Backend; label: string; note: string }[] = [
-  { id: 'auto', label: '自动', note: '有 Docker 用 Docker，否则本机工作树' },
-  { id: 'docker', label: 'Docker', note: '断网容器，最安全' },
-  { id: 'none', label: '本机', note: '独立 git 工作树，无隔离' },
+  { id: 'auto', label: tr('自动'), note: tr('有 Docker 用 Docker，否则本机工作树') },
+  { id: 'docker', label: 'Docker', note: tr('断网容器，最安全') },
+  { id: 'none', label: tr('本机'), note: tr('独立 git 工作树，无隔离') },
 ]
 
 function Sandbox() {
   const p = usePrefs()
   return (
     <>
-      <Title>沙箱</Title>
-      <Group title="后端">
+      <Title>{tr('沙箱')}</Title>
+      <Group title={tr('后端')}>
         <div role="radiogroup" className="py-2">
           {BACKEND_OPTIONS.map((o) => (
             <button
@@ -779,7 +780,7 @@ function Sandbox() {
           ))}
         </div>
       </Group>
-      <Group title="环境与一键安装">
+      <Group title={tr('环境与一键安装')}>
         <SandboxInstall />
       </Group>
     </>
@@ -791,12 +792,12 @@ function Sandbox() {
 function Connectors() {
   return (
     <>
-      <Title>连接器</Title>
+      <Title>{tr('连接器')}</Title>
       <Group>
         {['GitHub', 'GitLab', 'Gitee'].map((n) => (
           <Row key={n} label={n}>
-            <button type="button" onClick={() => notYet(`连接 ${n}`)} className="chip hover:text-amber">
-              连接
+            <button type="button" onClick={() => notYet(tr('连接 {0}', n))} className="chip hover:text-amber">
+              {tr('连接')}
             </button>
           </Row>
         ))}
@@ -808,19 +809,19 @@ function Connectors() {
 function Privacy() {
   return (
     <>
-      <Title>隐私</Title>
+      <Title>{tr('隐私')}</Title>
       <Group>
-        <Row label="数据位置" hint="会话、轨迹与证据都在本机 ~/.triwitness">
+        <Row label={tr('数据位置')} hint={tr('会话、轨迹与证据都在本机 ~/.triwitness')}>
           <Lock size={14} strokeWidth={1.6} className="text-sage" />
         </Row>
-        <Row label="导出数据">
-          <button type="button" onClick={() => notYet('导出数据')} className="chip hover:text-amber">
-            导出
+        <Row label={tr('导出数据')}>
+          <button type="button" onClick={() => notYet(tr('导出数据'))} className="chip hover:text-amber">
+            {tr('导出')}
           </button>
         </Row>
-        <Row label="清除本机会话记录">
-          <button type="button" onClick={() => notYet('清除记录')} className="chip hover:text-rose-ink">
-            清除
+        <Row label={tr('清除本机会话记录')}>
+          <button type="button" onClick={() => notYet(tr('清除记录'))} className="chip hover:text-rose-ink">
+            {tr('清除')}
           </button>
         </Row>
       </Group>
@@ -831,24 +832,24 @@ function Privacy() {
 function About({ onShortcuts }: { onShortcuts: () => void }) {
   return (
     <>
-      <Title>关于</Title>
+      <Title>{tr('关于')}</Title>
       <Group>
-        <Row label="三证 TriWitness">
+        <Row label={tr('三证 TriWitness')}>
           <span className="font-mono text-[12px] text-sepia">v{VERSION}</span>
         </Row>
-        <Row label="快捷键">
+        <Row label={tr('快捷键')}>
           <button type="button" onClick={onShortcuts} className="chip hover:text-amber">
             <Keyboard size={11} strokeWidth={1.7} /> Ctrl /
           </button>
         </Row>
-        <Row label="检查更新">
-          <button type="button" onClick={() => notYet('检查更新')} className="chip hover:text-amber">
-            检查
+        <Row label={tr('检查更新')}>
+          <button type="button" onClick={() => notYet(tr('检查更新'))} className="chip hover:text-amber">
+            {tr('检查')}
           </button>
         </Row>
-        <Row label="开源许可">
-          <button type="button" onClick={() => notYet('开源许可')} className="chip hover:text-amber">
-            查看
+        <Row label={tr('开源许可')}>
+          <button type="button" onClick={() => notYet(tr('开源许可'))} className="chip hover:text-amber">
+            {tr('查看')}
           </button>
         </Row>
       </Group>
@@ -857,9 +858,9 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
 }
 
 const MODES: { id: CoreMode; label: string; tip: string }[] = [
-  { id: 'demo', label: '演示', tip: '脚本模型 · 示例仓库 · ¥0' },
-  { id: 'replay', label: '回放', tip: '用录好的模型回复 · ¥0' },
-  { id: 'live', label: '真实', tip: 'deepseek-flash · 计费 · 受高峰闸门约束' },
+  { id: 'demo', label: tr('演示'), tip: tr('脚本模型 · 示例仓库 · ¥0') },
+  { id: 'replay', label: tr('回放'), tip: tr('用录好的模型回复 · ¥0') },
+  { id: 'live', label: tr('真实'), tip: tr('deepseek-flash · 计费 · 受高峰闸门约束') },
 ]
 
 function CoreModePicker() {
@@ -915,11 +916,11 @@ function DayBar({ minutes, weekday }: { minutes: number; weekday: boolean }) {
       <p className="mt-2 flex items-center gap-3 text-[10.5px] text-sepia-muted">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-3 rounded-sm bg-rose-ink/35" />
-          高峰
+          {tr('高峰')}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-3 rounded-sm bg-sage/25" />
-          空闲
+          {tr('空闲')}
         </span>
       </p>
     </div>

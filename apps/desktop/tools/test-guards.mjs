@@ -15,8 +15,14 @@ await page.goto(base, { waitUntil: 'networkidle0' })
 await page.evaluate(() => (window.__marker = 1))
 await wait(1500)
 
-// 1. 在 UI 空白处右键：不出菜单
-await page.mouse.click(600, 760, { button: 'right' })
+// 1. 在 UI 空白处右键：不出菜单（找一个不在输入框 / 可选文本里的点，坐标不写死）
+const blank = await page.evaluate(() => {
+  const ok = (el) => el && !el.closest('textarea, input, [contenteditable="true"], .selectable, button, a')
+  for (const [x, y] of [[720, 120], [1100, 200], [140, 600], [720, 60], [1300, 500]]) if (ok(document.elementFromPoint(x, y))) return [x, y]
+  return null
+})
+check(`找到 UI 空白点 (${blank})`, !!blank)
+await page.mouse.click(...(blank ?? [720, 60]), { button: 'right' })
 await wait(250)
 check('右键 UI 空白处无菜单', (await page.$('.ctx-menu')) === null)
 

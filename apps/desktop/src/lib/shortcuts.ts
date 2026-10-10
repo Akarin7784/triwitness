@@ -1,3 +1,4 @@
+import { t } from './i18n'
 /**
  * 快捷键（UI-21）：与 Claude Desktop 同一套。表格同时用于快捷键列表（Ctrl+/）和全局处理。
  * macOS 上 Ctrl 换成 ⌘（metaKey 同样识别）。
@@ -21,25 +22,25 @@ export interface Shortcut {
   action: ShortcutAction | 'send' | 'newline'
   label: string
   keys: string[]
-  group: '常用' | '对话' | '导航'
+  group: '常用' | '对话' | '导航' // i18n-ignore: 分组键
 }
 
 export const SHORTCUTS: Shortcut[] = [
-  { action: 'newChat', label: '新会话', keys: ['Ctrl', 'Shift', 'O'], group: '常用' },
-  { action: 'search', label: '搜索会话', keys: ['Ctrl', 'K'], group: '常用' },
-  { action: 'toggleSidebar', label: '收起 / 展开侧栏', keys: ['Ctrl', 'Shift', 'S'], group: '常用' },
-  { action: 'settings', label: '设置', keys: ['Ctrl', ','], group: '常用' },
-  { action: 'shortcuts', label: '快捷键', keys: ['Ctrl', '/'], group: '常用' },
-  { action: 'send', label: '发送', keys: ['Enter'], group: '对话' },
-  { action: 'newline', label: '换行', keys: ['Shift', 'Enter'], group: '对话' },
-  { action: 'stop', label: '停止生成', keys: ['Esc'], group: '对话' },
-  { action: 'focusInput', label: '聚焦输入框', keys: ['Shift', 'Esc'], group: '对话' },
-  { action: 'copyLast', label: '复制最后一条回复', keys: ['Ctrl', 'Shift', 'C'], group: '对话' },
-  { action: 'upload', label: '添加文件或图片', keys: ['Ctrl', 'U'], group: '对话' },
-  { action: 'modelMenu', label: '切换模型', keys: ['Ctrl', 'Shift', 'I'], group: '对话' },
-  { action: 'effortMenu', label: '思考强度', keys: ['Ctrl', 'Shift', 'E'], group: '对话' },
-  { action: 'nextChat', label: '下一个会话', keys: ['Ctrl', 'Shift', ']'], group: '导航' },
-  { action: 'prevChat', label: '上一个会话', keys: ['Ctrl', 'Shift', '['], group: '导航' },
+  { action: 'newChat', label: t('新会话'), keys: ['Ctrl', 'Shift', 'O'], group: '常用' }, // i18n-ignore: 分组键
+  { action: 'search', label: t('搜索会话'), keys: ['Ctrl', 'K'], group: '常用' }, // i18n-ignore: 分组键
+  { action: 'toggleSidebar', label: t('收起 / 展开侧栏'), keys: ['Ctrl', 'Shift', 'S'], group: '常用' }, // i18n-ignore: 分组键
+  { action: 'settings', label: t('设置'), keys: ['Ctrl', ','], group: '常用' }, // i18n-ignore: 分组键
+  { action: 'shortcuts', label: t('快捷键'), keys: ['Ctrl', '/'], group: '常用' }, // i18n-ignore: 分组键
+  { action: 'send', label: t('发送'), keys: ['Enter'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'newline', label: t('换行'), keys: ['Shift', 'Enter'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'stop', label: t('停止生成'), keys: ['Esc'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'focusInput', label: t('聚焦输入框'), keys: ['Shift', 'Esc'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'copyLast', label: t('复制最后一条回复'), keys: ['Ctrl', 'Shift', 'C'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'upload', label: t('添加文件或图片'), keys: ['Ctrl', 'U'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'modelMenu', label: t('切换模型'), keys: ['Ctrl', 'Shift', 'I'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'effortMenu', label: t('思考强度'), keys: ['Ctrl', 'Shift', 'E'], group: '对话' }, // i18n-ignore: 分组键
+  { action: 'nextChat', label: t('下一个会话'), keys: ['Ctrl', 'Shift', ']'], group: '导航' }, // i18n-ignore: 分组键
+  { action: 'prevChat', label: t('上一个会话'), keys: ['Ctrl', 'Shift', '['], group: '导航' }, // i18n-ignore: 分组键
 ]
 
 type KeyLike = Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey'>

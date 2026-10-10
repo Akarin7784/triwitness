@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import clsx from 'clsx'
 import { trackDialog } from '../lib/dialogState'
+import { t as tr } from '../lib/i18n'
 
 
 /**
@@ -80,7 +81,7 @@ export function Dialog({
             {!bare && title && (
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="font-serif text-[16px] font-medium text-ink">{title}</h3>
-                <button type="button" aria-label="关闭" onClick={onClose} className="tb-icon">
+                <button type="button" aria-label={tr('关闭')} onClick={onClose} className="tb-icon">
                   <X size={14} strokeWidth={1.6} />
                 </button>
               </div>

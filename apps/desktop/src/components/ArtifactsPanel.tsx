@@ -7,6 +7,7 @@ import { MAX_ARTIFACT_W, MIN_ARTIFACT_W, getPrefs, setPrefs } from '../lib/prefs
 import { saveText } from '../lib/download'
 import { CopyButton, Markdown } from './Markdown'
 import { Tip } from './Tip'
+import { t } from '../lib/i18n'
 
 export function ArtifactIcon({ kind, size = 14 }: { kind: Artifact['kind']; size?: number }) {
   const I = kind === 'diff' ? FileDiff : kind === 'markdown' ? FileText : Code2
@@ -72,7 +73,7 @@ export function ArtifactsPanel({
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="调整宽度"
+        aria-label={t('调整宽度')}
         aria-valuenow={w}
         aria-valuemin={MIN_ARTIFACT_W}
         aria-valuemax={MAX_ARTIFACT_W}
@@ -108,26 +109,24 @@ export function ArtifactsPanel({
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           {total > 1 && (
             <div data-testid="artifact-versions" className="mr-1 flex items-center gap-0.5 text-[11.5px] text-sepia-muted">
-              <button type="button" aria-label="上一版" disabled={v === 0} onClick={() => onVersion(v - 1)} className="rounded p-1 hover:bg-panel-raised disabled:opacity-30">
+              <button type="button" aria-label={t('上一版')} disabled={v === 0} onClick={() => onVersion(v - 1)} className="rounded p-1 hover:bg-panel-raised disabled:opacity-30">
                 <ChevronLeft size={13} />
               </button>
-              <span className="tabular-nums">
-                版本 {v + 1}/{total}
-              </span>
-              <button type="button" aria-label="下一版" disabled={v === total - 1} onClick={() => onVersion(v + 1)} className="rounded p-1 hover:bg-panel-raised disabled:opacity-30">
+              <span className="tabular-nums">{t('版本 {0}/{1}', v + 1, total)}</span>
+              <button type="button" aria-label={t('下一版')} disabled={v === total - 1} onClick={() => onVersion(v + 1)} className="rounded p-1 hover:bg-panel-raised disabled:opacity-30">
                 <ChevronRight size={13} />
               </button>
             </div>
           )}
-          <Tip label="复制" side="bottom">
+          <Tip label={t('复制')} side="bottom">
             <span>
-              <CopyButton text={content} label="复制" />
+              <CopyButton text={content} label={t('复制')} />
             </span>
           </Tip>
-          <Tip label="下载" side="bottom">
+          <Tip label={t('下载')} side="bottom">
             <button
               type="button"
-              aria-label="下载"
+              aria-label={t('下载')}
               data-testid="artifact-download"
               onClick={() => void saveText(fileNameOf(artifact), content)}
               className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber"
@@ -135,10 +134,10 @@ export function ArtifactsPanel({
               <Download size={13} strokeWidth={1.6} />
             </button>
           </Tip>
-          <Tip label="关闭 · Esc" side="bottom">
+          <Tip label={t('关闭 · Esc')} side="bottom">
             <button
               type="button"
-              aria-label="关闭作品"
+              aria-label={t('关闭作品')}
               data-testid="artifact-close"
               onClick={onClose}
               className="inline-flex h-6 items-center rounded-md px-1.5 text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-ink"
@@ -204,10 +203,7 @@ export function ArtifactCards({ items, activeId, onOpen }: { items: Artifact[]; 
             </span>
             <span className="min-w-0">
               <span className="block truncate text-[13px] text-ink">{a.title}</span>
-              <span className="block text-[11px] text-sepia-muted">
-                {a.kind === 'diff' ? '补丁' : a.kind === 'markdown' ? '文档' : '代码'} · {lines} 行
-                {a.versions.length > 1 ? ` · ${a.versions.length} 个版本` : ''}
-              </span>
+              <span className="block text-[11px] text-sepia-muted">{t('{0} · {1} 行{2}', a.kind === 'diff' ? t('补丁') : a.kind === 'markdown' ? t('文档') : t('代码'), lines, a.versions.length > 1 ? t(' · {0} 个版本', a.versions.length) : '')}</span>
             </span>
           </button>
         )

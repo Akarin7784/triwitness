@@ -5,6 +5,7 @@ import clsx from 'clsx'
 import { MODELS, THINKING_LEVELS, setPrefs, usePrefs } from '../lib/prefs'
 import { notYet } from '../lib/toast'
 import { Popover, MenuDivider } from './Popover'
+import { t as tr } from '../lib/i18n'
 
 const DEFAULT_THINKING = 'medium'
 
@@ -42,7 +43,7 @@ export function ModelPicker({
         )}
       >
         <span>{model.name}</span>
-        {prefs.thinking !== 'off' && <span className="text-sepia-muted">· 思考 {level.label}</span>}
+        {prefs.thinking !== 'off' && <span className="text-sepia-muted">{tr('· 思考 {0}', level.label)}</span>}
         <ChevronDown size={13} strokeWidth={1.7} className={clsx('text-sepia-muted transition-transform duration-300', open && 'rotate-180')} />
       </button>
       <Popover open={open} onClose={close} align="right" className="w-[264px]" testId="model-menu">
@@ -76,7 +77,7 @@ export function ModelPicker({
             data-active={sub}
             className="menu-item"
           >
-            <span className="flex-1">思考强度</span>
+            <span className="flex-1">{tr('思考强度')}</span>
             <span className="text-[12px] text-sepia-muted">{level.label}</span>
             <ChevronRight size={13} strokeWidth={1.7} className="text-sepia-muted" />
           </button>
@@ -104,7 +105,7 @@ export function ModelPicker({
                     className="menu-item"
                   >
                     <span className="flex-1">{t.label}</span>
-                    {t.id === DEFAULT_THINKING && <span className="text-[10.5px] text-sepia-muted">默认</span>}
+                    {t.id === DEFAULT_THINKING && <span className="text-[10.5px] text-sepia-muted">{tr('默认')}</span>}
                     {t.id === prefs.thinking && <Check size={13} strokeWidth={1.8} className="text-amber" />}
                   </button>
                 ))}
@@ -112,8 +113,8 @@ export function ModelPicker({
             )}
           </AnimatePresence>
         </div>
-        <button type="button" onClick={() => (close(), notYet('更多模型'))} className="menu-item">
-          <span className="flex-1">更多模型</span>
+        <button type="button" onClick={() => (close(), notYet(tr('更多模型')))} className="menu-item">
+          <span className="flex-1">{tr('更多模型')}</span>
           <ChevronRight size={13} strokeWidth={1.7} className="text-sepia-muted" />
         </button>
       </Popover>

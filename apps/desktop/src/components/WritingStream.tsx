@@ -6,6 +6,7 @@ import { roleColor, roleLabel } from '../data/mock'
 import { useWritingStream, type WrittenChar } from '../hooks/useWritingStream'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { Tip } from './Tip'
+import { t } from '../lib/i18n'
 
 interface WritingStreamProps {
   lines: StreamLine[]
@@ -83,10 +84,10 @@ export function WritingStream({
         ? 'writing'
         : 'idle'
   const stateTip = {
-    writing: `落笔 · ${activeRole ? roleLabel[activeRole] : ''}`,
-    paused: '已暂停',
-    idle: '等待下一行',
-    done: '写毕',
+    writing: t('落笔 · {0}', activeRole ? roleLabel[activeRole] : ''),
+    paused: t('已暂停'),
+    idle: t('等待下一行'),
+    done: t('写毕'),
   }[state]
   const stateColor = {
     writing: activeRole ? roleColor[activeRole] : 'var(--color-amber)',
@@ -127,12 +128,12 @@ export function WritingStream({
           </Tip>
           <IconButton
             onClick={done ? handleRestart : toggle}
-            label={done ? '重播' : playing ? '暂停' : '继续'}
+            label={done ? t('重播') : playing ? t('暂停') : t('继续')}
           >
             {done ? <RotateCcw size={13} strokeWidth={1.6} /> : playing ? <Pause size={13} strokeWidth={1.6} /> : <Play size={13} strokeWidth={1.6} />}
           </IconButton>
           {!done && (
-            <IconButton onClick={handleRestart} label="从头">
+            <IconButton onClick={handleRestart} label={t('从头')}>
               <RotateCcw size={13} strokeWidth={1.6} />
             </IconButton>
           )}

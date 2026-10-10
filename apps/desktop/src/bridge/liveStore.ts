@@ -7,6 +7,7 @@ import { LiveTask, type TaskMeta } from './liveTask'
 import { approveCmd, CANCEL_CMD, type ApprovalScope, type CoreMode } from './protocol'
 import { getTransport, type CoreTransport } from './transport'
 import type { RunChoices } from './choices'
+import { t as tr } from '../lib/i18n'
 
 const TASKS_KEY = 'tw.live.tasks'
 const MODE_KEY = 'tw.core.mode'
@@ -114,15 +115,15 @@ export async function startTask(
   opts: { repo: string; issue: string; mode: CoreMode; attachmentNames?: string[]; userAttachments?: string[] } & RunChoices,
 ): Promise<string> {
   const transport = await getTransport()
-  if (!transport) throw new Error('未连接核心')
+  if (!transport) throw new Error(tr('未连接核心'))
   const repo = opts.repo.trim() || (opts.mode === 'demo' ? defaultDemoRepo() : '')
-  if (!repo) throw new Error('先选仓库')
+  if (!repo) throw new Error(tr('先选仓库'))
   const { attachmentNames, userAttachments, ...run } = opts
   const key = await transport.start({ ...run, repo })
   const id = `${Date.now().toString(36)}-${key}`
   const t = new LiveTask(id)
   registry.set(id, t)
-  const title = opts.issue.trim().split(/\r?\n/)[0].slice(0, 60) || (opts.mode === 'demo' ? '演示任务' : '新任务')
+  const title = opts.issue.trim().split(/\r?\n/)[0].slice(0, 60) || (opts.mode === 'demo' ? tr('演示任务') : tr('新任务'))
   setMetas([
     { id, title, repo, mode: opts.mode, key, startedAt: Date.now(), issue: opts.issue, model: opts.model, thinking: opts.thinking,
       attachments: attachmentNames?.length ? attachmentNames : undefined,
@@ -156,7 +157,7 @@ export async function resumeTask(id: string): Promise<LiveTask | null> {
   registry.set(id, t)
   const transport = await getTransport()
   if (!transport) {
-    t.fail('未连接核心')
+    t.fail(tr('未连接核心'))
     return t
   }
   const key = (m).key
@@ -179,7 +180,7 @@ export async function resumeTask(id: string): Promise<LiveTask | null> {
 export async function approve(id: string, requestId: string, decision: 'allow' | 'deny', scope: ApprovalScope) {
   const transport = await getTransport()
   const key = metas.find((x) => x.id === id)?.key
-  if (!transport || !key) throw new Error('任务已断开')
+  if (!transport || !key) throw new Error(tr('任务已断开'))
   await transport.send(key, approveCmd(requestId, decision, scope))
 }
 

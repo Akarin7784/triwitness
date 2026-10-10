@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Cpu, Wallet } from 'lucide-react'
 import { BUDGET_TOTAL, gateStatus, ledger, rowCost } from '../data/budget'
 import { Tip } from './Tip'
+import { t as tr } from '../lib/i18n'
 
 export function StatusBar() {
   const [now, setNow] = useState(() => new Date())
@@ -21,15 +22,15 @@ export function StatusBar() {
             Flash
           </span>
         </Tip>
-        <Tip label={`北京时间 · ${gate.next}`} side="top">
+        <Tip label={tr('北京时间 · {0}', gate.next)} side="top">
           <span className="sb-item">
             <span className={`h-1.5 w-1.5 rounded-full ${gate.inPeak ? 'bg-rose-ink' : 'bg-sage'}`} />
-            {gate.inPeak ? '高峰' : '空闲'}
+            {gate.inPeak ? tr('高峰') : tr('空闲')}
           </span>
         </Tip>
       </div>
       <div className="flex items-center gap-1">
-        <Tip label={`余额 / ¥${BUDGET_TOTAL}`} side="top-end">
+        <Tip label={tr('余额 / ¥{0}', BUDGET_TOTAL)} side="top-end">
           <span className="sb-item tabular-nums">
             <Wallet size={11} strokeWidth={1.7} />¥{left.toFixed(2)}
           </span>

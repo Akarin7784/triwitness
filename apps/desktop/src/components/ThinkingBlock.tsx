@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, Sparkle } from 'lucide-react'
 import clsx from 'clsx'
 import { thinkingSeconds, type ThinkingBlock as Block } from '../data/turns'
+import { t } from '../lib/i18n'
 
 /** 思考块：流式时展开显示推理（淡墨小字、自动跟底）；正文一开始就收成“思考了 N 秒”，可再展开 */
 export function ThinkingBlock({ block }: { block: Block }) {
@@ -26,7 +27,7 @@ export function ThinkingBlock({ block }: { block: Block }) {
       >
         <Sparkle size={12} strokeWidth={1.7} className={clsx(live && 'pulse-dot')} />
         <span className={clsx(live && 'think-shimmer')}>
-          {live ? '思考中' : `思考了 ${thinkingSeconds(block)} 秒`}
+          {live ? t('思考中') : t('思考了 {0} 秒', thinkingSeconds(block))}
         </span>
         {!live && (
           <ChevronRight size={12} strokeWidth={1.7} className={clsx('transition-transform duration-300', open && 'rotate-90')} />

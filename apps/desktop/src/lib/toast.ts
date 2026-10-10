@@ -1,5 +1,6 @@
 /** 轻提示（UI-20）：未做的功能入口点一下，底部浮出一句，2 秒后淡出 */
 import { useSyncExternalStore } from 'react'
+import { t as tr } from './i18n'
 
 export interface Toast {
   id: number
@@ -23,7 +24,7 @@ export function toast(text: string, ms = 2200) {
 
 /** 功能入口已就位、实现还没到：统一口径 */
 export function notYet(feature: string) {
-  toast(`${feature} · 即将推出`)
+  toast(tr('{0} · 即将推出', feature))
 }
 
 export function useToasts(): Toast[] {

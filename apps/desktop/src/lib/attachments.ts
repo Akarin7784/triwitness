@@ -3,6 +3,7 @@
  * 文本内联进任务描述；图片与二进制只附文件名（DeepSeek Flash 只读文字），界面如实提示。
  */
 import { getTransport } from '../bridge/transport'
+import { t as tr } from './i18n'
 
 export type AttachKind = 'text' | 'image' | 'binary'
 export interface Attachment {
@@ -52,11 +53,11 @@ export function newAttachment(file: File): Attachment {
   const kind = classify(file.name, file.type)
   return {
     id: `att-${Date.now().toString(36)}-${++n}`,
-    name: file.name || (kind === 'image' ? `粘贴的图片-${n}.png` : `文件-${n}`),
+    name: file.name || (kind === 'image' ? tr('粘贴的图片-{0}.png', n) : tr('文件-{0}', n)),
     size: file.size,
     kind,
     status: file.size > MAX_FILE_BYTES ? 'error' : 'saving',
-    error: file.size > MAX_FILE_BYTES ? '超过 10 MB' : undefined,
+    error: file.size > MAX_FILE_BYTES ? tr('超过 10 MB') : undefined,
     preview: kind === 'image' && typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(file) : undefined,
   }
 }
@@ -68,7 +69,7 @@ export async function saveFile(file: File, a: Attachment): Promise<Attachment> {
     const bytes = new Uint8Array(await file.arrayBuffer())
     const preview = a.kind === 'text' ? new TextDecoder().decode(bytes.subarray(0, 4096)) : a.preview
     const t = await getTransport()
-    if (!t) return { ...a, status: 'error', error: '未连接核心，无法附上', preview }
+    if (!t) return { ...a, status: 'error', error: tr('未连接核心，无法附上'), preview }
     const saved = await t.saveAttachment(a.name, bytesToB64(bytes))
     return { ...a, status: 'ready', path: saved.path, name: saved.name, preview }
   } catch (e) {

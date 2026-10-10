@@ -10,6 +10,7 @@ import { ThinkingBlock } from './ThinkingBlock'
 import { ToolRow } from './ToolRow'
 import { FeedbackDialog } from './ChatDialogs'
 import { Tip } from './Tip'
+import { t as tr } from '../lib/i18n'
 
 const ACT =
   'inline-flex h-7 w-7 items-center justify-center rounded-md text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-ink-soft disabled:pointer-events-none disabled:opacity-40'
@@ -88,10 +89,10 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
             >
               <span className="mr-1 text-[10px] tabular-nums text-sepia-muted">{turn.user.time}</span>
               {v?.at === 'user' && <VersionNav v={v} />}
-              <Tip label="编辑">
+              <Tip label={tr('编辑')}>
                 <button
                   type="button"
-                  aria-label="编辑"
+                  aria-label={tr('编辑')}
                   data-testid="edit-message"
                   className={ACT}
                   disabled={!actions?.enabled}
@@ -100,7 +101,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                   <Pencil size={13} strokeWidth={1.6} />
                 </button>
               </Tip>
-              <Tip label="复制">
+              <Tip label={tr('复制')}>
                 <CopyButton text={turn.user.text} className={ACT} />
               </Tip>
             </div>
@@ -128,18 +129,18 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
           )}
           {!turn.streaming && turn.final && (
             <div data-testid="message-actions" className="fade-in mt-1.5 flex items-center gap-0.5">
-              <Tip label="复制">
+              <Tip label={tr('复制')}>
                 <CopyButton text={answer} className={ACT} />
               </Tip>
-              <Tip label="重试">
-                <button type="button" aria-label="重试" data-testid="retry" className={ACT} disabled={!actions?.enabled} onClick={actions?.onRetry}>
+              <Tip label={tr('重试')}>
+                <button type="button" aria-label={tr('重试')} data-testid="retry" className={ACT} disabled={!actions?.enabled} onClick={actions?.onRetry}>
                   <RotateCcw size={13} strokeWidth={1.6} />
                 </button>
               </Tip>
-              <Tip label="有帮助">
+              <Tip label={tr('有帮助')}>
                 <button
                   type="button"
-                  aria-label="有帮助"
+                  aria-label={tr('有帮助')}
                   aria-pressed={actions?.feedback === 'up'}
                   data-testid="thumb-up"
                   className={clsx(ACT, actions?.feedback === 'up' && 'text-sage')}
@@ -148,10 +149,10 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                   <ThumbsUp size={13} strokeWidth={1.6} className={clsx(actions?.feedback === 'up' && 'fill-sage/25')} />
                 </button>
               </Tip>
-              <Tip label="没帮助">
+              <Tip label={tr('没帮助')}>
                 <button
                   type="button"
-                  aria-label="没帮助"
+                  aria-label={tr('没帮助')}
                   aria-pressed={actions?.feedback === 'down'}
                   data-testid="thumb-down"
                   className={clsx(ACT, actions?.feedback === 'down' && 'text-rose-ink')}
@@ -179,13 +180,13 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
 function VersionNav({ v }: { v: VersionInfo }) {
   return (
     <span data-testid="version-nav" className="mx-1 inline-flex items-center gap-0.5 text-[11px] tabular-nums text-sepia">
-      <button type="button" aria-label="上一版" className={ACT} disabled={v.index <= 0} onClick={() => v.onSelect(v.index - 1)}>
+      <button type="button" aria-label={tr('上一版')} className={ACT} disabled={v.index <= 0} onClick={() => v.onSelect(v.index - 1)}>
         <ChevronLeft size={13} strokeWidth={1.7} />
       </button>
       <motion.span key={v.index} initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} className="min-w-[2.6em] text-center">
         {v.index + 1} / {v.total}
       </motion.span>
-      <button type="button" aria-label="下一版" className={ACT} disabled={v.index >= v.total - 1} onClick={() => v.onSelect(v.index + 1)}>
+      <button type="button" aria-label={tr('下一版')} className={ACT} disabled={v.index >= v.total - 1} onClick={() => v.onSelect(v.index + 1)}>
         <ChevronRight size={13} strokeWidth={1.7} />
       </button>
     </span>
@@ -230,12 +231,12 @@ function EditBox({ initial, onCancel, onSend }: { initial: string; onCancel: () 
             onCancel()
           }
         }}
-        aria-label="编辑消息"
+        aria-label={tr('编辑消息')}
         className="block w-full resize-none bg-transparent px-1 font-serif text-[14.5px] leading-relaxed text-ink outline-none"
       />
       <div className="mt-2 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1 text-[12.5px] text-ink-soft hover:bg-panel-raised">
-          取消
+          {tr('取消')}
         </button>
         <button
           type="button"
@@ -244,7 +245,7 @@ function EditBox({ initial, onCancel, onSend }: { initial: string; onCancel: () 
           onClick={() => onSend(v.trim())}
           className="rounded-lg bg-ink px-3 py-1 text-[12.5px] text-parchment transition-colors duration-300 hover:bg-espresso disabled:opacity-40"
         >
-          发送
+          {tr('发送')}
         </button>
       </div>
     </motion.div>

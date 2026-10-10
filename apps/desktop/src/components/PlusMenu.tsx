@@ -6,16 +6,17 @@ import { notYet } from '../lib/toast'
 import { PRESET_STYLES, setPrefs, usePrefs } from '../lib/prefs'
 import { Kbd, MenuDivider, Popover } from './Popover'
 import { Tip } from './Tip'
+import { t } from '../lib/i18n'
 
 const STUBS = [
-  { icon: Camera, label: '截图' },
+  { icon: Camera, label: t('截图') },
   null,
-  { icon: Globe, label: '网页搜索' },
-  { icon: Telescope, label: '深度研究' },
+  { icon: Globe, label: t('网页搜索') },
+  { icon: Telescope, label: t('深度研究') },
   null,
-  { icon: Sparkles, label: '技能' },
-  { icon: Plug, label: '连接器' },
-  { icon: Puzzle, label: '插件' },
+  { icon: Sparkles, label: t('技能') },
+  { icon: Plug, label: t('连接器') },
+  { icon: Puzzle, label: t('插件') },
 ] as const
 
 /** 输入框左下角的 +：与 Claude 同一组入口。附件、风格已实现；其余点了给一句“即将推出” */
@@ -39,10 +40,10 @@ export function PlusMenu({
   const styles = [...PRESET_STYLES.map((s) => ({ id: s.id, name: s.name })), ...prefs.customStyles.map((c) => ({ id: c.id, name: c.name }))]
   return (
     <div className="relative">
-      <Tip label="添加" side="top-start">
+      <Tip label={t('添加')} side="top-start">
         <button
           type="button"
-          aria-label="添加"
+          aria-label={t('添加')}
           data-testid="plus-button"
           onClick={() => (open ? close() : onOpenChange(true))}
           className={clsx(
@@ -74,7 +75,7 @@ export function PlusMenu({
                 }}
               >
                 <Paperclip size={14} strokeWidth={1.6} className="text-sepia" />
-                <span>添加文件或图片</span>
+                <span>{t('添加文件或图片')}</span>
                 <Kbd>Ctrl U</Kbd>
               </button>
               {STUBS.map((it, i) =>
@@ -99,7 +100,7 @@ export function PlusMenu({
               <MenuDivider />
               <button type="button" role="menuitem" data-testid="plus-style" className="menu-item" onClick={() => setPage('style')}>
                 <Palette size={14} strokeWidth={1.6} className="text-sepia" />
-                <span>风格</span>
+                <span>{t('风格')}</span>
                 <span className="ml-auto flex items-center gap-1 pl-3 text-[11.5px] text-sepia-muted">
                   {styles.find((s) => s.id === prefs.style)?.name}
                   <ChevronRight size={12} />
@@ -117,7 +118,7 @@ export function PlusMenu({
             >
               <button type="button" className="menu-item text-sepia" onClick={() => setPage('main')}>
                 <ChevronLeft size={14} strokeWidth={1.6} />
-                <span>风格</span>
+                <span>{t('风格')}</span>
               </button>
               <MenuDivider />
               {styles.map((s) => (
@@ -148,7 +149,7 @@ export function PlusMenu({
                 }}
               >
                 <Pencil size={13} strokeWidth={1.6} className="text-sepia" />
-                <span>创建并编辑风格</span>
+                <span>{t('创建并编辑风格')}</span>
               </button>
             </motion.div>
           )}

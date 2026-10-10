@@ -5,6 +5,7 @@
 import type { AnyEvent } from '../data/events'
 import type { EventSource, SubscribeOptions } from '../data/sources/types'
 import { parseBridgeLine, type ResultMsg } from './protocol'
+import { t } from '../lib/i18n'
 
 export interface PendingApproval {
   requestId: string
@@ -142,7 +143,7 @@ export class LiveTask implements EventSource {
     } else if (e.kind === 'approval_resolved') {
       const p = e.payload as Record<string, unknown>
       const rid = String(p.request_id)
-      const text = String(p.display ?? (p.decision === 'allow' ? '已允许' : '已拒绝'))
+      const text = String(p.display ?? (p.decision === 'allow' ? t('已允许') : t('已拒绝')))
       this.update({
         approvals: this.snapshot.approvals.filter((a) => a.requestId !== rid),
         resolved: { ...this.snapshot.resolved, [rid]: text },

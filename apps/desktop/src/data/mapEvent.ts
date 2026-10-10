@@ -3,27 +3,28 @@
  */
 import type { ChatMessage, RoleId, StreamLine, StreamTone } from '../types'
 import { isKnown, type AnyEvent, type TaskState, type TwEvent } from './events'
+import { t } from '../lib/i18n'
 
 export const TASK_CAP_DEFAULT = 0.8
 
 const STATE_LABEL: Record<TaskState, string> = {
-  received: '接收',
-  preparing: '准备沙箱',
-  planning: '规划',
-  await_plan_approval: '待批计划',
-  reproducing: '复现',
-  executing: '修复',
-  verifying: '复验',
-  reviewing: '评审',
-  packaging: '整理证据',
-  await_pr_approval: '待批 PR',
-  pr_opened: 'PR 已开',
-  ci_watch: '盯 CI',
-  done: '完成',
-  needs_human: '待人工',
-  budget_exceeded: '预算耗尽',
-  failed: '失败',
-  cancelled: '已取消',
+  received: t('接收'),
+  preparing: t('准备沙箱'),
+  planning: t('规划'),
+  await_plan_approval: t('待批计划'),
+  reproducing: t('复现'),
+  executing: t('修复'),
+  verifying: t('复验'),
+  reviewing: t('评审'),
+  packaging: t('整理证据'),
+  await_pr_approval: t('待批 PR'),
+  pr_opened: t('PR 已开'),
+  ci_watch: t('盯 CI'),
+  done: t('完成'),
+  needs_human: t('待人工'),
+  budget_exceeded: t('预算耗尽'),
+  failed: t('失败'),
+  cancelled: t('已取消'),
 }
 
 /** 状态 → 由哪个角色主导（用于点亮角色点） */
@@ -87,15 +88,15 @@ function fallbackText(e: TwEvent): string {
     case 'state_change':
       return STATE_LABEL[e.payload.to]
     case 'model_call':
-      return `${e.payload.model}${e.payload.thinking ? ' · 思考' : ''}`
+      return `${e.payload.model}${e.payload.thinking ? t(' · 思考') : ''}`
     case 'tool_call':
-      return `$ ${e.payload.tool}${e.payload.ok ? '' : ` → ${e.payload.exit_code ?? '失败'}`}`
+      return `$ ${e.payload.tool}${e.payload.ok ? '' : ` → ${e.payload.exit_code ?? t('失败')}`}`
     case 'checkpoint':
       return e.payload.label
     case 'loop_warning':
       return `⚠ ${e.payload.signal}`
     case 'context_event':
-      return e.payload.action === 'compact' ? '上下文压缩' : `上下文清理 ${e.payload.cleared ?? 0} 条`
+      return e.payload.action === 'compact' ? t('上下文压缩') : t('上下文清理 {0} 条', e.payload.cleared ?? 0)
     case 'hitl_request':
       return e.payload.question
     case 'hitl_response':
@@ -103,21 +104,21 @@ function fallbackText(e: TwEvent): string {
     case 'approval_requested':
       return `? ${e.payload.tool} ${e.payload.action}`
     case 'approval_resolved':
-      return e.payload.decision === 'allow' ? '已允许' : '已拒绝'
+      return e.payload.decision === 'allow' ? t('已允许') : t('已拒绝')
     case 'mode_changed':
-      return `模式 ${e.payload.from_mode} → ${e.payload.to_mode}`
+      return t('模式 {0} → {1}', e.payload.from_mode, e.payload.to_mode)
     case 'verification':
-      return `复验 ${e.payload.verdict}`
+      return t('复验 {0}', e.payload.verdict)
     case 'review':
-      return `评审 ${e.payload.findings?.length ?? 0} 条`
+      return t('评审 {0} 条', e.payload.findings?.length ?? 0)
     case 'task_finished':
       return STATE_LABEL[e.payload.status as TaskState] ?? e.payload.status
     case 'error':
-      return `${e.payload.type}：${e.payload.message}`
+      return t('{0}：{1}', e.payload.type, e.payload.message)
     case 'environment_prepared':
       return e.payload.ok
-        ? `环境就绪 · 基线失败 ${e.payload.baseline_failure_count ?? 0}`
-        : '环境构建失败'
+        ? t('环境就绪 · 基线失败 {0}', e.payload.baseline_failure_count ?? 0)
+        : t('环境构建失败')
     case 'model_delta':
     case 'reasoning_delta':
       return e.payload.text
@@ -266,7 +267,7 @@ export function reduceRun(v: RunView, e: AnyEvent): RunView {
       }
       const fr = p.finish_report
       const content = fr?.summary || (p.display ?? '').trim() || next.label
-      const meta = [p.display, fr ? `置信度 ${fr.confidence.toFixed(2)}` : null].filter(Boolean).join(' · ')
+      const meta = [p.display, fr ? t('置信度 {0}', fr.confidence.toFixed(2)) : null].filter(Boolean).join(' · ')
       next.messages = [
         ...v.messages,
         { id: `m-${e.seq}`, role: 'assistant', content: content || next.label, meta, timestamp: bjClock(e.ts) },

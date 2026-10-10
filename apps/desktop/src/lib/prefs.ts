@@ -5,13 +5,14 @@
  */
 import { useSyncExternalStore } from 'react'
 import { BACKENDS, MAX_COST_CAP, PERMISSION_MODES, type Backend, type PermissionMode } from '../bridge/choices'
+import { t as tr } from './i18n'
 
 export type Thinking = 'off' | 'low' | 'medium' | 'high'
 export const THINKING_LEVELS: { id: Thinking; label: string }[] = [
-  { id: 'off', label: '关' },
-  { id: 'low', label: '低' },
-  { id: 'medium', label: '中' },
-  { id: 'high', label: '高' },
+  { id: 'off', label: tr('关') },
+  { id: 'low', label: tr('低') },
+  { id: 'medium', label: tr('中') },
+  { id: 'high', label: tr('高') },
 ]
 
 export interface ModelOption {
@@ -23,9 +24,9 @@ export interface ModelOption {
 
 /** 可选模型。其他厂商只作“稍后”的灰显占位；v4-pro 永不列出 */
 export const MODELS: ModelOption[] = [
-  { id: 'deepseek-flash', name: 'DeepSeek Flash', note: '快 · 省 · 可思考', available: true },
-  { id: 'qwen', name: '通义千问', note: '稍后', available: false },
-  { id: 'glm', name: '智谱 GLM', note: '稍后', available: false },
+  { id: 'deepseek-flash', name: 'DeepSeek Flash', note: tr('快 · 省 · 可思考'), available: true },
+  { id: 'qwen', name: tr('通义千问'), note: tr('稍后'), available: false },
+  { id: 'glm', name: tr('智谱 GLM'), note: tr('稍后'), available: false },
 ]
 
 export function isSelectableModel(id: string): boolean {
@@ -45,10 +46,10 @@ export interface CustomStyle {
 }
 /** 预设风格（与 Claude 的 Normal / Concise / Explanatory / Formal 对应） */
 export const PRESET_STYLES = [
-  { id: 'standard', name: '标准', prompt: '' },
-  { id: 'concise', name: '简洁', prompt: '回答简短直接：只给结论与必要步骤，不重复题意，不写客套话。' },
-  { id: 'detailed', name: '详细', prompt: '回答详细：解释思路与取舍，给出背景、步骤和例子，便于学习。' },
-  { id: 'formal', name: '正式', prompt: '用正式、清晰、结构化的书面语回答，适合直接放进文档或评审。' },
+  { id: 'standard', name: tr('标准'), prompt: '' },
+  { id: 'concise', name: tr('简洁'), prompt: '回答简短直接：只给结论与必要步骤，不重复题意，不写客套话。' }, // i18n-ignore: 写给模型
+  { id: 'detailed', name: tr('详细'), prompt: '回答详细：解释思路与取舍，给出背景、步骤和例子，便于学习。' }, // i18n-ignore: 写给模型
+  { id: 'formal', name: tr('正式'), prompt: '用正式、清晰、结构化的书面语回答，适合直接放进文档或评审。' }, // i18n-ignore: 写给模型
 ] as const
 export const MAX_ARTIFACT_W = 900
 export const MIN_ARTIFACT_W = 340

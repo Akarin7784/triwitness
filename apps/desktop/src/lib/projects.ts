@@ -4,6 +4,7 @@
  * 起任务时：项目说明进“用户设置”，知识文件作为附件一起交给核心。localStorage 持久化，可订阅。
  */
 import { useSyncExternalStore } from 'react'
+import { t } from './i18n'
 
 export interface KnowledgeFile {
   name: string
@@ -74,7 +75,7 @@ export function createProject(name: string, description = ''): Project {
   const now = Date.now()
   const p: Project = {
     id: `p${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-    name: name.trim().slice(0, 60) || '未命名项目',
+    name: name.trim().slice(0, 60) || t('未命名项目'),
     description: description.trim().slice(0, 300),
     instructions: '',
     knowledge: [],
@@ -87,7 +88,7 @@ export function createProject(name: string, description = ''): Project {
 
 export function updateProject(id: string, patch: Partial<Pick<Project, 'name' | 'description' | 'instructions'>>) {
   const clean = { ...patch }
-  if (clean.name !== undefined) clean.name = clean.name.trim().slice(0, 60) || '未命名项目'
+  if (clean.name !== undefined) clean.name = clean.name.trim().slice(0, 60) || t('未命名项目')
   if (clean.description !== undefined) clean.description = clean.description.slice(0, 300)
   if (clean.instructions !== undefined) clean.instructions = clean.instructions.slice(0, 4000)
   commit({
