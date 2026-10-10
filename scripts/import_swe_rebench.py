@@ -94,6 +94,43 @@ def toml_list(xs: list[str]) -> str:
     return "[\n" + "".join(f"  {json.dumps(x)},\n" for x in xs) + "]"
 
 
+def dockerfile(row: dict, py: str) -> str:
+    """三种安装方式：数据集自带 pip freeze（filtered 拆分）→ 固定版本；任务工厂第一阶段（`_install`）→ 按数据集的
+    安装命令装（构建时联网）；任务工厂第二阶段（`_pins`，第一阶段镜像里 pip freeze 的结果）→
+    固定版本 + 仓库本身 --no-deps。"""
+    iid = row["instance_id"]
+    head = f"# {iid}（{row['repo']} @ {row['base_commit'][:12]}）；依赖在构建时装好，运行时断网。"
+    out = f"""{head}
+# 国内网络：pip 命令可加 -i https://mirrors.aliyun.com/pypi/simple
+FROM python:{py}-slim
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
+RUN for i in 1 2 3 4 5; do \\
+      apt-get -o Acquire::Retries=3 update -qq && \\
+      apt-get install -y -qq --no-install-recommends git >/dev/null && break; \\
+      sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*
+ADD {tarball_url(row["repo"], row["base_commit"])} /tmp/src.tar.gz
+RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz
+"""
+    if row.get("_install"):
+        out += f"""WORKDIR /workspace/repo
+RUN {row["_install"]}
+RUN pip install --no-cache-dir -q {PYTEST.split("==")[0]} && (pip install --no-cache-dir -q --no-deps -e . || true)
+"""
+    elif row.get("_pins"):
+        lines = " \\\n    ".join(row["_pins"])
+        out += f"""RUN pip install --no-cache-dir \\
+    {lines}
+RUN pip install --no-cache-dir --no-deps -e /workspace/repo || true
+"""
+    else:
+        lines = " \\\n    ".join(pins(row))
+        out += f"""RUN pip install --no-cache-dir \\
+    {lines}
+RUN pip install --no-cache-dir -e /workspace/repo
+"""
+    return out + "RUN chown -R 1000:1000 /workspace\nWORKDIR /workspace/repo\n"
+
+
 def convert(row: dict, suite: str) -> Path:
     iid = row["instance_id"]
     owner_repo, num = iid.rsplit("-", 1)
@@ -115,7 +152,8 @@ def convert(row: dict, suite: str) -> Path:
 
         shutil.rmtree(d)
     created = str(row["created_at"])[:10]
-    lic = row.get("license_name") or "unknown"
+    lic = row.get("license_name") or row.get("_license") or "unknown"
+    dataset = row.get("_dataset") or DATASET
     write(
         d / "task.toml",
         f'''schema_version = "1.3"
@@ -133,7 +171,7 @@ difficulty = "easy"
 tags = ["python", "real-world"]
 created_at = "{created}"
 license = {json.dumps(f"{lic}（代码）；SWE-rebench 数据集 CC-BY-4.0")}
-dataset = "{DATASET}"
+dataset = "{dataset}"
 instance_id = "{iid}"
 
 [agent]
@@ -156,23 +194,7 @@ max_cost_cny = 0.5
 ''',
     )
     write(d / "instruction.md", row["problem_statement"].strip() + "\n")
-    pin_lines = " \\\n    ".join(pins(row))
-    head = f"# {iid}（{row['repo']} @ {row['base_commit'][:12]}）；依赖在构建时装好，运行时断网。"
-    write(
-        d / "environment" / "Dockerfile",
-        f"""{head}
-# 国内网络：pip 命令可加 -i https://mirrors.aliyun.com/pypi/simple
-FROM python:{py}-slim
-ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1
-ADD {tarball_url(row["repo"], row["base_commit"])} /tmp/src.tar.gz
-RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz
-RUN pip install --no-cache-dir \\
-    {pin_lines}
-RUN pip install --no-cache-dir -e /workspace/repo
-RUN chown -R 1000:1000 /workspace
-WORKDIR /workspace/repo
-""",
-    )
+    write(d / "environment" / "Dockerfile", dockerfile(row, py))
     for rel, content in hidden.items():
         write(d / "tests" / "files" / rel, content)
     ids = " \\\n  ".join(shlex.quote(t) for t in [*f2p, *p2p])
