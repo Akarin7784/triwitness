@@ -251,6 +251,9 @@ def eval_reverify(
         3.0, help="model 档：保守预估超过此值则不开始；运行中累计花费逼近此值就停止派发（硬上限）"
     ),
     model_repeats: int = typer.Option(1, help="model 档每个补丁独立判几次（测稳定性；多数票，并列取保守）"),
+    model_policy: str = typer.Option(
+        "thin_pass", help="model 档何时调用模型：thin_pass（默认，只在确定性 pass 且证据薄时）/ always（W3-14 对比）"
+    ),
     reuse_deterministic: bool = typer.Option(
         True,
         "--reuse-deterministic/--no-reuse-deterministic",
@@ -273,6 +276,8 @@ def eval_reverify(
     from triwitness.llm.gate import PeakGate
 
     modes = tuple(mode or MODES)
+    if model_policy not in ("thin_pass", "always"):
+        raise typer.BadParameter("--model-policy 只能是 thin_pass / always")
     if any(m not in MODES for m in modes):
         raise typer.BadParameter("--mode 只能是 none / deterministic / model")
     if live:
@@ -297,7 +302,8 @@ def eval_reverify(
                                  router_factory=router, regression=regression, live=live,
                                  gate=PeakGate(allow_peak=allow_peak), max_total_cny=max_total_cny,
                                  concurrency=concurrency, limit=limit, configs=config,
-                                 model_repeats=model_repeats, reuse_deterministic=reuse_deterministic))  # fmt: skip
+                                 model_repeats=model_repeats, reuse_deterministic=reuse_deterministic,
+                                 model_policy=model_policy))  # type: ignore[arg-type]  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未开始：{e}", err=True)
         raise typer.Exit(2) from None

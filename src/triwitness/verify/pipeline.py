@@ -26,13 +26,16 @@ from triwitness.verify.rerun import Baseline, PatchApplyError, RerunResult, regr
 from triwitness.verify.risk import RiskResult
 from triwitness.verify.static_checks import StaticReport, run_static_checks
 from triwitness.verify.verifier import (
+    ModelPolicy,
     RouterLike,
     VerdictLabel,
     VerifierInput,
     VerifierResult,
     combine,
     deterministic_verdict,
+    needs_model,
     run_verifier,
+    thin_evidence,
 )
 
 UNVERIFIED_REASONS = ("no_sandbox", "backend_unavailable", "skipped")
@@ -44,6 +47,8 @@ class VerifyOptions:
     spec: SandboxSpec = field(default_factory=SandboxSpec)
     mode: Literal["deterministic", "model"] = "deterministic"
     router: RouterLike | None = None  # mode=model 时必填
+    # W3-14 结论：model 只在“确定性 pass 但证据薄”时调用（判 1 次）；always = 每次都判
+    model_policy: ModelPolicy = "thin_pass"
     executor_vendor: Vendor | None = "deepseek"
     regression: bool = True
     static: bool = True
@@ -185,7 +190,10 @@ async def verify_task(
     reasons = why + reasons
     final: VerdictLabel = det
     vr: VerifierResult | None = None
-    if opts.mode == "model":
+    thin = thin_evidence(runs + ([reg] if reg else []), ac, claim, finish.open_risks)
+    if opts.mode == "model" and not needs_model(det, thin, opts.model_policy):
+        reasons.append("Verifier 模型未调用：" + ("确定性 pass 且证据充分" if det == "pass" else "确定性结论不是 pass"))
+    elif opts.mode == "model":
         if opts.router is None:
             raise ValueError("verifier=model 需要 router")
         vr = await run_verifier(opts.router, VerifierInput(

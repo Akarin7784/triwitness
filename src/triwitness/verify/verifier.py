@@ -118,6 +118,43 @@ def deterministic_verdict(
     return ("inconclusive" if reasons else "pass"), reasons
 
 
+ModelPolicy = Literal["thin_pass", "always"]
+REGRESSION_SCOPES = ("full", "related")
+
+
+def thin_evidence(
+    test_runs: list[TestRun],
+    anticheat: AntiCheatReport | None = None,
+    claim: ClaimVerdict | None = None,
+    open_risks: list[str] | None = None,
+) -> list[str]:
+    """确定性判 pass 时，证据是否“薄”（W3-14 结论：model 档只在这种 pass 上调用，且只判 1 次）。
+
+    薄 = 没有回归证据 / 回归只跑了相关 + 抽样 / 有非阻断的防作弊提示（改已有测试、吞异常…）/
+    声明审计有标记 / Executor 自报了未覆盖的风险。返回原因列表；空列表 = 证据充分，不调模型。
+    """
+    out: list[str] = []
+    reg = [r for r in test_runs if r.scope in REGRESSION_SCOPES]
+    if not reg:
+        out.append("没有回归测试证据")
+    elif all(r.scope == "related" for r in reg):
+        out.append("回归只跑了相关测试 + 抽样")
+    if anticheat is not None:
+        soft = [f.code for f in anticheat.flags if f.action != "block"]
+        if soft:
+            out.append("防作弊提示：" + ", ".join(dict.fromkeys(soft)))
+    if claim is not None and claim.flags:
+        out.append("声明审计标记：" + ", ".join(claim.flags))
+    if open_risks:
+        out.append(f"Executor 自报未覆盖的风险 {len(open_risks)} 条")
+    return out
+
+
+def needs_model(det: VerdictLabel, thin: list[str], policy: ModelPolicy = "thin_pass") -> bool:
+    """always：每个补丁都判（W3-14 对比用）；thin_pass（默认）：只在确定性 pass 且证据薄时判。"""
+    return policy == "always" or (det == "pass" and bool(thin))
+
+
 def combine(*labels: VerdictLabel) -> VerdictLabel:
     return max(labels, key=lambda x: ORDER[x])
 
@@ -243,12 +280,15 @@ async def run_verifier(
 
 __all__ = [
     "CriterionJudgement",
+    "ModelPolicy",
     "Verdict",
     "VerifierInput",
     "VerifierResult",
     "combine",
     "deterministic_verdict",
     "extract_json",
+    "needs_model",
     "render_input",
     "run_verifier",
+    "thin_evidence",
 ]

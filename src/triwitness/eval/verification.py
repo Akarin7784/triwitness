@@ -23,12 +23,15 @@ from triwitness.verify.claim import verify_claim
 from triwitness.verify.rerun import PatchApplyError, regression, rerun_repro
 from triwitness.verify.risk import RiskInputs, assess
 from triwitness.verify.verifier import (
+    ModelPolicy,
     RouterLike,
     VerdictLabel,
     VerifierInput,
     combine,
     deterministic_verdict,
+    needs_model,
     run_verifier,
+    thin_evidence,
 )
 
 VerifierMode = Literal["none", "deterministic", "model"]
@@ -86,6 +89,8 @@ class VerificationOutcome(BaseModel):
     test_runs: list[TestRun] = Field(default_factory=list)
     cost_cny: float = 0.0
     model_judgments: list[ModelJudgment] = Field(default_factory=list)
+    thin_evidence: list[str] = Field(default_factory=list)  # 确定性 pass 的证据薄在哪（决定 model 档是否调用）
+    model_skipped: str | None = None  # model 档没调用模型的原因
 
 
 async def verify_attempt(
@@ -101,6 +106,7 @@ async def verify_attempt(
     task_id: str | None = None,
     timeout_s: int = 600,
     model_repeats: int = 1,
+    model_policy: ModelPolicy = "thin_pass",
 ) -> VerificationOutcome:
     assert mode != "none"
     spec = SandboxSpec()
@@ -123,14 +129,16 @@ async def verify_attempt(
             reasons.append(str(e)[:300])
     det, why = deterministic_verdict(repro_status, runs, ac, claim)
     reasons = why + reasons
+    thin = thin_evidence(runs, ac, claim, finish.open_risks if finish else None)
     base = VerificationOutcome(mode="deterministic", verdict=det, deterministic=det, repro_status=repro_status,
                                clean_env=clean_env, risk_score=0, risk_level="L0", anticheat_flags=ac.codes,
-                               claim_flags=claim.flags if claim else [], reasons=reasons, test_runs=runs)  # fmt: skip
+                               claim_flags=claim.flags if claim else [], reasons=reasons, test_runs=runs,
+                               thin_evidence=thin if det == "pass" else [])  # fmt: skip
     if mode == "model":
         if router is None:
             raise ValueError("verifier=model 需要 router")
         return await judge_with_model(base, issue=issue, diff=diff, finish=finish, router=router,
-                                      repeats=model_repeats, task_id=task_id)  # fmt: skip
+                                      repeats=model_repeats, task_id=task_id, policy=model_policy)  # fmt: skip
     return _finalize(base, diff=diff, ac=ac, claim_flags=base.claim_flags, final=det, conf=None)
 
 
@@ -154,12 +162,22 @@ async def judge_with_model(
     router: RouterLike,
     repeats: int = 1,
     task_id: str | None = None,
+    policy: ModelPolicy = "thin_pass",
 ) -> VerificationOutcome:
     """在已有的确定性证据（base）上做 model 档判读：独立判 `repeats` 次，多数票（并列取保守），
-    最终结论 = combine(确定性结论, 模型多数票)。W3-14 reverify 用它复用 deterministic 档的复跑结果，不再重跑沙箱。"""
+    最终结论 = combine(确定性结论, 模型多数票)。W3-14 reverify 用它复用 deterministic 档的复跑结果，不再重跑沙箱。
+
+    policy=thin_pass（默认，W3-14 结论）：只在确定性 pass 且证据薄时调用模型；否则直接用确定性结论（¥0）。"""
     if repeats < 1:
         raise ValueError("repeats 至少为 1")
     ac = anticheat.check(diff)
+    claim = verify_claim(issue=issue, claim=finish, patch=diff) if finish is not None else None
+    thin = thin_evidence(base.test_runs, ac, claim, finish.open_risks if finish else None)
+    base = base.model_copy(update={"thin_evidence": thin if base.deterministic == "pass" else []})
+    if not needs_model(base.deterministic, thin, policy):
+        why = "确定性结论不是 pass（模型只会更保守）" if base.deterministic != "pass" else "确定性 pass 且证据充分"
+        return _finalize(base, diff=diff, ac=ac, claim_flags=base.claim_flags, final=base.deterministic, conf=None,
+                         mode="model", model_skipped=why)  # fmt: skip
     inp = VerifierInput(
         issue=issue, diff=diff, repro_status=base.repro_status, test_runs=base.test_runs, notes=base.reasons,
         anticheat_flags=ac.codes, claim_flags=base.claim_flags,
@@ -192,6 +210,7 @@ async def verify_run(
     router: RouterLike | None = None,
     task_id: str | None = None,
     model_repeats: int = 1,
+    model_policy: ModelPolicy = "thin_pass",
 ) -> VerificationOutcome:
     """评测一次 attempt 的验证（`tw eval run` 与 `tw eval reverify` 共用）。没有改动直接判 fail。"""
     if not diff.strip():
@@ -202,6 +221,7 @@ async def verify_run(
     return await verify_attempt(
         issue=issue, diff=diff, finish=finish, backend=FactoryBackend(new_sandbox), mode=mode, test_cmd=test_cmd,
         run_regression=run_regression, router=router, task_id=task_id, model_repeats=model_repeats,
+        model_policy=model_policy,
     )  # fmt: skip
 
 

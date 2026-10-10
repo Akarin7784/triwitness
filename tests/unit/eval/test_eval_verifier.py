@@ -75,7 +75,7 @@ async def test_eval_with_verifier_modes(tmp_path: Path, tasks: list[EvalTask]) -
     cfgs = [
         RunConfig(name="null-det", agent="null", verifier="deterministic"),
         RunConfig(name="tamper-det", agent="tamper", verifier="deterministic"),
-        RunConfig(name="llm-none", agent="llm"),
+        RunConfig(name="llm-none", agent="llm", verifier="none"),
         RunConfig(name="llm-det", agent="llm", verifier="deterministic"),
         RunConfig(name="llm-model", agent="llm", verifier="model"),
     ]

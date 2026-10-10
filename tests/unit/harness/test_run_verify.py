@@ -116,7 +116,7 @@ async def test_model_verifier_conservative_and_costed(env: tuple) -> None:  # ty
     verdict = say(call("submit_verdict", verdict="inconclusive", confidence=0.4, rationale="没覆盖负数",
                        criteria=[{"criterion": "add 返回和", "judgement": "unknown", "evidence": []}],
                        evidence_gaps=["负数"]))  # fmt: skip
-    res, rec = await go(env, [say(WRITE_REPRO), say(RIGHT), finish()], verifier=[verdict])
+    res, rec = await go(env, [say(WRITE_REPRO), say(RIGHT), finish()], verifier=[verdict], model_policy="always")
     v = res.verification
     assert v is not None and v.deterministic == "pass" and v.evidence.verdict == "inconclusive"
     assert res.status == "done"  # inconclusive 不算失败，但风险更高、交给人看
@@ -137,3 +137,13 @@ async def test_no_verify_keeps_w2_behaviour(env: tuple) -> None:  # type: ignore
     finally:
         await sb.finish("discard")  # type: ignore[attr-defined]
     assert res.verification is None and "verifying" not in states(rec)
+
+
+async def test_model_skipped_when_deterministic_pass_is_well_evidenced(env: tuple) -> None:  # type: ignore[type-arg]
+    """W3-14 结论：默认 thin_pass——确定性 pass 且有回归、无提示时不调模型（¥0）。"""
+    verdict = say(call("submit_verdict", verdict="fail", confidence=0.9, rationale="不该被调用"))
+    res, rec = await go(env, [say(WRITE_REPRO), say(RIGHT), finish()], verifier=[verdict])
+    v = res.verification
+    assert v is not None and v.model is None and v.evidence.verdict == "pass"
+    assert any("Verifier 模型未调用" in r for r in v.reasons)
+    assert not [e for e in rec.events if e.kind == "model_call" and e.role == "verifier"]

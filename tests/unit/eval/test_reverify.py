@@ -186,3 +186,25 @@ async def test_hard_cap_stops_dispatch(saved: Path, tmp_path: Path, tasks: list[
     # 每个 attempt ¥0.003：第一个之后“已花 + 1.5×均值” = 0.0075 > 0.004，后面都不派发
     assert s.model_judged == 1 and len(s.capped) == len(tasks) - 1
     assert s.verifier_cost_cny <= 0.004
+
+
+async def test_default_policy_skips_model_on_non_pass(saved: Path, tmp_path: Path, tasks: list[EvalTask]) -> None:
+    """默认 thin_pass：确定性不是 pass（篡改 Agent）就不调模型；always 才每个都判。"""
+    calls: list[int] = []
+
+    def router():  # type: ignore[no-untyped-def]
+        calls.append(1)
+        return verdict_router()
+
+    s = await reverify(saved, tmp_path / "thin", tasks=by_id(tasks), grader=VerifyingGrader(),
+                       modes=("deterministic", "model"), router_factory=router, configs=["tamp"])  # fmt: skip
+    assert s.verifier_cost_cny == 0.0
+    import json
+
+    t = tasks[0].id
+    v = json.loads((tmp_path / "thin" / "tamp+model" / t / "1" / "verification.json").read_text(encoding="utf-8"))
+    assert v["model_judgments"] == [] and v["model_skipped"] and v["verdict"] != "pass"
+    s2 = await reverify(saved, tmp_path / "always", tasks=by_id(tasks), grader=VerifyingGrader(),
+                        modes=("deterministic", "model"), router_factory=router, configs=["tamp"],
+                        model_policy="always")  # fmt: skip
+    assert s2.model_judged == len(tasks)

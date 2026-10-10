@@ -30,7 +30,7 @@ from triwitness.eval.verification import VerificationOutcome, VerifierMode, judg
 from triwitness.eval.verify_estimate import estimate, sizes_from_results
 from triwitness.llm.gate import PeakGate
 from triwitness.sandbox.base import Sandbox
-from triwitness.verify.verifier import RouterLike
+from triwitness.verify.verifier import ModelPolicy, RouterLike
 
 log = logging.getLogger(__name__)
 MODES: tuple[VerifierMode, ...] = ("none", "deterministic", "model")
@@ -115,6 +115,7 @@ async def reverify(
     configs: list[str] | None = None,
     model_repeats: int = 1,
     reuse_deterministic: bool = True,
+    model_policy: ModelPolicy = "thin_pass",
 ) -> ReverifySummary:
     if src.resolve() == out.resolve():
         raise ConfigError("输出目录不能和原结果目录相同（原结果只读）")
@@ -134,7 +135,7 @@ async def reverify(
                 raise EstimateTooHigh(f"预估（保守）¥{summary.estimate_cny:.2f} 超过上限 ¥{max_total_cny:g}，不开始")
     out.mkdir(parents=True, exist_ok=True)
     meta = {"source": str(src), "modes": list(modes), "live": live, "estimate_cny": summary.estimate_cny,
-            "model_repeats": model_repeats, "max_total_cny": max_total_cny,
+            "model_repeats": model_repeats, "max_total_cny": max_total_cny, "model_policy": model_policy,
             "configs": [{"name": f"{c}+{m}", "attempts": max(s.result.attempt for s in saved if s.result.config == c)}
                         for c in sorted({s.result.config for s in saved}) for m in modes],
             "tasks": sorted({s.result.task_id for s in saved})}  # fmt: skip
@@ -167,14 +168,14 @@ async def reverify(
                         ver = await judge_with_model(
                             base, issue=task.instruction, diff=s.diff, finish=s.finish,
                             router=_router(router_factory, mode),  # type: ignore[arg-type]
-                            repeats=model_repeats, task_id=task.id,
+                            repeats=model_repeats, task_id=task.id, policy=model_policy,
                         )  # fmt: skip
                     else:
                         ver = await verify_run(
                             issue=task.instruction, diff=s.diff, finish=s.finish,
                             new_sandbox=_factory(grader, task), mode=mode, test_cmd=task.tw.test_cmd,
                             run_regression=regression, router=_router(router_factory, mode),
-                            task_id=task.id, model_repeats=model_repeats,
+                            task_id=task.id, model_repeats=model_repeats, model_policy=model_policy,
                         )  # fmt: skip
                 except Exception as e:  # 单个 attempt 出错不影响其他
                     log.exception("reverify 失败：%s", key)

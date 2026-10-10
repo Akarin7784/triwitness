@@ -35,7 +35,7 @@ from triwitness.eval.verification import VerificationOutcome, VerifierMode, veri
 from triwitness.llm.gate import PeakGate, estimate_run
 from triwitness.llm.pricing import to_shanghai
 from triwitness.telemetry.trajectory import TrajectoryRecorder
-from triwitness.verify.verifier import RouterLike
+from triwitness.verify.verifier import ModelPolicy, RouterLike
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,9 @@ class RunConfig(BaseModel):
     budget_profile: str = "eval"
     harness: str | None = None
     category: str = "baseline"  # 全局账本类别信封（configs/budget.yaml envelopes_cny）
-    verifier: VerifierMode = "none"  # W3-13：none / deterministic / model
+    # W3-13 / W3-14 结论：默认 deterministic（¥0）；model 档只在“确定性 pass 但证据薄”时调用模型，判 1 次
+    verifier: VerifierMode = "deterministic"
+    verifier_model_policy: ModelPolicy = "thin_pass"
     verifier_regression: bool = True  # 验证时是否跑基线 vs 修复后的回归对比（慢）
 
     @classmethod
@@ -312,7 +314,7 @@ class EvalRunner:
                 new_sandbox=lambda: self.grader.new_sandbox(job.task), mode=mode, test_cmd=job.task.tw.test_cmd,
                 run_regression=job.config.verifier_regression,
                 router=self.verifier_router_factory() if mode == "model" and self.verifier_router_factory else None,
-                task_id=job.task.id,
+                task_id=job.task.id, model_policy=job.config.verifier_model_policy,
             )  # fmt: skip
         except Exception as e:
             log.exception("验证失败：%s", job.rel().as_posix())
