@@ -110,6 +110,10 @@ def run_verifier(
         logs.append(f"$ bash /solution/solve.sh → {code}\n{out.decode('utf-8', 'replace')}")
     t = int(task.verifier_timeout_sec)
     env = {k: str(v) for k, v in (getattr(task.config.verifier, "env", None) or {}).items()}
+    if user != "root":
+        # 非 root（Grader 用 uid 1000，镜像里没有对应用户）时 HOME 默认是 /，不可写；任务校验是 root 跑的，
+        # 参考解能过、判分却必挂（W2-25：ultraplot-696 mkdir /.config、xcp_d-1433 mkdir /.cache）。
+        env.setdefault("HOME", "/tmp")
     code, out = container.exec_run(
         ["timeout", str(t), "bash", "/tests/test.sh"], workdir=workdir, environment=env, user=user
     )

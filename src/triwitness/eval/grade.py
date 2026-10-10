@@ -160,6 +160,7 @@ class Grader:
             cpus=env.cpus or 1.0,
             memory_mb=env.memory_mb or 2048,
             network="none",
+            env={"HOME": "/tmp"},  # uid 1000 在镜像里没有 passwd 条目，默认 HOME=/ 不可写（W2-25 ultraplot / xcp_d）
         )
         sb = await self.backend.create(spec)
         assert isinstance(sb, DockerSandbox)
