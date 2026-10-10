@@ -39,16 +39,20 @@ evals/tasks/<suite>/<task-id>/
 `task.toml`：
 
 ```toml
-version = "1.0"
+schema_version = "1.3"             # Harbor 字段（不是 version）；只接受 1.x
 
-[metadata]
-id = "dev-001-csv-empty-rows"
+[task]
+name = "triwitness/dev-001-csv-empty-rows"   # org/name；name 部分必须与目录名一致（即任务 id）
+description = "..."
+keywords = ["python", "bugfix"]
+
+[metadata]                         # Harbor 自由字段；TriWitness 约定如下
 source = "synthetic"            # synthetic | github-issue | swe-rebench | ...
 repo = "https://github.com/<owner>/<repo>"
 base_commit = "<sha>"
 difficulty = "easy"              # easy | medium | hard
 tags = ["python", "bugfix"]
-created_at = "2026-10-12"        # 用于防污染（与模型发布日期比较）
+created_at = "2026-10-12"        # 必填，用于防污染（与模型发布日期比较）
 
 [agent]
 timeout_sec = 1800
@@ -57,20 +61,22 @@ timeout_sec = 1800
 timeout_sec = 600
 
 [environment]
+network_mode = "no-network"      # Harbor：public（默认）| no-network | allowlist；TriWitness 任务必须 no-network
 cpus = 2
 memory_mb = 4096
-network = "none"
+workdir = "/workspace/repo"
+# docker_image = "..."           # 可选：用现成镜像代替 environment/Dockerfile
 
-[tw]                             # TriWitness 扩展
+[tw]                             # TriWitness 扩展（Harbor 忽略）；未知键报错
 test_cmd = "pytest -q"
-fail_to_pass = ["tests/test_io.py::test_empty_rows"]
+fail_to_pass = ["tests/test_io.py::test_empty_rows"]   # 不能为空
 pass_to_pass = ["tests/test_io.py"]
 max_cost_cny = 0.8
 ```
 
 > Harbor 字段名以 [Harbor 文档](https://www.harborframework.com/docs/tasks) 为准；实现时先对照官方示例任务校验，不一致的地方以官方为准并更新本 spec。
 
-`test.sh` 约定：运行 F2P 和 P2P；全部通过写 `1`，否则写 `0` 到 `/logs/verifier/reward.txt`；同时把明细写到 `/logs/verifier/results.json`。
+`test.sh` 约定：运行 F2P 和 P2P；全部通过写 `1`，否则写 `0` 到 `/logs/verifier/reward.txt`；同时把明细写到 `/logs/verifier/`（示例任务用 pytest 自带的 `--junitxml=/logs/verifier/junit.xml`，不引入额外依赖）。
 
 ## 5. 接口
 
@@ -174,3 +180,4 @@ tw task validate evals/tasks/dev/dev-001-*      # 校验任务有效性
 - 2026-10-10：初稿
 - 2026-10-10：按 ADR-0001（W1 接口与路径）与 ADR-0002（预算与模型策略）修订：结果目录 evals/results/、--config 指向 configs/runs/*.yaml、--max-total-cny 默认 10 + 空闲闸门、AC6 只要求 DeepSeek。
 - 2026-10-10：按 ADR-0005 修订：评测强制 docker 后端、非交互（权限 ask 视为 deny）、只用 default 层 + 运行配置中的权限规则，规则集哈希计入 config_hash；none 后端运行不进入报告。
+- 2026-10-10（W1-26 实现）：对照 Harbor 官方文档（docs.harborframework.com/tasks/configuration）改字段：`version` → `schema_version`（1.x）；任务 id 从 `[metadata] id` 移到 `[task] name = "org/<id>"`（id = 目录名）；`network = "none"` → `[environment] network_mode = "no-network"`（Harbor 默认 public，所以 TriWitness 要求显式写）；新增可选 `workdir`、`docker_image`；`created_at` 必填；`[tw]` 未知键报错，其余表允许 Harbor 未来新增字段。`tw task validate` 实现：镜像 tag = `tw-task/<id>:<environment/ 内容哈希，换行无关>`，已存在则复用；验证容器 `network_mode=none`、带 `tw.managed` 标签、跑完即删；`--static` 只查格式（不需要 Docker）。第一个示例任务 `evals/tasks/dev/csv-blank-line`。

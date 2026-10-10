@@ -1,5 +1,8 @@
 """`tw` 命令行入口（W1-04 骨架：只有 --version）。"""
 
+from pathlib import Path
+from typing import Annotated
+
 import typer
 
 from triwitness import __version__
@@ -81,3 +84,46 @@ def sandbox_gc(
     typer.echo(rep.summary())
     for run_id in rep.worktrees:
         typer.echo(f"  - worktree {run_id}")
+
+
+task_app = typer.Typer(add_completion=False, no_args_is_help=True, help="评测任务")
+app.add_typer(task_app, name="task")
+
+
+@task_app.command("validate")
+def task_validate(
+    paths: Annotated[list[Path], typer.Argument(help="任务目录（含 task.toml），或包含多个任务的目录")],
+    static: Annotated[bool, typer.Option("--static", help="只检查格式，不构建镜像、不跑测试")] = False,
+) -> None:
+    """检查任务：格式 → 构建镜像 → 原始代码 reward=0 → 应用参考解后 reward=1。"""
+    from triwitness.eval.task import TaskFormatError, discover, load_task
+
+    dirs: list[Path] = []
+    for p in paths:
+        dirs.extend([p] if (p / "task.toml").is_file() else discover(p))
+    if not dirs:
+        raise typer.BadParameter("没找到 task.toml")
+    failed = 0
+    for d in dirs:
+        try:
+            task = load_task(d)
+        except TaskFormatError as e:
+            failed += 1
+            typer.echo(f"✗ {d.name}  {e}")
+            continue
+        if static:
+            typer.echo(f"✓ {task.id}  格式正确")
+            continue
+        from triwitness.eval.validate import validate_sync
+
+        rep = validate_sync(task)
+        if rep.ok:
+            cached = "（镜像缓存）" if rep.image_cached else ""
+            typer.echo(f"✓ {task.id}  reward 0 → 1  {rep.image}{cached}")
+        else:
+            failed += 1
+            typer.echo(f"✗ {task.id}  " + "；".join(rep.problems))
+            bad = rep.with_solution if rep.without_solution.reward == 0 else rep.without_solution
+            typer.echo(bad.log_tail)
+    if failed:
+        raise typer.Exit(1)
