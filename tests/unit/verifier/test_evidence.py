@@ -25,9 +25,9 @@ from triwitness.sandbox.local import LocalSandboxBackend
 from triwitness.verify.claim import verify_claim
 from triwitness.verify.evidence import build_evidence, render_pr
 from triwitness.verify.rerun import RerunResult, regression, rerun_repro
-from triwitness.verify.testing import modify, new_file
+from triwitness.verify.testing import make_patch, make_repo, modify, new_file
 
-from .test_rerun_local import FIXED, PY, REPRO, CleanLocal, make_patch, make_repo, repro_test
+from .test_rerun_local import FIXED, PY, REPRO, CleanLocal, repro_test
 
 SNAP = Path(__file__).resolve().parents[2] / "fixtures" / "verifier" / "snapshots"
 FIX = "calc.py"

@@ -6,7 +6,6 @@ none 后端没有干净环境：结论一律 clean_env = unverified、unverified
 
 from __future__ import annotations
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -17,42 +16,12 @@ from triwitness.sandbox.base import Capabilities, SandboxSpec
 from triwitness.sandbox.local import LocalSandboxBackend
 from triwitness.verify.rerun import only_test_files, regression, rerun_repro
 from triwitness.verify.risk import RiskInputs, assess
+from triwitness.verify.testing import git, make_patch, make_repo
 
 PY = f'"{Path(sys.executable).as_posix()}" -m pytest -q -p no:cacheprovider'
 REPRO = "tests/tw_repro/test_issue_1.py"
 BUGGY = "def add(a, b):\n    return a - b\n"
 FIXED = "def add(a, b):\n    return a + b\n"
-
-
-def git(repo: Path, *a: str) -> str:
-    r = subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t", *a],
-                       check=True, capture_output=True, text=True)  # fmt: skip
-    return r.stdout
-
-
-def make_repo(tmp: Path, files: dict[str, str]) -> Path:
-    repo = tmp / "repo"
-    repo.mkdir()
-    for k, v in files.items():
-        (repo / k).parent.mkdir(parents=True, exist_ok=True)
-        (repo / k).write_text(v, newline="\n")
-    subprocess.run(["git", "init", "-q", "-b", "main", str(repo)], check=True)
-    git(repo, "config", "core.autocrlf", "false")
-    git(repo, "add", "-A")
-    git(repo, "commit", "-qm", "init")
-    return repo
-
-
-def make_patch(repo: Path, files: dict[str, str]) -> str:
-    """在仓库里写入改动 → 取 diff → 还原（模拟 Executor 交出来的补丁）。"""
-    for k, v in files.items():
-        (repo / k).parent.mkdir(parents=True, exist_ok=True)
-        (repo / k).write_text(v, newline="\n")
-    git(repo, "add", "-A")
-    patch = git(repo, "diff", "--cached", "--binary")
-    git(repo, "reset", "-q", "--hard")
-    git(repo, "clean", "-qfd")
-    return patch
 
 
 class CleanLocal(LocalSandboxBackend):

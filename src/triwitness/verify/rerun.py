@@ -47,7 +47,14 @@ def _tw_dir(sb: Sandbox) -> str:
 
 async def _fresh(backend: SandboxBackend, spec: SandboxSpec, patch: str, label: str) -> Sandbox:
     sb = await backend.create(spec)
-    if patch.strip():
+    apply = getattr(sb, "apply_patch", None)
+    if patch.strip() and apply is not None:  # docker：在宿主镜像目录上 git apply（任务镜像里不一定有 git）
+        try:
+            await apply(patch)
+        except Exception as e:
+            await sb.close()
+            raise PatchApplyError(f"{label}: git apply 失败：{str(e)[-400:]}") from e
+    elif patch.strip():
         path = f"{_tw_dir(sb)}/verify-{label}.patch"
         await sb.write_file(path, patch.encode())
         r = await sb.exec(f"git apply --whitespace=nowarn {shlex.quote(path)}", timeout_s=60)
