@@ -2,7 +2,7 @@
 
 > 不按日历排期，做完一项记一项。
 
-## UI-21 · Claude 交互对齐（已完成：两轮）
+## UI-21 · Claude 交互对齐（已完成：三轮 + 界面审查）
 
 原则（Eva）：操作方式与 Claude Desktop 一一对应，不缺也不多；差异只放在审美和复验功能上。没做的功能也放真入口，点了提示“即将推出”。逐项状态见 `docs/claude-parity.md`。
 
@@ -23,6 +23,34 @@
 - 模型选择：只有 DeepSeek Flash 可选；通义千问、智谱 GLM 灰显“稍后”；不出现 v4-pro。思考强度是子菜单（照 Claude 的 Effort）
 - 流式消息：新字淡入，柔和光标；Markdown（代码块带复制）；思考块折叠为“思考了 N 秒”；工具调用是可展开的紧凑行
 - 滚动贴底；向上滚时暂停，并出现“回到底部”
+
+### 第 3 轮：剩余对齐功能 + 中英文 + 界面审查（bfaa2a6 / 0ed5355 / f150ea2 / c514a28 / 6f0c226 / 7ee763e / ae187f3）
+
+**核心**
+- `tw run --attach PATH`（可重复，最多 20 个）：文本内联进任务（单个 2 万字、总共 6 万字封顶），图片和二进制只列文件名，原件存进 run_dir/attachments
+- `tw run --guidance-file`：个人资料、风格、项目说明（8K 封顶）
+- `mode_changed` 事件：会话模式不同于基础模式时发出，任务结束发 auto_revert；CI 环境拒绝 unrestricted
+- `tw doctor --json`：docker / wsl / winget 状态；Docker 必须真有版本号才算 ok，权限不足时报“没有权限”
+- `tw sandbox install docker|wsl --plan|--yes`：UAC 提权，不带 --yes 就拒绝执行
+- `tw permissions list / validate / add [--replace] / remove`：用户层或本仓库层，写入前用 parse_rule 校验
+
+**桌面端**
+- 附件：+ 菜单、拖放（放置层）、粘贴、Ctrl+U；附件签可预览、移除；图片提示“当前模型只读文字”
+- 项目：新建、重命名、删除；项目说明；知识文件；侧栏按项目分组；会话 … 菜单和标题下拉里可“加入项目”
+- 作品栏：代码 / Markdown / diff / pr.md；版本切换、复制、下载；可拖动调宽，宽度会记住；另有作品页
+- 分享：复制为 Markdown、导出 .md、导出 PDF（系统打印）。只在本机，菜单里写明
+- 风格：标准 / 简洁 / 详细 / 正式 + 自定义；个人资料和风格都交给模型
+- 规则编辑器（核心实时校验）；审批卡“总是”会提示已写入规则，并能在设置里看到
+- UI-19 沙箱：检测卡片 + 一键安装（先确认，经 UAC 提权，有进度显示）
+- 勇士横幅：由核心 mode_changed 驱动
+- 隐私：导出本机数据、清除会话记录；关于：开源许可
+- 中英文：`t('中文')` 查英文表，共 432 条；`tools/i18n-wrap.mjs --check` 防止漏包
+- Rust：files.rs，含 attach_save、save_download、core_read_artifact、core_tool 白名单
+
+**验证**
+- vitest 90 项
+- shoot-ui21c 46 项全过；shoot-ui21、test-guards 全过（右键空白点改为动态寻找）
+- 界面审查：浅色 / 深色 / 英文 / 减少动态效果，139 张截图，报告见 `docs/ui-review-2026-10-11.md`
 
 ### 第 2 轮：设置、侧栏、消息操作、快捷键（b3d20d0 / f35b741）
 
