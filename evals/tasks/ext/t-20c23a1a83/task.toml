@@ -1,0 +1,41 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-20c23a1a83"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/pgmpy/pgmpy"
+base_commit = "8ab9ee56b3be1409f2f284f565d719a5b0ccee7d"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2025-05-25"
+license = "MIT\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "pgmpy__pgmpy-2111"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "pgmpy/tests/test_factors/test_continuous/test_Linear_Gaussian_CPD.py::TestLGCPD::test_variable_hashable",
+]
+pass_to_pass = [
+  "pgmpy/tests/test_factors/test_continuous/test_Linear_Gaussian_CPD.py::TestLGCPD::test_class_init",
+  "pgmpy/tests/test_factors/test_continuous/test_Linear_Gaussian_CPD.py::TestLGCPD::test_get_random",
+  "pgmpy/tests/test_factors/test_continuous/test_Linear_Gaussian_CPD.py::TestLGCPD::test_str",
+]
+max_cost_cny = 0.5

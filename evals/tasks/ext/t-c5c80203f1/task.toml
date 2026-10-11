@@ -1,0 +1,107 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-c5c80203f1"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/valohai/valohai-cli"
+base_commit = "cdc6cfbc3670bb1947ebd6185bd3f670b66afe66"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2025-01-30"
+license = "MIT\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "valohai__valohai-cli-321"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/commands/execution/test_run.py::test_implicit_priority[regular]",
+  "tests/commands/execution/test_run.py::test_implicit_priority[adhoc]",
+]
+pass_to_pass = [
+  "tests/commands/execution/test_run.py::test_run_requires_step",
+  "tests/commands/execution/test_run.py::test_run_env_var[regular-custom]",
+  "tests/commands/execution/test_run.py::test_run_env_var[regular-override-default]",
+  "tests/commands/execution/test_run.py::test_run_env_var[adhoc-custom]",
+  "tests/commands/execution/test_run.py::test_run_env_var[adhoc-override-default]",
+  "tests/commands/execution/test_run.py::test_run_env[regular]",
+  "tests/commands/execution/test_run.py::test_run_env[adhoc]",
+  "tests/commands/execution/test_run.py::test_run_tags[regular]",
+  "tests/commands/execution/test_run.py::test_run_tags[adhoc]",
+  "tests/commands/execution/test_run.py::test_run_spot_restart[regular]",
+  "tests/commands/execution/test_run.py::test_run_spot_restart[adhoc]",
+  "tests/commands/execution/test_run.py::test_run_with_yaml_path[regular]",
+  "tests/commands/execution/test_run.py::test_run_with_yaml_path[adhoc]",
+  "tests/commands/execution/test_run.py::test_run_input[regular]",
+  "tests/commands/execution/test_run.py::test_run_input[adhoc]",
+  "tests/commands/execution/test_run.py::test_run_params[regular-direct]",
+  "tests/commands/execution/test_run.py::test_run_params[regular-file]",
+  "tests/commands/execution/test_run.py::test_run_params[regular-mix]",
+  "tests/commands/execution/test_run.py::test_run_params[adhoc-direct]",
+  "tests/commands/execution/test_run.py::test_run_params[adhoc-file]",
+  "tests/commands/execution/test_run.py::test_run_params[adhoc-mix]",
+  "tests/commands/execution/test_run.py::test_param_type_validation_integer",
+  "tests/commands/execution/test_run.py::test_param_type_validation_flag",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[regular-yes-True]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[regular-no-False]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[regular-1-True]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[regular-FALSE-False]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[regular-True-True]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[adhoc-yes-True]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[adhoc-no-False]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[adhoc-1-True]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[adhoc-FALSE-False]",
+  "tests/commands/execution/test_run.py::test_flag_param_coercion[adhoc-True-True]",
+  "tests/commands/execution/test_run.py::test_run_no_git",
+  "tests/commands/execution/test_run.py::test_param_input_sanitization",
+  "tests/commands/execution/test_run.py::test_multi_parameter_serialization[regular]",
+  "tests/commands/execution/test_run.py::test_multi_parameter_serialization[adhoc]",
+  "tests/commands/execution/test_run.py::test_multi_parameter_command_line_argument[regular]",
+  "tests/commands/execution/test_run.py::test_multi_parameter_command_line_argument[adhoc]",
+  "tests/commands/execution/test_run.py::test_typo_check",
+  "tests/commands/execution/test_run.py::test_run_help",
+  "tests/commands/execution/test_run.py::test_command_help",
+  "tests/commands/execution/test_run.py::test_remote[regular]",
+  "tests/commands/execution/test_run.py::test_remote[adhoc]",
+  "tests/commands/execution/test_run.py::test_remote_both_args[regular]",
+  "tests/commands/execution/test_run.py::test_remote_both_args[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_options[regular]",
+  "tests/commands/execution/test_run.py::test_kube_options[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_options_partial[regular]",
+  "tests/commands/execution/test_run.py::test_kube_options_partial[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_options_from_step[regular]",
+  "tests/commands/execution/test_run.py::test_kube_options_from_step[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_step_overrides[regular]",
+  "tests/commands/execution/test_run.py::test_kube_step_overrides[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_step_override_device_empty[regular]",
+  "tests/commands/execution/test_run.py::test_kube_step_override_device_empty[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_runtime_config_preset_argument[regular]",
+  "tests/commands/execution/test_run.py::test_kube_runtime_config_preset_argument[adhoc]",
+  "tests/commands/execution/test_run.py::test_kube_no_runtime_config_preset_argument[regular]",
+  "tests/commands/execution/test_run.py::test_kube_no_runtime_config_preset_argument[adhoc]",
+  "tests/commands/execution/test_run.py::test_no_git_adhoc_packaging[True]",
+  "tests/commands/execution/test_run.py::test_no_git_adhoc_packaging[False]",
+  "tests/commands/execution/test_run.py::test_priority[regular-0]",
+  "tests/commands/execution/test_run.py::test_priority[regular-7]",
+  "tests/commands/execution/test_run.py::test_priority[regular-42]",
+  "tests/commands/execution/test_run.py::test_priority[adhoc-0]",
+  "tests/commands/execution/test_run.py::test_priority[adhoc-7]",
+  "tests/commands/execution/test_run.py::test_priority[adhoc-42]",
+]
+max_cost_cny = 0.5

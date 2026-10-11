@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_create_structuretype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_datatype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unresolvedtype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unresolvedtype_str \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unresolvedtype_is_allocatable \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unresolvedtype_eq \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unresolvedtype_copy \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_notype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_notype_is_allocatable \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_notype_eq \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.INTEGER-Precision.SINGLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.INTEGER-Precision.DOUBLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.INTEGER-Precision.UNDEFINED]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.REAL-Precision.SINGLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.REAL-Precision.DOUBLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.REAL-Precision.UNDEFINED]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.BOOLEAN-Precision.SINGLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.BOOLEAN-Precision.DOUBLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.BOOLEAN-Precision.UNDEFINED]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.CHARACTER-Precision.SINGLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.CHARACTER-Precision.DOUBLE]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_enum_precision[Intrinsic.CHARACTER-Precision.UNDEFINED]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.INTEGER-1]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.INTEGER-8]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.INTEGER-16]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.REAL-1]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.REAL-8]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.REAL-16]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.BOOLEAN-1]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.BOOLEAN-8]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.BOOLEAN-16]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.CHARACTER-1]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.CHARACTER-8]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_int_precision[Intrinsic.CHARACTER-16]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_datasymbol_precision[Intrinsic.INTEGER]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_datasymbol_precision[Intrinsic.REAL]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_datasymbol_precision[Intrinsic.BOOLEAN]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_datasymbol_precision[Intrinsic.CHARACTER]' \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_not_equal \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_invalid_intrinsic_type \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_invalid_precision_type \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_invalid_precision_int_value \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_invalid_precision_datasymbol \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_str \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_immutable \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_replace_symbols \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_scalartype_reference_accesses \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_extent \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_invalid_datatype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_datatypesymbol_only \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_datatypesymbol \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_unsupportedtype \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_invalid_shape \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_invalid_shape_dimension_1 \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_invalid_shape_dimension_2 \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_invalid_shape_bounds \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_shape_dim_from_parent_scope \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_str \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_str_invalid \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_immutable \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_eq \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_copy \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_replace_symbols_using[None]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_replace_symbols_using[table1]' \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_arraytype_reference_accesses \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_optional_arg \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_text \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_text_error \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_eq \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_is_allocatable \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_copy \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_replace_symbols \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_unsupported_fortran_type_reference_accesses \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_structure_type \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_structuretype_eq \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_structuretype_replace_symbols[None]' \
+  'src/psyclone/tests/psyir/symbols/datatype_test.py::test_structuretype_replace_symbols[table1]' \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_structuretype_reference_accesses \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_structuretype_componenttype_eq \
+  src/psyclone/tests/psyir/symbols/datatype_test.py::test_structuretype___copy__; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

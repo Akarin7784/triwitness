@@ -1,0 +1,45 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-9c2f12362f"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/awelzel/flake8-gl-codeclimate"
+base_commit = "91c89ebe0c455815653bc66e5e75e6a80e51d4de"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2022-11-19"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "awelzel__flake8-gl-codeclimate-15"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_error_filepath",
+]
+pass_to_pass = [
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_complexity_error",
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_error1",
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_error1_and_error2",
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_error_filepath_with_prefix",
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_logging_errro",
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_no_errors",
+  "tests/test_formatter.py::TestGitlabCodeClimateFormatter::test_security_error",
+]
+max_cost_cny = 0.5

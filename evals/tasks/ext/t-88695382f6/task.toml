@@ -1,0 +1,78 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-88695382f6"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/acorg/slurm-pipeline"
+base_commit = "82b9419077b32dd6d090cec385e5f1996448aa22"
+difficulty = "hard"
+tags = ["python", "real-world"]
+created_at = "2016-11-25"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "acorg__slurm-pipeline-8"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "test/test_pipeline.py::TestRunner::testSleep",
+  "test/test_pipeline.py::TestRunner::testSleepNotCalledWhenZero",
+]
+pass_to_pass = [
+  "test/test_pipeline.py::TestRunner::testAccessAndExistsAreCalled",
+  "test/test_pipeline.py::TestRunner::testCwdWithRelativeScriptPath",
+  "test/test_pipeline.py::TestRunner::testDuplicateName",
+  "test/test_pipeline.py::TestRunner::testEmptyJSON",
+  "test/test_pipeline.py::TestRunner::testFirstStep",
+  "test/test_pipeline.py::TestRunner::testFirstStepAndLastStepDifferent",
+  "test/test_pipeline.py::TestRunner::testFirstStepAndLastStepSame",
+  "test/test_pipeline.py::TestRunner::testForce",
+  "test/test_pipeline.py::TestRunner::testInvalidJSON",
+  "test/test_pipeline.py::TestRunner::testJSONList",
+  "test/test_pipeline.py::TestRunner::testLastStepBeforeFirstStep",
+  "test/test_pipeline.py::TestRunner::testList",
+  "test/test_pipeline.py::TestRunner::testNoSteps",
+  "test/test_pipeline.py::TestRunner::testNonDictionaryStep",
+  "test/test_pipeline.py::TestRunner::testNonExistentDependency",
+  "test/test_pipeline.py::TestRunner::testNonListDependencies",
+  "test/test_pipeline.py::TestRunner::testNonStringName",
+  "test/test_pipeline.py::TestRunner::testNonStringScript",
+  "test/test_pipeline.py::TestRunner::testNonYetDefinedDependency",
+  "test/test_pipeline.py::TestRunner::testNonexistentFirstStep",
+  "test/test_pipeline.py::TestRunner::testNonexistentLastStep",
+  "test/test_pipeline.py::TestRunner::testNonexistentScript",
+  "test/test_pipeline.py::TestRunner::testReSchedule",
+  "test/test_pipeline.py::TestRunner::testRepeatedTaskJobId",
+  "test/test_pipeline.py::TestRunner::testRepeatedTaskName",
+  "test/test_pipeline.py::TestRunner::testScheduledTime",
+  "test/test_pipeline.py::TestRunner::testScriptArgs",
+  "test/test_pipeline.py::TestRunner::testSingleCollectorDependencyTaskNamesAndJobIds",
+  "test/test_pipeline.py::TestRunner::testSingleDependencySynchronousTaskNamesJobIdsAndCalls",
+  "test/test_pipeline.py::TestRunner::testSingleDependencyTaskNamesJobIdsAndCalls",
+  "test/test_pipeline.py::TestRunner::testSleepNotCalledByDefault",
+  "test/test_pipeline.py::TestRunner::testSpecificationIsStored",
+  "test/test_pipeline.py::TestRunner::testStepStdout",
+  "test/test_pipeline.py::TestRunner::testStepWithoutName",
+  "test/test_pipeline.py::TestRunner::testStepWithoutScript",
+  "test/test_pipeline.py::TestRunner::testStepsDict",
+  "test/test_pipeline.py::TestRunner::testStepsMustBeAList",
+  "test/test_pipeline.py::TestRunner::testTaskScheduleTime",
+  "test/test_pipeline.py::TestRunner::testTasksFollowingSchedule",
+]
+max_cost_cny = 0.5

@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  tests/test_api_30.py::ApiTest::test_UploadSmallVideoUsesChunkedData \
+  tests/test_api_30.py::ApiTest::testApiRaisesAuthErrors \
+  tests/test_api_30.py::ApiTest::testApiSetUp \
+  tests/test_api_30.py::ApiTest::testCreateBlock \
+  tests/test_api_30.py::ApiTest::testCreateFavorite \
+  tests/test_api_30.py::ApiTest::testCreateList \
+  tests/test_api_30.py::ApiTest::testCreateListsMember \
+  tests/test_api_30.py::ApiTest::testCreateListsMemberMultiple \
+  tests/test_api_30.py::ApiTest::testCreateMute \
+  tests/test_api_30.py::ApiTest::testCreateSubscription \
+  tests/test_api_30.py::ApiTest::testDestroyBlock \
+  tests/test_api_30.py::ApiTest::testDestroyDirectMessage \
+  tests/test_api_30.py::ApiTest::testDestroyFavorite \
+  tests/test_api_30.py::ApiTest::testDestroyList \
+  tests/test_api_30.py::ApiTest::testDestroyListsMember \
+  tests/test_api_30.py::ApiTest::testDestroyListsMemberMultiple \
+  tests/test_api_30.py::ApiTest::testDestroyMute \
+  tests/test_api_30.py::ApiTest::testDestroyStatus \
+  tests/test_api_30.py::ApiTest::testDestroySubscription \
+  tests/test_api_30.py::ApiTest::testFriendsErrorChecking \
+  tests/test_api_30.py::ApiTest::testGetBlocks \
+  tests/test_api_30.py::ApiTest::testGetBlocksIDs \
+  tests/test_api_30.py::ApiTest::testGetBlocksIDsPaged \
+  tests/test_api_30.py::ApiTest::testGetBlocksPaged \
+  tests/test_api_30.py::ApiTest::testGetDirectMessages \
+  tests/test_api_30.py::ApiTest::testGetFavorites \
+  tests/test_api_30.py::ApiTest::testGetFollowerIDsPaged \
+  tests/test_api_30.py::ApiTest::testGetFollowers \
+  tests/test_api_30.py::ApiTest::testGetFollowersIDs \
+  tests/test_api_30.py::ApiTest::testGetFollowersPaged \
+  tests/test_api_30.py::ApiTest::testGetFriendIDs \
+  tests/test_api_30.py::ApiTest::testGetFriendIDsPaged \
+  tests/test_api_30.py::ApiTest::testGetFriends \
+  tests/test_api_30.py::ApiTest::testGetFriendsAdditionalParams \
+  tests/test_api_30.py::ApiTest::testGetFriendsPaged \
+  tests/test_api_30.py::ApiTest::testGetFriendsPagedUID \
+  tests/test_api_30.py::ApiTest::testGetFriendsWithLimit \
+  tests/test_api_30.py::ApiTest::testGetHelpConfiguration \
+  tests/test_api_30.py::ApiTest::testGetHomeTimeline \
+  tests/test_api_30.py::ApiTest::testGetHomeTimelineWithExclusions \
+  tests/test_api_30.py::ApiTest::testGetListMembers \
+  tests/test_api_30.py::ApiTest::testGetListMembersPaged \
+  tests/test_api_30.py::ApiTest::testGetListTimeline \
+  tests/test_api_30.py::ApiTest::testGetLists \
+  tests/test_api_30.py::ApiTest::testGetListsList \
+  tests/test_api_30.py::ApiTest::testGetMemberships \
+  tests/test_api_30.py::ApiTest::testGetMentions \
+  tests/test_api_30.py::ApiTest::testGetMutes \
+  tests/test_api_30.py::ApiTest::testGetMutesIDs \
+  tests/test_api_30.py::ApiTest::testGetRetweeters \
+  tests/test_api_30.py::ApiTest::testGetRetweets \
+  tests/test_api_30.py::ApiTest::testGetRetweetsCount \
+  tests/test_api_30.py::ApiTest::testGetSeachRawQuery \
+  tests/test_api_30.py::ApiTest::testGetSearch \
+  tests/test_api_30.py::ApiTest::testGetSearchGeocode \
+  tests/test_api_30.py::ApiTest::testGetSentDirectMessages \
+  tests/test_api_30.py::ApiTest::testGetShortUrlLength \
+  tests/test_api_30.py::ApiTest::testGetStatus \
+  tests/test_api_30.py::ApiTest::testGetStatusExtraParams \
+  tests/test_api_30.py::ApiTest::testGetStatusOembed \
+  tests/test_api_30.py::ApiTest::testGetStatusWithExtAltText \
+  tests/test_api_30.py::ApiTest::testGetSubscriptions \
+  tests/test_api_30.py::ApiTest::testGetSubscriptionsSN \
+  tests/test_api_30.py::ApiTest::testGetTrendsCurrent \
+  tests/test_api_30.py::ApiTest::testGetUser \
+  tests/test_api_30.py::ApiTest::testGetUserSuggestion \
+  tests/test_api_30.py::ApiTest::testGetUserSuggestionCategories \
+  tests/test_api_30.py::ApiTest::testGetUserTimeSinceMax \
+  tests/test_api_30.py::ApiTest::testGetUserTimelineByScreenName \
+  tests/test_api_30.py::ApiTest::testGetUserTimelineByUserID \
+  tests/test_api_30.py::ApiTest::testGetUserTimelineCount \
+  tests/test_api_30.py::ApiTest::testGetUsersSearch \
+  tests/test_api_30.py::ApiTest::testLookupFriendship \
+  tests/test_api_30.py::ApiTest::testLookupFriendshipBlockMute \
+  tests/test_api_30.py::ApiTest::testLookupFriendshipMute \
+  tests/test_api_30.py::ApiTest::testMuteBlockParamsAndErrors \
+  tests/test_api_30.py::ApiTest::testPostDirectMessage \
+  tests/test_api_30.py::ApiTest::testPostMediaMetadata \
+  tests/test_api_30.py::ApiTest::testPostUpdate \
+  tests/test_api_30.py::ApiTest::testPostUpdateExtraParams \
+  tests/test_api_30.py::ApiTest::testPostUpdateWithMedia \
+  tests/test_api_30.py::ApiTest::testPostUploadMediaChunkedAppend \
+  tests/test_api_30.py::ApiTest::testPostUploadMediaChunkedAppendNonASCIIFilename \
+  tests/test_api_30.py::ApiTest::testPostUploadMediaChunkedFinalize \
+  tests/test_api_30.py::ApiTest::testPostUploadMediaChunkedInit \
+  tests/test_api_30.py::ApiTest::testSetAndClearCredentials \
+  tests/test_api_30.py::ApiTest::testShowFriendship \
+  tests/test_api_30.py::ApiTest::testShowSubscription \
+  tests/test_api_30.py::ApiTest::testUpdateBanner \
+  tests/test_api_30.py::ApiTest::testUpdateBanner400Error \
+  tests/test_api_30.py::ApiTest::testUpdateBanner422Error \
+  tests/test_api_30.py::ApiTest::testUsersLookup \
+  tests/test_api_30.py::ApiTest::testVerifyCredentials \
+  tests/test_api_30.py::ApiTest::testVerifyCredentialsIncludeEmail \
+  tests/test_api_30.py::ApiTest::test_UpdateBackgroundImage_deprecation; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

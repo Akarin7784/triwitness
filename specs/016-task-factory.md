@@ -58,8 +58,14 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 - `mine --exclude-existing --fetch-filtered N`：跳过所有已尝试过的实例（`evals/factory/**/build_log*.json` 与 task.toml 元数据），
   filtered 子集额外取 N 页；每仓库总数（含已有任务）≤ 2。
 - 构建一律加固（匿名 ID、清洗 Issue 正文、禁用 hooks、删 `.git`），与 dev / test 不重叠。
-- `split-ext --log evals/factory/ext/build_log.json --name ext`：把通过校验的任务搬到 `evals/tasks/ext/`，写冻结套件
-  `evals/suites/ext.yaml`（digest 同 5.3）；失败任务留在被 git 忽略的 `_staging_ext/`。
+- `split-ext --log evals/factory/ext/build_log.json --name ext --size 50`：把通过校验的任务搬到 `evals/tasks/ext/`，
+  created_at 最新的 50 个写冻结套件 `evals/suites/ext.yaml`，其余写 `ext-reserve.yaml`（同样冻结、备用）；
+  digest 同 5.3；失败任务留在被 git 忽略的 `_staging_ext/`。
+- 2026-10-12 结果：185 个候选 → **109 个通过**（null 0 / oracle 1 各 3 次），ext 50（leaderboard 33 + filtered 17，
+  2023-08…2026-02）+ ext-reserve 59（2016-11…2023-07）；dev 15 + test 35 + ext 50 = **100**。
+  失败 76：构建 28（依赖安装 / 钉版本冲突 21、拉源码归档网络超时 4、缺 make / poetry 2、超时 1）、
+  校验 39（缺测试依赖 15、测试 ID / pytest 参数不匹配 9、用例联网或环境失败 8、覆盖率门槛 4、版本漂移 3）、
+  格式错误 9（test.sh 没跑到参数化用例 / 缺测试文件 6、绝对路径软链接 1、网络 2）。审计：ext 109 个 0 发现。
 - 污染提示：filtered 子集里有 2016 年起的老实例，ext 只作补充样本（扩大 n、降低 MDE），报告里与 test 分开列。
 
 ## 6. 验收标准
@@ -81,10 +87,13 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 
 ## 9. 开放问题
 
+- ext 是否也设为“只出报告”（像 test 一样要 `--allow-test`）：目前允许在 ext 上跑消融（扩大 n），待 Eva 定。
+
 - leaderboard 新月份发布后是否滚动替换 test（会破坏跨周可比性；倾向新增 test-v2 而非替换）。
 - 自挖 GitHub PR 的必要性：等 SWE-rebench 无法覆盖目标仓库类型时再做。
 
 ## 10. 变更记录
 
+- 2026-10-12：ext 50 + ext-reserve 59 冻结（5.4）。
 - 2026-10-11：W5-12 扩充套件 ext（5.4）与磁盘占用率守卫（65%）。
 - 2026-10-10：初稿（W2-05），实现 W2-20～23 已完成（a71aa56 … 2227e22），见 docs/design/task-factory.md。

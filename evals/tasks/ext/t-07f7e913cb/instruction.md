@@ -1,0 +1,3 @@
+Double counting of errors p-code adm name combination consistency errors
+When I put the below into data check, I get 2 of every cell eg. F3,F3,F4,F4,F5,F5...
+https://data.humdata.org/dataset/77c97850-4004-4285-94db-0b390a962d6e/resource/d6c0dbac-683d-42d7-82b4-a6379bd4f48e/download/mrt_population_statistics_ons_rgph_2013_2017.xlsx

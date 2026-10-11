@@ -1,0 +1,49 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-a950fd3ed2"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/conan-io/conan"
+base_commit = "82765f2ba80a3f07d21de4c27d73203081017694"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2024-03-22"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "conan-io__conan-15924"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "conans/test/unittests/model/conanfile_test.py::ConanFileTest::test_conanfile_new_print_save",
+]
+pass_to_pass = [
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmake_toolchain_user_toolchain",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmake_toolchain_custom_toolchain",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmake_toolchain_without_build_type",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmake_presets_duplicated_install[True]",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmake_presets_duplicated_install[False]",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_remove_missing_presets",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmake_presets_not_forbidden_build_type",
+  "conans/test/functional/toolchains/cmake/test_cmake_toolchain.py::test_cmaketoolchain_conf_from_tool_require",
+  "conans/test/unittests/model/conanfile_test.py::ConanFileTest::test_conanfile_naming",
+  "conans/test/unittests/model/conanfile_test.py::ConanFileTest::test_conanfile_naming_complete",
+  "conans/test/unittests/model/conanfile_test.py::ConanFileTest::test_conanfile_new_print",
+]
+max_cost_cny = 0.5

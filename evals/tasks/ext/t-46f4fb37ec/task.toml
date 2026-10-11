@@ -1,0 +1,89 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-46f4fb37ec"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/lincc-frameworks/nested-pandas"
+base_commit = "349a91d1aa4985ae66f90173ecfc2838667e6c28"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2025-05-09"
+license = "MIT\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench-leaderboard"
+instance_id = "lincc-frameworks__nested-pandas-261"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_get_nested_columns",
+]
+pass_to_pass = [
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_nestedframe_construction",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_nestedseries_construction",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_html_repr",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_all_columns",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_nested_columns",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_is_known_hierarchical_column",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_is_known_column",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_get_nested_column",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_get_nested_columns_errors",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_set_or_replace_nested_col",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_set_new_nested_col",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_set_list_struct_col",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_get_dot_names",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_nesting_limit",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_add_nested_with_flat_df",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_add_nested_with_flat_df_and_mismatched_index",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_add_nested_with_series",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_add_nested_with_series_and_mismatched_index",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_add_nested_for_empty_df",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat[None-False]",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat[None-True]",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat[a-False]",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat[a-True]",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat[c-False]",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat[c-True]",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_recover_from_flat",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_flat_omitting_columns",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_from_lists",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_query",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_query_on_non_identifier_columns",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_dropna",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_dropna_layer_as_base_column",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_dropna_inplace_base",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_dropna_inplace_nested",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_dropna_errors",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_sort_values",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_sort_values_ascension",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_reduce",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_reduce_duplicated_cols",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_reduce_infer_nesting",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_reduce_arg_errors",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_scientific_notation",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_drop",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_eval",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_eval_funcs",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_mixed_eval_funcs",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_eval_assignment",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_access_non_existing_column",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_issue193",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_issue235",
+  "tests/nested_pandas/nestedframe/test_nestedframe.py::test_nest_lists",
+]
+max_cost_cny = 0.5

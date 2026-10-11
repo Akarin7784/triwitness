@@ -1,0 +1,44 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-8222d4ebc8"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/EvoluxBR/greenswitch"
+base_commit = "eb210f31ff723bba75d83b09d898f7e1273eb63b"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2023-05-15"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "EvoluxBR__greenswitch-83"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_outbound_session.py::TestWhileConnectedMethod::test_raising_OutboundSessionHasGoneAway_in_session_stop_will_pass",
+]
+pass_to_pass = [
+  "tests/test_outbound_session.py::TestOutboundSession::test_outbound_connected_is_updated_during_on_disconnected_event",
+  "tests/test_outbound_session.py::TestOutboundSession::test_outbound_connected_is_updated_during_on_hangup_event",
+  "tests/test_outbound_session.py::TestWhileConnectedMethod::test_context_manager",
+  "tests/test_outbound_session.py::TestWhileConnectedMethod::test_decorator",
+  "tests/test_outbound_session.py::TestWhileConnectedMethod::test_raise_value_error_while_the_call_is_active",
+  "tests/test_outbound_session.py::TestWhileConnectedMethod::test_skip_code_execution_if_the_outbound_session_is_disconnected",
+]
+max_cost_cny = 0.5

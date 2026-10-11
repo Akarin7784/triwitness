@@ -1,0 +1,49 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-15f0a0f949"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/chrahunt/hlp"
+base_commit = "b9d32dd1b2e80733582df93363ac5443837dd993"
+difficulty = "medium"
+tags = ["python", "real-world"]
+created_at = "2019-09-29"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "chrahunt__hlp-15"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_autocomplete.py::test_autocomplete_bash_empty",
+]
+pass_to_pass = [
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aa-expected0]",
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aaa-expected1]",
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aaa.-expected2]",
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aaa.m-expected3]",
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aaa.mod_a.-expected4]",
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aaa.mod_a.Test-expected5]",
+  "tests/test_autocomplete.py::test_autocomplete_basics[pkg_aaa.mod_a.Test.-expected6]",
+  "tests/test_autocomplete.py::test_autocomplete_bash[words0-1-expected0]",
+  "tests/test_autocomplete.py::test_autocomplete_bash[words1-1-expected1]",
+  "tests/test_autocomplete.py::test_autocomplete_bash[words2-2-expected2]",
+  "tests/test_autocomplete.py::test_autocomplete_bash[words3-2-expected3]",
+]
+max_cost_cny = 0.5

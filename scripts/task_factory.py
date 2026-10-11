@@ -430,12 +430,19 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
 EXT_DESC = (
     "扩展集（W5-12 / DF-08）：任务工厂加固版（匿名 ID、清洗 Issue、禁用 hooks），"
     "SWE-rebench leaderboard 2025-01～2026-03 + filtered；与 dev / test 不重叠、同仓库合计 ≤ 2；"
-    "W5 只构建与校验，全量跑分在 Eva 本机"
+    "W5 只构建与校验，全量跑分在 Eva 本机；取 created_at 最新的一批（dev 15 + test 35 + ext ≈ 100）"
+)
+EXT_RESERVE_DESC = (
+    "扩展集备用（W5-12）：与 ext 同批构建、同样加固与三次去抖校验，created_at 较旧（污染风险更高）；"
+    "不进默认报告，只在需要更大 n 时使用"
 )
 
 
-def split_ext(log_path: Path, name: str = "ext") -> None:
-    """把扩展构建里通过三次去抖校验的任务搬到 evals/tasks/<name>/，写冻结套件 evals/suites/<name>.yaml。"""
+def split_ext(log_path: Path, name: str = "ext", size: int = 0) -> None:
+    """把扩展构建里通过三次去抖校验的任务搬到 evals/tasks/<name>/，写冻结套件 evals/suites/<name>.yaml。
+
+    size > 0 时 <name> 只收 created_at 最新的 size 个（污染风险最低），其余写 <name>-reserve（同样冻结，备用）。
+    """
     import tomllib
 
     from triwitness.eval.suites import Suite, SuiteTask, digest, dump_suite
@@ -468,8 +475,16 @@ def split_ext(log_path: Path, name: str = "ext") -> None:
         return SuiteTask(id=d.name, source=f"{src}:{month}" if month else src, created_at=meta["created_at"],
                          difficulty=meta["difficulty"], license=to_spdx(meta["license"]))  # fmt: skip
 
-    s = Suite(name=name, description=EXT_DESC, digest=digest(dirs), tasks=[entry(d) for d in dirs])
-    print(f"{dump_suite(s, ROOT / 'evals' / 'suites').relative_to(ROOT)}：{len(s.tasks)} 个，digest {s.digest}")
+    entries = sorted((entry(d) for d in dirs), key=lambda t: (t.created_at, t.id), reverse=True)
+    picked = entries[:size] if size > 0 else entries
+    groups = [(name, EXT_DESC, picked)]
+    if len(picked) < len(entries):
+        groups.append((f"{name}-reserve", EXT_RESERVE_DESC, entries[len(picked) :]))
+    by_id = {d.name: d for d in dirs}
+    for suite_name, desc, tasks in groups:
+        tasks = sorted(tasks, key=lambda t: t.id)
+        s = Suite(name=suite_name, description=desc, digest=digest([by_id[t.id] for t in tasks]), tasks=tasks)
+        print(f"{dump_suite(s, ROOT / 'evals' / 'suites').relative_to(ROOT)}：{len(s.tasks)} 个，digest {s.digest}")
 
 
 def audit(roots: list[Path], out: Path | None, strict: bool) -> int:
@@ -520,6 +535,7 @@ def main() -> None:
     se = sub.add_parser("split-ext", help="W5 扩展集：通过校验的加固任务 → evals/tasks/ext + evals/suites/ext.yaml")
     se.add_argument("--log", type=Path, default=ROOT / "evals" / "factory" / "ext" / "build_log.json")
     se.add_argument("--name", default="ext")
+    se.add_argument("--size", type=int, default=0, help="主套件只收最新的 N 个，其余进 <name>-reserve（0 = 全收）")
     sp = sub.add_parser("split", help="冻结 dev / test / dev-smoke 切分，写 evals/suites/*.yaml")
     sp.add_argument("--log", type=Path, default=ROOT / "evals" / "factory" / "build_log.json")
     sp.add_argument("--staging", default="_staging")
@@ -529,7 +545,7 @@ def main() -> None:
     if a.cmd == "split":
         split(a.log, a.staging, a.test, a.dev_new)
     elif a.cmd == "split-ext":
-        split_ext(a.log, a.name)
+        split_ext(a.log, a.name, a.size)
     elif a.cmd == "mine":
         mine(a.out, a.months, a.filtered_pages, fetch_filtered=a.fetch_filtered, exclude_existing=a.exclude_existing)
     elif a.cmd == "audit":

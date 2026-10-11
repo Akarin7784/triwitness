@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_multiple_with_duplicates \
+  django_countries/tests/test_fields.py::TestCountryField::test_COUNTRIES_FLAG_URL_setting \
+  django_countries/tests/test_fields.py::TestCountryField::test_blank \
+  django_countries/tests/test_fields.py::TestCountryField::test_by_country_name \
+  django_countries/tests/test_fields.py::TestCountryField::test_by_country_name_contains \
+  django_countries/tests/test_fields.py::TestCountryField::test_by_country_name_endswith \
+  django_countries/tests/test_fields.py::TestCountryField::test_by_country_name_regex \
+  django_countries/tests/test_fields.py::TestCountryField::test_by_country_name_startswith \
+  django_countries/tests/test_fields.py::TestCountryField::test_create_modelform \
+  django_countries/tests/test_fields.py::TestCountryField::test_custom_field_flag_url \
+  django_countries/tests/test_fields.py::TestCountryField::test_custom_field_str_attr \
+  django_countries/tests/test_fields.py::TestCountryField::test_db_collation \
+  django_countries/tests/test_fields.py::TestCountryField::test_deconstruct \
+  django_countries/tests/test_fields.py::TestCountryField::test_deferred \
+  django_countries/tests/test_fields.py::TestCountryField::test_exact \
+  django_countries/tests/test_fields.py::TestCountryField::test_flag \
+  django_countries/tests/test_fields.py::TestCountryField::test_flag_css \
+  django_countries/tests/test_fields.py::TestCountryField::test_flag_css_blank \
+  django_countries/tests/test_fields.py::TestCountryField::test_get_property_from_class \
+  django_countries/tests/test_fields.py::TestCountryField::test_iexact \
+  django_countries/tests/test_fields.py::TestCountryField::test_in \
+  django_countries/tests/test_fields.py::TestCountryField::test_len \
+  django_countries/tests/test_fields.py::TestCountryField::test_logic \
+  django_countries/tests/test_fields.py::TestCountryField::test_lookup_country \
+  django_countries/tests/test_fields.py::TestCountryField::test_lookup_text \
+  django_countries/tests/test_fields.py::TestCountryField::test_model_with_prop \
+  django_countries/tests/test_fields.py::TestCountryField::test_multi_null_country \
+  django_countries/tests/test_fields.py::TestCountryField::test_name \
+  django_countries/tests/test_fields.py::TestCountryField::test_null \
+  django_countries/tests/test_fields.py::TestCountryField::test_nullable_deferred \
+  django_countries/tests/test_fields.py::TestCountryField::test_only \
+  django_countries/tests/test_fields.py::TestCountryField::test_render_form \
+  django_countries/tests/test_fields.py::TestCountryField::test_save_empty_country \
+  django_countries/tests/test_fields.py::TestCountryField::test_text \
+  django_countries/tests/test_fields.py::TestCountryField::test_unicode_flag_blank \
+  django_countries/tests/test_fields.py::TestCountryField::test_unicode_flags \
+  django_countries/tests/test_fields.py::TestValidation::test_get_prep_value_empty_string \
+  django_countries/tests/test_fields.py::TestValidation::test_get_prep_value_invalid_type \
+  django_countries/tests/test_fields.py::TestValidation::test_get_prep_value_none \
+  django_countries/tests/test_fields.py::TestValidation::test_validate \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_alpha3 \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_empty \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_invalid \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_multiple \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_multiple_empty \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_multiple_invalid \
+  django_countries/tests/test_fields.py::TestValidation::test_validate_multiple_uneditable \
+  django_countries/tests/test_fields.py::TestCountryCustom::test_deconstruct \
+  django_countries/tests/test_fields.py::TestCountryCustom::test_field \
+  django_countries/tests/test_fields.py::TestCountryCustom::test_name \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_all_countries \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_contains \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_deconstruct \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_empty \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_empty_save \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_multiple \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_set_countries \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_set_country \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_set_list \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_set_text \
+  django_countries/tests/test_fields.py::TestCountryMultiple::test_single \
+  django_countries/tests/test_fields.py::TestCountryObject::test_alpha2_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_alpha2_code_invalid \
+  django_countries/tests/test_fields.py::TestCountryObject::test_alpha3 \
+  django_countries/tests/test_fields.py::TestCountryObject::test_alpha3_invalid \
+  django_countries/tests/test_fields.py::TestCountryObject::test_country_from_blank_ioc_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_country_from_ioc_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_country_from_nonexistence_ioc_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_empty_flag_url \
+  django_countries/tests/test_fields.py::TestCountryObject::test_extensions \
+  django_countries/tests/test_fields.py::TestCountryObject::test_flag_on_empty_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_hash \
+  django_countries/tests/test_fields.py::TestCountryObject::test_ioc_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_numeric \
+  django_countries/tests/test_fields.py::TestCountryObject::test_numeric_code \
+  django_countries/tests/test_fields.py::TestCountryObject::test_numeric_code_invalid \
+  django_countries/tests/test_fields.py::TestCountryObject::test_numeric_invalid \
+  django_countries/tests/test_fields.py::TestCountryObject::test_numeric_padded \
+  django_countries/tests/test_fields.py::TestCountryObject::test_numeric_padded_invalid \
+  django_countries/tests/test_fields.py::TestCountryObject::test_repr \
+  django_countries/tests/test_fields.py::TestCountryObject::test_str \
+  django_countries/tests/test_fields.py::TestCountryObject::test_str_attr \
+  django_countries/tests/test_fields.py::TestModelForm::test_blank_choice \
+  django_countries/tests/test_fields.py::TestModelForm::test_blank_choice_label \
+  django_countries/tests/test_fields.py::TestModelForm::test_no_blank_choice \
+  django_countries/tests/test_fields.py::TestModelForm::test_translated_choices \
+  django_countries/tests/test_fields.py::TestModelForm::test_validation \
+  django_countries/tests/test_fields.py::TestPickling::test_custom_country_pickling \
+  django_countries/tests/test_fields.py::TestPickling::test_standard_country_pickling \
+  django_countries/tests/test_fields.py::TestLoadData::test_basic \
+  django_countries/tests/test_fields.py::test_longer_country_code_deconstruction \
+  django_countries/tests/test_fields.py::test_longer_country_code_multiple_deconstruction; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

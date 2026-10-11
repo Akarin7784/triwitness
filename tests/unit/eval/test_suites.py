@@ -71,3 +71,19 @@ def test_real_split_is_frozen_and_well_formed() -> None:
     fresh = [t for t in test.tasks if "leaderboard" in t.source]
     assert len(fresh) >= 20
     assert min(t.created_at for t in fresh) >= max(t.created_at for t in dev.tasks if t.source != "synthetic")
+
+
+@pytest.mark.skipif(not (SUITES / "ext.yaml").exists(), reason="扩展集尚未生成")
+def test_ext_suites_are_frozen_hardened_and_disjoint() -> None:
+    """W5-12：ext / ext-reserve 冻结、与 dev / test 不重叠、全部匿名 ID，ext 取较新的一批。"""
+    for name in ("ext", "ext-reserve"):
+        assert check_suite(name, suites=SUITES, tasks=TASKS) == [], name
+    ext, reserve, dev, test = (load_suite(n, SUITES) for n in ("ext", "ext-reserve", "dev", "test"))
+    assert len(ext.tasks) + len(dev.tasks) + len(test.tasks) >= 95
+    ids = set(ext.ids) | set(reserve.ids)
+    assert not set(ext.ids) & set(reserve.ids)
+    assert not ids & (set(dev.ids) | set(test.ids))
+    assert all(re.fullmatch(r"t-[0-9a-f]{10}", i) for i in ids)
+    for t in ext.tasks + reserve.tasks:
+        assert t.license.startswith(PERMISSIVE), (t.id, t.license)
+    assert min(t.created_at for t in ext.tasks) >= max(t.created_at for t in reserve.tasks)

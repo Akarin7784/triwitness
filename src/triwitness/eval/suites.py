@@ -1,4 +1,4 @@
-"""评测套件（W2-23）：evals/suites/<name>.yaml 冻结任务清单；dev / test / dev-smoke。
+"""评测套件（W2-23）：evals/suites/<name>.yaml 冻结任务清单；dev / test / dev-smoke，W5-12 加 ext / ext-reserve。
 
 - 套件文件列出任务 id 与来源 / 日期 / 难度 / 许可证，并带 `digest`：所有任务目录内容的哈希。任务内容被改动时
   `check_suite` 报错——冻结的切分不能悄悄变化（要改就重新生成并在变更记录里写明）；

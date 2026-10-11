@@ -1,0 +1,54 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-d9afe9b298"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/awdeorio/mailmerge"
+base_commit = "e23b6071ba4f6a3b6ef1b7b7520e13fcc7013756"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2023-07-29"
+license = "MIT License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "awdeorio__mailmerge-155"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/test_sendmail_client.py::test_security_ssl",
+  "tests/test_sendmail_client.py::test_ssl_error",
+]
+pass_to_pass = [
+  "tests/test_sendmail_client.py::test_smtp",
+  "tests/test_sendmail_client.py::test_dry_run",
+  "tests/test_sendmail_client.py::test_no_dry_run",
+  "tests/test_sendmail_client.py::test_bad_config_key",
+  "tests/test_sendmail_client.py::test_security_error",
+  "tests/test_sendmail_client.py::test_security_open",
+  "tests/test_sendmail_client.py::test_security_open_legacy",
+  "tests/test_sendmail_client.py::test_security_starttls",
+  "tests/test_sendmail_client.py::test_security_xoauth",
+  "tests/test_sendmail_client.py::test_security_xoauth_bad_username",
+  "tests/test_sendmail_client.py::test_security_plain",
+  "tests/test_sendmail_client.py::test_missing_username",
+  "tests/test_sendmail_client.py::test_smtp_login_error",
+  "tests/test_sendmail_client.py::test_smtp_sendmail_error",
+  "tests/test_sendmail_client.py::test_socket_error",
+]
+max_cost_cny = 0.5

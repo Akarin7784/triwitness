@@ -438,7 +438,7 @@ def eval_estimate(
 
 @eval_app.command("run")
 def eval_run(
-    suite: Annotated[str, typer.Option(help="evals/suites/<suite>.yaml（dev / test / dev-smoke）")] = "dev",
+    suite: Annotated[str, typer.Option(help="evals/suites/<suite>.yaml（dev / test / dev-smoke / ext …）")] = "dev",
     allow_test: Annotated[bool, typer.Option("--allow-test", help="test 集只用于出报告，跑它必须显式确认")] = False,
     config: Annotated[list[Path] | None, typer.Option(help="RunConfig YAML（llm Agent），可多次")] = None,
     agent: Annotated[list[str] | None, typer.Option(help="免费假 Agent：null / oracle / tamper，可多次")] = None,

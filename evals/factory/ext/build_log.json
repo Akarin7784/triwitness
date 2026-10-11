@@ -1,0 +1,1783 @@
+{
+ "pasqal-io__Pulser-936": {
+  "instance_id": "pasqal-io__Pulser-936",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-18",
+  "status": "build_failed",
+  "log": " nest-asyncio2-1.7.4 nodeenv-1.11.0 notebook-7.6.3 notebook-shim-0.2.4 numpy-2.5.4 packaging-26.3 pandocfilters-1.5.1 parso-0.8.7 pasqal-cloud-0.22.0 pathspec-1.1.1 pexpect-4.9.0 pillow-12.3.0 platformdirs-4.13.0 pluggy-1.6.0 pre-commit-4.6.2 prometheus-client-0.26.0 prompt_toolkit-3.0.53 psutil-7.2.2 ptyprocess-0.7.0 pulser-core-1.9.1 pulser-pasqal-0.24.0 pure-eval-0.2.4 pyaml-26.7.0 pycodestyle-2.15.0 pycparser-3.11 pydantic-2.14.0 pydantic-core-2.50.0 pydocstyle-6.3.0 pyflakes-4.0.3 pygments-2.21.0 pyjwt-2.15.1 pyparsing-3.3.3 pytest-9.1.1 pytest-cov-7.1.0 python-dateutil-2.9.0.post0 python-discovery-1.6.2 python-igraph-1.0.0 python-json-logger-4.2.0 pyyaml-6.0.3 pyzmq-27.2.0 referencing-0.37.0 requests-2.34.2 requests-mock-1.12.1 rfc3339-validator-0.1.4 rfc3986-validator-0.1.1 rfc3987-syntax-1.1.0 rpds-py-2026.9.1 ruff-0.11.1 scikit-learn-1.9.1 scikit-optimize-0.10.2 scipy-1.18.1 send2trash-2.1.0 six-1.17.0 snowballstemmer-3.1.1 soupsieve-3.0.1 stack_data-0.6.3 tenacity-8.5.0 terminado-0.18.1 texttable-1.7.0 threadpoolctl-3.7.0 tinycss2-1.5.1 tokenize-rt-6.2.0 tornado-6.5.10 traitlets-5.16.1 typing-extensions-4.16.0 typing-inspection-0.4.4 tzdata-2026.5 uri-template-1.3.0 urllib3-2.8.0 virtualenv-21.14.6 wcwidth-0.9.2 webcolors-25.10.0 webencodings-0.6.1 websocket-client-1.9.2\n\u001b[91m/bin/sh: 1: make: not found\n\u001b[0m ---> Removed intermediate container 99204e280d83\nThe command '/bin/sh -c pip install -r dev_requirements.txt && make dev-install' returned a non-zero code: 127\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-92c48e457f",
+  "seconds": 151
+ },
+ "a2aproject__a2a-python-472": {
+  "instance_id": "a2aproject__a2a-python-472",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-13",
+  "status": "build_failed",
+  "log": "               ^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-vu8wqcws/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 264, in _get_version\n          version = self.hatch.version.cached\n                    ^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-vu8wqcws/overlay/lib/python3.12/site-packages/hatchling/metadata/core.py\", line 1550, in cached\n          raise type(e)(message) from None\n      RuntimeError: Error getting the version from source `uv-dynamic-versioning`: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container d3381108f6f5\nThe command '/bin/sh -c pip install httpx>=0.28.1 httpx-sse>=0.4.0 pydantic>=2.11.3 protobuf>=5.29.5 google-api-core>=1.26.0 pytest>=8.3.5 pytest-asyncio>=0.26.0 pytest-cov>=6.1.1 pytest-mock>=3.14.0 respx>=0.20.2 && pip install fastapi>=0.115.2 sse-starlette starlette && pip install sqlalchemy[asyncio] asyncpg aiomysql aiosqlite && pip install -e . && pip install grpcio>=1.60 grpcio-tools>=1.60 grpcio_reflection>=1.7.0 && pip install opentelemetry-api>=1.33.0 opentelemetry-sdk>=1.33.0 && pip install cryptography>=43.0.0' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-2be22f2e85",
+  "seconds": 28
+ },
+ "reframe-hpc__reframe-3553": {
+  "instance_id": "reframe-hpc__reframe-3553",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-ad8de31634",
+  "image": "tw-task/t-ad8de31634:fbc1490d8769",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/unittests/conftest.py'.\nunittests/conftest.py:16: in <module>\n    import reframe.core.settings as settings\nreframe/__init__.py:25: in <module>\n    from reframe.core.pipeline import *     # noqa: F401, F403\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nreframe/core/pipeline.py:25: in <module>\n    import reframe.core.fields as fields\nreframe/core/fields.py:10: in <module>\n    import reframe.utility.typecheck as types\nreframe/utility/__init__.py:22: in <module>\n    from ClusterShell.NodeSet import NodeSet, NodeSetParseError\nE   ModuleNotFoundError: No module named 'ClusterShell'\n",
+  "seconds": 192
+ },
+ "getmoto__moto-9727": {
+  "instance_id": "getmoto__moto-9727",
+  "source": "nebius/SWE-rebench-leaderboard:2026_02",
+  "created_at": "2026-02-09",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-ca8117225b",
+  "image": "tw-task/t-ca8117225b:561be645e254",
+  "status": "ok",
+  "seconds": 207
+ },
+ "pab1it0__prometheus-mcp-server-76": {
+  "instance_id": "pab1it0__prometheus-mcp-server-76",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-21",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-d5d94eab5b",
+  "status": "build_failed",
+  "log": "     jaraco.classes==3.4.0     jaraco.context==6.1.2     jaraco.functools==4.6.0     jeepney==0.9.0     joserfc==1.7.5     jsonref==1.1.0     jsonschema-path==0.5.0     jsonschema-specifications==2025.9.1     jsonschema==4.26.0     keyring==25.7.0     markdown-it-py==4.2.0     mcp-types==2.3.0     mcp==2.3.0     mdurl==0.1.2     more-itertools==11.1.0     openapi-pydantic==0.6.0     opentelemetry-api==1.45.1     packaging==26.3     pathable==0.6.0     platformdirs==4.13.0     pluggy==1.6.0     prometheus-api-client==0.7.2     py-key-value-aio==0.4.6     pycparser==3.11     pydantic-settings==2.15.0     pydantic==2.14.0     pydantic_core==2.50.0     Pygments==2.21.0     PyJWT==2.15.1     pyperclip==1.11.0     pyproject-toml==0.1.0     pytest-asyncio==1.4.0     pytest-cov==7.1.0     pytest-mock==3.16.0     pytest==9.1.1     python-dateutil==2.9.0.post0     python-dotenv==1.2.4     python-multipart==0.0.32     pytz==2026.5     PyYAML==6.0.3     referencing==0.37.0     regex==2026.9.29     requests==2.34.2     rich-rst==2.2.0     rich==15.0.0     rpds-py==2026.9.1     SecretStorage==3.5.0     shellingham==1.5.4     six==1.17.0     sse-starlette==3.5.0     starlette==1.7.0     structlog==26.1.0     tography==50.0.2     truststore==0.10.4     typer==0.27.3     typing-inspection==0.4.4     typing_extensions==4.16.0     tzlocal==5.4.4     uncalled-for==0.4.1     urllib3==2.8.0     uvicorn==0.54.0     watchfiles==1.3.0     websockets==17.2     zipp==4.1.1' returned a non-zero code: 1\n",
+  "seconds": 241
+ },
+ "prometheus__client_python-1134": {
+  "instance_id": "prometheus__client_python-1134",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-11",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-fb4d0ceeb6",
+  "image": "tw-task/t-fb4d0ceeb6:6620e109280f",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nt setup of test_benchmark_text_string_to_metric_families ________\nfile /workspace/repo/tests/test_parser.py, line 378\n  def test_benchmark_text_string_to_metric_families(benchmark):\nE       fixture 'benchmark' not found\n>       available fixtures: capfd, capfdbinary, caplog, capsys, capsysbinary, capteesys, doctest_namespace, monkeypatch, platformdirs_isolated, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, subtests, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory\n>       use 'pytest --fixtures [testpath]' for help on them.\n\n/workspace/repo/tests/test_parser.py:378\n=========================== short test summary info ============================\nERROR tests/test_parser.py::test_benchmark_text_string_to_metric_families\n28 passed, 1 error in 0.17s\n",
+  "seconds": 80
+ },
+ "canopen-python__canopen-613": {
+  "instance_id": "canopen-python__canopen-613",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-04",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-7cec79f05e",
+  "image": "tw-task/t-7cec79f05e:cd7a11ea8c36",
+  "status": "ok",
+  "seconds": 83
+ },
+ "openatx__adbutils-188": {
+  "instance_id": "openatx__adbutils-188",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-14",
+  "status": "build_failed",
+  "log": "_version(\n                                   ^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-9rb6xif_/normal/lib/python3.12/site-packages/pbr/packaging.py\", line 408, in get_version\n          raise Exception(\n      Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name adbutils was given, but was not able to be found.\n      setup.py arguments: ['setup.py', 'dist_info', '--output-dir', '/tmp/pip-modern-metadata-_wow8lnj', '--keep-egg-info']\n      error in setup command: Error parsing /workspace/repo/setup.cfg: Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name adbutils was given, but was not able to be found.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container e85378a5f129\nThe command '/bin/sh -c pip install -e .[all]' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-3ad8a21594",
+  "seconds": 14
+ },
+ "macbre__sql-metadata-583": {
+  "instance_id": "macbre__sql-metadata-583",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-25",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-cdea6d34f0",
+  "image": "tw-task/t-cdea6d34f0:f29f641aa559",
+  "status": "ok",
+  "seconds": 59
+ },
+ "aws-powertools__powertools-lambda-python-7315": {
+  "instance_id": "aws-powertools__powertools-lambda-python-7315",
+  "source": "nebius/SWE-rebench-leaderboard:2025_09",
+  "created_at": "2025-09-04",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-67561a3a29",
+  "image": "tw-task/t-67561a3a29:4785cd568a91",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/unit/test_shared_functions.py:9: in <module>\n    from pydantic import BaseModel\nE   ModuleNotFoundError: No module named 'pydantic'\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nERROR tests/unit/parser/_pydantic/test_apigw.py\nERROR tests/unit/parser/_pydantic/test_apigwv2.py\nERROR tests/unit/test_shared_functions.py\n============================== 3 errors in 0.16s ===============================\n",
+  "seconds": 173
+ },
+ "yukinarit__pyserde-657": {
+  "instance_id": "yukinarit__pyserde-657",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-10",
+  "status": "build_failed",
+  "log": "in _get_version_from_dunamai\n          return Version.from_vcs(\n                 ^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-48pqop64/overlay/lib/python3.12/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n                 ^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-48pqop64/overlay/lib/python3.12/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n                 ^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-48pqop64/overlay/lib/python3.12/site-packages/dunamai/__init__.py\", line 2133, in from_any_vcs\n          vcs = _detect_vcs(None, path)\n                ^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-48pqop64/overlay/lib/python3.12/site-packages/dunamai/__init__.py\", line 420, in _detect_vcs\n          raise RuntimeError(\" \".join(error_parts))\n      RuntimeError: Unable to detect version control system. Checked: Git. Not installed: Mercurial, Darcs, Subversion, Bazaar, Fossil, Pijul.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 63888c1f2bf7\nThe command '/bin/sh -c pip install -e .[all,dev]' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-75c41a4a63",
+  "seconds": 18
+ },
+ "iterative__dvc-10844": {
+  "instance_id": "iterative__dvc-10844",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-15",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-e32816fa59",
+  "status": "build_failed",
+  "log": "e==2.50.0     pydot==4.0.1     PyDrive2==1.21.2     pygal==3.1.3     pygaljs==1.0.2     pygit2==1.20.1     Pygments==2.21.0     pygtrie==2.6.2     PyJWT==2.15.1     pyOpenSSL==22.0.0     pyparsing==3.3.3     pytest-benchmark==5.3.0     pytest-cov==7.1.0     pytest-docker==3.2.5     pytest-mock==3.16.0     pytest-rerunfailures==16.7     pytest-test-utils==0.1.0     pytest-timeout==2.4.0     pytest-xdist==3.8.0     pytest==8.4.2     python-dateutil==2.9.0.post0     python-dotenv==1.2.4     PyYAML==6.0.3     requests-oauthlib==2.0.0     requests==2.34.2     rich==15.0.0     rsa==4.9.1     ruamel.yaml==0.19.1     s3fs==2026.9.0     scmrepo==3.6.2     semver==3.1.0     setuptools==84.0.0     shortuuid==1.0.13     shtab==1.12.1     six==1.17.0     smmap==5.0.3     soupsieve==3.0.1     SQLAlchemy==2.1.4     sqltrie==0.11.3     sshfs==2026.8.0     tabulate==0.10.0     thspec==1.1.1     tomlkit==0.15.1     tqdm==4.70.1     types-colorama==0.4.15.20260508     types-psutil==7.2.2.20260906     types-pyinstaller==6.22.1.20260827     types-requests==2.33.0.20261006     types-tabulate==0.10.0.20261006     types-toml==0.10.8.20260518     types-tqdm==4.70.0.20260906     typing-inspection==0.4.4     typing_extensions==4.16.0     tzdata==2026.5     tzlocal==5.4.4     uritemplate==4.2.0     urllib3==2.8.0     uv==0.13.0     vine==5.1.0     voluptuous==0.16.0     wcwidth==0.9.2     webdav4==0.11.0     wrapt==2.5.0     yarl==1.25.1     zc.lockfile==4.0     zipp==4.1.1' returned a non-zero code: 1\n",
+  "seconds": 159
+ },
+ "gidgethub__gidgethub-225": {
+  "instance_id": "gidgethub__gidgethub-225",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-08",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-5adf88da9d",
+  "image": "tw-task/t-5adf88da9d:765b1563cd6b",
+  "status": "ok",
+  "seconds": 59
+ },
+ "microsoft__fabric-cicd-465": {
+  "instance_id": "microsoft__fabric-cicd-465",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-06",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-f8c79aea6b",
+  "image": "tw-task/t-f8c79aea6b:004f359ce192",
+  "status": "ok",
+  "seconds": 76
+ },
+ "vprusso__toqito-1298": {
+  "instance_id": "vprusso__toqito-1298",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-09",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-43ca469ddb",
+  "image": "tw-task/t-43ca469ddb:39d8ab217f1f",
+  "status": "ok",
+  "seconds": 206
+ },
+ "google__adk-python-2478": {
+  "instance_id": "google__adk-python-2478",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-12",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-7d95dd2aa2",
+  "image": "tw-task/t-7d95dd2aa2:fd18b208b8fe",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nalid Python names.\nTraceback:\n/usr/local/lib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntests/unittests/test_telemetry.py:21: in <module>\n    from google.adk.agents.invocation_context import InvocationContext\nsrc/google/adk/__init__.py:16: in <module>\n    from .agents.llm_agent import Agent\nsrc/google/adk/agents/__init__.py:15: in <module>\n    from .base_agent import BaseAgent\nsrc/google/adk/agents/base_agent.py:32: in <module>\n    from google.genai import types\nE   ModuleNotFoundError: No module named 'google.genai'\n=========================== short test summary info ============================\nERROR tests/unittests/test_telemetry.py\n1 error in 0.08s\n",
+  "seconds": 309
+ },
+ "mpmath__mpmath-992": {
+  "instance_id": "mpmath__mpmath-992",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-14",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-d42ea263c1",
+  "image": "tw-task/t-d42ea263c1:51c4662f1d60",
+  "status": "ok",
+  "seconds": 355
+ },
+ "reagento__dishka-512": {
+  "instance_id": "reagento__dishka-512",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-02",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-df0612ae21",
+  "image": "tw-task/t-df0612ae21:636c80622174",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nERROR: usage: python -m pytest [options] [file_or_dir] [file_or_dir] [...]\npython -m pytest: error: unrecognized arguments: --cov=dishka --cov-append --cov-report=term-missing\n  inifile: /workspace/repo/.pytest.ini\n  rootdir: /workspace/repo\n\n",
+  "seconds": 55
+ },
+ "microsoft__fabric-cicd-394": {
+  "instance_id": "microsoft__fabric-cicd-394",
+  "source": "nebius/SWE-rebench-leaderboard:2025_07",
+  "created_at": "2025-07-03",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-ec1f468f63",
+  "image": "tw-task/t-ec1f468f63:e2805c9d3749",
+  "status": "ok",
+  "seconds": 73
+ },
+ "boxed__mutmut-403": {
+  "instance_id": "boxed__mutmut-403",
+  "source": "nebius/SWE-rebench-leaderboard:2025_07",
+  "created_at": "2025-07-03",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-d582001bb4",
+  "status": "error",
+  "log": "TaskFormatError: /workspace/triwitness/evals/tasks/_staging_ext/t-d582001bb4：test.sh 没有运行 tests/test_mutation.py::test_basic_mutations['FoO'-expected66]；test.sh 没有运行 tests/test_mutation.py::test_basic_mutations[u'FoO'-expected67]；test.sh 没有运行 tests/test_mutation.py::test_basic_mutations['''foo'''-expected120]；test.sh 没有运行 tests/test_mutation.py::test_basic_mutations[r'''foo'''-expected121]",
+  "seconds": 162
+ },
+ "marcosschroh__dataclasses-avroschema-870": {
+  "instance_id": "marcosschroh__dataclasses-avroschema-870",
+  "source": "nebius/SWE-rebench-leaderboard:2025_06",
+  "created_at": "2025-06-26",
+  "status": "build_failed",
+  "log": ": The legacy builder is deprecated and will be removed in a future release.\n            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0\n            environment-variable.\n\nSending build context to Docker daemon  3.072kB\n\nStep 1/11 : FROM python:3.11-slim\n ---> 541096ae9b05\nStep 2/11 : ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore\n ---> Using cache\n ---> e7542d580c74\nStep 3/11 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> f7a449ddb96a\nStep 4/11 : ADD https://github.com/marcosschroh/dataclasses-avroschema/archive/c2d2cefe4b7e54df9defd05f28aade188abfd08f.tar.gz /tmp/src.tar.gz\n\n\n ---> 6b5366256ecc\nStep 5/11 : RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz\n ---> Running in 6c48ace9b9ef\n ---> Removed intermediate container 6c48ace9b9ef\n ---> da268806a8d2\nStep 6/11 : WORKDIR /workspace/repo\n ---> Running in 70e04fe33322\n ---> Removed intermediate container 70e04fe33322\n ---> 6b687bebee35\nStep 7/11 : RUN poetry install --with dev,cli\n ---> Running in 59ee573bfb37\n\u001b[91m/bin/sh: 1: poetry: not found\n\u001b[0m ---> Removed intermediate container 59ee573bfb37\nThe command '/bin/sh -c poetry install --with dev,cli' returned a non-zero code: 127\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-2c7aa80ec2",
+  "seconds": 8
+ },
+ "matthewwithanm__python-markdownify-230": {
+  "instance_id": "matthewwithanm__python-markdownify-230",
+  "source": "nebius/SWE-rebench-leaderboard:2025_06",
+  "created_at": "2025-06-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-2f225d8476",
+  "image": "tw-task/t-2f225d8476:9bb88c156b2b",
+  "status": "ok",
+  "seconds": 70
+ },
+ "neurostuff__NiMARE-939": {
+  "instance_id": "neurostuff__NiMARE-939",
+  "source": "nebius/SWE-rebench-leaderboard:2025_08",
+  "created_at": "2025-08-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-bb3ac19981",
+  "image": "tw-task/t-bb3ac19981:51523935d202",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nimare.extract.utils:Dataset created in /root/.nimare/crab_people\n------------------------------ Captured log call -------------------------------\nINFO     nimare.extract.utils:utils.py:137 Dataset created in /root/.nimare/crab_people\n=========================== short test summary info ============================\nFAILED nimare/tests/test_io.py::test_convert_neurovault_to_dataset[kwargs0]\nFAILED nimare/tests/test_io.py::test_convert_neurovault_to_dataset[kwargs1]\nFAILED nimare/tests/test_io.py::test_convert_neurovault_to_dataset[kwargs2]\nFAILED nimare/tests/test_io.py::test_convert_neurovault_to_dataset[kwargs3]\nFAILED nimare/tests/test_io.py::test_convert_neurovault_to_dataset[kwargs4]\nFAILED nimare/tests/test_io.py::test_convert_neurovault_to_dataset[kwargs5]\n6 failed, 22 passed in 5.21s\n",
+  "seconds": 271
+ },
+ "lincc-frameworks__nested-pandas-302": {
+  "instance_id": "lincc-frameworks__nested-pandas-302",
+  "source": "nebius/SWE-rebench-leaderboard:2025_07",
+  "created_at": "2025-07-02",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-903f862a85",
+  "image": "tw-task/t-903f862a85:9af679024d87",
+  "status": "ok",
+  "seconds": 242
+ },
+ "trinodb__trino-python-client-564": {
+  "instance_id": "trinodb__trino-python-client-564",
+  "source": "nebius/SWE-rebench-leaderboard:2025_06",
+  "created_at": "2025-06-04",
+  "status": "build_failed",
+  "log": "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/tmp/pip-build-env-23q_447l/overlay/lib/python3.11/site-packages/setuptools/build_meta.py\", line 301, in _get_build_requires\n          self.run_setup()\n        File \"/tmp/pip-build-env-23q_447l/overlay/lib/python3.11/site-packages/setuptools/build_meta.py\", line 317, in run_setup\n          exec(code, locals())  # noqa: S102 # exec is intentional here\n          ^^^^^^^^^^^^^^^^^^^^\n        File \"<string>\", line 175, in <module>\n        File \"<string>\", line 33, in run_command\n        File \"/usr/local/lib/python3.11/subprocess.py\", line 466, in check_output\n          return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        File \"/usr/local/lib/python3.11/subprocess.py\", line 571, in run\n          raise CalledProcessError(retcode, process.args,\n      subprocess.CalledProcessError: Command '('krb5-config --cflags krb5',)' returned non-zero exit status 127.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: subprocess-exited-with-error\n\n× Getting requirements to build wheel did not run successfully.\n│ exit code: 1\n╰─> See above for output.\n\nnote: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m ---> Removed intermediate container 514a282c2a51\nThe command '/bin/sh -c pip install -e '.[tests]'' returned a non-zero code: 1\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-d534920611",
+  "seconds": 15
+ },
+ "yt-dlp__yt-dlp-13403": {
+  "instance_id": "yt-dlp__yt-dlp-13403",
+  "source": "nebius/SWE-rebench-leaderboard:2025_06",
+  "created_at": "2025-06-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-015de9f247",
+  "image": "tw-task/t-015de9f247:2619da47b965",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nutube_signature.py::TestSignature::test_signature_js_vfl0Cbn9e\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vfl9FYC6l\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vflBb0OQx\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vflCGk6yw\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vflHOr_nV\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vflKjOTVq\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vflXGBaUN\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vfldJ8xgI\nFAILED test/test_youtube_signature.py::TestSignature::test_signature_js_vfle_mVwz\n======================== 71 failed, 1 passed in 16.35s =========================\n",
+  "seconds": 106
+ },
+ "bodo-ai__PyDough-368": {
+  "instance_id": "bodo-ai__PyDough-368",
+  "source": "nebius/SWE-rebench-leaderboard:2025_06",
+  "created_at": "2025-06-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-96c8af0077",
+  "image": "tw-task/t-96c8af0077:e76464e801bb",
+  "status": "ok",
+  "seconds": 219
+ },
+ "feder-observatory__stellarphot-526": {
+  "instance_id": "feder-observatory__stellarphot-526",
+  "source": "nebius/SWE-rebench-leaderboard:2025_06",
+  "created_at": "2025-06-12",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-e4b8360eeb",
+  "status": "build_failed",
+  "log": "     pytz==2026.5     pyvo==1.9.1     PyYAML==6.0.3     pyzmq==27.2.0     QtPy==2.4.3     r==0.2.2     referencing==0.37.0     regions==0.12     reproject==0.21.0     requests==2.34.2     rfc3339-validator==0.1.4     rfc3986-validator==0.1.1     rfc3986==2.0.0     rfc3987-syntax==1.1.0     rich==15.0.0     rpds-py==2026.9.1     ruff==0.17.0     s3fs==2026.9.0     scikit-image==0.26.0     scikit-learn==1.9.1     scipy==1.17.1     SecretStorage==3.5.0     Send2Trash==2.1.0     shellingham==1.5.4     simpervisor==1.0.0     simpleeval==1.0.8     six==1.17.0     slicerator==1.1.0     sortedcontainers==2.4.0     soupsieve==3.0.1     stack-data==0.6.3     tabulate==0.10.0     tenacity==9.2.1     terminado==0.18.1     text-unidecode==1.3     threadpoolctl==3.7.0     tifffile==2026.3.3     tinycss2==1.5.1     tomli==2.5.0     tomli_w==1.2.0     toolz==1.2.0     tornado==6.5.10     tox==4.65.3     tqdm==4.70.1     traitlets==5.16.1     traittypes==0.2.3     typeguard==4.6.0     typer==0.27.3     typing-inspection==0.4.4     typing_extensions==4.16.0     tzdata==2026.5     uncertainties==3.2.3     uri-template==1.3.0     urllib3==2.8.0     validators==0.36.0     virtualenv==21.14.6     wcmatch==11.1     wcwidth==0.9.2     webcolors==25.10.0     webencodings==0.6.1     websocket-client==1.9.2     widgetsnbextension==4.0.16     wrapt==2.5.0     xlsxdatagrid==0.3.4     xlsxwriter==3.2.9     xyzservices==2026.9.1     yarl==1.25.1     zarr==3.1.6     zipp==4.1.1' returned a non-zero code: 1\n",
+  "seconds": 277
+ },
+ "pasqal-io__Pulser-865": {
+  "instance_id": "pasqal-io__Pulser-865",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-b56e424d9f",
+  "status": "build_failed",
+  "log": "     nodeenv==1.11.0     notebook==7.6.3     notebook_shim==0.2.4     numpy==2.4.6     overrides==7.7.0     packaging==26.3     pandocfilters==1.5.1     parso==0.8.7     pathspec==1.1.1     pexpect==4.9.0     pillow==12.3.0     platformdirs==4.13.0     pluggy==1.6.0     pre_commit==4.6.2     prometheus_client==0.26.0     prompt_toolkit==3.0.53     psutil==7.2.2     ptyprocess==0.7.0     pure_eval==0.2.4     pyaml==26.7.0     pycodestyle==2.15.0     pycparser==3.11     pydocstyle==6.3.0     pyflakes==4.0.3     Pygments==2.21.0     pyparsing==3.3.3     pytest-cov==7.1.0     pytest==9.1.1     python-dateutil==2.9.0.post0     python-discovery==1.6.2     python-igraph==1.0.0     python-json-logger==4.2.0     PyYAML==6.0.3     pyzmq==27.2.0     qutip==5.3.1     referencing==0.37.0     requests==2.34.2     rfc3339-validator==0.1.4     rfc3986-validator==0.1.1     rfc3987-syntax==1.1.0     rpds-py==2026.9.1     ruff==0.11.1     scikit-learn==1.9.1     scikit-optimize==0.10.2     scipy==1.17.1     Send2Trash==2.1.0     six==1.17.0     snowballstemmer==3.1.1     soupsieve==3.0.1     stack-data==0.6.3     terminado==0.18.1     texttable==1.7.0     threadpoolctl==3.7.0     tinycss2==1.5.1     tokenize_rt==6.2.0     tornado==6.5.10     traitlets==5.16.1     typing_extensions==4.16.0     tzdata==2026.5     uri-template==1.3.0     urllib3==2.8.0     virtualenv==21.14.6     wcwidth==0.9.2     webcolors==25.10.0     webencodings==0.6.1     websocket-client==1.9.2' returned a non-zero code: 1\n",
+  "seconds": 157
+ },
+ "stfc__PSyclone-2999": {
+  "instance_id": "stfc__PSyclone-2999",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-20",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-e3670a3cda",
+  "image": "tw-task/t-e3670a3cda:341b0c0d446f",
+  "status": "ok",
+  "seconds": 276
+ },
+ "pgmpy__pgmpy-2111": {
+  "instance_id": "pgmpy__pgmpy-2111",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-25",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-20c23a1a83",
+  "image": "tw-task/t-20c23a1a83:af7c97852e2f",
+  "status": "ok",
+  "seconds": 529
+ },
+ "dstl__Stone-Soup-1167": {
+  "instance_id": "dstl__Stone-Soup-1167",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-d465a62f2f",
+  "image": "tw-task/t-d465a62f2f:42adab57d5a8",
+  "status": "ok",
+  "seconds": 241
+ },
+ "lincc-frameworks__nested-pandas-261": {
+  "instance_id": "lincc-frameworks__nested-pandas-261",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-09",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-46f4fb37ec",
+  "image": "tw-task/t-46f4fb37ec:68060b283c8c",
+  "status": "ok",
+  "seconds": 252
+ },
+ "Aunsiels__pyformlang-35": {
+  "instance_id": "Aunsiels__pyformlang-35",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-09",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-691b7302bf",
+  "image": "tw-task/t-691b7302bf:8f0a14f4a203",
+  "status": "ok",
+  "seconds": 75
+ },
+ "fox-it__dissect.cstruct-120": {
+  "instance_id": "fox-it__dissect.cstruct-120",
+  "source": "nebius/SWE-rebench-leaderboard:2025_04",
+  "created_at": "2025-04-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-12a8b07cd8",
+  "image": "tw-task/t-12a8b07cd8:551cb6f682c6",
+  "status": "ok",
+  "seconds": 65
+ },
+ "modin-project__modin-7560": {
+  "instance_id": "modin-project__modin-7560",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-2c7476a048",
+  "image": "tw-task/t-2c7476a048:5e1775c7c0dd",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/modin/conftest.py'.\nmodin/conftest.py:26: in <module>\n    import boto3\nE   ModuleNotFoundError: No module named 'boto3'\n",
+  "seconds": 89
+ },
+ "MahjongRepository__mahjong-62": {
+  "instance_id": "MahjongRepository__mahjong-62",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-09",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-59dc158eee",
+  "image": "tw-task/t-59dc158eee:637cabefea15",
+  "status": "ok",
+  "seconds": 199
+ },
+ "pgmpy__pgmpy-2098": {
+  "instance_id": "pgmpy__pgmpy-2098",
+  "source": "nebius/SWE-rebench-leaderboard:2025_05",
+  "created_at": "2025-05-23",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-a12f4ca4c2",
+  "image": "tw-task/t-a12f4ca4c2:38f8907a7788",
+  "status": "ok",
+  "seconds": 868
+ },
+ "iris-hep__func_adl-184": {
+  "instance_id": "iris-hep__func_adl-184",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-21",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-22496cea41",
+  "image": "tw-task/t-22496cea41:1716459d3597",
+  "status": "ok",
+  "seconds": 283
+ },
+ "scipp__plopp-428": {
+  "instance_id": "scipp__plopp-428",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-26",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-72299ba48e",
+  "image": "tw-task/t-72299ba48e:74270f896320",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n xarray as xr\nE       ModuleNotFoundError: No module named 'xarray'\n\ntests/plotting/plot_2d_test.py:142: ModuleNotFoundError\n_______________ test_plot_xarray_data_array_2d[mpl-interactive] ________________\n\n    def test_plot_xarray_data_array_2d():\n>       import xarray as xr\nE       ModuleNotFoundError: No module named 'xarray'\n\ntests/plotting/plot_2d_test.py:142: ModuleNotFoundError\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nFAILED tests/plotting/plot_2d_test.py::test_plot_xarray_data_array_2d[mpl-static]\nFAILED tests/plotting/plot_2d_test.py::test_plot_xarray_data_array_2d[mpl-interactive]\n======================== 2 failed, 120 passed in 10.50s ========================\n",
+  "seconds": 327
+ },
+ "dpkp__kafka-python-2548": {
+  "instance_id": "dpkp__kafka-python-2548",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-f7547dd203",
+  "image": "tw-task/t-f7547dd203:c2d3c23798e1",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nERROR: usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]\n__main__.py: error: unrecognized arguments: --timeout=300\n  inifile: /workspace/repo/pytest.ini\n  rootdir: /workspace/repo\n\n",
+  "seconds": 66
+ },
+ "ej2__python-quickbooks-381": {
+  "instance_id": "ej2__python-quickbooks-381",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-7a0c8ccb6d",
+  "image": "tw-task/t-7a0c8ccb6d:c680524b94f2",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nt_client.py::ClientTest::test_get_current_user - request...\nFAILED tests/unit/test_client.py::ClientTest::test_handle_exceptions - reques...\nFAILED tests/unit/test_client.py::ClientTest::test_handle_exceptions_severe\nFAILED tests/unit/test_client.py::ClientTest::test_isvalid_object_name_invalid\nFAILED tests/unit/test_client.py::ClientTest::test_isvalid_object_name_valid\nFAILED tests/unit/test_client.py::ClientTest::test_make_request_file_closed\nFAILED tests/unit/test_client.py::ClientTest::test_misc_operation - requests....\nFAILED tests/unit/test_client.py::ClientTest::test_query - requests.exception...\nFAILED tests/unit/test_client.py::ClientTest::test_update_object - requests.e...\nFAILED tests/unit/test_client.py::ClientTest::test_validate_webhook_signature\n24 failed, 1 warning in 2.63s\n",
+  "seconds": 74
+ },
+ "tefra__xsdata-1126": {
+  "instance_id": "tefra__xsdata-1126",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-08",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-ecd297f3df",
+  "image": "tw-task/t-ecd297f3df:e3c38529d277",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nERROR: usage: python -m pytest [options] [file_or_dir] [file_or_dir] [...]\npython -m pytest: error: unrecognized arguments: --benchmark-skip\n  inifile: /workspace/repo/pyproject.toml\n  rootdir: /workspace/repo\n\n",
+  "seconds": 144
+ },
+ "streamlink__streamlink-6455": {
+  "instance_id": "streamlink__streamlink-6455",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-01",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-56ad7fbabf",
+  "image": "tw-task/t-56ad7fbabf:9146a21c1cff",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/tests/conftest.py'.\ntests/__init__.py:3: in <module>\n    import freezegun.config\nE   ModuleNotFoundError: No module named 'freezegun'\n",
+  "seconds": 87
+ },
+ "scipp__plopp-422": {
+  "instance_id": "scipp__plopp-422",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-10",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-6799d2149b",
+  "image": "tw-task/t-6799d2149b:bb2504d3a37a",
+  "status": "ok",
+  "seconds": 264
+ },
+ "scikit-rf__scikit-rf-1256": {
+  "instance_id": "scikit-rf__scikit-rf-1256",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-22",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-5f3a686031",
+  "image": "tw-task/t-5f3a686031:b0345d764247",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nval  # try to convert to proper type or raise\n/usr/local/lib/python3.9/site-packages/matplotlib/__init__.py:739: in __setitem__\n    cval = self.validate[key](val)\n/usr/local/lib/python3.9/site-packages/matplotlib/rcsetup.py:427: in validate_font_properties\n    parse_fontconfig_pattern(s)\n/usr/local/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:83: in parse_fontconfig_pattern\n    parser = _make_fontconfig_parser()\n/usr/local/lib/python3.9/site-packages/matplotlib/_fontconfig_pattern.py:64: in _make_fontconfig_parser\n    prop = Group((name + Suppress(\"=\") + comma_separated(value)) | oneOf(_CONSTANTS))\n/usr/local/lib/python3.9/site-packages/pyparsing/util.py:472: in _inner\n    warnings.warn(\nE   pyparsing.warnings.PyparsingDeprecationWarning: 'oneOf' deprecated - use 'one_of'\n",
+  "seconds": 255
+ },
+ "modelcontextprotocol__python-sdk-222": {
+  "instance_id": "modelcontextprotocol__python-sdk-222",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-20",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-6bd655071c",
+  "image": "tw-task/t-6bd655071c:0f074f27ac7c",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nse import Tool\nsrc/mcp/server/fastmcp/tools/base.py:8: in <module>\n    from mcp.server.fastmcp.utilities.func_metadata import FuncMetadata, func_metadata\nsrc/mcp/server/fastmcp/utilities/func_metadata.py:11: in <module>\n    from pydantic._internal._typing_extra import eval_type_backport\nE   ImportError: cannot import name 'eval_type_backport' from 'pydantic._internal._typing_extra' (/usr/local/lib/python3.10/site-packages/pydantic/_internal/_typing_extra.py)\n=========================== short test summary info ============================\nERROR tests/issues/test_141_resource_templates.py\nERROR tests/issues/test_152_resource_mime_type.py\nERROR tests/server/fastmcp/servers/test_file_server.py\nERROR tests/server/fastmcp/test_server.py\nERROR tests/server/test_read_resource.py\n5 errors in 0.64s\n",
+  "seconds": 230
+ },
+ "sdv-dev__SDMetrics-749": {
+  "instance_id": "sdv-dev__SDMetrics-749",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-18",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-0878d0f760",
+  "image": "tw-task/t-0878d0f760:99906c6cb68e",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n in <module>\n    from sdmetrics.single_table.privacy.loss import InverseCDFDistance\nsdmetrics/single_table/privacy/loss.py:4: in <module>\n    from copulas.univariate.base import Univariate\nE   ModuleNotFoundError: No module named 'copulas'\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nERROR tests/integration/single_table/data_augmentation/test_binary_classifier_precision_efficacy.py\nERROR tests/unit/single_table/data_augmentation/test_binary_classifier_precision_efficacy.py\nERROR tests/integration/single_table/data_augmentation/test_binary_classifier_recall_efficacy.py\nERROR tests/unit/single_table/data_augmentation/test_binary_classifier_recall_efficacy.py\n4 errors in 4.00s\n",
+  "seconds": 701
+ },
+ "stefmolin__data-morph-265": {
+  "instance_id": "stefmolin__data-morph-265",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-12",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-b7f545ff19",
+  "image": "tw-task/t-b7f545ff19:12cd701b1739",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nest_distance\n(no match in any of [<Class TestScatter>])\n\nERROR: not found: /workspace/repo/tests/shapes/test_points.py::TestScatter::test_distance\n(no match in any of [<Class TestScatter>])\n\nERROR: not found: /workspace/repo/tests/shapes/test_points.py::TestScatter::test_distance\n(no match in any of [<Class TestScatter>])\n\n============================= test session starts ==============================\nplatform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.6.0\nUsing --randomly-seed=49558723\nrootdir: /workspace/repo\nconfigfile: pyproject.toml\nplugins: randomly-5.0.0, platformdirs-4.13.0, cov-7.1.0, mock-3.16.0\ncollected 6 items\n\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n============================ no tests ran in 0.09s =============================\n",
+  "seconds": 127
+ },
+ "streamlink__streamlink-6439": {
+  "instance_id": "streamlink__streamlink-6439",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-18",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-ad474cab0d",
+  "image": "tw-task/t-ad474cab0d:066bbac89a4f",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/tests/conftest.py'.\ntests/__init__.py:3: in <module>\n    import freezegun.config\nE   ModuleNotFoundError: No module named 'freezegun'\n",
+  "seconds": 162
+ },
+ "asottile__dead-204": {
+  "instance_id": "asottile__dead-204",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-08",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8c6930caea",
+  "image": "tw-task/t-8c6930caea:3d4e081bfa6e",
+  "dropped_p2p": [
+   "tests/dead_test.py::test_dead_disable_regex_matching[#",
+   "tests/dead_test.py::test_dead_disable_regex_not_matching[#",
+   "tests/dead_test.py::test_is_marked_as_used[annotated",
+   "tests/dead_test.py::test_is_marked_as_used[async",
+   "tests/dead_test.py::test_is_marked_as_used[class",
+   "tests/dead_test.py::test_is_marked_as_used[def",
+   "tests/dead_test.py::test_is_marked_as_used[from",
+   "tests/dead_test.py::test_is_marked_as_used[import",
+   "tests/dead_test.py::test_is_marked_as_used[x"
+  ],
+  "status": "ok",
+  "seconds": 36
+ },
+ "valohai__valohai-cli-321": {
+  "instance_id": "valohai__valohai-cli-321",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-30",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-c5c80203f1",
+  "image": "tw-task/t-c5c80203f1:44648f029693",
+  "status": "ok",
+  "seconds": 93
+ },
+ "allenai__rslearn-142": {
+  "instance_id": "allenai__rslearn-142",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-19",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8472e482aa",
+  "image": "tw-task/t-8472e482aa:716a845499a6",
+  "status": "ok",
+  "seconds": 287
+ },
+ "modin-project__modin-7434": {
+  "instance_id": "modin-project__modin-7434",
+  "source": "nebius/SWE-rebench-leaderboard:2025_02",
+  "created_at": "2025-02-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-83ce64f212",
+  "status": "build_failed",
+  "log": " lark==1.3.1     locket==1.0.0     MarkupSafe==3.0.4     matplotlib-inline==0.2.2     mistune==3.3.4     modin-spreadsheet==0.1.2     msgpack==1.1.2     nbclient==0.10.2     nbconvert==7.17.1     nbformat==5.10.4     nest-asyncio==1.6.0     notebook==7.5.8     notebook_shim==0.2.4     numpy==2.0.2     overrides==7.7.0     packaging==26.3     pandas==2.2.3     pandocfilters==1.5.1     parso==0.8.7     partd==1.4.2     pexpect==4.9.0     platformdirs==4.4.0     pluggy==1.6.0     prometheus_client==0.26.0     prompt_toolkit==3.0.52     protobuf==6.33.6     psutil==7.2.2     ptyprocess==0.7.0     pure_eval==0.2.4     pyarrow==21.0.0     pycparser==2.23     Pygments==2.21.0     pytest==8.4.2     python-dateutil==2.9.0.post0     python-json-logger==4.0.0     pytz==2026.5     PyYAML==6.0.3     pyzmq==27.2.0     ray==2.51.2     referencing==0.36.2     requests==2.32.5     rfc3339-validator==0.1.4     rfc3986-validator==0.1.1     rfc3987-syntax==1.1.0     rpds-py==0.27.1     Send2Trash==2.1.0     six==1.17.0     sortedcontainers==2.4.0     soupsieve==2.8.4     stack-data==0.6.3     tblib==3.2.2     terminado==0.18.1     tinycss2==1.4.0     tomli==2.5.0     toolz==1.2.0     tornado==6.5.10     traitlets==5.15.1     typing_extensions==4.16.0     tzdata==2026.5     uri-template==1.3.0     urllib3==2.6.3     wcwidth==0.9.2     webcolors==24.11.1     webencodings==0.5.1     websocket-client==1.9.0     widgetsnbextension==4.0.16     zict==3.0.0     zipp==3.23.1' returned a non-zero code: 1\n",
+  "seconds": 207
+ },
+ "ipython__ipython-14693": {
+  "instance_id": "ipython__ipython-14693",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-a01876435d",
+  "image": "tw-task/t-a01876435d:cf282888865d",
+  "status": "ok",
+  "seconds": 121
+ },
+ "ipython__ipython-14695": {
+  "instance_id": "ipython__ipython-14695",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-54c64d682a",
+  "image": "tw-task/t-54c64d682a:a62af9e64d6c",
+  "status": "ok",
+  "seconds": 145
+ },
+ "brightway-lca__brightway2-data-235": {
+  "instance_id": "brightway-lca__brightway2-data-235",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9a14448936",
+  "image": "tw-task/t-9a14448936:212694c3f09d",
+  "status": "ok",
+  "seconds": 142
+ },
+ "rayokota__jsonata-python-14": {
+  "instance_id": "rayokota__jsonata-python-14",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-18",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-49b140e702",
+  "image": "tw-task/t-49b140e702:6700696bbfaf",
+  "status": "ok",
+  "seconds": 65
+ },
+ "huggingface__smolagents-285": {
+  "instance_id": "huggingface__smolagents-285",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-21",
+  "status": "build_failed",
+  "log": "> Using cache\n ---> e7542d580c74\nStep 3/11 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> f7a449ddb96a\nStep 4/11 : ADD https://github.com/huggingface/smolagents/archive/bd08d6485daad3a8eba8d22ca0c185c6653acf2c.tar.gz /tmp/src.tar.gz\n\n\n ---> 1bbabc72efbf\nStep 5/11 : RUN mkdir -p /workspace/repo && tar xzf /tmp/src.tar.gz -C /workspace/repo --strip-components=1 && rm /tmp/src.tar.gz\n ---> Running in 9721396d91f4\n ---> Removed intermediate container 9721396d91f4\n ---> e33c946b068d\nStep 6/11 : WORKDIR /workspace/repo\n ---> Running in 55018c99b30c\n ---> Removed intermediate container 55018c99b30c\n ---> b8d1e6daf919\nStep 7/11 : RUN pip install -e . -q --timeout 120 && pip install pytest -q --timeout 120 && pip install huggingface_hub transformers mcp -q --timeout 120 && pip install pytest-timeout -q --timeout 120 && python fix_test_types.py\n ---> Running in 90e0b4ac011a\n\u001b[91mpython: can't open file '/workspace/repo/fix_test_types.py': [Errno 2] No such file or directory\n\u001b[0m ---> Removed intermediate container 90e0b4ac011a\nThe command '/bin/sh -c pip install -e . -q --timeout 120 && pip install pytest -q --timeout 120 && pip install huggingface_hub transformers mcp -q --timeout 120 && pip install pytest-timeout -q --timeout 120 && python fix_test_types.py' returned a non-zero code: 2\n",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-42d0c2f9ff",
+  "seconds": 169
+ },
+ "googlefonts__glyphsLib-1060": {
+  "instance_id": "googlefonts__glyphsLib-1060",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-23",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-3e840e5a50",
+  "image": "tw-task/t-3e840e5a50:fdc390eb3cd3",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nfcon]\n\n\n==================================== ERRORS ====================================\n________________ ERROR collecting tests/builder/builder_test.py ________________\nImportError while importing test module '/workspace/repo/tests/builder/builder_test.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/usr/local/lib/python3.9/importlib/__init__.py:127: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\ntests/builder/builder_test.py:24: in <module>\n    import defcon\nE   ModuleNotFoundError: No module named 'defcon'\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nERROR tests/builder/builder_test.py\n1 error in 0.53s\n",
+  "seconds": 217
+ },
+ "Davidyz__VectorCode-27": {
+  "instance_id": "Davidyz__VectorCode-27",
+  "source": "nebius/SWE-rebench-leaderboard:2025_03",
+  "created_at": "2025-03-21",
+  "status": "build_failed",
+  "log": "timeout",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-c4b38d75ec",
+  "seconds": 1502
+ },
+ "getsentry__sentry-python-3942": {
+  "instance_id": "getsentry__sentry-python-3942",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-6a74510015",
+  "image": "tw-task/t-6a74510015:2b8fda32fa46",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/tests/conftest.py'.\ntests/conftest.py:11: in <module>\n    import jsonschema\nE   ModuleNotFoundError: No module named 'jsonschema'\n",
+  "seconds": 62
+ },
+ "duo-labs__py_webauthn-241": {
+  "instance_id": "duo-labs__py_webauthn-241",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-16",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-ed08fb8869",
+  "image": "tw-task/t-ed08fb8869:e2b2d3de949c",
+  "status": "ok",
+  "seconds": 58
+ },
+ "probabl-ai__skore-1154": {
+  "instance_id": "probabl-ai__skore-1154",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-18",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-88cff5e95a",
+  "status": "build_failed",
+  "log": "  polars-runtime-32==1.36.1     polars==1.36.1     pre_commit==4.3.0     prettytable==3.16.0     prompt_toolkit==3.0.52     ptyprocess==0.7.0     pure_eval==0.2.4     pyarrow==21.0.0     pydantic==2.13.5     pydantic_core==2.46.5     pydata-sphinx-theme==0.16.1     pydot==4.0.1     Pygments==2.21.0     pyparsing==3.3.3     pytest-cov==7.1.0     pytest-order==1.5.0     pytest-randomly==4.0.1     pytest-xdist==3.8.0     pytest==8.4.2     python-dateutil==2.9.0.post0     python-discovery==1.6.2     pytz==2026.5     PyYAML==6.0.3     referencing==0.36.2     requests==2.32.5     rich==15.0.0     rpds-py==0.27.1     ruff==0.17.0     scikit-learn==1.6.1     scipy==1.13.1     simplejson==4.2.0     six==1.17.0     skops==0.16.0     skrub==0.6.2     snowballstemmer==3.1.1     soupsieve==2.8.4     sphinx-autosummary-accessors==2025.3.1     sphinx-copybutton==0.5.2     sphinx-gallery==0.19.0     sphinx-tabs==3.4.7     Sphinx==7.4.7     sphinx_design==0.6.1     sphinxcontrib-applehelp==2.0.0     sphinxcontrib-devhelp==2.0.0     sphinxcontrib-htmlhelp==2.1.0     sphinxcontrib-jsmath==1.0.1     sphinxcontrib-qthelp==2.0.0     sphinxcontrib-serializinghtml==2.0.0     stack-data==0.6.3     starlette==0.49.3     tenacity==9.1.2     threadpoolctl==3.7.0     tomli==2.5.0     traitlets==5.15.1     typing-inspection==0.4.2     typing_extensions==4.16.0     tzdata==2026.5     urllib3==2.6.3     uvicorn==0.39.0     virtualenv==21.14.6     wcwidth==0.9.2     zipp==3.23.1' returned a non-zero code: 1\n",
+  "seconds": 302
+ },
+ "probabl-ai__skore-1136": {
+  "instance_id": "probabl-ai__skore-1136",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-207ee088fb",
+  "status": "build_failed",
+  "log": "  polars-runtime-32==1.36.1     polars==1.36.1     pre_commit==4.3.0     prettytable==3.16.0     prompt_toolkit==3.0.52     ptyprocess==0.7.0     pure_eval==0.2.4     pyarrow==21.0.0     pydantic==2.13.5     pydantic_core==2.46.5     pydata-sphinx-theme==0.16.1     pydot==4.0.1     Pygments==2.21.0     pyparsing==3.3.3     pytest-cov==7.1.0     pytest-order==1.5.0     pytest-randomly==4.0.1     pytest-xdist==3.8.0     pytest==8.4.2     python-dateutil==2.9.0.post0     python-discovery==1.6.2     pytz==2026.5     PyYAML==6.0.3     referencing==0.36.2     requests==2.32.5     rich==15.0.0     rpds-py==0.27.1     ruff==0.17.0     scikit-learn==1.6.1     scipy==1.13.1     simplejson==4.2.0     six==1.17.0     skops==0.16.0     skrub==0.6.2     snowballstemmer==3.1.1     soupsieve==2.8.4     sphinx-autosummary-accessors==2025.3.1     sphinx-copybutton==0.5.2     sphinx-gallery==0.19.0     sphinx-tabs==3.4.7     Sphinx==7.4.7     sphinx_design==0.6.1     sphinxcontrib-applehelp==2.0.0     sphinxcontrib-devhelp==2.0.0     sphinxcontrib-htmlhelp==2.1.0     sphinxcontrib-jsmath==1.0.1     sphinxcontrib-qthelp==2.0.0     sphinxcontrib-serializinghtml==2.0.0     stack-data==0.6.3     starlette==0.49.3     tenacity==9.1.2     threadpoolctl==3.7.0     tomli==2.5.0     traitlets==5.15.1     typing-inspection==0.4.2     typing_extensions==4.16.0     tzdata==2026.5     urllib3==2.6.3     uvicorn==0.39.0     virtualenv==21.14.6     wcwidth==0.9.2     zipp==3.23.1' returned a non-zero code: 1\n",
+  "seconds": 305
+ },
+ "brightway-lca__brightway2-io-294": {
+  "instance_id": "brightway-lca__brightway2-io-294",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-08",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-69717f6eb3",
+  "image": "tw-task/t-69717f6eb3:2f04aa8999ce",
+  "status": "ok",
+  "seconds": 109
+ },
+ "zarr-developers__zarr-python-2655": {
+  "instance_id": "zarr-developers__zarr-python-2655",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-7e7d1e82b3",
+  "image": "tw-task/t-7e7d1e82b3:76e107dd834e",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/tests/conftest.py'.\ntests/conftest.py:10: in <module>\n    from hypothesis import HealthCheck, Verbosity, settings\nE   ModuleNotFoundError: No module named 'hypothesis'\n",
+  "seconds": 76
+ },
+ "googleapis__python-pubsub-1318": {
+  "instance_id": "googleapis__python-pubsub-1318",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-06",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-05acf61f73",
+  "image": "tw-task/t-05acf61f73:8be07050c173",
+  "status": "ok",
+  "seconds": 96
+ },
+ "instructlab__sdg-484": {
+  "instance_id": "instructlab__sdg-484",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-6358eb60d9",
+  "image": "tw-task/t-6358eb60d9:d47f00d21ed0",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/tests/conftest.py'.\ntests/conftest.py:13: in <module>\n    from datasets import Dataset\nE   ModuleNotFoundError: No module named 'datasets'\n",
+  "seconds": 566
+ },
+ "zarr-developers__zarr-python-2629": {
+  "instance_id": "zarr-developers__zarr-python-2629",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-03",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-e2626e3d2a",
+  "image": "tw-task/t-e2626e3d2a:56af73aa4c6c",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/tests/conftest.py'.\ntests/conftest.py:10: in <module>\n    from hypothesis import HealthCheck, Verbosity, settings\nE   ModuleNotFoundError: No module named 'hypothesis'\n",
+  "seconds": 86
+ },
+ "fjosw__pyerrors-253": {
+  "instance_id": "fjosw__pyerrors-253",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-06",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-15c42480e0",
+  "image": "tw-task/t-15c42480e0:6abf247f05cf",
+  "status": "ok",
+  "seconds": 229
+ },
+ "owkin__PyDESeq2-356": {
+  "instance_id": "owkin__PyDESeq2-356",
+  "source": "nebius/SWE-rebench-leaderboard:2025_01",
+  "created_at": "2025-01-10",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-d6d26c07c5",
+  "image": "tw-task/t-d6d26c07c5:f362fff15040",
+  "status": "ok",
+  "seconds": 552
+ },
+ "aspuru-guzik-group__selfies-125": {
+  "instance_id": "aspuru-guzik-group__selfies-125",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-12-27",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-0cc3055ddd",
+  "image": "tw-task/t-0cc3055ddd:702caac1129c",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nule>\n    from .decoder import decoder\nselfies/decoder.py:4: in <module>\n    from selfies.compatibility import modernize_symbol\nselfies/compatibility.py:1: in <module>\n    from selfies.utils.smiles_utils import atom_to_smiles, smiles_to_atom\nselfies/utils/smiles_utils.py:8: in <module>\n    from selfies.mol_graph import Atom, Attribution, \\\nE     File \"/workspace/repo/selfies/mol_graph.py\", line 320\nE       return not ((free_electrons >= 0) and (free_electrons % 2 != 0))TW_EOF\nE                                                                       ^\nE   SyntaxError: invalid syntax\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nERROR tests/test_specific_cases.py\n1 error in 0.16s\n",
+  "seconds": 48
+ },
+ "capitalone__datacompy-335": {
+  "instance_id": "capitalone__datacompy-335",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-08fa45130a",
+  "image": "tw-task/t-08fa45130a:cb0356d1c1f2",
+  "dropped_p2p": [
+   "tests/test_core.py::test_generate_id_within_group_valueerror[dataframe0-DATACOMPY_NULL"
+  ],
+  "status": "ok",
+  "seconds": 155
+ },
+ "IAMconsortium__nomenclature-391": {
+  "instance_id": "IAMconsortium__nomenclature-391",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-f53105ef34",
+  "status": "build_failed",
+  "log": "ion_from_dunamai(vcs, pattern, config)\n        File \"/tmp/pip-build-env-pszw4dih/overlay/lib/python3.10/site-packages/poetry_dynamic_versioning/__init__.py\", line 510, in _get_version_from_dunamai\n          return Version.from_vcs(\n        File \"/tmp/pip-build-env-pszw4dih/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n        File \"/tmp/pip-build-env-pszw4dih/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n        File \"/tmp/pip-build-env-pszw4dih/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 1179, in from_git\n          _detect_vcs(vcs, path)\n        File \"/tmp/pip-build-env-pszw4dih/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 399, in _detect_vcs\n          raise RuntimeError(\"This does not appear to be a {} project\".format(expected_vcs.value.title()))\n      RuntimeError: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container e664ba8f3a19\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 145
+ },
+ "BoboTiG__ebook-reader-dict-2101": {
+  "instance_id": "BoboTiG__ebook-reader-dict-2101",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-31",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-f8084de542",
+  "status": "error",
+  "log": "TaskFormatError: /workspace/triwitness/evals/tasks/_staging_ext/t-f8084de542：test.sh 没有运行 tests/test_en.py::test_parse_word[it's-pronunciations4-etymology4-definitions4-variants4]",
+  "seconds": 4
+ },
+ "adamtheturtle__doccmd-78": {
+  "instance_id": "adamtheturtle__doccmd-78",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-20",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-899b0555ea",
+  "image": "tw-task/t-899b0555ea:1ba353c123c7",
+  "status": "ok",
+  "seconds": 160
+ },
+ "altcha-org__altcha-lib-py-2": {
+  "instance_id": "altcha-org__altcha-lib-py-2",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-13",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-919601a454",
+  "image": "tw-task/t-919601a454:3107e36cbdb1",
+  "status": "ok",
+  "seconds": 24
+ },
+ "amjith__fuzzyfinder-19": {
+  "instance_id": "amjith__fuzzyfinder-19",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-4b15afed75",
+  "image": "tw-task/t-4b15afed75:fbeee0af5935",
+  "status": "ok",
+  "seconds": 30
+ },
+ "IAMconsortium__nomenclature-390": {
+  "instance_id": "IAMconsortium__nomenclature-390",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-09-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-56cefafcdc",
+  "status": "build_failed",
+  "log": "ion_from_dunamai(vcs, pattern, config)\n        File \"/tmp/pip-build-env-ia2klg1x/overlay/lib/python3.10/site-packages/poetry_dynamic_versioning/__init__.py\", line 510, in _get_version_from_dunamai\n          return Version.from_vcs(\n        File \"/tmp/pip-build-env-ia2klg1x/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n        File \"/tmp/pip-build-env-ia2klg1x/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n        File \"/tmp/pip-build-env-ia2klg1x/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 1179, in from_git\n          _detect_vcs(vcs, path)\n        File \"/tmp/pip-build-env-ia2klg1x/overlay/lib/python3.10/site-packages/dunamai/__init__.py\", line 399, in _detect_vcs\n          raise RuntimeError(\"This does not appear to be a {} project\".format(expected_vcs.value.title()))\n      RuntimeError: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 8c87ec99e8f4\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 66
+ },
+ "bvanelli__actualpy-55": {
+  "instance_id": "bvanelli__actualpy-55",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-08-13",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-adea2bcb19",
+  "image": "tw-task/t-adea2bcb19:872d393d4224",
+  "status": "ok",
+  "seconds": 44
+ },
+ "TeamGraphix__graphix-225": {
+  "instance_id": "TeamGraphix__graphix-225",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-10-14",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-b98eb44904",
+  "image": "tw-task/t-b98eb44904:ccea03e007f8",
+  "status": "ok",
+  "seconds": 345
+ },
+ "batfish__pybatfish-918": {
+  "instance_id": "batfish__pybatfish-918",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-07-20",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-f77810c211",
+  "image": "tw-task/t-f77810c211:18649362acf1",
+  "status": "ok",
+  "seconds": 119
+ },
+ "christiansandberg__canopen-506": {
+  "instance_id": "christiansandberg__canopen-506",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-07-09",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8291fcda7c",
+  "image": "tw-task/t-8291fcda7c:2f4daf33d0b8",
+  "status": "ok",
+  "seconds": 98
+ },
+ "Toloka__crowd-kit-109": {
+  "instance_id": "Toloka__crowd-kit-109",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-07-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-656ba807c0",
+  "image": "tw-task/t-656ba807c0:613b50f07c7c",
+  "status": "ok",
+  "seconds": 156
+ },
+ "biolink__biolink-model-toolkit-172": {
+  "instance_id": "biolink__biolink-model-toolkit-172",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-05-28",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-8c5020c241",
+  "status": "build_failed",
+  "log": "_version_from_dunamai(vcs, pattern, config)\n        File \"/tmp/pip-build-env-4cea9r5a/overlay/lib/python3.9/site-packages/poetry_dynamic_versioning/__init__.py\", line 510, in _get_version_from_dunamai\n          return Version.from_vcs(\n        File \"/tmp/pip-build-env-4cea9r5a/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 2196, in from_vcs\n          return cls._do_vcs_callback(\n        File \"/tmp/pip-build-env-4cea9r5a/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 2254, in _do_vcs_callback\n          return callback(**kwargs)\n        File \"/tmp/pip-build-env-4cea9r5a/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 1179, in from_git\n          _detect_vcs(vcs, path)\n        File \"/tmp/pip-build-env-4cea9r5a/overlay/lib/python3.9/site-packages/dunamai/__init__.py\", line 399, in _detect_vcs\n          raise RuntimeError(\"This does not appear to be a {} project\".format(expected_vcs.value.title()))\n      RuntimeError: This does not appear to be a Git project\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container b382e2a24487\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 27
+ },
+ "asottile__pyupgrade-939": {
+  "instance_id": "asottile__pyupgrade-939",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-03-24",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-077022bd33",
+  "image": "tw-task/t-077022bd33:6e135fb41840",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n\n(no match in any of [<Module shlex_join_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/shlex_join_test.py::test_shlex_join_noop[3.8+\n(no match in any of [<Module shlex_join_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/shlex_join_test.py::test_shlex_join_fixes[generator\n(no match in any of [<Module shlex_join_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/shlex_join_test.py::test_shlex_join_fixes[list\n(no match in any of [<Module shlex_join_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/shlex_join_test.py::test_shlex_join_fixes[removes\n(no match in any of [<Module shlex_join_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/shlex_join_test.py::test_shlex_join_fixes[more\n(no match in any of [<Module shlex_join_test.py>])\n\n",
+  "seconds": 21
+ },
+ "conan-io__conan-15924": {
+  "instance_id": "conan-io__conan-15924",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-03-22",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-a950fd3ed2",
+  "image": "tw-task/t-a950fd3ed2:36b2b26c8234",
+  "status": "ok",
+  "seconds": 53
+ },
+ "casbin__pycasbin-346": {
+  "instance_id": "casbin__pycasbin-346",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-06-11",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-88f7dbd093",
+  "image": "tw-task/t-88f7dbd093:74ebe405baab",
+  "status": "ok",
+  "seconds": 108
+ },
+ "burnash__gspread-1415": {
+  "instance_id": "burnash__gspread-1415",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-02-16",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9a14f3c60f",
+  "image": "tw-task/t-9a14f3c60f:f7e8dc959b45",
+  "status": "ok",
+  "seconds": 72
+ },
+ "codalab__codalab-worksheets-4578": {
+  "instance_id": "codalab__codalab-worksheets-4578",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-11-15",
+  "status": "error",
+  "log": "AbsoluteLinkError: 'tests/cli/files/broken-symlink' is a link to an absolute path",
+  "seconds": 3
+ },
+ "byllyfish__precis_i18n-32": {
+  "instance_id": "byllyfish__precis_i18n-32",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-10-31",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-eeefe3cff6",
+  "status": "error",
+  "log": "st/test_precis.py::TestPrecisUnicodeData::test_has_compat）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_hebrew_script）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_hiragana_katakana_han_script）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_noncharacter）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_old_hangul_jamo）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_replace_whitespace）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_valid_join_type）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_version_to_float）；tests/ 下缺少 test_precis.py（test/test_precis.py::TestPrecisUnicodeData::test_width_map）",
+  "seconds": 2
+ },
+ "BoboTiG__ebook-reader-dict-2054": {
+  "instance_id": "BoboTiG__ebook-reader-dict-2054",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-06-07",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-5bbbaf77e2",
+  "image": "tw-task/t-5bbbaf77e2:bf580340c34b",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n.. collected 5 items\n\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n============================ no tests ran in 2.27s =============================\nERROR: not found: /workspace/repo/tests/test_3_convert.py::test_word_rendering[KoboFormat-True-<w><p><a\n(no match in any of [<Module test_3_convert.py>])\n\nERROR: not found: /workspace/repo/tests/test_3_convert.py::test_word_rendering[DictFileFormat-True-@\n(no match in any of [<Module test_3_convert.py>])\n\nERROR: not found: /workspace/repo/tests/test_3_convert.py::test_word_rendering[KoboFormat-False-<w><p><a\n(no match in any of [<Module test_3_convert.py>])\n\nERROR: not found: /workspace/repo/tests/test_3_convert.py::test_word_rendering[DictFileFormat-False-@\n(no match in any of [<Module test_3_convert.py>])\n\n",
+  "seconds": 121
+ },
+ "asottile__pyupgrade-890": {
+  "instance_id": "asottile__pyupgrade-890",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-09-19",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-7032e5072d",
+  "status": "error",
+  "log": "test_format_literals_noop['{'.format(1)]；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals_noop['}'.format(1)]；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals_noop['{0}；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals_noop['{0:<{1}}'.format(1,；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals_noop['{'；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals['{0}'.format(1)-'{}'.format(1)]；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals['{0:x}'.format(30)-'{:x}'.format(30)]；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals['''{0}\\n{1}\\n'''.format(1,；test.sh 没有运行 tests/features/format_literals_test.py::test_format_literals['{0}'",
+  "seconds": 2
+ },
+ "aio-libs__aiocache-795": {
+  "instance_id": "aio-libs__aiocache-795",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-12-22",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-f5d272f359",
+  "image": "tw-task/t-f5d272f359:6b3f20bc9d98",
+  "status": "ok",
+  "seconds": 41
+ },
+ "dask__distributed-8447": {
+  "instance_id": "dask__distributed-8447",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2024-01-10",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-b965fc718d",
+  "image": "tw-task/t-b965fc718d:1f05571f5d71",
+  "status": "ok",
+  "seconds": 77
+ },
+ "allo-media__text2num-96": {
+  "instance_id": "allo-media__text2num-96",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-08-14",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-e225f8f88a",
+  "image": "tw-task/t-e225f8f88a:de19c99b71ac",
+  "status": "ok",
+  "seconds": 25
+ },
+ "cwacek__python-jsonschema-objects-261": {
+  "instance_id": "cwacek__python-jsonschema-objects-261",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-09-05",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-38aa22d437",
+  "image": "tw-task/t-38aa22d437:7d2c31d0f0dc",
+  "dropped_p2p": [
+   "test/test_pytest.py::test_default_values[{\"type\":",
+   "test/test_pytest.py::test_oneOfBare_validates_against_any_valid[{\"MyAddress\":",
+   "test/test_pytest.py::test_oneOfBare_validates_against_any_valid[{\"firstName\":",
+   "test/test_pytest.py::test_oneOf_validates_against_any_valid[{\"MyData\":"
+  ],
+  "status": "ok",
+  "seconds": 55
+ },
+ "burnash__gspread-1336": {
+  "instance_id": "burnash__gspread-1336",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-10-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-c5835212a8",
+  "image": "tw-task/t-c5835212a8:06b15b165665",
+  "status": "ok",
+  "seconds": 68
+ },
+ "awdeorio__mailmerge-155": {
+  "instance_id": "awdeorio__mailmerge-155",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-07-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-d9afe9b298",
+  "image": "tw-task/t-d9afe9b298:0a1d651529d1",
+  "status": "ok",
+  "seconds": 47
+ },
+ "EvoluxBR__greenswitch-83": {
+  "instance_id": "EvoluxBR__greenswitch-83",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-05-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8222d4ebc8",
+  "image": "tw-task/t-8222d4ebc8:408c79d7045c",
+  "status": "ok",
+  "seconds": 32
+ },
+ "auth0__auth0-python-499": {
+  "instance_id": "auth0__auth0-python-499",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-06-22",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-3cba0d3b61",
+  "image": "tw-task/t-3cba0d3b61:94529e29fc05",
+  "status": "ok",
+  "seconds": 53
+ },
+ "benmoran56__esper-81": {
+  "instance_id": "benmoran56__esper-81",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-04-20",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9323acbb66",
+  "image": "tw-task/t-9323acbb66:dd2dce9d5d85",
+  "status": "ok",
+  "seconds": 25
+ },
+ "altair-viz__altair-3128": {
+  "instance_id": "altair-viz__altair-3128",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-07-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-2e0cccc2f7",
+  "image": "tw-task/t-2e0cccc2f7:b7bab2cd9606",
+  "status": "ok",
+  "seconds": 104
+ },
+ "datalad__datalad-next-257": {
+  "instance_id": "datalad__datalad-next-257",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-02-23",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-1d0d66c8e7",
+  "status": "build_failed",
+  "log": "meta.py\", line 333, in get_requires_for_build_wheel\n          return self._get_build_requires(config_settings, requirements=[])\n        File \"/tmp/pip-build-env-oxenohs_/overlay/lib/python3.9/site-packages/setuptools/build_meta.py\", line 301, in _get_build_requires\n          self.run_setup()\n        File \"/tmp/pip-build-env-oxenohs_/overlay/lib/python3.9/site-packages/setuptools/build_meta.py\", line 520, in run_setup\n          super().run_setup(setup_script=setup_script)\n        File \"/tmp/pip-build-env-oxenohs_/overlay/lib/python3.9/site-packages/setuptools/build_meta.py\", line 317, in run_setup\n          exec(code, locals())\n        File \"<string>\", line 7, in <module>\n        File \"/workspace/repo/_datalad_buildsupport/setup.py\", line 16, in <module>\n          from setuptools import Command, DistutilsOptionError\n      ImportError: cannot import name 'DistutilsOptionError' from 'setuptools' (/tmp/pip-build-env-oxenohs_/overlay/lib/python3.9/site-packages/setuptools/__init__.py)\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: subprocess-exited-with-error\n\n× Getting requirements to build editable did not run successfully.\n│ exit code: 1\n╰─> See above for output.\n\nnote: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m ---> Removed intermediate container 1b94dfb9ca00\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 40
+ },
+ "boolangery__py-lua-parser-32": {
+  "instance_id": "boolangery__py-lua-parser-32",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-02-07",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-1aae37858a",
+  "image": "tw-task/t-1aae37858a:faac64485a33",
+  "status": "ok",
+  "seconds": 29
+ },
+ "Parquery__swagger-to-141": {
+  "instance_id": "Parquery__swagger-to-141",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-01-26",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-33def99557",
+  "status": "error",
+  "log": "/test_py_client.py::TestDocstring::test_triple_quote_handled）；tests/ 下缺少 test_style.py（tests/test_style.py::TestStyleCheck::test_that_it_works）；tests/ 下缺少 test_style.py（tests/test_style.py::TestDescription::test_that_it_works）；tests/ 下缺少 test_swagger_to.py（tests/test_swagger_to.py::TestSwaggerTo::test_camel_case）；tests/ 下缺少 test_swagger_to.py（tests/test_swagger_to.py::TestSwaggerTo::test_camel_case_split）；tests/ 下缺少 test_swagger_to.py（tests/test_swagger_to.py::TestSwaggerTo::test_capial_camel_case）；tests/ 下缺少 test_swagger_to.py（tests/test_swagger_to.py::TestSwaggerTo::test_path_tokenization）；tests/ 下缺少 test_swagger_to.py（tests/test_swagger_to.py::TestSwaggerTo::test_snake_case）；tests/ 下缺少 test_ts_angular5_client.py（tests/test_ts_angular5_client.py::TestTypescriptClient::test_that_it_works）",
+  "seconds": 2
+ },
+ "astanin__python-tabulate-243": {
+  "instance_id": "astanin__python-tabulate-243",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-01-27",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-34c82f3ddd",
+  "image": "tw-task/t-34c82f3ddd:f3d9528bd2c6",
+  "status": "ok",
+  "seconds": 49
+ },
+ "RemDelaporteMathurin__h-transport-materials-118": {
+  "instance_id": "RemDelaporteMathurin__h-transport-materials-118",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-01-06",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-4f686c32c2",
+  "image": "tw-task/t-4f686c32c2:7c251ea397ac",
+  "status": "ok",
+  "seconds": 76
+ },
+ "12rambau__sepal_ui-747": {
+  "instance_id": "12rambau__sepal_ui-747",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-02-08",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-ba92e32bef",
+  "image": "tw-task/t-ba92e32bef:9ca286617d85",
+  "status": "ok",
+  "seconds": 174
+ },
+ "Sceptre__sceptre-1277": {
+  "instance_id": "Sceptre__sceptre-1277",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-12-14",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-874b8b72a1",
+  "image": "tw-task/t-874b8b72a1:8c7f5bb0a1b4",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n  91     26      0     0%   3-268\nsceptre/template_handlers/__init__.py          31      5      4      0    86%   61, 78-81\nsceptre/template_handlers/file.py              29     29      8      0     0%   2-62\nsceptre/template_handlers/helper.py            57     36     22      2    27%   36-66, 81, 89-99, 125-146\nsceptre/template_handlers/http.py              62      1     12      2    96%   32, 68->78, 129->132\nsceptre/template_handlers/s3.py                45     45      8      0     0%   2-97\n---------------------------------------------------------------------------------------\nTOTAL                                        3163   2985    855      4     5%\nCoverage XML written to file coverage.xml\n\nFAIL Required test coverage of 90.0% not reached. Total coverage: 4.78%\n9 passed in 1.08s\n",
+  "seconds": 76
+ },
+ "CS-SI__eodag-588": {
+  "instance_id": "CS-SI__eodag-588",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-12-20",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-7023a3148e",
+  "image": "tw-task/t-7023a3148e:dc493408ac3d",
+  "status": "ok",
+  "seconds": 160
+ },
+ "PyCQA__pyflakes-754": {
+  "instance_id": "PyCQA__pyflakes-754",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-11-27",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-7df44db65f",
+  "image": "tw-task/t-7df44db65f:20c50d158efd",
+  "status": "ok",
+  "seconds": 26
+ },
+ "cytomining__pycytominer-246": {
+  "instance_id": "cytomining__pycytominer-246",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-12-07",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-6083c12785",
+  "image": "tw-task/t-6083c12785:7402e7df90ed",
+  "status": "ok",
+  "seconds": 121
+ },
+ "awelzel__flake8-gl-codeclimate-15": {
+  "instance_id": "awelzel__flake8-gl-codeclimate-15",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-11-19",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9c2f12362f",
+  "image": "tw-task/t-9c2f12362f:19304a9b4d94",
+  "status": "ok",
+  "seconds": 30
+ },
+ "12rambau__sepal_ui-646": {
+  "instance_id": "12rambau__sepal_ui-646",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-11-29",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-a20809480a",
+  "status": "build_failed",
+  "log": "etup_params)\n      File \"/usr/local/lib/python3.9/site-packages/setuptools/__init__.py\", line 117, in setup\n        return distutils.core.setup(**attrs)\n      File \"/usr/local/lib/python3.9/site-packages/setuptools/_distutils/core.py\", line 186, in setup\n        return run_commands(dist)\n      File \"/usr/local/lib/python3.9/site-packages/setuptools/_distutils/core.py\", line 202, in run_commands\n        dist.run_commands()\n      File \"/usr/local/lib/python3.9/site-packages/setuptools/_distutils/dist.py\", line 1002, in run_commands\n        self.run_command(cmd)\n      File \"/usr/local/lib/python3.9/site-packages/setuptools/dist.py\", line 1104, in run_command\n        super().run_command(command)\n      File \"/usr/local/lib/python3.9/site-packages/setuptools/_distutils/dist.py\", line 1021, in run_command\n        cmd_obj.run()\n      File \"/workspace/repo/setup.py\", line 16, in run\n        check_call([\"pre-commit\", \"install\", \"-t\", \"pre-commit\", \"-t\", \"commit-msg\"])\n      File \"/usr/local/lib/python3.9/subprocess.py\", line 373, in check_call\n        raise CalledProcessError(retcode, cmd)\n    subprocess.CalledProcessError: Command '['pre-commit', 'install', '-t', 'pre-commit', '-t', 'commit-msg']' returned non-zero exit status 1.\n    [end of output]\n\nnote: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m ---> Removed intermediate container b3ca39f74bfe\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 100
+ },
+ "PyCQA__isort-1995": {
+  "instance_id": "PyCQA__isort-1995",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-11-11",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-237a867fda",
+  "image": "tw-task/t-237a867fda:e7c1e6b6e7de",
+  "status": "ok",
+  "seconds": 58
+ },
+ "PyCQA__flake8-1726": {
+  "instance_id": "PyCQA__flake8-1726",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-10-30",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-1914888132",
+  "image": "tw-task/t-1914888132:a50ac21c8c40",
+  "status": "ok",
+  "seconds": 33
+ },
+ "Wortmeister-HQ__zahlwort2num-6": {
+  "instance_id": "Wortmeister-HQ__zahlwort2num-6",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-10-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-c304e79bef",
+  "image": "tw-task/t-c304e79bef:6ce228f5e59d",
+  "status": "ok",
+  "seconds": 27
+ },
+ "barrust__pyspellchecker-132": {
+  "instance_id": "barrust__pyspellchecker-132",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-08-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-12ffa216d1",
+  "image": "tw-task/t-12ffa216d1:c98ed8bc5024",
+  "status": "ok",
+  "seconds": 52
+ },
+ "cytomining__pycytominer-238": {
+  "instance_id": "cytomining__pycytominer-238",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-11-03",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-168bc2a62d",
+  "image": "tw-task/t-168bc2a62d:c4ee2f4afebf",
+  "status": "ok",
+  "seconds": 106
+ },
+ "andialbrecht__sqlparse-676": {
+  "instance_id": "andialbrecht__sqlparse-676",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-08-16",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-e7c5ebb316",
+  "image": "tw-task/t-e7c5ebb316:a27d99cbe870",
+  "dropped_p2p": [
+   "tests/test_regressions.py::test_issue26[--",
+   "tests/test_regressions.py::test_issue284_as_grouping[SELECT",
+   "tests/test_regressions.py::test_issue359_index_error_assignments[SELECT",
+   "tests/test_regressions.py::test_issue78[get_alias-z-select",
+   "tests/test_regressions.py::test_issue78[get_name-z-select",
+   "tests/test_regressions.py::test_issue78[get_parent_name-x-select",
+   "tests/test_regressions.py::test_issue78[get_real_name-y-select",
+   "tests/test_regressions.py::test_issue78[get_typecast-text-select"
+  ],
+  "status": "ok",
+  "seconds": 30
+ },
+ "commitizen-tools__commitizen-539": {
+  "instance_id": "commitizen-tools__commitizen-539",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-07-26",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-1d4c471a70",
+  "image": "tw-task/t-1d4c471a70:d99b1b5d1052",
+  "dropped_p2p": [
+   "tests/commands/test_bump_command.py::test_bump_command_increment_option[BREAKING",
+   "tests/commands/test_bump_command.py::test_bump_command_increment_option[feat:",
+   "tests/commands/test_bump_command.py::test_bump_command_increment_option[fix:",
+   "tests/commands/test_bump_command.py::test_bump_command_increment_option[refactor:",
+   "tests/commands/test_bump_command.py::test_bump_major_increment[BREAKING",
+   "tests/commands/test_bump_command.py::test_bump_major_increment[BREAKING-CHANGE:",
+   "tests/commands/test_bump_command.py::test_bump_major_increment[feat!:",
+   "tests/commands/test_bump_command.py::test_bump_major_increment[feat(user)!:",
+   "tests/commands/test_bump_command.py::test_bump_major_increment[feat(user):",
+   "tests/commands/test_bump_command.py::test_bump_major_increment[feat:",
+   "tests/commands/test_bump_command.py::test_bump_minor_increment[feat(user):",
+   "tests/commands/test_bump_command.py::test_bump_minor_increment[feat:",
+   "tests/commands/test_bump_command.py::test_bump_minor_increment_annotated[feat(user):",
+   "tests/commands/test_bump_command.py::test_bump_minor_increment_annotated[feat:",
+   "tests/commands/test_bump_command.py::test_bump_minor_increment_annotated_config_file[feat(user):",
+   "tests/commands/test_bump_command.py::test_bump_minor_increment_annotated_config_file[feat:",
+   "tests/commands/test_bump_command.py::test_bump_patch_increment[fix(user):",
+   "tests/commands/test_bump_command.py::test_bump_patch_increment[fix:",
+   "tests/commands/test_bump_command.py::test_bump_patch_increment[perf(worker):",
+   "tests/commands/test_bump_command.py::test_bump_patch_increment[perf:",
+   "tests/commands/test_bump_command.py::test_bump_patch_increment[refactor(config):",
+   "tests/commands/test_bump_command.py::test_bump_patch_increment[refactor:"
+  ],
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\ncommand.py::test_bump_when_version_inconsistent_in_version_files\nFAILED tests/commands/test_bump_command.py::test_bump_files_only - commitizen...\nFAILED tests/commands/test_bump_command.py::test_bump_local_version - commiti...\nFAILED tests/commands/test_bump_command.py::test_bump_dry_run - commitizen.ex...\nFAILED tests/commands/test_bump_command.py::test_none_increment_should_not_call_git_tag_and_error_code_is_not_zero\nFAILED tests/commands/test_bump_command.py::test_bump_with_changelog_arg - co...\nFAILED tests/commands/test_bump_command.py::test_bump_with_changelog_config\nFAILED tests/commands/test_bump_command.py::test_prevent_prerelease_when_no_increment_detected\nFAILED tests/commands/test_bump_command.py::test_bump_with_changelog_to_stdout_arg\n15 failed, 7 passed, 44 warnings in 1.74s\n",
+  "seconds": 41
+ },
+ "SmileyChris__django-countries-394": {
+  "instance_id": "SmileyChris__django-countries-394",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-08-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-f1d1aa2258",
+  "image": "tw-task/t-f1d1aa2258:ff911996c428",
+  "status": "ok",
+  "seconds": 61
+ },
+ "NeurodataWithoutBorders__pynwb-1538": {
+  "instance_id": "NeurodataWithoutBorders__pynwb-1538",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-08-11",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-b35bc89a50",
+  "image": "tw-task/t-b35bc89a50:91fbf7383f83",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\ntest_init\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::IndexSeriesConstructor::test_init_bad_unit\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::IndexSeriesConstructor::test_init_indexed_ts\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::ImageMaskSeriesConstructor::test_init\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::OpticalSeriesConstructor::test_init\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::TestImageSubtypes::test_grayscale_image\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::TestImageSubtypes::test_rgb_image\n\nERROR: found no collectors for /workspace/repo/tests/unit/test_image.py::TestImageSubtypes::test_rgba_image\n\n",
+  "seconds": 68
+ },
+ "PMEAL__porespy-809": {
+  "instance_id": "PMEAL__porespy-809",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2023-03-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8d4fb23fb1",
+  "image": "tw-task/t-8d4fb23fb1:0326e38605e9",
+  "status": "ok",
+  "seconds": 501
+ },
+ "Sceptre__sceptre-1249": {
+  "instance_id": "Sceptre__sceptre-1249",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-07-22",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-31cc1958f2",
+  "image": "tw-task/t-31cc1958f2:57f798b9d398",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nate.py                            91     91     26      0     0%   3-268\nsceptre/template_handlers/__init__.py          31     31      4      0     0%   2-81\nsceptre/template_handlers/file.py              29     29      8      0     0%   2-62\nsceptre/template_handlers/helper.py            57     57     22      0     0%   1-146\nsceptre/template_handlers/http.py              65     65     12      0     0%   2-133\nsceptre/template_handlers/s3.py                45     45      8      0     0%   2-97\n---------------------------------------------------------------------------------------\nTOTAL                                        2910   2663    767      2     8%\nCoverage XML written to file coverage.xml\n\nFAIL Required test coverage of 90.0% not reached. Total coverage: 8.13%\n42 passed in 0.98s\n",
+  "seconds": 80
+ },
+ "Textualize__textual-441": {
+  "instance_id": "Textualize__textual-441",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-04-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-0f040c8fdb",
+  "image": "tw-task/t-0f040c8fdb:9121987011d4",
+  "dropped_p2p": [
+   "tests/css/test_stylesheet.py::test_color_property_parsing[rgb(200,",
+   "tests/css/test_stylesheet.py::test_color_property_parsing[rgba(200,90,30,",
+   "tests/css/test_stylesheet.py::test_color_property_parsing[turquoise"
+  ],
+  "status": "ok",
+  "seconds": 64
+ },
+ "David-Wobrock__sqlvalidator-43": {
+  "instance_id": "David-Wobrock__sqlvalidator-43",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-04-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-efe012fb41",
+  "image": "tw-task/t-efe012fb41:c81f99a52627",
+  "status": "ok",
+  "seconds": 27
+ },
+ "PyCQA__flake8-bugbear-261": {
+  "instance_id": "PyCQA__flake8-bugbear-261",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-06-12",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-c54eb8ace9",
+  "image": "tw-task/t-c54eb8ace9:3e867af8cff8",
+  "status": "ok",
+  "seconds": 93
+ },
+ "dapr__python-sdk-402": {
+  "instance_id": "dapr__python-sdk-402",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-05-03",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-022390aa6f",
+  "image": "tw-task/t-022390aa6f:7e4748f2691c",
+  "status": "ok",
+  "seconds": 91
+ },
+ "David-Wobrock__sqlvalidator-40": {
+  "instance_id": "David-Wobrock__sqlvalidator-40",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-04-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-58a960157d",
+  "image": "tw-task/t-58a960157d:6855a2653bc0",
+  "status": "ok",
+  "seconds": 41
+ },
+ "bids-standard__pybids-836": {
+  "instance_id": "bids-standard__pybids-836",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-04-11",
+  "status": "error",
+  "log": "URLError: <urlopen error _ssl.c:993: The handshake operation timed out>",
+  "seconds": 120
+ },
+ "aspuru-guzik-group__selfies-78": {
+  "instance_id": "aspuru-guzik-group__selfies-78",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-02-19",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-3706e7bdef",
+  "status": "build_failed",
+  "log": "DEPRECATED: The legacy builder is deprecated and will be removed in a future release.\n            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0\n            environment-variable.\n\nSending build context to Docker daemon  3.072kB\n\nStep 1/10 : FROM python:3.9-slim\n ---> 085da638e1b8\nStep 2/10 : ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore\n ---> Using cache\n ---> c766b3c6c4d6\nStep 3/10 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> c2c3d32ed500\nStep 4/10 : ADD https://github.com/aspuru-guzik-group/selfies/archive/cea9f28851e72857eea71c41cf9e2124949338c5.tar.gz /tmp/src.tar.gz\nADD failed: Get \"https://github.com/aspuru-guzik-group/selfies/archive/cea9f28851e72857eea71c41cf9e2124949338c5.tar.gz\": read tcp 172.30.0.2:58368->198.18.0.1:443: read: connection timed out\n",
+  "seconds": 831
+ },
+ "Bachmann1234__diff_cover-277": {
+  "instance_id": "Bachmann1234__diff_cover-277",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-04-14",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-2291b568e4",
+  "status": "build_failed",
+  "log": "DEPRECATED: The legacy builder is deprecated and will be removed in a future release.\n            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0\n            environment-variable.\n\nSending build context to Docker daemon  3.072kB\n\nStep 1/10 : FROM python:3.9-slim\n ---> 085da638e1b8\nStep 2/10 : ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore\n ---> Using cache\n ---> c766b3c6c4d6\nStep 3/10 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> c2c3d32ed500\nStep 4/10 : ADD https://github.com/Bachmann1234/diff_cover/archive/d9efc6c0e5f1c94a25d0772d149d08ecb2542aa1.tar.gz /tmp/src.tar.gz\nADD failed: Get \"https://github.com/Bachmann1234/diff_cover/archive/d9efc6c0e5f1c94a25d0772d149d08ecb2542aa1.tar.gz\": read tcp 172.30.0.2:58368->198.18.0.1:443: read: connection timed out\n",
+  "seconds": 954
+ },
+ "Dorthu__openapi3-83": {
+  "instance_id": "Dorthu__openapi3-83",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-03-18",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-0cd4c338c3",
+  "status": "build_failed",
+  "log": "DEPRECATED: The legacy builder is deprecated and will be removed in a future release.\n            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0\n            environment-variable.\n\nSending build context to Docker daemon  3.072kB\n\nStep 1/10 : FROM python:3.9-slim\n ---> 085da638e1b8\nStep 2/10 : ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore\n ---> Using cache\n ---> c766b3c6c4d6\nStep 3/10 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> c2c3d32ed500\nStep 4/10 : ADD https://github.com/Dorthu/openapi3/archive/dc791af2ff58e8170c21c2775df091c421829b48.tar.gz /tmp/src.tar.gz\nADD failed: Get \"https://github.com/Dorthu/openapi3/archive/dc791af2ff58e8170c21c2775df091c421829b48.tar.gz\": read tcp 172.30.0.2:58368->198.18.0.1:443: read: connection timed out\n",
+  "seconds": 916
+ },
+ "asottile__setup-cfg-fmt-132": {
+  "instance_id": "asottile__setup-cfg-fmt-132",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-04-02",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-347a281518",
+  "status": "build_failed",
+  "log": "DEPRECATED: The legacy builder is deprecated and will be removed in a future release.\n            BuildKit is currently disabled; enable it by removing the DOCKER_BUILDKIT=0\n            environment-variable.\n\nSending build context to Docker daemon  3.072kB\n\nStep 1/10 : FROM python:3.9-slim\n ---> 085da638e1b8\nStep 2/10 : ENV SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore\n ---> Using cache\n ---> c766b3c6c4d6\nStep 3/10 : RUN for i in 1 2 3 4 5; do       apt-get -o Acquire::Retries=3 update -qq &&       apt-get install -y -qq --no-install-recommends git >/dev/null && break;       sleep 10; done; git --version && rm -rf /var/lib/apt/lists/*\n ---> Using cache\n ---> c2c3d32ed500\nStep 4/10 : ADD https://github.com/asottile/setup-cfg-fmt/archive/5efd7109ad526cf4b5b5de7dff003eb5aa1e4058.tar.gz /tmp/src.tar.gz\nADD failed: Get \"https://github.com/asottile/setup-cfg-fmt/archive/5efd7109ad526cf4b5b5de7dff003eb5aa1e4058.tar.gz\": read tcp 172.30.0.2:58368->198.18.0.1:443: read: connection timed out\n",
+  "seconds": 941
+ },
+ "click-contrib__sphinx-click-94": {
+  "instance_id": "click-contrib__sphinx-click-94",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-02-01",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-542f9f4929",
+  "status": "build_failed",
+  "log": "tmp/pip-build-env-p4vem10g/normal/lib/python3.9/site-packages/pbr/hooks/metadata.py\", line 28, in hook\n          self.config['version'] = packaging.get_version(\n        File \"/tmp/pip-build-env-p4vem10g/normal/lib/python3.9/site-packages/pbr/packaging.py\", line 408, in get_version\n          raise Exception(\n      Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name sphinx-click was given, but was not able to be found.\n      error in setup command: Error parsing /workspace/repo/setup.cfg: Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name sphinx-click was given, but was not able to be found.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container 7aa6aa3f8177\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 31
+ },
+ "beartype__beartype-88": {
+  "instance_id": "beartype__beartype-88",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-01-27",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9308a319a5",
+  "image": "tw-task/t-9308a319a5:5e4fa0c4292d",
+  "status": "ok",
+  "seconds": 59
+ },
+ "StingraySoftware__stingray-634": {
+  "instance_id": "StingraySoftware__stingray-634",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-02-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-00ada825d6",
+  "image": "tw-task/t-00ada825d6:0569ebfdb665",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n$ bash /solution/solve.sh → 0\n\n$ bash /tests/test.sh → 0\nImportError while loading conftest '/workspace/repo/stingray/conftest.py'.\nstingray/__init__.py:6: in <module>\n    from ._astropy_init import *\nstingray/_astropy_init.py:21: in <module>\n    from astropy.config.configuration import (\nE   ImportError: cannot import name 'update_default_config' from 'astropy.config.configuration' (/usr/local/lib/python3.9/site-packages/astropy/config/configuration.py)\n",
+  "seconds": 83
+ },
+ "dask__distributed-5699": {
+  "instance_id": "dask__distributed-5699",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-01-25",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-b2d285f602",
+  "image": "tw-task/t-b2d285f602:ecf8427fc81d",
+  "status": "ok",
+  "seconds": 52
+ },
+ "NREL__floris-312": {
+  "instance_id": "NREL__floris-312",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2022-02-11",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-4994feba7c",
+  "image": "tw-task/t-4994feba7c:e06384c0d01a",
+  "status": "ok",
+  "seconds": 84
+ },
+ "NREL__hescore-hpxml-170": {
+  "instance_id": "NREL__hescore-hpxml-170",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-11-18",
+  "status": "error",
+  "log": "HTTPError: HTTP Error 404: Not Found",
+  "seconds": 2
+ },
+ "cdent__gabbi-302": {
+  "instance_id": "cdent__gabbi-302",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-09-02",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-8ad3e8c648",
+  "status": "build_failed",
+  "log": ")\n        File \"/usr/local/lib/python3.9/site-packages/pbr/hooks/metadata.py\", line 25, in hook\n          self.config['version'] = packaging.get_version(\n        File \"/usr/local/lib/python3.9/site-packages/pbr/packaging.py\", line 866, in get_version\n          raise Exception(\"Versioning for this project requires either an sdist\"\n      Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name gabbi was given, but was not able to be found.\n      error in setup command: Error parsing /workspace/repo/setup.cfg: Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name gabbi was given, but was not able to be found.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\nerror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container c601215287b2\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 16
+ },
+ "asottile__add-trailing-comma-154": {
+  "instance_id": "asottile__add-trailing-comma-154",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-11-20",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-5ed246e2c5",
+  "image": "tw-task/t-5ed246e2c5:f457a81c72c1",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nepo/tests/features/literals_test.py::test_fixes_literals[(\\n\n(no match in any of [<Module literals_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/literals_test.py::test_fixes_literals[multi-line\n(no match in any of [<Module literals_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/literals_test.py::test_fixes_literals[single\n(no match in any of [<Module literals_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/literals_test.py::test_fixes_literals[nested\n(no match in any of [<Module literals_test.py>])\n\nERROR: not found: /workspace/repo/tests/features/literals_test.py::test_fixes_py35_plus_literals[x\n(no match in any of [<Module literals_test.py>])\n\n\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\nno tests ran in 0.04s\n",
+  "seconds": 25
+ },
+ "arrow-py__arrow-1035": {
+  "instance_id": "arrow-py__arrow-1035",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-09-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-30a8cf8744",
+  "image": "tw-task/t-30a8cf8744:edfc2c604eb1",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n-3892, 3896-3897, 3906-3915, 3987-3996, 4414-4419, 4669-4677, 5004-5012, 5173-5183, 5267-5275, 5362, 5371-5377, 5409-5421, 5558-5563\narrow/parser.py        315     76    134     30    72%   190, 208, 241, 250, 273, 281-286, 289, 296, 317-318, 333, 335, 340, 375-376, 397, 506-507, 517, 523, 557, 559, 569, 576-578, 581->exit, 583-584, 592-607, 617, 625-647, 654-665, 673, 677-686, 693-694, 752, 769\narrow/util.py           45     11     22      0    72%   40-42, 57-58, 67-70, 111-112\n----------------------------------------------------------------\nTOTAL                 2162    782    660     43    55%\nCoverage XML written to file coverage.xml\n\nFAIL Required test coverage of 99% not reached. Total coverage: 55.17%\n============================== 49 passed in 1.87s ==============================\n",
+  "seconds": 50
+ },
+ "Materials-Consortia__optimade-python-tools-1001": {
+  "instance_id": "Materials-Consortia__optimade-python-tools-1001",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-11-21",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-fbdde1e643",
+  "image": "tw-task/t-fbdde1e643:950e45dfc107",
+  "status": "ok",
+  "seconds": 87
+ },
+ "astanin__python-tabulate-139": {
+  "instance_id": "astanin__python-tabulate-139",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-08-19",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-170db1123a",
+  "image": "tw-task/t-170db1123a:56bc25923950",
+  "status": "ok",
+  "seconds": 47
+ },
+ "awdeorio__mailmerge-135": {
+  "instance_id": "awdeorio__mailmerge-135",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-07-19",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-e5381c9619",
+  "image": "tw-task/t-e5381c9619:2c687c4d6b88",
+  "status": "ok",
+  "seconds": 52
+ },
+ "andialbrecht__sqlparse-633": {
+  "instance_id": "andialbrecht__sqlparse-633",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-07-19",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8048f76340",
+  "image": "tw-task/t-8048f76340:05290382dfaf",
+  "dropped_p2p": [
+   "tests/test_regressions.py::test_issue26[--",
+   "tests/test_regressions.py::test_issue284_as_grouping[SELECT",
+   "tests/test_regressions.py::test_issue359_index_error_assignments[SELECT",
+   "tests/test_regressions.py::test_issue78[get_alias-z-select",
+   "tests/test_regressions.py::test_issue78[get_name-z-select",
+   "tests/test_regressions.py::test_issue78[get_parent_name-x-select",
+   "tests/test_regressions.py::test_issue78[get_real_name-y-select",
+   "tests/test_regressions.py::test_issue78[get_typecast-text-select"
+  ],
+  "status": "ok",
+  "seconds": 33
+ },
+ "Qiskit__qiskit-bot-11": {
+  "instance_id": "Qiskit__qiskit-bot-11",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-05-17",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-893bfcb48e",
+  "status": "build_failed",
+  "log": "r/local/lib/python3.9/site-packages/pbr/hooks/metadata.py\", line 25, in hook\n          self.config['version'] = packaging.get_version(\n        File \"/usr/local/lib/python3.9/site-packages/pbr/packaging.py\", line 866, in get_version\n          raise Exception(\"Versioning for this project requires either an sdist\"\n      Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name qiskit-bot was given, but was not able to be found.\n      error in setup command: Error parsing /workspace/repo/setup.cfg: Exception: Versioning for this project requires either an sdist tarball, or access to an upstream git repository. It's also possible that there is a mismatch between the package name in setup.cfg and the argument given to pbr.version.VersionInfo. Project name qiskit-bot was given, but was not able to be found.\n      [end of output]\n  \n  note: This error originates from a subprocess, and is likely not a problem with pip.\n\u001b[0m\u001b[91merror: metadata-generation-failed\n\n× Encountered error while generating package metadata.\n╰─> See above for output.\n\nnote: This is an issue with the package mentioned above, not pip.\nhint: See above for details.\n\u001b[0m ---> Removed intermediate container d2f94cec2fa7\nThe command '/bin/sh -c pip install --no-cache-dir -e /workspace/repo' returned a non-zero code: 1\n",
+  "seconds": 27
+ },
+ "Bachmann1234__diff_cover-210": {
+  "instance_id": "Bachmann1234__diff_cover-210",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-06-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-e3b90d966f",
+  "image": "tw-task/t-e3b90d966f:bab184cdc8a9",
+  "status": "ok",
+  "seconds": 52
+ },
+ "arrow-py__arrow-986": {
+  "instance_id": "arrow-py__arrow-986",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-06-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-5e44d267ef",
+  "image": "tw-task/t-5e44d267ef:b2cbe65ef273",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n4, 401, 476, 551, 611-613, 943, 951, 1207-1210, 1218-1227, 1313, 1315, 1891, 2226, 2524-2534, 2677-2684, 3038-3060, 3138-3160, 3313-3322, 3336-3352, 3633-3641, 3713, 3779-3780, 3784-3785, 3794-3799, 3871-3880, 4300-4305, 4557-4565, 4894-4902, 5063-5073, 5159-5167, 5254\narrow/parser.py        313    223    132      1    22%   163-190, 200-298, 307-346, 354-429, 502-581, 585-697, 713-728, 735, 749\narrow/util.py           45     19     22      3    52%   40-42, 51, 53, 76-81, 95-107\n----------------------------------------------------------------\nTOTAL                 2110    530    642     39    69%\nCoverage XML written to file coverage.xml\n\nFAIL Required test coverage of 99% not reached. Total coverage: 68.57%\n============================= 210 passed in 4.73s ==============================\n",
+  "seconds": 53
+ },
+ "canonical__operator-507": {
+  "instance_id": "canonical__operator-507",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-04-14",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-cdf12ce9a5",
+  "image": "tw-task/t-cdf12ce9a5:591863b049c3",
+  "status": "ok",
+  "seconds": 30
+ },
+ "beetbox__mediafile-46": {
+  "instance_id": "beetbox__mediafile-46",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-05-13",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-3bf493d6ab",
+  "image": "tw-task/t-3bf493d6ab:3388e7fff5b1",
+  "status": "ok",
+  "seconds": 39
+ },
+ "Materials-Consortia__optimade-python-tools-813": {
+  "instance_id": "Materials-Consortia__optimade-python-tools-813",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-05-24",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-035249a663",
+  "image": "tw-task/t-035249a663:fb53e50e06c0",
+  "status": "ok",
+  "seconds": 98
+ },
+ "AzureAD__microsoft-authentication-library-for-python-315": {
+  "instance_id": "AzureAD__microsoft-authentication-library-for-python-315",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-03-02",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-5f1a803a61",
+  "image": "tw-task/t-5f1a803a61:ecafd4a2f7b6",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nt_application.py::TestClientApplicationForAuthorityMigration::test_get_accounts_should_find_accounts_under_different_alias\nFAILED tests/test_application.py::TestApplicationForRefreshInBehaviors::test_aging_token_and_available_aad_should_return_new_token\nFAILED tests/test_application.py::TestApplicationForRefreshInBehaviors::test_aging_token_and_unavailable_aad_should_return_old_token\nFAILED tests/test_application.py::TestApplicationForRefreshInBehaviors::test_expired_token_and_available_aad_should_return_new_token\nFAILED tests/test_application.py::TestApplicationForRefreshInBehaviors::test_expired_token_and_unavailable_aad_should_return_error\nFAILED tests/test_application.py::TestApplicationForRefreshInBehaviors::test_fresh_token_should_be_returned_from_cache\n18 failed, 26 passed in 2.23s\n",
+  "seconds": 30
+ },
+ "Dorthu__openapi3-30": {
+  "instance_id": "Dorthu__openapi3-30",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-01-21",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-2621e9299e",
+  "image": "tw-task/t-2621e9299e:7bfa3179afa6",
+  "status": "ok",
+  "seconds": 28
+ },
+ "barrust__pyspellchecker-101": {
+  "instance_id": "barrust__pyspellchecker-101",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-03-23",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-1feb13051f",
+  "image": "tw-task/t-1feb13051f:1ccbd5310c19",
+  "status": "ok",
+  "seconds": 59
+ },
+ "ably__ably-python-161": {
+  "instance_id": "ably__ably-python-161",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-01-19",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-eb3c9aad2a",
+  "image": "tw-task/t-eb3c9aad2a:b9b972cd5bf7",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n==============\nERROR test/ably/resthttp_test.py::TestRestHttp::test_500_errors - requests.ex...\nERROR test/ably/resthttp_test.py::TestRestHttp::test_cached_fallback - reques...\nERROR test/ably/resthttp_test.py::TestRestHttp::test_cumulative_timeout - req...\nERROR test/ably/resthttp_test.py::TestRestHttp::test_custom_http_timeouts - r...\nERROR test/ably/resthttp_test.py::TestRestHttp::test_host_fallback - requests...\nERROR test/ably/resthttp_test.py::TestRestHttp::test_max_retry_attempts_and_timeouts_defaults\nERROR test/ably/resthttp_test.py::TestRestHttp::test_no_host_fallback_nor_retries_if_custom_host\nERROR test/ably/resthttp_test.py::TestRestHttp::test_no_retry_if_not_500_to_599_http_code\nERROR test/ably/resthttp_test.py::TestRestHttp::test_request_headers - reques...\n9 errors in 1.05s\n",
+  "seconds": 37
+ },
+ "asottile__astpretty-41": {
+  "instance_id": "asottile__astpretty-41",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2020-12-28",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9a2594ad35",
+  "image": "tw-task/t-9a2594ad35:304bab58844b",
+  "status": "ok",
+  "seconds": 28
+ },
+ "0b01001001__spectree-64": {
+  "instance_id": "0b01001001__spectree-64",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2020-10-12",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-c540dc6b44",
+  "image": "tw-task/t-c540dc6b44:5c779c138868",
+  "status": "ok",
+  "seconds": 38
+ },
+ "alanmcruickshank__sqlfluff-336": {
+  "instance_id": "alanmcruickshank__sqlfluff-336",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2020-05-16",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-4f83ffedea",
+  "image": "tw-task/t-4f83ffedea:91a51d2860df",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\n not found: /workspace/repo/test/cli_commands_test.py::test__cli__command_lint_serialize_from_stdin[select\n(no match in any of [<Module cli_commands_test.py>])\n\nERROR: not found: /workspace/repo/test/cli_commands_test.py::test__cli__command_lint_serialize_from_stdin[SElect\n(no match in any of [<Module cli_commands_test.py>])\n\n\n=============================== warnings summary ===============================\nsrc/sqlfluff/__init__.py:2\n  /workspace/repo/src/sqlfluff/__init__.py:2: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html\n    import pkg_resources\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n1 warning in 0.12s\n",
+  "seconds": 30
+ },
+ "alexgolec__tda-api-105": {
+  "instance_id": "alexgolec__tda-api-105",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2020-09-11",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9582324b21",
+  "image": "tw-task/t-9582324b21:04671c2fc897",
+  "status": "ok",
+  "seconds": 54
+ },
+ "asottile__dead-37": {
+  "instance_id": "asottile__dead-37",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2020-03-10",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-1d01cf1b0b",
+  "image": "tw-task/t-1d01cf1b0b:34bb4e7a949e",
+  "dropped_p2p": [
+   "tests/dead_test.py::test_dead_disable_regex_matching[#",
+   "tests/dead_test.py::test_dead_disable_regex_not_matching[#",
+   "tests/dead_test.py::test_is_marked_as_used[MyStr",
+   "tests/dead_test.py::test_is_marked_as_used[async",
+   "tests/dead_test.py::test_is_marked_as_used[class",
+   "tests/dead_test.py::test_is_marked_as_used[def",
+   "tests/dead_test.py::test_is_marked_as_used[from",
+   "tests/dead_test.py::test_is_marked_as_used[import",
+   "tests/dead_test.py::test_is_marked_as_used[x"
+  ],
+  "status": "ok",
+  "seconds": 34
+ },
+ "Shopify__shopify_python_api-354": {
+  "instance_id": "Shopify__shopify_python_api-354",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2020-01-27",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-ce59b82cac",
+  "image": "tw-task/t-ce59b82cac:6b69852f0b38",
+  "status": "ok",
+  "seconds": 27
+ },
+ "asottile__add-trailing-comma-85": {
+  "instance_id": "asottile__add-trailing-comma-85",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2019-07-05",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-bf2046fb7b",
+  "status": "error",
+  "log": "TaskFormatError: /workspace/triwitness/evals/tasks/_staging_ext/t-bf2046fb7b：test.sh 没有运行 tests/add_trailing_comma_test.py::test_fix_unhugs[{'foo':",
+  "seconds": 2
+ },
+ "chrahunt__hlp-15": {
+  "instance_id": "chrahunt__hlp-15",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2019-09-29",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-15f0a0f949",
+  "image": "tw-task/t-15f0a0f949:df4c96e8852e",
+  "status": "ok",
+  "seconds": 31
+ },
+ "LordGolias__sqf-47": {
+  "instance_id": "LordGolias__sqf-47",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2018-09-02",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-309181f2cd",
+  "image": "tw-task/t-309181f2cd:98e036daec55",
+  "status": "ok",
+  "seconds": 30
+ },
+ "caronc__apprise-119": {
+  "instance_id": "caronc__apprise-119",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2019-06-05",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-3da67a8c2a",
+  "image": "tw-task/t-3da67a8c2a:5a32a4d7f0af",
+  "status": "ok",
+  "seconds": 44
+ },
+ "HXLStandard__libhxl-python-174": {
+  "instance_id": "HXLStandard__libhxl-python-174",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2018-05-30",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-07f7e913cb",
+  "image": "tw-task/t-07f7e913cb:461a15280fd2",
+  "status": "ok",
+  "seconds": 31
+ },
+ "ARMmbed__greentea-263": {
+  "instance_id": "ARMmbed__greentea-263",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2018-02-15",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-943c1ba6cb",
+  "image": "tw-task/t-943c1ba6cb:b1c4d00c96d0",
+  "status": "ok",
+  "seconds": 31
+ },
+ "aio-libs__aiosmtpd-106": {
+  "instance_id": "aio-libs__aiosmtpd-106",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-06-02",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-d3727b637e",
+  "image": "tw-task/t-d3727b637e:4a10224f82c8",
+  "status": "ok",
+  "seconds": 27
+ },
+ "construct__construct-399": {
+  "instance_id": "construct__construct-399",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-09-12",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-dd31d9bd80",
+  "image": "tw-task/t-dd31d9bd80:25a0dbc2a5b9",
+  "status": "ok",
+  "seconds": 40
+ },
+ "ARMmbed__yotta-804": {
+  "instance_id": "ARMmbed__yotta-804",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-04-06",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-66ede9e6ae",
+  "status": "build_failed",
+  "log": ", 0.21.0, 0.22.0, 0.23.0a1, 0.23.0, 0.24.0, 0.24.1, 0.25.0, 0.26.0, 0.26.1, 0.27.0, 0.27.1, 0.27.2, 0.27.3, 0.28.0, 0.28.1, 0.28.2, 0.28.3, 0.29.0, 0.30.0, 0.30.1, 0.30.2, 0.30.3, 0.31.0, 0.32.0, 0.32.1, 0.32.2, 0.32.3, 0.33.0, 0.33.1, 0.34.0, 0.34.1, 0.34.2, 0.34.3, 0.35.0, 0.35.1, 0.36.0, 0.37.0, 0.38.0, 0.39.0, 0.40.0, 0.41.0, 0.42.0, 0.43.0, 0.43.1, 0.44.0, 0.44.1, 0.45.0, 0.45.1)\n\u001b[0m\u001b[91mERROR: No matching distribution found for pyocd==0.15.0\n\u001b[0m ---> Removed intermediate container f00100cf2770\nThe command '/bin/sh -c pip install --no-cache-dir     argcomplete==1.12.3     certifi==2025.1.31     cffi==1.17.1     charset-normalizer==3.4.1     colorama==0.3.9     cryptography==44.0.2     Deprecated==1.2.18     exceptiongroup==1.2.2     future==1.0.0     hgapi==1.7.4     idna==3.10     iniconfig==2.1.0     intelhex==2.3.0     intervaltree==3.1.0     Jinja2==2.11.3     jsonpointer==1.14     jsonschema==2.6.0     MarkupSafe==3.0.2     mbed_test_wrapper==1.0.0     packaging==24.2     pathlib==1.0.1     pluggy==1.5.0     project-generator-definitions==0.2.46     project_generator==0.8.17     pycparser==2.22     pyelftools==0.23     PyGithub==1.54.1     PyJWT==1.7.1     pyocd==0.15.0     pytest==8.3.5     pyusb==1.3.1     PyYAML==3.13     requests==2.32.3     semantic-version==2.10.0     six==1.17.0     sortedcontainers==2.4.0     tomli==2.2.1     urllib3==2.3.0     valinor==0.0.15     websocket-client==1.8.0     wrapt==1.17.2     xmltodict==0.14.2' returned a non-zero code: 1\n",
+  "seconds": 19
+ },
+ "craffel__mir_eval-249": {
+  "instance_id": "craffel__mir_eval-249",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-04-14",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-cf0a07b696",
+  "image": "tw-task/t-cf0a07b696:367e6bd291db",
+  "status": "ok",
+  "seconds": 60
+ },
+ "cherrypy__cherrypy-1578": {
+  "instance_id": "cherrypy__cherrypy-1578",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-03-11",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-ad23bd3890",
+  "image": "tw-task/t-ad23bd3890:ca1361e7a2ed",
+  "status": "ok",
+  "seconds": 46
+ },
+ "Shopify__shopify_python_api-177": {
+  "instance_id": "Shopify__shopify_python_api-177",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-02-21",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-9dcb674514",
+  "image": "tw-task/t-9dcb674514:e95f813230c4",
+  "status": "ok",
+  "seconds": 27
+ },
+ "PyCQA__mccabe-47": {
+  "instance_id": "PyCQA__mccabe-47",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-01-22",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-f273c2a1f1",
+  "image": "tw-task/t-f273c2a1f1:bdb4f2bef2ad",
+  "status": "ok",
+  "seconds": 25
+ },
+ "bear__python-twitter-439": {
+  "instance_id": "bear__python-twitter-439",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-02-14",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-f00d05e3c2",
+  "image": "tw-task/t-f00d05e3c2:7a5ac2dd32e9",
+  "status": "ok",
+  "seconds": 46
+ },
+ "CybOXProject__mixbox-35": {
+  "instance_id": "CybOXProject__mixbox-35",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2017-01-06",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-8df2abf89e",
+  "image": "tw-task/t-8df2abf89e:8fd9ab51a0b4",
+  "status": "ok",
+  "seconds": 36
+ },
+ "bear__python-twitter-416": {
+  "instance_id": "bear__python-twitter-416",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2016-11-28",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-4f715f992d",
+  "image": "tw-task/t-4f715f992d:e284271ef763",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\ney}\\n\")\n\n../../usr/local/lib/python3.9/site-packages/_pytest/config/__init__.py:1441\n  /usr/local/lib/python3.9/site-packages/_pytest/config/__init__.py:1441: PytestConfigWarning: Unknown config option: with-coverage\n  \n    self._warn_or_fail_if_strict(f\"Unknown config option: {key}\\n\")\n\ntwitter/parse_tweet.py:99\n  /workspace/repo/twitter/parse_tweet.py:99: DeprecationWarning: invalid escape sequence \\w\n    \"\"\" URL : [http://]?[\\w\\.?/]+\"\"\"\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n----------------- generated xml file: /logs/verifier/junit.xml -----------------\n=========================== short test summary info ============================\nFAILED tests/test_twitter_utils.py::ApiTest::test_parse_media_file_http - req...\n1 failed, 6 passed, 8 warnings in 0.39s\n",
+  "seconds": 33
+ },
+ "aarande__nexradaws-9": {
+  "instance_id": "aarande__nexradaws-9",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2019-08-26",
+  "dir": "/workspace/triwitness/evals/tasks/_staging_ext/t-175537a4ad",
+  "image": "tw-task/t-175537a4ad:38aa295b83c6",
+  "status": "validate_failed",
+  "log": "应用 solve.sh 后 reward 应为 1，得到 0.0（参考解或测试有问题）\nstNexradAwsInterface::test_download_single_2017\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_get_available_days\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_get_available_months\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_get_available_radars\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_get_available_scans\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_get_available_scans_in_range\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_get_available_years\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_open_file\nFAILED tests/test_nexradAwsInterface.py::TestNexradAwsInterface::test_open_pyart\n16 failed, 4 passed in 119.48s (0:01:59)\n",
+  "seconds": 280
+ },
+ "acorg__slurm-pipeline-8": {
+  "instance_id": "acorg__slurm-pipeline-8",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2016-11-25",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-88695382f6",
+  "image": "tw-task/t-88695382f6:4bf985a4405c",
+  "status": "ok",
+  "seconds": 26
+ },
+ "PMEAL__porespy-465": {
+  "instance_id": "PMEAL__porespy-465",
+  "source": "nebius/SWE-rebench:filtered",
+  "created_at": "2021-04-07",
+  "dir": "/workspace/triwitness/evals/tasks/ext/t-217a1ce8da",
+  "image": "tw-task/t-217a1ce8da:5589b6f10bc8",
+  "status": "ok",
+  "seconds": 486
+ }
+}

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_ehlo_duplicate \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_ehlo_then_helo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_helo_duplicate \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_helo_then_ehlo \
+  aiosmtpd/tests/test_smtp.py::TestResetCommands::test_ehlo \
+  aiosmtpd/tests/test_smtp.py::TestResetCommands::test_helo \
+  aiosmtpd/tests/test_smtp.py::TestProtocol::test_empty_email \
+  aiosmtpd/tests/test_smtp.py::TestProtocol::test_honors_mail_delimeters \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_data_invalid_params \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_data_no_helo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_data_no_rcpt \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_ehlo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_ehlo_no_hostname \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_empty_command \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_expn \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_helo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_helo_no_hostname \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_bad_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_data \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_ehlo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_helo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_mail \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_mail_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_noop \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_quit \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_rcpt \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_rcpt_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_rset \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_help_vrfy \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_fail_parse_email \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_from_malformed \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_from_twice \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_malformed_params_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_missing_params_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_no_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_no_from \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_no_helo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_params_bad_syntax_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_params_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_params_no_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_mail_unrecognized_params_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_noop \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_noop_with_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_quit \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_quit_with_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_fail_parse_email \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_no_address \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_no_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_no_arg_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_no_helo \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_no_mail \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_no_to \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_with_bad_params \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_with_params_no_esmtp \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rcpt_with_unknown_params \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rset \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_rset_with_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_too_long_command \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_unknown_command \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_vrfy \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_vrfy_no_arg \
+  aiosmtpd/tests/test_smtp.py::TestSMTP::test_vrfy_not_an_address \
+  aiosmtpd/tests/test_smtp.py::TestResetCommands::test_rset \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_bad_encodings \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_dots_escaped \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_esmtp_no_size_limit \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_exception_handler_exception \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_exception_handler_undescribable \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_mail_invalid_body \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_mail_with_compatible_smtputf8 \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_mail_with_incompatible_smtputf8 \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_mail_with_size_too_large \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_mail_with_unrequited_smtputf8 \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_process_message_error \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_too_long_message_body \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_unexpected_errors \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_unexpected_errors_custom_response \
+  aiosmtpd/tests/test_smtp.py::TestSMTPWithController::test_unexpected_errors_unhandled \
+  aiosmtpd/tests/test_smtp.py::TestCustomizations::test_custom_greeting \
+  aiosmtpd/tests/test_smtp.py::TestCustomizations::test_custom_hostname \
+  aiosmtpd/tests/test_smtp.py::TestCustomizations::test_default_greeting \
+  aiosmtpd/tests/test_smtp.py::TestCustomizations::test_mail_invalid_body_param \
+  aiosmtpd/tests/test_smtp.py::TestClientCrash::test_close_in_command \
+  aiosmtpd/tests/test_smtp.py::TestClientCrash::test_close_in_data \
+  aiosmtpd/tests/test_smtp.py::TestClientCrash::test_connection_reset_during_DATA \
+  aiosmtpd/tests/test_smtp.py::TestClientCrash::test_connection_reset_during_command \
+  aiosmtpd/tests/test_smtp.py::TestStrictASCII::test_bad_encoded_param \
+  aiosmtpd/tests/test_smtp.py::TestStrictASCII::test_data \
+  aiosmtpd/tests/test_smtp.py::TestStrictASCII::test_ehlo \
+  aiosmtpd/tests/test_smtp.py::TestStrictASCII::test_mail_param; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

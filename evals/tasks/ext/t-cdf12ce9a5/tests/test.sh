@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  test/test_model.py::TestModelBindings::test_no_bind_addresses \
+  test/test_model.py::TestModel::test_active_message_default \
+  test/test_model.py::TestModel::test_app_immutable \
+  test/test_model.py::TestModel::test_app_relation_data_modify_local_as_leader \
+  test/test_model.py::TestModel::test_app_relation_data_modify_local_as_minion \
+  test/test_model.py::TestModel::test_base_status_instance_raises \
+  test/test_model.py::TestModel::test_config \
+  test/test_model.py::TestModel::test_config_immutable \
+  test/test_model.py::TestModel::test_get_relation \
+  test/test_model.py::TestModel::test_is_leader \
+  test/test_model.py::TestModel::test_local_set_valid_app_status \
+  test/test_model.py::TestModel::test_local_set_valid_unit_status \
+  test/test_model.py::TestModel::test_model_attributes \
+  test/test_model.py::TestModel::test_model_name_from_backend \
+  test/test_model.py::TestModel::test_our_unit_is_our \
+  test/test_model.py::TestModel::test_peer_relation_app \
+  test/test_model.py::TestModel::test_pod_immutable \
+  test/test_model.py::TestModel::test_pod_spec \
+  test/test_model.py::TestModel::test_relation_data_del_key \
+  test/test_model.py::TestModel::test_relation_data_del_missing_key \
+  test/test_model.py::TestModel::test_relation_data_modify_our \
+  test/test_model.py::TestModel::test_relation_data_modify_remote \
+  test/test_model.py::TestModel::test_relation_data_type_check \
+  test/test_model.py::TestModel::test_relation_no_units \
+  test/test_model.py::TestModel::test_relation_set_fail \
+  test/test_model.py::TestModel::test_relations_immutable \
+  test/test_model.py::TestModel::test_relations_keys \
+  test/test_model.py::TestModel::test_remote_app_relation_data \
+  test/test_model.py::TestModel::test_remote_app_status \
+  test/test_model.py::TestModel::test_remote_unit_status \
+  test/test_model.py::TestModel::test_remote_units_is_our \
+  test/test_model.py::TestModel::test_resources \
+  test/test_model.py::TestModel::test_resources_immutable \
+  test/test_model.py::TestModel::test_set_app_status_invalid \
+  test/test_model.py::TestModel::test_set_app_status_non_leader_raises \
+  test/test_model.py::TestModel::test_set_unit_status_invalid \
+  test/test_model.py::TestModel::test_status_eq \
+  test/test_model.py::TestModel::test_status_repr \
+  test/test_model.py::TestModel::test_storage \
+  test/test_model.py::TestModel::test_storages_immutable \
+  test/test_model.py::TestModel::test_unit_immutable \
+  test/test_model.py::TestModel::test_unit_relation_data \
+  test/test_model.py::TestModel::test_workload_version \
+  test/test_model.py::TestModel::test_workload_version_invalid \
+  test/test_model.py::TestContainers::test_unit_containers \
+  test/test_model.py::TestContainers::test_unit_get_container \
+  test/test_model.py::TestContainerPebble::test_add_layer \
+  test/test_model.py::TestContainerPebble::test_autostart \
+  test/test_model.py::TestContainerPebble::test_get_plan \
+  test/test_model.py::TestContainerPebble::test_get_service \
+  test/test_model.py::TestContainerPebble::test_get_services \
+  test/test_model.py::TestContainerPebble::test_socket_path \
+  test/test_model.py::TestContainerPebble::test_start \
+  test/test_model.py::TestContainerPebble::test_stop \
+  test/test_model.py::TestContainerPebble::test_type_errors \
+  test/test_model.py::TestModelBindings::test_binding_by_relation \
+  test/test_model.py::TestModelBindings::test_binding_by_relation_name \
+  test/test_model.py::TestModelBindings::test_binding_no_iface_name \
+  test/test_model.py::TestModelBindings::test_dead_relations \
+  test/test_model.py::TestModelBindings::test_empty_bind_addresses \
+  test/test_model.py::TestModelBindings::test_empty_interface_info \
+  test/test_model.py::TestModelBindings::test_invalid_keys \
+  test/test_model.py::TestModelBindings::test_missing_bind_addresses \
+  test/test_model.py::TestModelBindings::test_missing_egress_subnets \
+  test/test_model.py::TestModelBindings::test_missing_ingress_addresses \
+  test/test_model.py::TestModelBackend::test_action_fail \
+  test/test_model.py::TestModelBackend::test_action_get \
+  test/test_model.py::TestModelBackend::test_action_get_error \
+  test/test_model.py::TestModelBackend::test_action_log \
+  test/test_model.py::TestModelBackend::test_action_log_error \
+  test/test_model.py::TestModelBackend::test_action_set \
+  test/test_model.py::TestModelBackend::test_action_set_error \
+  test/test_model.py::TestModelBackend::test_application_version_set \
+  test/test_model.py::TestModelBackend::test_application_version_set_invalid \
+  test/test_model.py::TestModelBackend::test_invalid_metric_label_values \
+  test/test_model.py::TestModelBackend::test_invalid_metric_labels \
+  test/test_model.py::TestModelBackend::test_invalid_metric_names \
+  test/test_model.py::TestModelBackend::test_invalid_metric_values \
+  test/test_model.py::TestModelBackend::test_is_leader_refresh \
+  test/test_model.py::TestModelBackend::test_juju_log \
+  test/test_model.py::TestModelBackend::test_local_set_invalid_status \
+  test/test_model.py::TestModelBackend::test_network_get \
+  test/test_model.py::TestModelBackend::test_network_get_errors \
+  test/test_model.py::TestModelBackend::test_relation_get_juju_version_quirks \
+  test/test_model.py::TestModelBackend::test_relation_get_set_is_app_arg \
+  test/test_model.py::TestModelBackend::test_relation_remote_app_name_env \
+  test/test_model.py::TestModelBackend::test_relation_remote_app_name_script_errors \
+  test/test_model.py::TestModelBackend::test_relation_remote_app_name_script_success \
+  test/test_model.py::TestModelBackend::test_relation_set_juju_version_quirks \
+  test/test_model.py::TestModelBackend::test_relation_tool_errors \
+  test/test_model.py::TestModelBackend::test_status_get \
+  test/test_model.py::TestModelBackend::test_status_is_app_forced_kwargs \
+  test/test_model.py::TestModelBackend::test_status_set_is_app_not_bool_raises \
+  test/test_model.py::TestModelBackend::test_storage_tool_errors \
+  test/test_model.py::TestModelBackend::test_valid_metrics \
+  test/test_model.py::TestLazyMapping::test_invalidate; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi

@@ -1,0 +1,57 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-ad23bd3890"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/cherrypy/cherrypy"
+base_commit = "8c635f55c3634b722260fef501ee49fb440be3ac"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2017-03-11"
+license = "BSD 3-Clause \"New\" or \"Revised\" License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "cherrypy__cherrypy-1578"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_redirect_with_xss",
+]
+pass_to_pass = [
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testCookies",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testDefaultContentType",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testFavicon",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testFlatten",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testRanges",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testRedirect",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testSlashes",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::testStatus",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_InternalRedirect",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_cherrypy_url",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_expose_decorator",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_multiple_headers",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_on_end_resource_status",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_redirect_with_unicode",
+  "cherrypy/test/test_core.py::CoreRequestHandlingTest::test_gc",
+  "cherrypy/test/test_core.py::ErrorTests::test_contextmanager",
+  "cherrypy/test/test_core.py::ErrorTests::test_start_response_error",
+  "cherrypy/test/test_core.py::ErrorTests::test_gc",
+  "cherrypy/test/test_core.py::TestBinding::test_bind_ephemeral_port",
+]
+max_cost_cny = 0.5

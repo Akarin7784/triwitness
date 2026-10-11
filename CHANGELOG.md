@@ -50,7 +50,7 @@
   - L0 开 PR 仍需确认（不变）。
   - **CI 修复返工后先重跑验证器（不重跑评审者）再推送**：发布流程 `CI_WATCH → EXECUTING → VERIFYING → PACKAGING → 推送`；验证不通过就不推送，任务以“CI 修复未通过验证，未推送”结束（spec 012 §5）。
   - 不新建任何 GitHub 仓库；真实仓库上的 CI 修复验收等 Eva 提供 / 批准仓库后再做。
-- **W5-12 扩充任务集 ext（构建中）**：`task_factory.py mine --exclude-existing --fetch-filtered N` 跳过所有已尝试过的实例，从 SWE-rebench 2025-01…2026-03 与 filtered 子集挖出 185 个新候选（每仓库总数 ≤ 2）；全部加固构建（匿名 ID、hooks 关闭、删 `.git`）；新增磁盘占用率守卫（≥ 65% 不开新构建）；`split-ext` 写冻结套件 `evals/suites/ext.yaml`，dev / test 不动（spec 016 §5.4）。
+- **W5-12 扩充任务集 ext（完成）**：`task_factory.py mine --exclude-existing --fetch-filtered N` 跳过所有已尝试过的实例，从 SWE-rebench 2025-01…2026-03 与 filtered 子集挖出 185 个新候选（每仓库总数 ≤ 2）；全部加固构建（匿名 ID、hooks 关闭、删 `.git`），**109 个通过** null 0 / oracle 1 ×3 校验。`split-ext --size 50`：最新 50 个冻结为 `evals/suites/ext.yaml`（dev 15 + test 35 + ext 50 = 100），其余 59 个冻结为 `ext-reserve.yaml`；dev / test 不动、无重叠、审计 0 发现。新增磁盘占用率守卫（≥ 65% 不开新构建）。失败原因见 spec 016 §5.4。
 - **W5-13 Harbor 集成**：我们的任务目录与 Harbor 格式兼容（oracle 1 / nop 0）；新增 `triwitness.integrations.harbor_agent:TriWitnessAgent` + `HarborSandbox`，`harbor run -a ...` 让 TriWitness（deepseek-flash）解 Harbor 任务，box 实测 1 题解决、¥0.0126。Terminal-Bench 2.0 的 10 题子集脚本 `scripts/harbor_external.py` + Windows 一键 `scripts/windows/run-harbor-tb2.ps1`（WSL2）待 Eva 本机跑（box 的 Docker 自定义网络无 DNS，TB2 verifier 联网失败）。见 `docs/design/harbor-integration.md`。
 - CI：Windows 作业解析 `scripts/windows/*.ps1`（PowerShell 5.1 语法 + BOM / CRLF 检查）。
 - 默认权限模式仍是 `auto_review`（未改，等 Eva 决定）。

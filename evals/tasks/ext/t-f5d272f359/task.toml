@@ -1,0 +1,82 @@
+schema_version = "1.3"
+
+[task]
+name = "triwitness/t-f5d272f359"
+description = "SWE-rebench \u4efb\u52a1"
+keywords = ["python", "bugfix", "swe-rebench"]
+
+[metadata]
+source = "swe-rebench"
+repo = "https://github.com/aio-libs/aiocache"
+base_commit = "a6a131ecd33862a3406d03514e9e1031612301ef"
+difficulty = "easy"
+tags = ["python", "real-world"]
+created_at = "2023-12-22"
+license = "BSD 3-Clause \"New\" or \"Revised\" License\uff08\u4ee3\u7801\uff09\uff1bSWE-rebench \u6570\u636e\u96c6 CC-BY-4.0"
+dataset = "nebius/SWE-rebench"
+instance_id = "aio-libs__aiocache-795"
+
+[agent]
+timeout_sec = 1200
+
+[verifier]
+timeout_sec = 300
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 2048
+workdir = "/workspace/repo"
+
+[tw]
+test_cmd = "python -m pytest -q -x"
+fail_to_pass = [
+  "tests/ut/test_factory.py::TestCache::test_new_invalid_cache_raises[None]",
+]
+pass_to_pass = [
+  "tests/ut/test_factory.py::test_class_from_string",
+  "tests/ut/test_factory.py::test_create_simple_cache",
+  "tests/ut/test_factory.py::test_create_cache_with_everything",
+  "tests/ut/test_factory.py::TestCache::test_cache_types",
+  "tests/ut/test_factory.py::TestCache::test_new[memory]",
+  "tests/ut/test_factory.py::TestCache::test_new[memcached]",
+  "tests/ut/test_factory.py::TestCache::test_new[redis]",
+  "tests/ut/test_factory.py::TestCache::test_new_defaults_to_memory",
+  "tests/ut/test_factory.py::TestCache::test_new_invalid_cache_raises[object]",
+  "tests/ut/test_factory.py::TestCache::test_get_scheme_class[memory]",
+  "tests/ut/test_factory.py::TestCache::test_get_scheme_class[memcached]",
+  "tests/ut/test_factory.py::TestCache::test_get_scheme_class[redis]",
+  "tests/ut/test_factory.py::TestCache::test_get_scheme_class_invalid",
+  "tests/ut/test_factory.py::TestCache::test_from_url_returns_cache_from_scheme[memory]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_returns_cache_from_scheme[memcached]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_returns_cache_from_scheme[redis]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://-expected_args0]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://localhost-expected_args1]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://localhost/-expected_args2]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://localhost:6379-expected_args3]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://localhost/?arg1=arg1&arg2=arg2-expected_args4]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://localhost:6379/?arg1=arg1&arg2=arg2-expected_args5]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis:///?arg1=arg1-expected_args6]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis:///?arg2=arg2-expected_args7]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://:password@localhost:6379-expected_args8]",
+  "tests/ut/test_factory.py::TestCache::test_from_url_calls_cache_with_args[redis://:password@localhost:6379?password=pass-expected_args9]",
+  "tests/ut/test_factory.py::TestCache::test_calls_parse_uri_path_from_cache",
+  "tests/ut/test_factory.py::TestCache::test_from_url_invalid_protocol",
+  "tests/ut/test_factory.py::TestCacheHandler::test_add_new_entry",
+  "tests/ut/test_factory.py::TestCacheHandler::test_add_updates_existing_entry",
+  "tests/ut/test_factory.py::TestCacheHandler::test_get_wrong_alias",
+  "tests/ut/test_factory.py::TestCacheHandler::test_reuse_instance",
+  "tests/ut/test_factory.py::TestCacheHandler::test_create_not_reuse",
+  "tests/ut/test_factory.py::TestCacheHandler::test_create_extra_args",
+  "tests/ut/test_factory.py::TestCacheHandler::test_retrieve_cache",
+  "tests/ut/test_factory.py::TestCacheHandler::test_retrieve_cache_new_instance",
+  "tests/ut/test_factory.py::TestCacheHandler::test_multiple_caches",
+  "tests/ut/test_factory.py::TestCacheHandler::test_default_caches",
+  "tests/ut/test_factory.py::TestCacheHandler::test_get_alias_config",
+  "tests/ut/test_factory.py::TestCacheHandler::test_set_empty_config",
+  "tests/ut/test_factory.py::TestCacheHandler::test_set_config_updates_existing_values",
+  "tests/ut/test_factory.py::TestCacheHandler::test_set_config_removes_existing_caches",
+  "tests/ut/test_factory.py::TestCacheHandler::test_set_config_no_default",
+  "tests/ut/test_factory.py::TestCacheHandler::test_ensure_plugins_order",
+]
+max_cost_cny = 0.5

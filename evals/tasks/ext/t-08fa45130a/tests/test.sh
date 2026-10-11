@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# 判分：用 test_patch 之后的测试文件覆盖仓库里的同名文件，只跑 FAIL_TO_PASS + PASS_TO_PASS；全部通过写 1。
+set -u
+cd /workspace/repo
+mkdir -p /logs/verifier
+cp -r /tests/files/. ./
+if python -m pytest -q -p no:cacheprovider --junitxml=/logs/verifier/junit.xml \
+  tests/test_core.py::test_mixed_column \
+  tests/test_core.py::test_mixed_column_with_ignore_spaces \
+  tests/test_core.py::test_mixed_column_with_ignore_spaces_and_case \
+  tests/test_core.py::test_numeric_columns_equal_abs \
+  tests/test_core.py::test_numeric_columns_equal_rel \
+  tests/test_core.py::test_string_columns_equal \
+  tests/test_core.py::test_string_columns_equal_with_ignore_spaces \
+  tests/test_core.py::test_string_columns_equal_with_ignore_spaces_and_case \
+  tests/test_core.py::test_date_columns_equal \
+  tests/test_core.py::test_date_columns_equal_with_ignore_spaces \
+  tests/test_core.py::test_date_columns_equal_with_ignore_spaces_and_case \
+  tests/test_core.py::test_date_columns_unequal \
+  tests/test_core.py::test_bad_date_columns \
+  tests/test_core.py::test_rounded_date_columns \
+  tests/test_core.py::test_decimal_float_columns_equal \
+  tests/test_core.py::test_decimal_float_columns_equal_rel \
+  tests/test_core.py::test_decimal_columns_equal \
+  tests/test_core.py::test_decimal_columns_equal_rel \
+  tests/test_core.py::test_infinity_and_beyond \
+  tests/test_core.py::test_compare_df_setter_bad \
+  tests/test_core.py::test_compare_df_setter_good \
+  tests/test_core.py::test_compare_df_setter_different_cases \
+  tests/test_core.py::test_compare_df_setter_bad_index \
+  tests/test_core.py::test_compare_on_index_and_join_columns \
+  tests/test_core.py::test_compare_df_setter_good_index \
+  tests/test_core.py::test_columns_overlap \
+  tests/test_core.py::test_columns_no_overlap \
+  tests/test_core.py::test_columns_maintain_order_through_set_operations \
+  tests/test_core.py::test_10k_rows \
+  tests/test_core.py::test_subset \
+  tests/test_core.py::test_not_subset \
+  tests/test_core.py::test_large_subset \
+  tests/test_core.py::test_string_joiner \
+  tests/test_core.py::test_decimal_with_joins \
+  tests/test_core.py::test_decimal_with_nulls \
+  tests/test_core.py::test_strings_with_joins \
+  tests/test_core.py::test_index_joining \
+  tests/test_core.py::test_index_joining_strings_i_guess \
+  tests/test_core.py::test_index_joining_non_overlapping \
+  tests/test_core.py::test_temp_column_name \
+  tests/test_core.py::test_temp_column_name_one_has \
+  tests/test_core.py::test_temp_column_name_both_have_temp_1 \
+  tests/test_core.py::test_temp_column_name_both_have_temp_2 \
+  tests/test_core.py::test_temp_column_name_one_already \
+  tests/test_core.py::test_simple_dupes_one_field \
+  tests/test_core.py::test_simple_dupes_two_fields \
+  tests/test_core.py::test_simple_dupes_index \
+  tests/test_core.py::test_simple_dupes_one_field_two_vals_1 \
+  tests/test_core.py::test_simple_dupes_one_field_two_vals_2 \
+  tests/test_core.py::test_simple_dupes_one_field_three_to_two_vals \
+  tests/test_core.py::test_dupes_from_real_data \
+  tests/test_core.py::test_strings_with_joins_with_ignore_spaces \
+  tests/test_core.py::test_strings_with_joins_with_ignore_case \
+  tests/test_core.py::test_decimal_with_joins_with_ignore_spaces \
+  tests/test_core.py::test_decimal_with_joins_with_ignore_case \
+  tests/test_core.py::test_index_with_joins_with_ignore_spaces \
+  tests/test_core.py::test_index_with_joins_with_ignore_case \
+  tests/test_core.py::test_strings_with_ignore_spaces_and_join_columns \
+  tests/test_core.py::test_integers_with_ignore_spaces_and_join_columns \
+  tests/test_core.py::test_sample_mismatch \
+  tests/test_core.py::test_all_mismatch_not_ignore_matching_cols_no_cols_matching \
+  tests/test_core.py::test_all_mismatch_not_ignore_matching_cols_some_cols_matching \
+  tests/test_core.py::test_all_mismatch_ignore_matching_cols_some_cols_matching_diff_rows \
+  tests/test_core.py::test_all_mismatch_ignore_matching_cols_some_calls_matching \
+  tests/test_core.py::test_all_mismatch_ignore_matching_cols_no_cols_matching \
+  'tests/test_core.py::test_calculate_max_diff[base-0]' \
+  'tests/test_core.py::test_calculate_max_diff[floats-0.2]' \
+  'tests/test_core.py::test_calculate_max_diff[decimals-0.1]' \
+  'tests/test_core.py::test_calculate_max_diff[null_floats-0.1]' \
+  'tests/test_core.py::test_calculate_max_diff[strings-0.1]' \
+  'tests/test_core.py::test_calculate_max_diff[mixed_strings-0]' \
+  'tests/test_core.py::test_calculate_max_diff[infinity-inf]' \
+  tests/test_core.py::test_dupes_with_nulls \
+  'tests/test_core.py::test_generate_id_within_group[dataframe0-expected0]' \
+  'tests/test_core.py::test_generate_id_within_group[dataframe1-expected1]' \
+  'tests/test_core.py::test_generate_id_within_group[dataframe2-expected2]' \
+  'tests/test_core.py::test_generate_id_within_group[dataframe3-expected3]' \
+  'tests/test_core.py::test_generate_id_within_group[dataframe4-expected4]' \
+  'tests/test_core.py::test_generate_id_within_group[dataframe5-expected5]' \
+  tests/test_core.py::test_lower \
+  tests/test_core.py::test_integer_column_names \
+  tests/test_core.py::test_save_html; then
+  echo 1 > /logs/verifier/reward.txt
+else
+  echo 0 > /logs/verifier/reward.txt
+fi
