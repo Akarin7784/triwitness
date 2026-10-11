@@ -1,4 +1,7 @@
-"""W2-26：Executor 流程默认 repro-first；显式写 baseline.yaml 的 RunConfig 仍是 W2-25 基线。"""
+"""W2-26：Executor 流程默认 repro-first；显式写 baseline.yaml 的 RunConfig 仍是 W2-25 基线。
+
+1M 档（2026-10-11）：默认 long-context-1m.yaml（继承 repro-first，只改上下文参数），repro-first 行为不变。
+"""
 
 from __future__ import annotations
 
@@ -17,10 +20,12 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def test_default_harness_is_repro_first() -> None:
-    assert DEFAULT_HARNESS == "harness/repro-first.yaml"
+    assert DEFAULT_HARNESS == "harness/long-context-1m.yaml"
     h = HarnessConfig.default()
-    assert h.name == "repro-first"
+    assert h.name == "long-context-1m"
     assert "submit_repro" in h.tools and h.prompts["executor"] == "executor-repro-first"
+    rf = HarnessConfig.load("harness/repro-first.yaml")
+    assert (h.tools, h.prompts) == (rf.tools, rf.prompts)  # 提示 / 工具与 repro-first 相同：缓存前缀不变
     assert "submit_repro" not in HarnessConfig.load().tools  # baseline 不变
 
 
@@ -47,7 +52,7 @@ async def test_run_task_without_config_runs_repro_first() -> None:
                          issue_title="add 是减法", task_prompt="修", repo="o/r", budget=Budget(), config_hash="c",
                          issue_number=3, test_command="pytest -q")  # fmt: skip
     started = next(e for e in rec.events if e.kind == "task_started")
-    assert started.payload["harness"] == "repro-first"
+    assert started.payload["harness"] == "long-context-1m"
     assert tool_results(rec, "finish")[0]["ok"] is False
     assert "reproducing" in states(rec) and res.repro_status is not None
 

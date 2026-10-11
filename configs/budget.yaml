@@ -2,9 +2,11 @@
 # 0.3.2（Eva 2026-10-11 19:14）起去掉预算控制：没有 ¥100 总额 / 类别信封 / 单任务 ¥ 上限 / 高峰闸门 / STOP 熔断。
 # 花费仍逐次记入本地账本（~/.triwitness/ledger.sqlite，`tw usage` 查看），只统计不拦截。
 warn_ratio: 0.8             # 任一上限用到 80% 提醒模型收尾
+# 1M 档（Eva 2026-10-11 20:26）：输入两项为 auto = 由工作预算推导（core/limits.runaway_limits）：
+#   累计输入 = max_turns × 工作预算 × 0.63 ≈ 60M；未命中 = 3 × 工作预算 ≈ 2.85M（工作预算 auto ≈ 951,582）
 per_task:
-  eval: {max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 1800}
-  run:  {max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 2700}
+  eval: {max_input_tokens: auto, max_uncached_input_tokens: auto, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 1800}
+  run:  {max_input_tokens: auto, max_uncached_input_tokens: auto, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 2700}
 usage_categories:           # 账本里的统计类别（不再有额度）
   - dev
   - smoke

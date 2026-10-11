@@ -8,6 +8,11 @@ ContextManager 管 AgentLoop 的消息列表，原则是**只追加、少改写*
 - 压缩（compact）：清理后仍 > compact_at 时，先把失败尝试写进 .tw/NOTES.md，再让 summarizer（非思考）写结构化摘要；
   新历史 = system + 任务 + 摘要与 NOTES + 最近 N 轮原样保留。summarizer 出错时退回确定性摘要，不中断任务。
 - token 估算：有上一次请求的真实 input_tokens 就用它 + 新增消息的字符估算；改写后退回纯字符估算。
+- 1M 档（Eva 2026-10-11）：工作预算可写 auto（窗口 − 输出预留 − 3%）；另有与工作预算无关的**窗口硬上限**
+  （`hard_limit`），请求前超过它就强制清理 + 压缩，仍超就体面结束（AgentLoop）。
+- 防抖：压完仍高于压缩线（压完马上又满）算一次“无效压缩”，连续 `max_ineffective_compactions` 次 → `thrashing`
+  （AgentLoop 以 context_thrash 结束）。
+- 压缩后重读最近修改的文件（`reread_recent_files`），NOTES.md 按其写入上限完整注入。
 """
 
 from __future__ import annotations
@@ -17,19 +22,21 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
-from triwitness.core.errors import BudgetExceeded, TriWitnessError
+from triwitness.core.errors import BudgetExceeded, SandboxError, TriWitnessError
 from triwitness.core.events import ContextEventPayload
 from triwitness.core.models import Usage
 from triwitness.harness.config import HarnessConfig
+from triwitness.llm.limits import hard_input_limit
 from triwitness.llm.types import LLMRequest, LLMResponse, Message, ToolCallSpec
 from triwitness.prompts import load_prompt
 from triwitness.tools.base import ToolContext, ToolResult
-from triwitness.tools.workspace import read_notes, replace_section, write_notes
+from triwitness.tools.workspace import NOTES_MAX_CHARS, read_notes, replace_section, write_notes
 
 PER_MESSAGE_OVERHEAD = 4  # token：角色 / 分隔符
 MIN_KEEP = 2  # 滞回清理时至少保留最近 2 条工具结果
 TAIL_SHARE = 0.4  # 压缩时原样保留的最近几轮最多占工作预算的 40%
 FAILURES_SECTION = "失败尝试（压缩前自动记录）"
+EDIT_TOOLS = ("edit_file", "write_file")  # 压缩后重读的“最近修改的文件”来自这些工具的成功调用
 Summarize = Callable[[LLMRequest], Awaitable[LLMResponse]]
 
 
@@ -87,7 +94,15 @@ def placeholder(meta: ToolMeta) -> str:
 
 
 class ContextManager:
-    def __init__(self, cfg: HarnessConfig, *, summarize: Summarize | None = None, tools_chars: int = 0) -> None:
+    def __init__(
+        self,
+        cfg: HarnessConfig,
+        *,
+        summarize: Summarize | None = None,
+        tools_chars: int = 0,
+        role: str = "executor",
+        hard_limit: int | None = None,
+    ) -> None:
         self.cfg = cfg
         self.c = cfg.context
         self.summarize = summarize
@@ -95,6 +110,11 @@ class ContextManager:
         self.meta: dict[str, ToolMeta] = {}
         self._actual: tuple[int, int] | None = None  # (发送时的消息数, 真实 input_tokens)
         self._last_compact_step = -(10**9)
+        self._budget = self.c.budget_tokens(role)
+        # 窗口硬上限：窗口 − 本角色输出预留 − 余量（与工作预算无关；128K 基线也受它保护）
+        self.hard_limit = hard_limit if hard_limit is not None else hard_input_limit(role)
+        self.ineffective = 0  # 连续无效压缩次数
+        self.modified: dict[str, None] = {}  # 最近修改的文件（有序，最近的在后）
 
     # ---------------------------------------------------------------- 渲染
     def task_message(self, task_prompt: str) -> str:
@@ -113,8 +133,13 @@ class ContextManager:
     # ---------------------------------------------------------------- 记账
     def record_tool(self, call: ToolCallSpec, result: ToolResult) -> None:
         err = None if result.ok else (result.content.strip().splitlines() or ["失败"])[0][:200]
-        self.meta[call.id] = ToolMeta(call_id=call.id, tool=call.name, args=_args(call), ok=result.ok, error=err,
-                                      clearable=result.ok and call.name in self.c.clearable_tools)  # fmt: skip
+        meta = ToolMeta(call_id=call.id, tool=call.name, args=_args(call), ok=result.ok, error=err,
+                        clearable=result.ok and call.name in self.c.clearable_tools)  # fmt: skip
+        self.meta[call.id] = meta
+        path = meta.args.get("path")
+        if result.ok and call.name in EDIT_TOOLS and isinstance(path, str) and path:
+            self.modified.pop(path, None)
+            self.modified[path] = None
 
     def observe(self, n_sent: int, usage: Usage | None) -> None:
         if usage is not None and usage.input_tokens > 0:
@@ -136,14 +161,23 @@ class ContextManager:
 
     @property
     def budget(self) -> int:
-        return self.c.working_budget_tokens
+        return self._budget
+
+    def over_window(self, messages: list[Message]) -> bool:
+        """估算输入是否超过窗口硬上限（请求前检查）。"""
+        return self.estimate(messages) > self.hard_limit
+
+    @property
+    def thrashing(self) -> bool:
+        return self.ineffective >= self.c.max_ineffective_compactions
 
     # ---------------------------------------------------------------- 清理（W2-13）
-    def maybe_clear(self, messages: list[Message]) -> ContextEventPayload | None:
-        if not self.c.clear:
+    def maybe_clear(self, messages: list[Message], *, force: bool = False) -> ContextEventPayload | None:
+        """force：窗口硬上限触发时用——不看 clear_at / min_clear_gain，也不看 clear 开关，尽量清到 clear_to。"""
+        if not self.c.clear and not force:
             return None
         before = self.estimate(messages)
-        if before <= self.c.clear_at * self.budget:
+        if not force and before <= self.c.clear_at * self.budget:
             return None
         tool_idx = [i for i, m in enumerate(messages) if m.role == "tool"]
         keep = min(self.c.keep_recent, len(tool_idx))
@@ -164,7 +198,8 @@ class ContextManager:
             saved += (len(m.content or "") - len(ph)) / self.c.chars_per_token
             plan.append((i, meta, ph))
         # 收益太小（清不到 clear_to、又省不到 min_clear_gain）就不清：每次清理都让缓存前缀失效，小批量清理得不偿失
-        if not plan or (before - saved > self.c.clear_to * self.budget and saved < self.c.min_clear_gain * self.budget):
+        small = before - saved > self.c.clear_to * self.budget and saved < self.c.min_clear_gain * self.budget
+        if not plan or (small and not force):
             return None
         for i, meta, ph in plan:
             messages[i] = messages[i].model_copy(update={"content": ph})
@@ -178,7 +213,7 @@ class ContextManager:
                                    display=f"上下文清理 {n} 条 · {before // 1000}K→{after // 1000}K")  # fmt: skip
 
     # ---------------------------------------------------------------- 压缩（W2-14）
-    def needs_compact(self, messages: list[Message], step: int) -> bool:
+    def needs_compact(self, messages: list[Message], step: int) -> bool:  # 窗口硬上限的强制压缩不经过这里
         return (
             self.c.compact
             and step - self._last_compact_step >= self.c.min_steps_between_compactions
@@ -192,7 +227,10 @@ class ContextManager:
         if len(asst) < 2:
             return None
         keep = min(max(1, self.c.keep_recent_turns), len(asst) - 1)
-        while keep > 1 and self._est(messages[asst[-keep] :]) > TAIL_SHARE * self.budget:
+        cap = TAIL_SHARE * self.budget
+        if self.c.tail_max_tokens is not None:
+            cap = min(cap, self.c.tail_max_tokens)
+        while keep > 1 and self._est(messages[asst[-keep] :]) > cap:
             keep -= 1
         return asst[-keep]
 
@@ -212,7 +250,8 @@ class ContextManager:
         return len(fails)
 
     def _transcript(self, messages: list[Message]) -> str:
-        per = 1500
+        total = self.c.chars(self.c.summary_input_tokens)
+        per = max(1500, total // 80)  # 24K 档 = 1500 字符 / 条（旧行为）；120K 档 = 4500
         out: list[str] = []
         for m in messages:
             if m.role == "assistant":
@@ -226,13 +265,34 @@ class ContextManager:
                 out.append(f"[result {m.name}{status}] {head_tail(m.content or '', per)[0]}")
             else:
                 out.append(f"[{m.role}] {head_tail(m.content or '', per)[0]}")
-        return head_tail("\n".join(out), self.c.chars(24_000), head_ratio=0.3)[0]
+        return head_tail("\n".join(out), total, head_ratio=0.3)[0]
 
     def _fallback_summary(self, old: list[Message]) -> str:
         calls = [f"- {tc.name} {tc.arguments[:120]}" for m in old if m.role == "assistant" for tc in m.tool_calls or []]
         fails = [f"- {m.tool}: {m.error}" for m in self.meta.values() if not m.ok]
         return "\n".join(["## 已做的工具调用（自动摘要，模型摘要不可用）", *calls[-40:],
                           "## 失败尝试", *(fails[-20:] or ["- （无）"])])  # fmt: skip
+
+    async def reread_files(self, ctx: ToolContext) -> tuple[str, int]:
+        """压缩后重读最近修改的文件（最近的在前），总量不超过 reread_recent_files.max_tokens。"""
+        rc = self.c.reread_recent_files
+        paths = list(reversed(self.modified))[: rc.max_files]
+        if not paths or rc.max_tokens <= 0:
+            return "", 0
+        per = self.c.chars(rc.max_tokens) // len(paths)
+        blocks: list[str] = []
+        for p in paths:
+            try:
+                data = await ctx.sandbox.read_file(p)
+            except SandboxError:
+                continue  # 文件被删除 / 改名：跳过
+            if b"\x00" in data[:8000]:
+                continue
+            text, cut = head_tail(data.decode("utf-8", "replace"), per)
+            blocks.append(wrap_untrusted(f"file:{p}", text + ("\n（中间已省略，需要时 read_file）" if cut else "")))
+        if not blocks:
+            return "", 0
+        return "\n\n最近修改的文件（压缩后重新读入的当前内容）：\n" + "\n".join(blocks), len(blocks)
 
     async def compact(
         self, messages: list[Message], step: int, ctx: ToolContext
@@ -261,19 +321,25 @@ class ContextManager:
         if not summary:
             summary, source = self._fallback_summary(old), "fallback"
         summary = head_tail(summary, self.c.chars(a.summary))[0]
-        notes = head_tail(await read_notes(ctx), self.c.chars(a.notes), head_ratio=0.5)[0]
+        # NOTES 至少按其写入上限完整注入（旧的 2K token ≈ 6000 字符会切掉写满时的中段）
+        notes = head_tail(await read_notes(ctx), max(self.c.chars(a.notes), NOTES_MAX_CHARS), head_ratio=0.5)[0]
         body = ("之前的工作历史已压缩成下面的摘要（较早的工具输出不再可见，需要时重新获取）。\n\n"
                 f"<context_summary>\n{summary}\n</context_summary>")  # fmt: skip
         if notes.strip():
             body += "\n\n当前 .tw/NOTES.md：\n" + wrap_untrusted("notes", notes)
+        reread, n_files = await self.reread_files(ctx)
+        body += reread
         new = [messages[0], messages[1], Message(role="user", content=body), *tail]
         self._actual = None
         self._last_compact_step = step
         after = self.estimate(new)
+        # 防抖：压完仍高于压缩线 = 无效压缩（“压完马上又满”：单个超大输出 / 尾部太大）；有效一次就清零
+        self.ineffective = self.ineffective + 1 if after > self.c.compact_at * self.budget else 0
+        extra = f" · 重读 {n_files} 个文件" if n_files else ""
         payload = ContextEventPayload(action="compact", tokens_before=before, tokens_after=after,
                                       summary_chars=len(summary), notes_chars=len(notes), failures_recorded=recorded,
                                       summarizer=source,  # type: ignore[arg-type]
-                                      display=f"上下文压缩 · {before // 1000}K→{after // 1000}K")  # fmt: skip
+                                      display=f"上下文压缩 · {before // 1000}K→{after // 1000}K{extra}")  # fmt: skip
         return new, payload
 
 

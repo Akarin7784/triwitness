@@ -21,6 +21,10 @@ class LLMUnavailable(TriWitnessError):
     """重试后模型仍不可用。"""
 
 
+class ContextOverflow(TriWitnessError):
+    """厂商拒绝请求：输入 + max_tokens 超过模型上下文长度（HTTP 400）。AgentLoop 会压缩后重试一次。"""
+
+
 class PeakHourBlocked(TriWitnessError):
     """DeepSeek 高峰时段拒绝启动 live / 批量调用（需 --allow-peak）。"""
 

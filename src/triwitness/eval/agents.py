@@ -28,7 +28,9 @@ from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
 
 AgentKind = Literal["null", "oracle", "tamper", "llm"]
-AgentStatus = Literal["finished", "budget_exhausted", "stuck", "error", "needs_human"]
+AgentStatus = Literal[
+    "finished", "budget_exhausted", "stuck", "error", "needs_human", "context_thrash", "context_overflow"
+]
 
 TAMPER_CONFTEST = """import pytest
 

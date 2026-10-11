@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
 from triwitness.config import load_config
 from triwitness.core.errors import ConfigError
+from triwitness.llm.limits import auto_working_budget
 from triwitness.prompts import load_prompt
 
 DEFAULT_TOOLS = [
@@ -32,8 +33,16 @@ class TokenAllocation(BaseModel):
     repo_map: int = 2_000  # repo_map 默认 max_tokens
 
 
+class RereadConfig(BaseModel):
+    """压缩后重新读入最近修改的文件（CC 报告 §4：官方压缩后会重读最近改过的文件）。max_files=0 关闭。"""
+
+    max_files: int = Field(default=0, ge=0, le=20)
+    max_tokens: int = Field(default=40_000, ge=0)
+
+
 class ContextConfig(BaseModel):
-    working_budget_tokens: int = 128_000  # 不按 1M 用满（04 §3.5）
+    # 128K 是 W2 基线（baseline.yaml 冻结）；1M 档（long-context-1m.yaml，默认）写 auto = 窗口 − 输出预留 − 3%（≈950K）
+    working_budget_tokens: int | Literal["auto"] = 128_000
     clear: bool = True
     compact: bool = True
     clear_at: float = 0.6  # 估算上下文 > 60% 工作预算 → 批量清理
@@ -52,16 +61,29 @@ class ContextConfig(BaseModel):
     chars_per_token: float = 3.0  # 没有真实用量时的估算（中英混排偏保守）
     min_steps_between_compactions: int = 3
     allocation: TokenAllocation = Field(default_factory=TokenAllocation)
+    # ---- 1M 档新增（默认值 = 旧行为；等于默认值时不进 config_hash，W2 基线哈希不变）
+    tail_max_tokens: int | None = Field(default=None, gt=0)  # 压缩时原样保留尾部的绝对上限（另有 40% 预算的比例上限）
+    summary_input_tokens: int = Field(default=24_000, gt=0)  # 交给 summarizer 的历史转录上限
+    max_ineffective_compactions: int = Field(default=2, ge=1)  # 连续 N 次压完仍高于压缩线 → context_thrash 结束
+    reread_recent_files: RereadConfig = Field(default_factory=RereadConfig)
 
     @model_validator(mode="after")
     def _check(self) -> ContextConfig:
         if not 0 < self.clear_to < self.clear_at <= self.compact_at <= 1:
             raise ValueError("需要 0 < clear_to < clear_at ≤ compact_at ≤ 1")
+        if isinstance(self.working_budget_tokens, int) and self.working_budget_tokens <= 0:
+            raise ValueError("working_budget_tokens 必须 > 0 或写 auto")
         a = self.allocation
         fixed = a.prefix + a.task + a.notes + a.summary
-        if fixed > self.clear_at * self.working_budget_tokens:
-            raise ValueError(f"固定分配 {fixed} token 超过清理阈值 {self.clear_at:.0%} × {self.working_budget_tokens}")
+        if fixed > self.clear_at * self.budget_tokens():
+            raise ValueError(f"固定分配 {fixed} token 超过清理阈值 {self.clear_at:.0%} × {self.budget_tokens()}")
         return self
+
+    def budget_tokens(self, role: str = "executor") -> int:
+        """实际工作预算：auto = 该角色的输入硬上限（core/limits.py）。"""
+        if self.working_budget_tokens == "auto":
+            return auto_working_budget(role)
+        return self.working_budget_tokens
 
     def chars(self, tokens: int) -> int:
         return int(tokens * self.chars_per_token)
@@ -69,7 +91,12 @@ class ContextConfig(BaseModel):
 
 # W2-26：Executor 流程默认先复现（submit_repro + finish 校验）。`baseline.yaml` 仍是 W2-25 基线与消融的父配置，
 # 显式写 `harness: configs/harness/baseline.yaml` 的 RunConfig（W2-25 基线复跑）不受影响。
-DEFAULT_HARNESS = "harness/repro-first.yaml"
+# 1M 档（Eva 2026-10-11 20:26）：默认 long-context-1m.yaml（继承 repro-first，只改上下文参数）；
+# baseline.yaml / repro-first.yaml 冻结，W2-25 / W2-26 的 harness_hash 不变。
+DEFAULT_HARNESS = "harness/long-context-1m.yaml"
+
+# 这些字段在 1M 档时新增：等于默认值时不进 config_hash，旧配置的哈希保持不变
+_HASH_COMPAT_CONTEXT = ("tail_max_tokens", "summary_input_tokens", "max_ineffective_compactions", "reread_recent_files")
 
 
 class HarnessConfig(BaseModel):
@@ -129,8 +156,13 @@ class HarnessConfig(BaseModel):
         return {role: load_prompt(n).tag for role, n in sorted(self.prompts.items())}
 
     def config_hash(self) -> str:
-        blob = json.dumps({"cfg": self.model_dump(mode="json", exclude={"name"}), "prompts": self.prompt_versions()},
-                          sort_keys=True, ensure_ascii=False)  # fmt: skip
+        cfg = self.model_dump(mode="json", exclude={"name"})
+        defaults = ContextConfig.model_fields
+        for k in _HASH_COMPAT_CONTEXT:
+            d = defaults[k].get_default(call_default_factory=True)
+            if cfg["context"][k] == (d.model_dump(mode="json") if isinstance(d, BaseModel) else d):
+                del cfg["context"][k]
+        blob = json.dumps({"cfg": cfg, "prompts": self.prompt_versions()}, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]
 
     def reminder(self, key: str, **kw: str) -> str:
@@ -166,4 +198,4 @@ def _resolve(name: str, seen: set[str]) -> dict[str, Any]:
     return raw
 
 
-__all__ = ["DEFAULT_TOOLS", "ContextConfig", "HarnessConfig", "TokenAllocation"]
+__all__ = ["DEFAULT_TOOLS", "ContextConfig", "HarnessConfig", "RereadConfig", "TokenAllocation"]

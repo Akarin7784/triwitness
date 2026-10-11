@@ -23,3 +23,8 @@ Eva（2026-10-11 19:14 北京时间）：“可以把预算控制相关功能去
 - **保留**：本地账本（改称用量日志，`tw usage` / `tw usage --json`，按类别 / 周 / 模型统计；`tw budget` 作为隐藏别名）、每条消息 / 每个任务的花费显示（结论卡实付、悬停名义价）、缓存命中统计、高峰价调用计数；非金钱安全上限（`max_turns`、`max_wall_seconds`、`max_input_tokens`、`max_uncached_input_tokens`、`max_output_tokens`，`warn_ratio` 改为按这些上限提醒收尾）；模型白名单（永不使用 `deepseek-v4-pro`）；测试 / CI 不花钱（replay / 本机模拟服务）。
 - **迁移**：桌面端偏好里的 `maxCost` / `allowPeak` 读入时丢弃并立即改写存储；旧前端传来的 `maxCost` / `allowPeak` 被 Rust `Choices` 与核心忽略；旧链接 `section=budget` 跳到“用量”页；`CostReport.budget_cny` 改为可选（旧轨迹照常读）。`configs/budget.yaml` 只剩安全上限与统计类别。
 - 研究工具 `tw eval reverify --max-total-cny` 是显式传入的一次性上限，保留。
+
+## 修订 2026-10-11（1M 上下文档）
+
+Eva（2026-10-11 20:26 北京时间）批准默认工作预算直接用约 950K（窗口 1,048,576 − Executor 输出预留 64K − 3%）。防失控上限跟着工作预算推导（仍不含金额）：`max_input_tokens` = 100 轮 × 工作预算 × 0.63 ≈ 60M（原 6M），`max_uncached_input_tokens` = 3 × 工作预算 ≈ 2.85M（原 400K）；`configs/budget.yaml` 写 `auto`。失控时的名义最坏花费约 ¥4.4 / 任务（错峰），只统计不拦截。见 spec 007 §12。
+

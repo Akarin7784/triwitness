@@ -1,4 +1,4 @@
-# RunConfig（W2-26）：基线同款模型 + repro-first（先复现后修复）；安全上限见 configs/budget.yaml（6M 总输入兜底 + 400K 未命中）
+# RunConfig（W2-26）：基线同款模型 + repro-first（先复现后修复）；安全上限见 configs/budget.yaml（1M 档起由工作预算推导：约 60M 总输入兜底 + 2.85M 未命中）
 # 未经 Eva 批准不跑 live：tw eval run --suite test --config configs/runs/w2-26-deepseek.yaml
 name: w2-26-deepseek
 harness: configs/harness/repro-first.yaml

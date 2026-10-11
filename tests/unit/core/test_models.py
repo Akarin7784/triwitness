@@ -96,7 +96,9 @@ def test_json_round_trip(obj: BaseModel) -> None:
 
 def test_budget_defaults_match_adr_0002() -> None:
     b = m.Budget()
-    assert (b.max_cost_cny, b.max_input_tokens, b.max_output_tokens) == (None, 6_000_000, 100_000)
+    # 1M 档：输入两项由工作预算（≈951,582）推导：≈60M / ≈2.85M（原 6M / 400K）
+    assert (b.max_cost_cny, b.max_input_tokens, b.max_output_tokens) == (None, 59_949_666, 100_000)
+    assert b.max_uncached_input_tokens == 2_854_746
     assert (b.max_turns, b.max_wall_seconds, b.warn_ratio) == (100, 1800, 0.8)
     r = m.Budget.for_run()
     assert (r.max_cost_cny, r.max_wall_seconds) == (None, 2700)

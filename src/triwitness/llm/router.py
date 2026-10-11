@@ -48,6 +48,7 @@ class RoleRoute(BaseModel):
     effort: Literal["low", "high", "max"] | None = None
     variant: str | None = None
     fallback: list[str] = Field(default_factory=list)
+    max_output_tokens: int | None = Field(default=None, gt=0)  # 显式 max_tokens（窗口里的输出预留，core/limits.py）
 
 
 # 界面上的思考强度 → DeepSeek（thinking 开关 + reasoning_effort low / high / max）
@@ -153,6 +154,8 @@ class Router:
         upd: dict[str, Any] = {"thinking": route.thinking}
         if req.effort is None and route.effort is not None:
             upd["effort"] = route.effort
+        if req.max_output_tokens is None and route.max_output_tokens is not None:
+            upd["max_output_tokens"] = route.max_output_tokens
         return req.model_copy(update=upd)
 
     async def complete(

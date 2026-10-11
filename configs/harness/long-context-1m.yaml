@@ -1,0 +1,23 @@
+# 1M 上下文默认档（Eva 2026-10-11 20:26 批；审计见 agent-product/research/2026-10-11-1m-context-audit.md）。
+# 继承 repro-first（提示 / 工具不变，缓存前缀不变），只改上下文参数；baseline.yaml / repro-first.yaml 冻结作 W2 对照。
+# 成本模型：命中价 = 未命中的 1/50。只追加很便宜；每次清理 / 压缩会让改写点之后全部未命中 → 清理少而大批、比例线偏低。
+extends: repro-first.yaml
+context:
+  working_budget_tokens: auto     # = 窗口 1,048,576 − Executor 输出预留 65,536 − 3% ≈ 951,582（core/limits.py）
+  clear_at: 0.5                   # ≈ 476K → 批量清理较早的可重取结果
+  clear_to: 0.25                  # ≈ 238K（滞回：一次清得深，两次失效之间只追加区间更长）
+  min_clear_gain: 0.15            # ≈ 143K：省不到这么多又清不到 clear_to 就不清
+  compact_at: 0.75                # ≈ 714K → 先写 NOTES，再摘要压缩
+  keep_recent: 16                 # 清理时保留最近 16 条工具结果
+  keep_recent_turns: 6            # 压缩时原样保留最近 6 轮
+  tail_max_tokens: 120000         # 原样尾部绝对上限（否则 40% × 950K ≈ 380K，压完全是未命中）
+  summary_input_tokens: 120000    # summarizer 看到的历史转录上限（原 24K）
+  max_ineffective_compactions: 2  # 连续 2 次压完仍高于压缩线（压完马上又满）→ context_thrash 结束
+  reread_recent_files: {max_files: 5, max_tokens: 40000}   # 压缩后重读最近修改的 5 个文件
+  allocation:                     # token；固定部分之和 ≤ clear_at × 工作预算
+    prefix: 24000                 # system + 工具 schema + AGENTS.md（AGENTS.md 上限由此推算，约 3 万字符）
+    task: 50000                   # Issue + 指引 + 附件（附件按此预算内联，不再二次截断）
+    notes: 7000                   # 压缩后注入 NOTES.md（≥ 2 万字符写入上限）
+    summary: 10000                # summarizer max_output
+    tool_result: 16000            # 单条工具结果上限（超出头尾截断，全文写 .tw/outputs/）
+    repo_map: 6000

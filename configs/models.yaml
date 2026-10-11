@@ -7,10 +7,20 @@ allowed_models:
   - deepseek-v4-flash          # 旧别名，按 Flash 计费
 denied_models:
   - deepseek-v4-pro
+# 模型窗口与最大输出（核心架构面向 1M 上下文，Eva 2026-10-11）：core/limits.py 读取，推导输入硬上限与 auto 工作预算
+models:
+  deepseek-flash:
+    aliases: [deepseek-v4.1-flash, deepseek-v4-flash, DeepSeek-V4.1-Flash]
+    context_window: 1048576   # 1M；输入 + 生成 ≤ 上下文长度
+    max_output: 393216        # 384K；不传 max_tokens 时默认：非思考 8K / 思考 64K / effort=max 128K
+    source: https://api-docs.deepseek.com/quick_start/pricing ; https://api-docs.deepseek.com/api/create-chat-completion
+    verified_at: "2026-10-11"
+# max_output_tokens：每次请求显式传的 max_tokens（也是窗口里给输出留的余量）。Executor 固定 64K：
+# 桌面端选“高”（effort=max，API 默认 128K）时也按 64K，保证工作预算 ≈ 950K。
 roles:
-  executor:   {model: deepseek/deepseek-flash, thinking: true, effort: high}
-  planner:    {model: deepseek/deepseek-flash, thinking: true}
-  verifier:   {model: deepseek/deepseek-flash, thinking: true}
-  reviewer:   {model: deepseek/deepseek-flash, thinking: true, effort: max, variant: adversarial}
-  summarizer: {model: deepseek/deepseek-flash, thinking: false}
-  classifier: {model: deepseek/deepseek-flash, thinking: false}
+  executor:   {model: deepseek/deepseek-flash, thinking: true, effort: high, max_output_tokens: 65536}
+  planner:    {model: deepseek/deepseek-flash, thinking: true, max_output_tokens: 65536}
+  verifier:   {model: deepseek/deepseek-flash, thinking: true, max_output_tokens: 65536}
+  reviewer:   {model: deepseek/deepseek-flash, thinking: true, effort: max, variant: adversarial, max_output_tokens: 131072}
+  summarizer: {model: deepseek/deepseek-flash, thinking: false, max_output_tokens: 16384}
+  classifier: {model: deepseek/deepseek-flash, thinking: false, max_output_tokens: 1024}

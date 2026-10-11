@@ -5,7 +5,7 @@
 
 ## 1. 背景
 
-DeepSeek 的缓存命中价约为未命中的 1/10，W1 基线 95% 的输入是缓存命中。上下文管理做得不好有两种代价：一是上下文溢出或被噪声淹没，任务失败；二是每次改写历史都会让缓存前缀失效，成本成倍上升。所以这里的每个决定都要同时看**效果**和**缓存命中**。
+DeepSeek 的缓存命中价是未命中的 **1/50**（deepseek-flash 错峰 ¥0.02 vs ¥1 / 百万 token，`configs/pricing.yaml`），W1 基线 95% 的输入是缓存命中。上下文管理做得不好有两种代价：一是上下文溢出或被噪声淹没，任务失败；二是每次改写历史都会让缓存前缀失效，成本成倍上升。所以这里的每个决定都要同时看**效果**和**缓存命中**。
 
 ## 2. 目标
 
@@ -27,7 +27,7 @@ DeepSeek 的缓存命中价约为未命中的 1/10，W1 基线 95% 的输入是�
 
 - `prompts/<name>.md`：front matter `name`、`version`；`Prompt.tag = "executor@v2"`。
 - `configs/harness/*.yaml`：`HarnessConfig`，支持 `extends` 深合并；未知键报错；`config_hash()` = 规范化 JSON 的 sha256 前 12 位。
-- `ContextConfig`：`working_budget_tokens`（默认 128K）、`clear_at` 0.6、`clear_to` 0.35、`min_clear_gain` 0.1、`compact_at` 0.8、`keep_recent` 8、`keep_recent_turns`、`min_steps_between_compactions` 3、`allocation`。校验：`0 < clear_to < clear_at ≤ compact_at ≤ 1`，且固定分配之和 ≤ `clear_at × budget`。
+- `ContextConfig`：`working_budget_tokens`（类默认 128K = W2 基线；**默认 harness `long-context-1m.yaml` 写 `auto` ≈ 951,582**，见 §12）、`clear_at` 0.6、`clear_to` 0.35、`min_clear_gain` 0.1、`compact_at` 0.8、`keep_recent` 8、`keep_recent_turns`、`min_steps_between_compactions` 3、`allocation`。校验：`0 < clear_to < clear_at ≤ compact_at ≤ 1`，且固定分配之和 ≤ `clear_at × budget`。
 - token 分配（默认）：
 
 | 项 | token | 用途 |
@@ -68,6 +68,19 @@ DeepSeek 的缓存命中价约为未命中的 1/10，W1 基线 95% 的输入是�
 - 单测：`tests/unit/harness/test_context.py`（AC1–AC8，含模拟缓存）、`tests/unit/tools/test_tools_w2.py`（notes / git / repo_map / grep / gitignore）。
 - 真实验证：`configs/harness/context-stress.yaml`（32K 工作预算）跑 dev 的 SWE 题；`baseline.yaml` 跑 dev 10 题做回归。
 
+## 12. 1M 窗口（2026-10-11，Eva 20:26 批）
+
+核心架构面向约 1M 上下文的模型（deepseek-flash：窗口 1,048,576，最大输出 384K）。审计：`agent-product/research/2026-10-11-1m-context-audit.md`。
+
+- **窗口推导**：`configs/models.yaml` 的 `models:` 记窗口 / 最大输出（附来源与核对日期），`roles.<role>.max_output_tokens` 是每个角色显式传的 `max_tokens`（Executor 64K、Reviewer 128K、summarizer 16K、classifier 1K）。输入硬上限 = 窗口 − 输出预留 − 3%：Executor **951,582**。`working_budget_tokens: auto` 取这个值（`core/limits.py`、`llm/limits.py`）。
+- **成本模型**：命中价 = 未命中的 1/50。只追加很便宜（50 万上下文每步约 ¥0.01）；清理 / 压缩会让改写点之后全部未命中（60 万上下文清一次约 ¥0.6 ≈ 60 步只追加）。所以 1M 档清理“少而大批”：清理线 50%、一次清到 25%、省不到 15% 不清；压缩线 75%。
+- **默认 harness** `configs/harness/long-context-1m.yaml`（继承 repro-first，提示 / 工具不变）：`keep_recent` 16、`keep_recent_turns` 6、`tail_max_tokens` 120K（原样尾部绝对上限；否则 40% × 950K ≈ 380K 全是未命中）、`summary_input_tokens` 120K（原 24K）、summary 10K、notes 7K、task 50K、prefix 24K、tool_result 16K。`baseline.yaml` / `repro-first.yaml` **冻结**：新字段等于默认值时不进 `config_hash`，W2-25 / W2-26 的 harness_hash 不变（`bd9e633b20e4` / `b10ba3e07403`）。
+- **窗口硬上限保护**（与工作预算无关，128K 基线也受保护）：每次请求前估算 > 硬上限 → 强制清理（不看阈值与开关）→ 仍超则强制压缩 → 仍超则以 `context_overflow` 结束，不把注定被拒的请求发给厂商。厂商返回上下文超限的 400（`ContextOverflow`）→ 强制压缩后重试一次，再超就结束。
+- **防抖**：压完仍高于压缩线（“压完马上又满”）记一次无效压缩，连续 `max_ineffective_compactions`（2）次 → `context_thrash` 结束（Claude Code 官方 troubleshooting 同款保护）。
+- **压缩后重读**：最近 `edit_file` / `write_file` 成功修改的文件，按最近优先重读 `reread_recent_files.max_files`（1M 档 5 个）、总量 ≤ `max_tokens`（40K），包 `<untrusted source="file:...">`。
+- **修复**：NOTES.md 在压缩后 / 续跑时按其写入上限（2 万字符）完整注入（以前 2K token / 4000 字符会切掉中段）；附件按任务分配内联（`compose_task(max_chars=…)`），不再被 `task_message` 二次头尾截断；AGENTS.md 长度只受 `allocation.prefix` 余量约束（去掉写死的 4000 字符）。
+- **防失控上限**（非金钱）：累计输入 = 100 轮 × 工作预算 × 0.63 ≈ 60M，未命中 = 3 × 工作预算 ≈ 2.85M（原 6M / 400K）。
+
 ## 8. 评测影响
 
 - 消融配置：`no-context-mgmt`、`clear-only`、`compact-only`、`minimal-4-tools`、`repo-map`、`no-untrusted-wrap`（W2-25 / W3 消融）。
@@ -88,3 +101,4 @@ DeepSeek 的缓存命中价约为未命中的 1/10，W1 基线 95% 的输入是�
 
 - 2026-10-10：初稿（W2-06），同时完成实现 W2-07（压缩 / 清理 / 截断 / untrusted）、W2-08（repo_map v0，Python）、W2-12（notes）、W2-13（git 只读）、W2-14（版本化 prompt / harness 配置）、W2-15（grep 上下文 / gitignore）。模拟发现两个设计缺陷并修正：① 小预算下清理还没有可清内容就反复压缩 → 尾部轮数自适应（≤ 40% 预算）；② keep_recent × 结果大小接近阈值时，批量清理退化为逐步清理（模拟命中率 63%）→ 增加 clear_to 回滞（89%，40K 预算下 93%）。
 - 2026-10-10：真实验证（¥0.986，见 evals/baselines/2026-10-10-w2-context）。dev 10 回归 9/9 完成即解决、命中 95.3%（W1 95.2%）；32K 压力配置下清理 / 压缩真实触发（crosstl 压缩 25.7K→7.6K，模型摘要）。发现并修复：可清内容不足时清理退化成每几步清 1 条（命中降到 87–91%）→ 新增 `min_clear_gain`；清理后改用“真实用量锚点 − 省下量”估算。新增 `tw eval run --task` 过滤与 `configs/harness/context-stress.yaml`。AC9 勾选（修复后的行为尚未二次真跑，留到 W2-25 基线一并观察）。
+- 2026-10-11：1M 档（§12）：窗口推导 + `auto` 工作预算、默认 `long-context-1m.yaml`、窗口硬上限保护与上下文超限重试、压缩防抖、压缩后重读文件、NOTES / 附件 / AGENTS.md 截断修复；§1 的命中价比例改为 1/50（之前误写 1/10）。

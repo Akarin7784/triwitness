@@ -5,15 +5,30 @@ from __future__ import annotations
 import asyncio
 import os
 import random
+import re
 from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
 
-from triwitness.core.errors import ConfigError, LLMUnavailable
+from triwitness.core.errors import ConfigError, ContextOverflow, LLMUnavailable
 from triwitness.llm.stream import ChunkAssembler, Sink, parse_sse_lines, stream_payload
 
 RETRY_STATUS = {429, 500, 502, 503, 504}
+# 上下文超限的 400（DeepSeek / OpenAI 兼容端点的常见措辞）
+_OVERFLOW_RE = re.compile(
+    r"maximum context length|context length|context window|context_length_exceeded|too many tokens"
+    r"|prompt is too long|input is too long|exceeds? the (?:model'?s )?(?:maximum|max)",
+    re.IGNORECASE,
+)
+
+
+def http_error(status: int, text: str) -> Exception:
+    """不可重试的 HTTP 错误：上下文超限单独成类（AgentLoop 压缩后重试），其余是 LLMUnavailable。"""
+    msg = f"HTTP {status}: {text[:300]}"
+    if status in (400, 413) and _OVERFLOW_RE.search(text):
+        return ContextOverflow(msg)
+    return LLMUnavailable(msg)
 
 
 class HttpTransport:
@@ -54,7 +69,7 @@ class HttpTransport:
                         return r.json()
                     if r.status_code not in RETRY_STATUS:
                         # 不回显请求头；响应体是厂商错误说明，可以截断后给出
-                        raise LLMUnavailable(f"HTTP {r.status_code}: {r.text[:300]}")
+                        raise http_error(r.status_code, r.text)
                     last = f"HTTP {r.status_code}"
                 if attempt < self.retries:
                     await self.sleep((1, 4)[min(attempt, 1)] * (1 + random.random() * 0.25))
@@ -80,7 +95,7 @@ class HttpTransport:
                         if r.status_code >= 400:
                             text = (await r.aread()).decode("utf-8", "replace")
                             if r.status_code not in RETRY_STATUS:
-                                raise LLMUnavailable(f"HTTP {r.status_code}: {text[:300]}")
+                                raise http_error(r.status_code, text)
                             last = f"HTTP {r.status_code}"
                         else:
                             async for line in r.aiter_lines():

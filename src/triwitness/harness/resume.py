@@ -22,11 +22,12 @@ from typing import Any
 from triwitness.core.errors import ConfigError, SandboxError
 from triwitness.core.redact import redact_text
 from triwitness.tools.pytest_report import changed_paths
+from triwitness.tools.workspace import NOTES_MAX_CHARS
 
 FORMAT = "tw-resume/1"
 MAX_FILE_BYTES = 1_000_000
 MAX_TOTAL_BYTES = 8_000_000
-NOTES_CHARS = 4_000
+NOTES_CHARS = NOTES_MAX_CHARS  # 续跑时完整带回 NOTES.md（以前只带最后 4000 字符）
 RESUMABLE = frozenset({"cancelled", "error", "stuck", "budget_exceeded", "needs_human", "failed", "interrupted"})
 
 

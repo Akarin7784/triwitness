@@ -13,6 +13,7 @@ import logging
 from typing import Any
 
 from triwitness.core.models import Vendor
+from triwitness.llm.limits import model_limits
 from triwitness.llm.types import Caps, LLMRequest, LLMResponse, Message, ToolCallSpec, Usage
 
 log = logging.getLogger(__name__)
@@ -26,13 +27,14 @@ class DeepSeekAdapter:
     vendor: Vendor = "deepseek"
 
     def capabilities(self, model: str) -> Caps:
+        lim = model_limits(model)  # configs/models.yaml（1M / 384K，附来源与核对日期）
         return Caps(
             vendor="deepseek",
             model=model,
             supports_thinking=True,
             supports_tools=True,
-            context_window=1_048_576,
-            max_output_tokens=393_216,
+            context_window=lim.context_window,
+            max_output_tokens=lim.max_output,
             reasoning_passback_with_tools=True,
         )
 

@@ -34,6 +34,8 @@ from triwitness.telemetry.trajectory import TrajectoryEvent, TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
 from triwitness.verify.pipeline import EphemeralBackend, VerifyOptions
 
+AGENTS_MD_READ_MAX = 200_000  # 只防超大文件；实际注入长度由 run_task 按 allocation.prefix 的余量决定
+
 BackendPref = Literal["auto", "docker", "none"]
 VerifyPref = Literal["off", "deterministic", "model"]
 
@@ -89,7 +91,10 @@ async def run_local(
         rec.subscribe(on_event)
     branch: str | None = None
     result: TaskResult | None = None
-    composed = compose_task(issue, guidance=guidance, attachments=attachments)
+    hcfg = harness or HarnessConfig.default()
+    # 附件按 harness 的任务分配内联，避免进 ContextManager 后再被头尾截断
+    composed = compose_task(issue, guidance=guidance, attachments=attachments,
+                            max_chars=hcfg.context.chars(hcfg.context.allocation.task))  # fmt: skip
     if attachments:
         archive_attachments(attachments, run_dir)
     modes: ModeController | None = None
@@ -105,7 +110,7 @@ async def run_local(
         engine = PermissionEngine(policy, workspace=sb.spec.workdir)
         gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo, reviewer=reviewer)
         shell = getattr(getattr(sb, "shell", None), "kind", "bash")
-        registry = ToolRegistry(default_tools(shell=shell, names=(harness or HarnessConfig.default()).tools), gate=gate)
+        registry = ToolRegistry(default_tools(shell=shell, names=hcfg.tools), gate=gate)
         tw_dir = str(getattr(sb, "tw_dir", "/workspace/.tw"))
         agents_md = repo / "AGENTS.md"
         opts = None
@@ -123,8 +128,9 @@ async def run_local(
             budget=budget or Budget.for_run(),
             config_hash="tw-run",
             test_command=test_command,
-            agents_md=agents_md.read_text(encoding="utf-8")[:4000] if agents_md.is_file() else None,
-            config=harness,
+            # 长度由 run_task 按 allocation.prefix 的余量截（不再写死 4000 字符）；这里只防超大文件
+            agents_md=agents_md.read_text(encoding="utf-8")[:AGENTS_MD_READ_MAX] if agents_md.is_file() else None,
+            config=hcfg,
             tw_dir=tw_dir,
             category="dogfood",
             verify=opts,

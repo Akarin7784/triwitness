@@ -43,6 +43,12 @@ class TaskState(StrEnum):
 # ---------------------------------------------------------------- 预算（ADR-0002）
 
 
+def _runaway() -> tuple[int, int]:
+    from triwitness.core.limits import runaway_limits
+
+    return runaway_limits()
+
+
 class Budget(_Model):
     """单任务安全上限（防失控循环，不是花钱预算）。默认值为 eval 档；`tw run` / dogfooding 用 `Budget.for_run()`。
 
@@ -50,9 +56,10 @@ class Budget(_Model):
     """
 
     max_cost_cny: float | None = Field(default=None, gt=0)  # 已废弃，忽略
-    # W2-26：总输入（含缓存命中）6M 作兜底，另按未命中（真正计价的输入）设上限，挡住失控循环。
-    max_input_tokens: int = Field(default=6_000_000, gt=0)  # 含缓存命中，兜底
-    max_uncached_input_tokens: int = Field(default=400_000, gt=0)  # 缓存未命中
+    # W2-26 起总输入（含缓存命中）兜底 + 未命中上限，挡住失控循环。1M 档（Eva 2026-10-11）：两者都由
+    # 工作预算推导（core/limits.runaway_limits）：950K → 累计约 60M、未命中约 2.85M（原 6M / 400K）。
+    max_input_tokens: int = Field(default_factory=lambda: _runaway()[0], gt=0)  # 含缓存命中，兜底
+    max_uncached_input_tokens: int = Field(default_factory=lambda: _runaway()[1], gt=0)  # 缓存未命中
     max_output_tokens: int = Field(default=100_000, gt=0)
     max_turns: int = Field(default=100, gt=0)
     max_wall_seconds: int = Field(default=1800, gt=0)

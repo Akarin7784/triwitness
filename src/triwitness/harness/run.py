@@ -49,6 +49,9 @@ _STATUS: dict[str, tuple[FinishStatus, TaskState, str]] = {
     "needs_human": ("needs_human", TaskState.NEEDS_HUMAN, "等待人工"),
     "error": ("failed", TaskState.FAILED, "失败"),
     "cancelled": ("cancelled", TaskState.CANCELLED, "已取消"),
+    # 1M 档：上下文抖动 / 超窗口——事件层仍报 stuck（tw-events/1 不变），原因写在 error 事件里
+    "context_thrash": ("stuck", TaskState.FAILED, "上下文反复压缩无效"),
+    "context_overflow": ("stuck", TaskState.FAILED, "上下文超出窗口"),
 }
 
 
@@ -147,7 +150,7 @@ async def run_task(
         loop = AgentLoop(router, registry, budget=budget, emitter=rec, mode=mode, config=cfg, category=category,
                          stream=stream,
                          system_prompt=build_system_prompt(role_prompt, agents_md=agents_md, tool_names=registry.names,
-                                                           agents_md_max_chars=min(4000, max(0, room))))  # fmt: skip
+                                                           agents_md_max_chars=max(0, room)))  # fmt: skip
         ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
                           tw_dir=tw_dir)  # fmt: skip
         if repro_first:
@@ -203,8 +206,10 @@ async def run_task(
             outcome = await loop.run(f"{task_prompt}\n\n<verification_feedback>\n{verification.feedback()}\n"
                                      "</verification_feedback>", ctx)  # fmt: skip
             status, final, label = _classify(outcome)
-        if outcome.status in ("budget_exhausted", "error", "stuck"):
-            etype = {"budget_exhausted": "BudgetExceeded", "stuck": "Stuck", "error": "Error"}[outcome.status]
+        etypes = {"budget_exhausted": "BudgetExceeded", "stuck": "Stuck", "error": "Error",
+                  "context_thrash": "ContextThrash", "context_overflow": "ContextOverflow"}  # fmt: skip
+        if outcome.status in etypes:
+            etype = etypes[outcome.status]
             rec.emit(ErrorPayload(type=etype, message=outcome.reason or etype, display=_clip(outcome.reason or label)))
         await _checkpoint(rec, sandbox, "final")
         if progress_dir is not None and status != "done":  # 停下 / 失败：留一份最新进度给“继续”

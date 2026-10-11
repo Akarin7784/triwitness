@@ -60,8 +60,9 @@ class ToolRegistry:
 
 class Budget(BaseModel):  # ADR-0002（eval 模式默认值）；0.3.2 起是防失控的安全上限，不含金额
     max_cost_cny: float | None = None  # 已废弃：只为兼容旧配置，读入后忽略
-    max_input_tokens: int = 6_000_000  # 含缓存命中，兜底（W2-26：原 3M）
-    max_uncached_input_tokens: int = 400_000  # 缓存未命中（W2-26）
+    # 1M 档（2026-10-11）：输入两项由工作预算推导（core/limits.runaway_limits，工作预算 auto ≈ 951,582）
+    max_input_tokens: int = 59_949_666  # 含缓存命中，兜底 = 100 轮 × 工作预算 × 0.63（≈60M；W2-26：6M，更早 3M）
+    max_uncached_input_tokens: int = 2_854_746  # 缓存未命中 = 3 × 工作预算（≈2.85M；W2-26：400K）
     max_output_tokens: int = 100_000
     max_turns: int = 100
     max_wall_seconds: int = 1800
@@ -146,7 +147,7 @@ while True:
 
 ### 5.3 工具结果截断
 
-单个工具结果超过 8K token（按字符估算 ≈ 4 字符/token）时保留头 60% + 尾 40%，中间注明省略量，并把完整内容写到沙箱 `/workspace/.tw/outputs/<step>.txt`，提示模型可用 `read_file` 查看。
+单个工具结果超过 `allocation.tool_result`（基线 8K token、1M 档 16K token；按字符估算 ≈ 3 字符/token，与 `chars_per_token=3.0` 一致）时保留头 60% + 尾 40%，中间注明省略量，并把完整内容写到沙箱 `/workspace/.tw/outputs/<step>.txt`，提示模型可用 `read_file` 查看。
 
 ### 5.4 死循环检测
 
@@ -205,3 +206,4 @@ while True:
 - 2026-10-10：W2-26：单任务预算总输入 3M→6M（兜底）+ 新增 `max_uncached_input_tokens=400K`（守卫按 cache_miss 计）；Executor 默认 harness 改为 repro-first（`HarnessConfig.default()`，`run_task` / `tw run` / eval LLMAgent 未指定时使用），基线 RunConfig 显式指定 baseline.yaml 不受影响。
 - 2026-10-10：UI-10 桌面端接入：`run_task` 捕获取消（CancelledError）→ 状态 cancelled + `task_finished(status=cancelled)`，正常返回（保留分支与产物）；`run_local(on_event=…)` 把事件同步推给桥接；`tw run --jsonl`（tw-bridge/1，见 src/triwitness/bridge/stdio.py）与 `--demo`（脚本化 Router + 演示仓库，¥0）；`python -m triwitness`。审批事件带 display（待批 · 工具 · 命令 / 已允许（一次 / 本次任务 / 总是）/ 已拒绝）。默认权限规则修正：`Read(~/.triwitness/**)` 误伤 none 后端工作树（`~/.triwitness/worktrees`），加例外 `Read(!~/.triwitness/worktrees/**)`。
 - 2026-10-11（0.3.2）：按 ADR-0002 修订“去掉预算控制”（Eva 19:14）：`TaskBudgetGuard` 不再检查花费，只检查轮数 / 墙钟 / token 兜底；`warn_ratio` 按这些上限提醒收尾；`Budget.max_cost_cny` 废弃（可选、忽略）。
+- 2026-10-11：1M 档（Eva 20:26 批）：单任务安全上限的输入两项改为由工作预算推导（≈60M / ≈2.85M）；`LoopOutcome` 新增 `context_thrash`（连续 2 次压完仍高于压缩线）与 `context_overflow`（强制清理 + 压缩后仍超窗口硬上限，或厂商连续两次报上下文超限），事件层仍报 `stuck`、原因写进 error 事件；每个角色显式传 `max_tokens`（configs/models.yaml）；§5.3 的字符估算改为 3 字符/token（与代码一致）。详见 spec 007 §12。

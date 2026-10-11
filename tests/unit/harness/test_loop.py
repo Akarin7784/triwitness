@@ -66,13 +66,13 @@ def test_ac6_budget_defaults() -> None:
     b = Budget()
     assert (b.max_cost_cny, b.max_input_tokens, b.max_output_tokens, b.max_turns, b.max_wall_seconds, b.warn_ratio) == (
         None,  # 0.3.2：不再有 ¥ 上限
-        6_000_000,
+        59_949_666,  # 1M 档：100 轮 × 工作预算 951,582 × 0.63
         100_000,
         100,
         1800,
         0.8,
     )
-    assert b.max_uncached_input_tokens == 400_000  # W2-26
+    assert b.max_uncached_input_tokens == 2_854_746  # 1M 档：3 × 工作预算（W2-26 时为 400K）
 
 
 async def test_ac6_budget_exhausted_after_first_call() -> None:

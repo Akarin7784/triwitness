@@ -9,7 +9,7 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel
 
-from triwitness.core.errors import BudgetExceeded, SandboxError, TriWitnessError
+from triwitness.core.errors import BudgetExceeded, ContextOverflow, SandboxError, TriWitnessError
 from triwitness.core.events import LoopWarningPayload, ModelCallPayload, ToolCallPayload, billing
 from triwitness.core.models import Budget, FinishReport, Role
 from triwitness.core.redact import redact_text
@@ -37,7 +37,17 @@ class RouterLike(Protocol):
 
 
 class LoopOutcome(BaseModel):
-    status: Literal["finished", "budget_exhausted", "stuck", "error", "needs_human", "cancelled"]
+    # context_thrash：连续无效压缩；context_overflow：强制清理 + 压缩后仍超窗口硬上限 / 厂商连续两次报上下文超限
+    status: Literal[
+        "finished",
+        "budget_exhausted",
+        "stuck",
+        "error",
+        "needs_human",
+        "cancelled",
+        "context_thrash",
+        "context_overflow",
+    ]
     finish: FinishReport | None = None
     steps: int
     reason: str | None = None
@@ -102,8 +112,10 @@ class AgentLoop:
         guard: TaskBudgetGuard | None = None,
         category: str = "dev",
         stream: bool = False,
+        hard_limit: int | None = None,
     ) -> None:
         self.router = router
+        self.hard_limit = hard_limit  # 窗口硬上限覆盖（测试用）；默认按角色从 configs/models.yaml 推导
         self.category = category  # 全局账本的类别信封（eval 用 baseline 等）
         self.registry = registry
         self.system_prompt = system_prompt
@@ -137,12 +149,43 @@ class AgentLoop:
         )  # fmt: skip
         return resp
 
+    def _thrash(self, cm: ContextManager, steps: int) -> LoopOutcome:
+        return LoopOutcome(status="context_thrash", steps=steps,
+                           reason=f"连续 {cm.ineffective} 次压缩后上下文仍高于压缩线"
+                                  f"（{cm.estimate(self.messages) // 1000}K）："
+                                  "单个结果过大或尾部无法压缩，停下以免反复压缩")  # fmt: skip
+
+    async def _fit_window(
+        self, cm: ContextManager, steps: int, ctx: ToolContext, *, force_compact: bool
+    ) -> LoopOutcome | None:
+        """强制清理（不看阈值），仍超窗口（或 force_compact）就强制压缩；还超就以 context_overflow 结束。"""
+        rec = self.emitter
+        cleared = cm.maybe_clear(self.messages, force=True)
+        if cleared is not None:
+            rec.emit(cleared, role=self.role)
+        if force_compact or cm.over_window(self.messages):
+            try:
+                compacted = await cm.compact(self.messages, steps, ctx)
+            except BudgetExceeded as e:
+                return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
+            if compacted is not None:
+                self.messages, payload = compacted
+                rec.emit(payload, role=self.role)
+            if cm.thrashing:
+                return self._thrash(cm, steps)
+        if cm.over_window(self.messages):
+            return LoopOutcome(status="context_overflow", steps=steps,
+                               reason=f"清理并压缩后上下文仍约 {cm.estimate(self.messages) // 1000}K，"
+                                      f"超过窗口硬上限 {cm.hard_limit // 1000}K")  # fmt: skip
+        return None
+
     async def run(self, task_prompt: str, ctx: ToolContext) -> LoopOutcome:
         cfg = self.config
         rec = self.emitter
         tools = self.registry.schemas()
         tool_names = [t["function"]["name"] for t in tools]
-        cm = ContextManager(cfg, tools_chars=len(json.dumps(tools, ensure_ascii=False)),
+        cm = ContextManager(cfg, tools_chars=len(json.dumps(tools, ensure_ascii=False)), role=self.role,
+                            hard_limit=self.hard_limit,
                             summarize=lambda r: self._summarize(r, ctx.task_id))  # fmt: skip
         self.context = cm
         self.messages = [Message(role="system", content=self.system_prompt),
@@ -155,6 +198,7 @@ class AgentLoop:
         idle_streak = 0  # 信号 3：连续没有修改、也没有新读取目标的工具调用
         seen_reads: set[str] = set()
         steps = 0
+        overflow_retried = False
         while True:
             # 上下文管理（spec 007）：先批量清理，仍超线再压缩；两者都会写 context_event
             cleared = cm.maybe_clear(self.messages)
@@ -168,6 +212,13 @@ class AgentLoop:
                 if compacted is not None:
                     self.messages, payload = compacted
                     rec.emit(payload, role=self.role)
+                if cm.thrashing:
+                    return self._thrash(cm, steps)
+            # 窗口硬上限（与工作预算无关）：估算超了就强制清理 + 压缩，仍超就体面结束，不等厂商 400
+            if cm.over_window(self.messages):
+                ended = await self._fit_window(cm, steps, ctx, force_compact=False)
+                if ended is not None:
+                    return ended
             req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools)
             call_id = f"c{rec.next_seq}"
             writer = DeltaWriter(rec, self.role, call_id) if self.stream else None
@@ -178,11 +229,23 @@ class AgentLoop:
                     )
             except BudgetExceeded as e:
                 return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
+            except ContextOverflow as e:
+                # 估算偏低、厂商报上下文超限：强制压缩后重试一次；再超就结束
+                if writer is not None:
+                    writer.flush()
+                if overflow_retried:
+                    return LoopOutcome(status="context_overflow", steps=steps, reason=f"压缩后仍超出上下文窗口：{e}")
+                overflow_retried = True
+                ended = await self._fit_window(cm, steps, ctx, force_compact=True)
+                if ended is not None:
+                    return ended
+                continue
             except TriWitnessError as e:
                 return LoopOutcome(status="error", steps=steps, reason=f"{type(e).__name__}: {e}")
             finally:
                 if writer is not None:
                     writer.flush()
+            overflow_retried = False
             steps += 1
             cm.observe(len(req.messages), resp.usage)
             seq = rec.next_seq

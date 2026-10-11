@@ -26,14 +26,6 @@ from triwitness.llm.stream import current_sink, replay_deltas
 from triwitness.llm.types import LLMRequest, LLMResponse
 
 CHAT_PATH = "/chat/completions"
-DEFAULT_MAX_OUTPUT_ESTIMATE = 4096
-
-
-def _estimate_input_tokens(payload: dict[str, object]) -> int:
-    import json
-
-    return len(json.dumps(payload, ensure_ascii=False)) // 3 + 1  # 偏保守：约 3 字符 / token
-
 
 BASE_URL_OVERRIDE_ENV = "TW_LLM_BASE_URL_OVERRIDE"
 

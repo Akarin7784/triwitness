@@ -1,6 +1,8 @@
 """桌面端输入（UI-21）：附件与用户说明（个人偏好 / 风格 / 项目说明）拼进任务描述。
 
-- 文本附件内联为带文件名的代码块（单个 20K 字、合计 60K 字封顶，超出截断并注明）
+- 文本附件内联为带文件名的代码块（默认单个 20K 字、合计 60K 字封顶，超出截断并注明）
+- 传 `max_chars`（= harness 的任务分配）时，用户设置 + Issue + 附件整体落在这个预算内：附件按剩余预算截断并注明，
+  不会再被 `ContextManager.task_message` 二次头尾截断（以前附件中段会被悄悄切掉）
 - 图片 / 二进制不读内容：当前模型（deepseek-flash）只读文字，只列出文件名与大小，诚实说明
 - 用户说明放在任务描述前，作为“用户设置”而非 Issue 正文；同样封顶
 附件原件复制到 run_dir/attachments/ 留档。
@@ -48,7 +50,13 @@ def _read_text(p: Path) -> str | None:
             return None
 
 
-def compose_task(issue: str, *, guidance: str | None = None, attachments: list[Path] | None = None) -> ComposedTask:
+TASK_SHARE = 0.85  # 任务分配里留给首轮描述的比例：续跑说明 / 验证反馈会追加在后面
+BLOCK_OVERHEAD = 200  # 每个附件块的标题 / 代码围栏
+
+
+def compose_task(
+    issue: str, *, guidance: str | None = None, attachments: list[Path] | None = None, max_chars: int | None = None
+) -> ComposedTask:
     files = list(attachments or [])[:MAX_FILES]
     out = ComposedTask(prompt="")
     parts: list[str] = []
@@ -59,6 +67,10 @@ def compose_task(issue: str, *, guidance: str | None = None, attachments: list[P
         parts.append(f"## 用户设置（偏好 / 风格 / 项目说明）\n\n{g}")
     parts.append(issue.strip())
     budget = TOTAL_CHARS
+    per_file = PER_FILE_CHARS
+    if max_chars is not None:
+        budget = int(max_chars * TASK_SHARE) - sum(len(p) for p in parts) - BLOCK_OVERHEAD * (len(files) + 1)
+        per_file = max(PER_FILE_CHARS, budget // 2)
     blocks: list[str] = []
     for p in files:
         name = p.name
@@ -72,7 +84,7 @@ def compose_task(issue: str, *, guidance: str | None = None, attachments: list[P
             out.binaries.append(name)
             blocks.append(f"- 二进制文件 `{name}`（{size} 字节）：未读取内容")
             continue
-        cap = min(PER_FILE_CHARS, budget)
+        cap = min(per_file, budget)
         if cap <= 0:
             out.truncated.append(name)
             blocks.append(f"- `{name}`：附件总量已达上限，未内联")
@@ -81,7 +93,7 @@ def compose_task(issue: str, *, guidance: str | None = None, attachments: list[P
         if len(body) > cap:
             body = body[:cap] + "\n…（已截断）"
             out.truncated.append(name)
-        budget -= len(body)
+        budget -= len(body) + BLOCK_OVERHEAD
         out.texts.append(name)
         f = _fence(body)
         blocks.append(f"### {name}\n\n{f}\n{body}\n{f}")
