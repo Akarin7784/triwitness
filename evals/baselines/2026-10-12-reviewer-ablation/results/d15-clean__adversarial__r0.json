@@ -1,0 +1,31 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "修复本身正确，但 diff 未附带任何测试，现有 set_broker 相关测试只断言 app.broker is broker（tests/application/test_delayed_broker.py:8-16、tests/cli/require_broker/test_app.py:31-34），没有任何断言能证明 broker._update_fd_config 被调用/上下文被合并。也就是说本 Issue 的核心场景（FastStream() + app.set_broker(broker) 后 handler 注入 app）在当前测试集中未被覆盖，将来很容易被静默改坏（例如又有人把 set_broker 改为直接 append）。",
+   "suggestion": "在 tests/application/test_delayed_broker.py 增加回归测试，例如：app = StartAbleApplication(); broker = RabbitBroker(); app.set_broker(broker); assert broker.context is app.context（或断言 broker.config.fd_config 与 app.config 合并、或写一个 @broker.subscriber 的 handler 参数注入 app 后跑 TestRabbitBroker 验证）。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.152121,
+ "input_tokens": 509182,
+ "cache_hit_tokens": 474752,
+ "output_tokens": 27049,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 142.7
+}

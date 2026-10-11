@@ -1,0 +1,66 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "下标 off-by-one：`next_chr()` 里 `self.ch = self.text[self.at]; self.at += 1`（第117-118行），所以任何时刻 `self.at == index(self.ch) + 1`，`self.ch` 的下一个字符是 `self.text[self.at]`，而这里用了 `self.text[self.at + 1]`，即比较的是 `ch` 之后第二个字符。结果：`'--'` 开头且后面不是恰好又一个 '-' 的注释根本不会被识别。比如 `slpp.decode('--comment\\n1')`：ch='-', at=1, text[2]='c' != '-' → 不进 skip_comments → value() 走 number() → next_digit 抛 'mfnumber_minus' 并被捕获打印后 return 0，最终返回 0（正确应为 1；base 版本因为 `re.sub('--.*$', ...)` 返回 1）。再如注释里带 `=`/`,` 时会把注释正文当表内容解析：`slpp.decode('{ -- a = b\\n 1 }')` 得到 `{'a': 'b', 0: 1}` 而不是 `[1]`。也就是说 base 支持的普通短注释在补丁后基本失效，是功能回归。",
+   "suggestion": "改为 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（同时解决下一条的越界），并补一条注释相关测试（如 `slpp.decode('--comment\\n1') == 1`、`slpp.decode('{1, -- c\\n 2}') == [1, 2]`、`slpp.decode('{ -- a = b\\n 1 }') == [1]`）。"
+  },
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "越界崩溃：`self.text[self.at + 1]` 未做边界判断，当 `at + 1 >= len(text)` 时抛 IndexError。最小复现：`slpp.decode('-1')`（len=2，初次 next_chr 后 at=1，text[2] 越界）→ IndexError: string index out of range，而 base 返回 -1；同理 `slpp.decode('-')`、`slpp.decode(' -')` 也会崩。tests.py 只测了 '-0.45' 和 '-3.23e+17'（长度足够，text[at+1] 恰好存在），所以单测全绿掩盖了这个崩溃。",
+   "suggestion": "先判边界再取字符：`if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "skip_comments 在遇到换行时调用 self.white()，而 white() 结尾又调用 skip_comments()，形成 递归：N 行连续注释会嵌套 N 层栈帧（`--a\\n--b\\n--c\\n1` 依次 white→skip_comments→white→…），注释行数一多（约千行量级）会 RecursionError。",
+   "suggestion": "改成同帧循环：跳过注释后继续走 white() 的空白跳过逻辑（例如让 skip_comments 返回后由 white 的 while 循环重新判断），不要相互递归调用。"
+  },
+  {
+   "severity": "nit",
+   "file": "slpp.py",
+   "line": 107,
+   "message": "`re.match('\\n', self.ch)` 用正则判断单个字符没有必要（每次循环都走一遍正则编译/匹配），直接比较字符更清晰也更快。另外新代码仍然只支持短注释（原 FIXME 已删除，但 `--[[ ... ]]` 长注释依旧不支持），建议保留一句说明或后续单独处理。",
+   "suggestion": "用 `if self.ch == '\\n':`（并可用 `self.ch in ('\\n',)` 处理 \\r\\n 时先跳过 '\\r'）。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests.py",
+   "line": 129,
+   "message": "补丁没有为 Issue 场景加回归测试，也没有注释相关测试，所以上述 off-by-one / IndexError 都能骗过现有测试套件。",
+   "suggestion": "在 test_string 增加 `self.assertEqual(slpp.decode('\"--3\"'), '--3')`；新增 test_comments 覆盖 `decode('--comment\\n1')`、`{1, -- c\\n 2}`、`{ -- a = b\\n 1 }`，并在 test_numbers 加 `decode('-1') == -1`。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.05369,
+ "input_tokens": 41975,
+ "cache_hit_tokens": 36352,
+ "output_tokens": 11835,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 65.3
+}

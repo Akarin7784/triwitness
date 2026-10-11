@@ -1,0 +1,45 @@
+{
+ "item": "d20-clean",
+ "task": "swe-llm-sandbox-101",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 520,
+   "message": "新的超时解析逻辑与 SandboxSession 不一致，并且对显式配置的无超时值进行了错误处理。SandboxSession.run 使用 `actual_timeout = timeout or self.config.get_execution_timeout()`（session_base.py:390），直接委托给配置逻辑，并将 None 视为“无限运行”。这里 `if timeout is not None: ... else: config_timeout = get_execution_timeout(); effective_timeout = config_timeout if config_timeout is not None else 60`：(a) 当同时设置 `default_timeout=None, execution_timeout=None` 时，尽管 SessionConfig 中（config.py:54-61）记录 `None` 为“无限运行”，并且 SandboxSession 会将其继续传递，代码仍强制使用 60 秒——也就是说，同一类意外超时钳制问题在一个新的路径上重新出现，这正是 issue 所要修复的行为；(b) `timeout=0` 不再像 `SandboxSession` 中那样回退到配置值。由于 `get_execution_timeout()` 本身已经实现了 `execution_timeout or default_timeout`（如果未配置则默认 60.0），整个分支是多余的。",
+   "suggestion": "直接与 SandboxSession 保持一致：`actual_timeout = timeout or self._session.config.get_execution_timeout()`，并移除 `... else 60` 回退，这样 None 配置会按文档继续表示无超时。同时为 `ArtifactSandboxSession(execution_timeout=120).run(code)` 和 `ArtifactSandboxSession(default_timeout=120).run(code)` 添加测试，断言传给 `run_with_artifacts` 的 timeout 为 120。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "该 diff 没有添加任何测试，而现有测试只在底层会话是 MagicMock 时才会通过：`mock_session.config.get_execution_timeout()` 返回一个 Mock，而 `int(Mock)` 会静默变成 0，于是 `run_with_artifacts` 收到的是 `timeout=0` 而不是 Mock，导致 `assert_called_once_with(..., timeout=30)` 失败/变得无意义。无论哪种情况，都没有测试证明配置的 `execution_timeout`/`default_timeout` 会被传递，也没有测试证明用户显式的 `timeout=` 会覆盖它——而这正是该 issue 的核心回归点。",
+   "suggestion": "添加测试，显式设置 `mock_session.config.get_execution_timeout.return_value = 120`（并使用真实 SessionConfig 做一次集成式断言），断言 `run_with_artifacts` 收到 `timeout=120`，并断言显式 `timeout` 参数优先。"
+  },
+  {
+   "severity": "minor",
+   "file": "llm_sandbox/language_handlers/base.py",
+   "line": 222,
+   "message": "`run_with_artifacts` 的默认值仍为 `timeout: int = 30`（在 cpp_handler.py:44、go_handler.py:36、java_handler.py:41、javascript_handler.py:43、ruby_handler.py:35 中有重复）。调用方现在总会传入一个值，因此这个过时的 30 秒默认值只会在直接调用处理器时生效，并且它既与配置默认值（60）不一致，也与 `container.run` 的 `float | None = None` 语义不一致——这正是导致本次 issue 的同一个 30 秒常量。",
+   "suggestion": "将处理器默认值改为 `timeout: float | None = None`，并让 `container.run` 在那里应用配置默认值。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.042094,
+ "input_tokens": 230277,
+ "cache_hit_tokens": 206848,
+ "output_tokens": 3632,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 23.6
+}

@@ -1,0 +1,52 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "`except KeyError` 覆盖了 `emit()` 的整个 try 块，而不只是格式字符串解析。第 200-206 行的 `self._sink.write(str_record)`（以及第 133 行的 `self._filter(record)`、第 137 行的 `self._formatter(record)` 动态 format）抛出的 KeyError 也会进入这个分支：catch=False 时（第 209 行）用户拿到的是被替换成 'The format string references an unknown key ...' 的新 KeyError，catch=True 时（第 210 行）stderr 输出的是同样的误导性文案。而 `ErrorInterceptor.print` 用 `exception.__traceback__` 取堆栈（loguru/_error_interceptor.py:20），新构造的 KeyError 从未被 raise，`__traceback__` 为 None，也未设置 `__cause__`，因此原来通过 `sys.exc_info()` 打印的完整原始堆栈（能定位到是 sink 还是格式串出错）在 catch=True 路径下彻底丢失。这会让“sink/filter 里访问了不存在的 dict 键”这类真实 bug 被误诊为格式串写错，而该 Issue 的本意正是提升这一段错误反馈的可读性。修复建议：只在 `format_map(formatter_record)` 调用处捕获 KeyError（例如把格式化段落包一层内层 try/except，转成内部标记异常或设置局部标志），外层只对“格式化失败”标记做增强诊断；同时保留原始异常对象以便打印原始 traceback（catch=False 分支已用 `from e`，catch=True 分支可把原异常挂到 `exception.__cause__` 后再 print，或直接传原始 `e` 并另附诊断文本）。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "`_make_key_error()` 是在 `except KeyError` 处理块内部调用的（第 209/210 行），它自身抛出的异常不会被同一个 try 的其他 except 捕获，而 `Logger._log` 也没有对 `handler.emit()` 做保护（loguru/_logger.py:2163-2164），因此会直接穿透到调用方、使日志调用崩溃——即使配置了 catch=True，也违反“日志错误不该弄崩应用”的约定。第 254 行 `sorted(record.keys())` 对 patcher 加入的非字符串/混合类型顶层键（例如 `logger.patch(lambda r: r.update({1: 'x'}))`）会抛 TypeError；第 253/259 行的 `original.args[0]`、`%s` 对 `__str__` 抛异常的自定义键同样会炸。建议把整个 `_make_key_error` 包在 try/except 里做降级（拿不到信息时回退为简单文案），或使用 `sorted(map(str, record.keys()))` 并避免对 key 做隐式字符串化之外的假设。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 256,
+   "message": "嵌套键场景文案会误导：当格式串写成 `{extra[foo]}` 而 `extra` 中没有 `foo` 时，`format_map` 抛的是 `KeyError('foo')`，文案会输出 “unknown key 'foo'. Available record keys are: elapsed, exception, extra, ...”——这个列表里根本不会有 'foo'，用户按“可用键”去比对会被带偏。建议在文案中区分顶层键与 `extra[...]` 内的键（例如提示 “若使用 '{extra[key]}' 语法，请确认 extra 中存在该键”），或至少在列表中保留 'extra' 的说明。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "补丁只改了 loguru/_handler.py，没有为验收标准（catch=True 的 stderr 文案、catch=False 的 KeyError 文案与 `__cause__`、patcher 添加的键仍然可用）添加任何测试；现有用例中没有任何 Test 覆盖 format 键缺失的错误输出（grep 'Available record keys' / 'unknown key' 在 tests/ 下无匹配），后续很容易被回归掉。建议在 tests/test_add_option_catch.py 或 tests/test_add_option_format.py 中补充上述用例。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.128108,
+ "input_tokens": 483451,
+ "cache_hit_tokens": 456064,
+ "output_tokens": 22900,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 125.5
+}

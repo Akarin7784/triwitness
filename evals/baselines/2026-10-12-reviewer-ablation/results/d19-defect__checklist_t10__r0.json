@@ -1,0 +1,52 @@
+{
+ "item": "d19-defect",
+ "task": "swe-cyclopts-633",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/parameter.py",
+  "line": 279,
+  "category": "wrong_condition",
+  "severity": "major",
+  "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "cyclopts/parameter.py",
+   "line": 280,
+   "message": "The patch fixes the reported behavior but adds no regression test for it. The diff touches only `Parameter.get_negatives`; no test for `Annotated[bool | None, Parameter(negative=\"--negative\")]` help output, nor for the default `negative=None` case (`--no-x` + `--empty-x`), nor for other union shapes (e.g. `list[bool] | None`, `bool | int`). Since the rubric explicitly asks that the fix address the described behavior rather than a single repro, a test asserting the help text contains exactly one `--negative` for the union case (and still two distinct entries when `negative=None`) is needed to lock this in and prevent future regressions.",
+   "suggestion": "Add a unit/snapshot test in the parameter/help test suite covering: (1) `bool | None` with `negative=\"--negative\"` yields exactly one entry; (2) `bool | None` with default `negative=None` yields `(\"--no-<name>\", \"--empty-<name>\")` in that order; (3) a union of two flag types with distinct prefixes is unaffected."
+  },
+  {
+   "severity": "minor",
+   "file": "cyclopts/parameter.py",
+   "line": 279,
+   "message": "The sort key `not (is_nonetype(x) or x is None)` is functionally redundant for the fix: the actual deduplication is done by the `if neg not in out` check, and since the only collisions are identical strings, ordering has no observable effect on the result for the reported case. `x is None` is also dead for typing-produced unions (`Optional[bool]` yields `(bool, NoneType)`, never a bare `None`). The sort is defensible only where `negative_bool`/`negative_none` prefixes overlap for the same name, which is rare. Consider either documenting concretely why ordering matters (which prefixes can collide) or dropping the sort in favor of just the dedup, to avoid misleading future readers into thinking the ordering is load-bearing.",
+   "suggestion": "Either remove the sort and rely solely on the order-preserving dedup, or add a brief comment/example showing the overlapping-prefix scenario the sort protects against (e.g. a custom `negative_none` prefix that equals `negative_bool`)."
+  },
+  {
+   "severity": "nit",
+   "file": "cyclopts/parameter.py",
+   "line": 280,
+   "message": "Deduplication uses a list membership check inside a nested loop (`if neg not in out`), which is O(n^2); union member counts here are tiny so this is not a performance issue, but a small ordered-set pattern would be clearer. Not blocking.",
+   "suggestion": "Optional: track seen strings in a `set` alongside `out` to make the intent (first occurrence wins, order preserved) explicit."
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.028713,
+ "input_tokens": 142034,
+ "cache_hit_tokens": 132352,
+ "output_tokens": 4096,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 30.6
+}

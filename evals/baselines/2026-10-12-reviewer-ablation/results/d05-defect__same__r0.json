@@ -1,0 +1,45 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "只调用了 `.lstrip(\"-\")`，尾部分隔符仍然保留，Issue 的核心用例没有修好。实际计算：`\"  Hello,  World!  \".lower()` → `\"  hello,  world!  \"`，`_NON_WORD`（`[^a-z0-9]+`）替换后得到 `\"-hello-world-\"`，lstrip 后仍是 `\"hello-world-\"`，与期望的 `\"hello-world\"` 不符，也违反 Issue 中「slug 不应以 `-` 结尾」。",
+   "suggestion": "改用 `_NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`（同时处理首尾）；分隔符连续折叠为单个 `-` 已由正则的 `+` 量词保证。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_slug.py",
+   "line": 4,
+   "message": "仓库现有测试只有 `test_simple`（`\"Hello World\"`），该输入不含首尾标点，因此即使补丁完全错误（只加了 lstrip）测试仍会通过，无法防止回归。",
+   "suggestion": "补充覆盖 Issue 的用例，例如：断言 `slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`，以及纯符号输入（如 `slugify(\"!!!\") == \"\"`）。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.005011,
+ "input_tokens": 9701,
+ "cache_hit_tokens": 8704,
+ "output_tokens": 960,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 8.2
+}

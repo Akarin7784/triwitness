@@ -1,0 +1,31 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "补丁未修改任何测试（无改弱/删除/跳过，也无针对测试特判），但仓库现有测试 tests/test_lru.py 只有 test_put_get，完全没有覆盖淘汰路径（capacity 满时的 evict 顺序）。因此本补丁修复的正是 Issue 描述的行为，却没有测试守护：例如 capacity=2 时 put(\"a\")/put(\"b\")/get(\"a\")/put(\"c\") 后断言 \"b\" 不在缓存、\"a\" 仍可 get 到，以及 put 覆盖已存在键时应刷新为 MRU。",
+   "suggestion": "新增一条针对淘汰顺序的回归测试（如 test_get_refreshes_recency 与 test_put_existing_key_refreshes_recency），直接断言 Issue 中的复现场景结果。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.007611,
+ "input_tokens": 18777,
+ "cache_hit_tokens": 16512,
+ "output_tokens": 1254,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 9.8
+}

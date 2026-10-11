@@ -1,0 +1,45 @@
+{
+ "item": "d12-defect",
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "条件写反：`if isinstance(v, dict) and \"@id\" in v: raise ValueError(f\"no @id in {v}\")`。当字典**含有** @id 时抛错，当字典**不含** @id 时放行，与 Issue 要求（字典缺 @id 时报错）完全相反。\n\n后果一（没修好）：Issue 中的复现 `crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC-O\", \"url\": \"...\"}` 不含 @id，`\"@id\" in v` 为 False，不会抛错，仍然被写入，随后 `crate.root_dataset[\"license\"]` 依旧在 entity.py:94 抛 `ValueError: no @id in ...`。Issue 的核心症状原样保留。\n\n后果二（回归）：合法用法 `crate.root_dataset[\"license\"] = {\"@id\": \"https://spdx.org/licenses/CC0-1.0\"}` 或 `entity[\"about\"] = {\"@id\": \"http://example.org\"}` 现在会直接抛 `ValueError: no @id in {'@id': ...}`，而这类带 @id 的引用字典正是 JSON-LD 展开/压缩后的标准形式（参见 rocrate/model/metadata.py:56、test/test_metadata.py:63/78/147 中大量 `{\"@id\": ...}` 赋值），属于破坏既有行为。\n\n修复建议：改为 `if isinstance(v, dict) and \"@id\" not in v: raise ValueError(f\"no @id in {v}\")`，并补一个覆盖两种情况的测试（缺 @id 抛错、带 @id 正常写入且可读回）。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 159,
+   "message": "同一问题的另一条写入路径 `append_to()`（entity.py:159-169）未做任何校验，仍可把不含 @id 的字典追加进属性（`current_value.extend([...])` 对非 Entity 的 dict 原样保留），随后 `__getitem__` 同样会抛 `ValueError: no @id in ...`。Issue 要求的是“赋值时保证字典含 @id”的一致性，只改 `__setitem__` 会留下同样的不一致入口。建议在 append_to 中对非 Entity 的 dict 值做同样的 `\"@id\" not in v` 校验。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.011692,
+ "input_tokens": 30392,
+ "cache_hit_tokens": 25984,
+ "output_tokens": 1691,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 10.5
+}

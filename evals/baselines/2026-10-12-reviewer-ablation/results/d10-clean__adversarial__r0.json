@@ -1,0 +1,38 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 45,
+   "message": "告警文案与实际行为不符：文案声称 \"STATICFILES_DIRS expected str, bytes or os.PathLike object\"，但 pathlib 不接受 bytes（purepath 的 _parse_args 在 os.fspath() 返回非 str 时抛 TypeError，见 CPython pathlib 实现），因此 bytes 类型的目录项会走进 except 分支并被 `continue` 静默跳过，用户按提示使用 bytes 路径时既看不到报错也找不到组件。",
+   "suggestion": "把文案中的 \"bytes\" 去掉（或改为 \"str or os.PathLike\"），让提示与 Path() 的真实约束一致。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "修复缺少回归测试保护：仓库内没有任何测试用 tuple 形式的 STATICFILES_DIRS 调用 get_dirs()（grep 结果显示 tests/ 下 STATICFILES_DIRS 仅出现在 test_component.py:231、794，且都是 Path 字符串形式），因此新增的 tuple 解包逻辑与 except/continue 分支（第 40-49 行）无测试覆盖；tox.ini 的 coverage env 要求覆盖率 ≥93%，这些未执行行也会略微拉低覆盖率，且后续重构很容易再次引入同类崩溃。",
+   "suggestion": "在 tests/test_autodiscover.py（如 TestLoaderSettingsModule 或新增 TestLoaderWithTupleDirs）加一个用例：settings.STATICFILES_DIRS = [(\"prefix\", Path(__file__).parent.resolve() / \"components\")]，断言 get_dirs() 返回该 components 目录；可再补一个非法项（如普通 str 以外的 int）被跳过的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.144568,
+ "input_tokens": 401572,
+ "cache_hit_tokens": 380800,
+ "output_tokens": 29045,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 145.9
+}

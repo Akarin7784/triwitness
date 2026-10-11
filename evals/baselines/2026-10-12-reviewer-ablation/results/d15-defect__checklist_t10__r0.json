@@ -1,0 +1,52 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "传入 `FastDependsConfig()` 而非应用的 `self.config`，没有修复 Issue 的 context 注入问题。依据：`BrokerUsecase._update_fd_config`（faststream/_internal/broker/broker.py:86-88）执行 `self.config.fd_config = config | self.config.fd_config`，而 `FastDependsConfig.__or__`（faststream/_internal/di/config.py:51-61）中 `context = self.context`，即**左操作数（传入参数）的 context 胜出**。这里左操作数是新建的 `FastDependsConfig()`，其 context 是全新的空 ContextRepo。而应用在 `_init_setupable_`（application.py:87）通过 `self.config.context.set_global(\"app\", self)` 注册的 `app` 只存在于 `self.config.context` 中；`Context(\"app\")`（faststream/annotations.py:10）与 subscriber usecase（faststream/_internal/endpoint/subscriber/usecase.py:316 `self._outer_config.fd_config.context.get(\"app\")`）都依赖 broker 的 fd_config.context 就是应用 context。结果是 broker.context 为空、拿不到 app，`FastStream`/`Context(\"app\")` 注入依旧失败——正是 Issue 报告的症状。修复：改为 `broker._update_fd_config(self.config)`。",
+   "suggestion": "将该行改为 `broker._update_fd_config(self.config)`。"
+  },
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 88,
+   "message": "构造期传 broker 的路径出现回归。基线 `_init_setupable_`（git show ffb4be2）对 `self.brokers` 里的 broker 调用的是 `b._update_fd_config(self.config)`（应用 config，含已注册的 app context）。补丁后 `_init_setupable_` 改为调用 `self._add_broker(broker)`，而 `_add_broker` 传入的是 `FastDependsConfig()`，于是 `FastStream(my_broker)` 这条原本正常的路径也不再获得 app context，属于行为回归。",
+   "suggestion": "与上一条同修：`_add_broker` 内使用 `self.config`。修正后 `_init_setupable_` 与 `set_broker` 两条路径行为一致且与基线等价。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 16,
+   "message": "新增/既有的 `test_set_broker` 只断言 `app.broker is broker`，无法覆盖 Issue 的核心（context 注入）。该断言在 broker._update_fd_config 完全被删除时也会通过，因此这个补丁是否真正修复注入行为没有被测试锁定；上面 blocker 说明当前实现实际未修复。建议补充断言 `broker.context.get(\"app\") is app`（或端到端验证 `Context(\"app\")`/`FastStream` 注入可用），否则回归会再次静默通过。",
+   "suggestion": "在 test_set_broker（以及构造期传 broker 的用例）中增加断言：`assert broker.context.get(\"app\") is app`，覆盖 `set_broker` 与 `FastStream(broker)` 两条路径。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.031735,
+ "input_tokens": 96979,
+ "cache_hit_tokens": 80000,
+ "output_tokens": 3289,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 25.3
+}

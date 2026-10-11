@@ -1,0 +1,38 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "`_add_broker()` 里的重复校验当前不可达：两个调用点都已保证 `self.brokers` 为空（`set_broker` 第 109-111 行先用 `already has a broker` 报错；构造期 `self.brokers` 刚初始化为 `[]`），因此这条 `Broker ... is already added` 分支是死代码，且依赖 `BrokerUsecase` 未定义 `__eq__` 的隐式身份比较才安全。",
+   "suggestion": "要么删掉这个校验，让 `_add_broker` 只负责 append/schema/fd_config；要么去掉 `set_broker` 中的重复判断，统一由 `_add_broker` 抛出同一条错误信息，避免同一语义出现两种消息（现有测试 `test_set_more_than_once_broker` 断言的是 `already has a broker` 文案）。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": null,
+   "message": "补丁只改了实现，没有新增/更新测试，现有用例无法覆盖本次修复：`test_set_broker` 只断言 `app.broker is broker`，`tests/cli/require_broker/test_app.py::test_set_broker_in_on_startup_hook` 也只启动 app，都不检查 `_update_fd_config` 是否被调用，因此在补丁前这些测试同样通过，修复处于未被验证状态。",
+   "suggestion": "在 tests/application/test_delayed_broker.py 增加断言，例如：`app = StartAbleApplication(); broker = RabbitBroker(); app.set_broker(broker); assert broker.config.fd_config.context is app.context`（或 `assert broker.context.get(\"app\") is app`），以覆盖 Issue 中提到的 context 注入场景。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.15397,
+ "input_tokens": 497390,
+ "cache_hit_tokens": 445824,
+ "output_tokens": 23372,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 137.9
+}

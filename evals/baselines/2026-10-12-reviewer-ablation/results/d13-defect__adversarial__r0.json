@@ -1,0 +1,52 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "注释探测索引偏移了一位：next_chr() 先执行 `self.ch = self.text[self.at]` 再 `self.at += 1`（slpp.py:113-119），因此 `self.at` 指向的是下一个未消费字符，判断注释应看 `self.text[self.at]`，而代码看的是后两个字符 `self.text[self.at + 1]`。后果：真正的 `--` 注释识别不到，例如 `slpp.decode('-- comment\\n{1,2}')` 中 `--` 后一位是空格，检测失败 → value() 进入 number() → next_digit() 抛 ParseError（打印 'Malformed number (no digits after initial minus).'）并返回 0，decode 结果是 0 而不是 [1,2]；`slpp.decode('--3')` 由打补丁前的 None 变成 0。顶层/表内注释是极常见输入，这是相对打补丁前的功能回归（旧的正则预处理能正确剥掉这些注释）。",
+   "suggestion": "改为 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（参考 slpp.py:113-119 中 self.at 的语义），并补一条 `decode('-- comment\\n{1,2}') == [1,2]`、`decode('--3') is None` 的测试。"
+  },
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "同一行的 `self.text[self.at + 1]` 未做边界保护，当 `-` 位于文本倒数第二或最后一个字符时必然越界：对 `slpp.decode('-1')`，len=2，next_chr() 后 self.at=1，white() 里 self.ch=='-'，于是访问 self.text[2] 抛未捕获的 IndexError（打补丁前该输入正常返回 -1）；`slpp.decode('-')`、`slpp.decode('--')` 同样抛 IndexError。即使按上一条改成 `self.text[self.at]`，当 `-` 是最后一个字符时 self.at == self.len 仍会越界，所以上界判断是必须的。",
+   "suggestion": "在条件里先判断 `self.at < self.len`：`if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`；对 `decode('-1') == -1` 加回归测试。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests.py",
+   "line": 129,
+   "message": "补丁只改了 slpp.py，未增加任何针对该 Issue 的回归测试；现有 tests.py 中没有任何含 `--` 的用例，也没有以负数结尾的输入（`decode('-0.45')` 恰好不触发越界），因此上面两个缺陷在测试中不可见。",
+   "suggestion": "补充用例：`self.assertEqual(slpp.decode('\"--3\"'), '--3')`、含注释的表（如 `'-- c\\n{1,2}'`、`'{1, -- c\\n2}'`）、注释-only 输入，以及 `slpp.decode('-1')`。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.072297,
+ "input_tokens": 23341,
+ "cache_hit_tokens": 17792,
+ "output_tokens": 16598,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 86.7
+}

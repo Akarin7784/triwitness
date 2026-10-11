@@ -1,0 +1,52 @@
+{
+ "item": "d18-defect",
+ "task": "swe-conan-19750",
+ "kind": "defect",
+ "truth": {
+  "file": "conan/internal/api/profile/profile_loader.py",
+  "line": 251,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 251,
+   "message": "检测条件是死代码，无法识别版本范围。`RecipeReference.__str__`（conan/api/model/refs.py:61-71）返回 `\"name/version\"`，例如 profile 里写 `dep/[>=1.0]`，loads 后 name=\"dep\"、version=\"[>=1.0]\"，`str(r)` == `\"dep/[>=1.0]\"`，`startswith(\"[\")` 为 False。只有当包名本身以 `[` 开头（如畸形输入 `[/1.0]`）时才会命中，而真正的版本范围永远不会被拦截。因此验收标准“包含 version range 时必须以普通 profile 错误失败”不成立：profile 中的范围仍会被接受，后续走到 graph_builder._resolved_system（conan/internal/graph/graph_builder.py:303-306，`require.ref.version = d.version` 把范围字符串塞进 require.ref.version）后，仍会在 conan/internal/graph/graph.py:139 触发 `assert not require.version_range`，即 Issue 原样复现（AssertionError + traceback）。",
+   "suggestion": "改为判断版本本身是否为范围，与 Requires.version_range / graph_builder 中既有写法保持一致（version_range 见 conan/internal/model/requires.py:170-177）：`errors = [r for r in result if repr(r.version).startswith(\"[\") and repr(r.version).endswith(\"]\")]`（或对每个 ref 用 `repr(r.version)` 判断）。建议同时补一个回归测试：profile `[platform_requires]\\ndep/[>=1.0]` + recipe `requires=\"dep/[>=1.0]\"`，断言 install 报出正常的 ConanException 且输出中不含 AssertionError。"
+  },
+  {
+   "severity": "major",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 253,
+   "message": "错误信息没有定位到具体的 section。验收标准要求“identifies the offending section and reference”，但当前文案是合并的 `[platform_requires]/[platform_tool_requires]`，且两处调用都用同一个辅助函数，用户无法知道是哪个 section 出错；如果两个 section 都写了范围，也会因为 platform_tool_requires 先解析而只报第一个。另外 `parse_replaces` 这个名字有误导性（parse_platform_requires 之类更贴切）。",
+   "suggestion": "给辅助函数加 section 名参数并逐个解析，例如 `_parse_platform(section, text)`，在异常信息中写成 `Profile [{section}] must be exact versions, not version ranges: dep/[>=1.0]`（用逗号连接 `str(r)` 或 repr，避免直接 f-string 列表）。"
+  },
+  {
+   "severity": "minor",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 256,
+   "message": "顺序上先校验 platform_tool_requires 再校验 platform_requires，若两者都非法只会报第一个；且 doc.system_tools（已弃用别名）也走同一路径，报错时应指明实际使用的 section 名以免误导。",
+   "suggestion": "按 doc 中出现顺序解析并在消息中携带准确 section 名（system_tools 时提示其为 platform_tool_requires 的别名）。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.069076,
+ "input_tokens": 383577,
+ "cache_hit_tokens": 349568,
+ "output_tokens": 7019,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 50.6
+}

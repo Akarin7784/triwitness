@@ -1,0 +1,31 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_duration.py",
+   "line": 11,
+   "message": "修复正确但缺少回归测试：现有测试只覆盖 \"45s\" 和非法输入，恰好都不是 Issue 中的失败场景。当前 `_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}` 下 `parse_duration(\"1h30m\") == 5400`、`\"2m\" == 120`、`\"1h30m15s\" == 5415`、`\"2h\" == 7200` 均成立（手工验算：3600+1800=5400；3600+1800+15=5415），但没有自动化用例锁住，未来很容易再次写成 `\"m\": 1`。",
+   "suggestion": "在 tests/test_duration.py 中补充参数化用例，例如 assert parse_duration(\"2m\") == 120 / parse_duration(\"1h30m\") == 5400 / parse_duration(\"1h30m15s\") == 5415 / parse_duration(\"2h\") == 7200。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.004146,
+ "input_tokens": 9913,
+ "cache_hit_tokens": 8832,
+ "output_tokens": 722,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 6.8
+}

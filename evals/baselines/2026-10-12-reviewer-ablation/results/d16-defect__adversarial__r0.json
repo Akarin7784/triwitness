@@ -1,0 +1,52 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` 索引错位：这里要处理的 KeyError 来自 `str.format_map(formatter_record)`（第 161/165/175/180/184/192 行），而 `formatter_record = record.copy()` 是普通 dict（第 139 行；record 由 loguru/_logger.py:2113-2127 构造为 dict），缺失键由 `dict.__getitem__` 抛出，`e.args` 只有 1 个元素（即缺失的键），这与 Issue 复现输出中的 `KeyError: 'nonexistent'` 完全一致。因此 `original.args[1]` 会抛 `IndexError: tuple index out of range`，而且它是在新加的 `except KeyError` 块内被调用的（第 209-210 行的 `self._make_key_error(...)`），异常处理期间抛出的异常不会被同一 try 的后续 `except Exception:`（第 211 行）捕获，于是 IndexError 会逃出 `Handler.emit` → `Logger._log`（loguru/_logger.py:2164，无 try/except 包裹）直接崩到用户代码：catch=True（默认）时不是打印诊断而是抛 IndexError 崩溃，catch=False 时抛的是 IndexError 而非“包含缺失键与 logger.bind 指引的 KeyError”，两条验收标准均失败。同样的路径也会影响任意单参数 KeyError（例如 sink 内部 `d[\"missing\"]`），并且会直接打挂仓库已有测试：tests/test_configure.py:141 与 :151（`logger.add(writer, format=\"{extra[a]}\", catch=False)` 后期望 `pytest.raises(KeyError)`，现在会得到 IndexError）。",
+   "suggestion": "改为 `key = original.args[0] if original.args else \"?\"`（并加一个单测覆盖 `format=\"{nonexistent}\"` 的 catch=True/catch=False 两种路径）；更稳妥的做法是不依赖 args 索引，例如把格式化调用单独包一层 `try/except KeyError as e` 并只在那里构造诊断信息，避免在异常处理分支里再次抛异常。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "`except KeyError` 覆盖了 emit 的整个执行体，而 KeyError 并非只可能来自格式字符串：filter（第 133 行）、动态 format 函数（第 137 行）、`_serialize_record`（第 195 行）以及 sink 写入（第 206 行 `self._sink.write(str_record)`，用户代码）抛出的 KeyError 现在都会被改写成 “The format string references an unknown key ...”，把故障归因到格式字符串上并替换掉原本指向真实出错位置的 traceback，属于对既有报错行为的回归/误导（原实现只会走第 211-214 行的通用路径，打印真实异常）。",
+   "suggestion": "把增强诊断限定在格式解析/格式化这一步（例如用一个私有 helper 只包裹 `format_map(...)` 调用，或检查返回/失败来源），其余 KeyError 继续走原来的通用 `except Exception` 分支；并保留原始异常链（`raise ... from e`）与真实 traceback。"
+  },
+  {
+   "severity": "minor",
+   "file": null,
+   "line": null,
+   "message": "该补丁没有附带任何测试，而验收标准是明确的行为约定（catch=True 的诊断输出、catch=False 的 KeyError 文案、patcher 注入键仍需可用、available keys 需包含 elapsed/exception/extra/file/level/message）。当前实现的问题（args 索引）正是因为没有测试才未被发现。",
+   "suggestion": "在 tests/test_add_option_format.py（或 tests/test_add_option_catch.py）补充用例：缺失键时 catch=True 下 stderr 含缺失键名、logger.bind 指引和可用键列表且不抛异常；catch=False 下 `pytest.raises(KeyError, match=...)`；以及 `logger.patch(lambda r: r.update(foo=1))` + `format=\"{foo}\"` 仍能正常输出。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.154228,
+ "input_tokens": 493390,
+ "cache_hit_tokens": 455680,
+ "output_tokens": 26851,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 140.3
+}

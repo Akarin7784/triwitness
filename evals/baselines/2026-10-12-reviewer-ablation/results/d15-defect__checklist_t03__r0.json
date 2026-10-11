@@ -1,0 +1,52 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "修复未生效：`_add_broker` 调用 `broker._update_fd_config(FastDependsConfig())`，传入的是一个全新的空配置，而不是 app 的 `self.config`。\n\n依据：\n- `_init_setupable_` 在第 87 行执行 `self.config.context.set_global(\"app\", self)`，`app` 全局只存在于 `self.config.context` 上。\n- `BrokerUsecase._update_fd_config`（faststream/_internal/broker/broker.py:86-88）实现为 `self.config.fd_config = config | self.config.fd_config`。\n- `FastDependsConfig.__or__`（faststream/_internal/di/config.py:51-61）返回的 `context=self.context`，即**左操作数**的 context 生效。\n- 因此 `FastDependsConfig() | broker.config.fd_config` 会让 broker 的 fd_config.context 变成那个新建的空 `ContextRepo`，而不是 app 的 context。\n- 原代码 `b._update_fd_config(self.config)` 正是把 app 的 context 合并进 broker，从而让 `FastStream = Annotated[FS, Context(\"app\")]`（faststream/annotations.py:10）可注入。\n\n结果：`app = FastStream(); app.set_broker(broker)` 之后，broker 的 `context`（broker.py:68 返回 `self.config.fd_config.context`）里依然没有 `app`，Issue 描述的 Context 注入仍然失败——补丁只是“调用了 `_update_fd_config`”，并没有真正修复行为。\n\n修复建议：改为 `broker._update_fd_config(self.config)`（与 `_init_setupable_` 原逻辑一致），并新增一个断言 `app` 可注入的测试（例如在 subscriber 中 `Context(\"app\")` 或 `app.context.get(\"app\") is app`）来锁定该行为。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "缺少针对本 Issue 的回归测试。现有 `test_set_broker` 只断言 `app.broker is broker`，无论 `_update_fd_config` 是否被正确调用都会通过，因此无法防止上述 blocker 回归。建议补充断言 broker 的 fd_config.context 中能取到 `app`（如 `assert broker.context.get(\"app\") is app`），或端到端验证 `Context(\"app\")` 注入。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "`_add_broker` 中的 `if broker in self.brokers: raise SetupError(...)` 是冗余的：唯一调用方 `set_broker` 已在第 109-111 行对 `self.brokers` 非空做了检查并抛出不同消息的 `SetupError`，`_init_setupable_` 调用时 `self.brokers` 必为空。该分支实际不可达，且引入了与既有错误消息不一致的第二条错误路径。可移除，或明确其用途。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.035215,
+ "input_tokens": 109781,
+ "cache_hit_tokens": 88320,
+ "output_tokens": 2997,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 21.3
+}

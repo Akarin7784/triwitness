@@ -1,0 +1,45 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "修复方向反了，Issue 描述的错误行为仍然存在。`put` 在超容量时执行 `self._data.popitem(last=False)`（第 23 行），即淘汰 OrderedDict 的**头部**；因此头部是 LRU 端、尾部是 MRU 端，`put` 更新已有 key 时也用 `self._data.move_to_end(key)`（默认 last=True，移到尾部）来标记最近使用。而新增的 `self._data.move_to_end(key, last=False)` 是把刚被 `get` 的 key 移到**头部**，也就是移到了下一个被淘汰的位置。逐步推演 Issue 场景：put(\"a\")→[a]；put(\"b\")→[a,b]；get(\"a\")→move_to_end(\"a\", last=False)，a 已在头部，顺序仍为 [a,b]；put(\"c\")→[a,b,c] 超容量，popitem(last=False) 弹出 \"a\"。即 `\"a\"` 依然消失，与 Issue 要求（保留 \"a\"、淘汰 \"b\"）不符；更糟的是对任意不在头部的 key，例如 put(\"a\"),put(\"b\"),get(\"b\"),put(\"c\")，`get(\"b\")` 会把 b 放到头部，随后 put(\"c\") 直接淘汰刚刚读取过的 \"b\"，语义被反转。修复应为 `self._data.move_to_end(key)`（last=True，移到 MRU 尾部），与 `put` 的约定一致。",
+   "suggestion": "将第 15 行改为 `self._data.move_to_end(key)`（等价于 `last=True`），把被访问的 key 移到 MRU 端（尾部），这样 `put` 中 `popitem(last=False)` 淘汰的才是真正的 LRU 条目。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "补丁未添加任何回归测试（tests/test_lru.py 与 base 完全一致，只有 test_put_get，容量 2 却从未触发淘汰路径），因此上面这个方向写反的错误可以无声通过验证。Issue 里给出的最小复现（put(\"a\"), put(\"b\"), get(\"a\"), put(\"c\") → 期望 get(\"b\") 为空、get(\"a\")==1）应当作为回归用例固定下来。",
+   "suggestion": "新增测试，例如：c = LRUCache(2); c.put(\"a\",1); c.put(\"b\",2); assert c.get(\"a\")==1; c.put(\"c\",3); assert c.get(\"b\") is None and c.get(\"a\")==1 and c.get(\"c\")==3，以覆盖容量淘汰顺序。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.015359,
+ "input_tokens": 17631,
+ "cache_hit_tokens": 14976,
+ "output_tokens": 3101,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 17.0
+}

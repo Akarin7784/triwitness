@@ -1,0 +1,413 @@
+{
+ "arms": {
+  "same": {
+   "n_defect": 20,
+   "n_clean": 20,
+   "hit": 17,
+   "blocked": 17,
+   "fp": 3,
+   "fp_conservative": 8,
+   "no_verdict_defect": 1,
+   "no_verdict_clean": 5,
+   "valid_hit": 17,
+   "valid_defect": 19,
+   "valid_fp": 3,
+   "valid_clean": 15,
+   "calls": 464,
+   "cost_cny": 2.5527,
+   "cost_per_review_cny": 0.0638,
+   "elapsed_median_s": 60.9,
+   "elapsed_p90_s": 134.0,
+   "elapsed_sum_min": 44.0
+  },
+  "adversarial": {
+   "n_defect": 20,
+   "n_clean": 20,
+   "hit": 17,
+   "blocked": 16,
+   "fp": 5,
+   "fp_conservative": 10,
+   "no_verdict_defect": 3,
+   "no_verdict_clean": 5,
+   "valid_hit": 17,
+   "valid_defect": 17,
+   "valid_fp": 5,
+   "valid_clean": 15,
+   "calls": 517,
+   "cost_cny": 3.8123,
+   "cost_per_review_cny": 0.0953,
+   "elapsed_median_s": 84.6,
+   "elapsed_p90_s": 187.9,
+   "elapsed_sum_min": 61.0
+  },
+  "checklist_t03": {
+   "n_defect": 20,
+   "n_clean": 20,
+   "hit": 15,
+   "blocked": 15,
+   "fp": 7,
+   "fp_conservative": 10,
+   "no_verdict_defect": 1,
+   "no_verdict_clean": 3,
+   "valid_hit": 15,
+   "valid_defect": 19,
+   "valid_fp": 7,
+   "valid_clean": 17,
+   "calls": 483,
+   "cost_cny": 1.1646,
+   "cost_per_review_cny": 0.0291,
+   "elapsed_median_s": 23.2,
+   "elapsed_p90_s": 36.3,
+   "elapsed_sum_min": 14.8
+  },
+  "checklist_t10": {
+   "n_defect": 20,
+   "n_clean": 20,
+   "hit": 18,
+   "blocked": 17,
+   "fp": 5,
+   "fp_conservative": 9,
+   "no_verdict_defect": 0,
+   "no_verdict_clean": 4,
+   "valid_hit": 18,
+   "valid_defect": 20,
+   "valid_fp": 5,
+   "valid_clean": 16,
+   "calls": 456,
+   "cost_cny": 1.1854,
+   "cost_per_review_cny": 0.0296,
+   "elapsed_median_s": 25.4,
+   "elapsed_p90_s": 41.6,
+   "elapsed_sum_min": 16.9
+  },
+  "consensus_t03": {
+   "n_defect": 20,
+   "n_clean": 20,
+   "hit": 14,
+   "blocked": 14,
+   "fp": 4,
+   "fp_conservative": 8,
+   "no_verdict_defect": 3,
+   "no_verdict_clean": 5,
+   "valid_hit": 14,
+   "valid_defect": 17,
+   "valid_fp": 4,
+   "valid_clean": 15,
+   "calls": 1000,
+   "cost_cny": 4.9769,
+   "cost_per_review_cny": 0.1244,
+   "elapsed_median_s": 84.6,
+   "elapsed_p90_s": 187.9,
+   "elapsed_sum_min": 61.0
+  },
+  "consensus_t10": {
+   "n_defect": 20,
+   "n_clean": 20,
+   "hit": 15,
+   "blocked": 15,
+   "fp": 4,
+   "fp_conservative": 8,
+   "no_verdict_defect": 3,
+   "no_verdict_clean": 5,
+   "valid_hit": 15,
+   "valid_defect": 17,
+   "valid_fp": 4,
+   "valid_clean": 15,
+   "calls": 973,
+   "cost_cny": 4.9977,
+   "cost_per_review_cny": 0.1249,
+   "elapsed_median_s": 84.6,
+   "elapsed_p90_s": 187.9,
+   "elapsed_sum_min": 61.0
+  }
+ },
+ "by_category": {
+  "exception_handling": {
+   "same": [
+    1,
+    1
+   ],
+   "adversarial": [
+    1,
+    1
+   ],
+   "checklist_t03": [
+    1,
+    1
+   ],
+   "checklist_t10": [
+    1,
+    1
+   ],
+   "consensus_t03": [
+    1,
+    1
+   ],
+   "consensus_t10": [
+    1,
+    1
+   ]
+  },
+  "incomplete_fix": {
+   "same": [
+    2,
+    2
+   ],
+   "adversarial": [
+    1,
+    2
+   ],
+   "checklist_t03": [
+    2,
+    2
+   ],
+   "checklist_t10": [
+    2,
+    2
+   ],
+   "consensus_t03": [
+    1,
+    2
+   ],
+   "consensus_t10": [
+    1,
+    2
+   ]
+  },
+  "missing_edge_case": {
+   "same": [
+    1,
+    1
+   ],
+   "adversarial": [
+    1,
+    1
+   ],
+   "checklist_t03": [
+    0,
+    1
+   ],
+   "checklist_t10": [
+    0,
+    1
+   ],
+   "consensus_t03": [
+    0,
+    1
+   ],
+   "consensus_t10": [
+    0,
+    1
+   ]
+  },
+  "off_by_one": {
+   "same": [
+    3,
+    3
+   ],
+   "adversarial": [
+    3,
+    3
+   ],
+   "checklist_t03": [
+    3,
+    3
+   ],
+   "checklist_t10": [
+    3,
+    3
+   ],
+   "consensus_t03": [
+    3,
+    3
+   ],
+   "consensus_t10": [
+    3,
+    3
+   ]
+  },
+  "spec_violation": {
+   "same": [
+    1,
+    1
+   ],
+   "adversarial": [
+    1,
+    1
+   ],
+   "checklist_t03": [
+    1,
+    1
+   ],
+   "checklist_t10": [
+    1,
+    1
+   ],
+   "consensus_t03": [
+    1,
+    1
+   ],
+   "consensus_t10": [
+    1,
+    1
+   ]
+  },
+  "wrong_argument": {
+   "same": [
+    2,
+    2
+   ],
+   "adversarial": [
+    2,
+    2
+   ],
+   "checklist_t03": [
+    2,
+    2
+   ],
+   "checklist_t10": [
+    2,
+    2
+   ],
+   "consensus_t03": [
+    2,
+    2
+   ],
+   "consensus_t10": [
+    2,
+    2
+   ]
+  },
+  "wrong_condition": {
+   "same": [
+    3,
+    4
+   ],
+   "adversarial": [
+    2,
+    4
+   ],
+   "checklist_t03": [
+    2,
+    4
+   ],
+   "checklist_t10": [
+    4,
+    4
+   ],
+   "consensus_t03": [
+    2,
+    4
+   ],
+   "consensus_t10": [
+    2,
+    4
+   ]
+  },
+  "wrong_constant": {
+   "same": [
+    1,
+    1
+   ],
+   "adversarial": [
+    1,
+    1
+   ],
+   "checklist_t03": [
+    1,
+    1
+   ],
+   "checklist_t10": [
+    1,
+    1
+   ],
+   "consensus_t03": [
+    1,
+    1
+   ],
+   "consensus_t10": [
+    1,
+    1
+   ]
+  },
+  "wrong_index": {
+   "same": [
+    1,
+    1
+   ],
+   "adversarial": [
+    1,
+    1
+   ],
+   "checklist_t03": [
+    1,
+    1
+   ],
+   "checklist_t10": [
+    1,
+    1
+   ],
+   "consensus_t03": [
+    1,
+    1
+   ],
+   "consensus_t10": [
+    1,
+    1
+   ]
+  },
+  "wrong_regex": {
+   "same": [
+    0,
+    2
+   ],
+   "adversarial": [
+    2,
+    2
+   ],
+   "checklist_t03": [
+    0,
+    2
+   ],
+   "checklist_t10": [
+    1,
+    2
+   ],
+   "consensus_t03": [
+    0,
+    2
+   ],
+   "consensus_t10": [
+    1,
+    2
+   ]
+  },
+  "wrong_variable": {
+   "same": [
+    2,
+    2
+   ],
+   "adversarial": [
+    2,
+    2
+   ],
+   "checklist_t03": [
+    2,
+    2
+   ],
+   "checklist_t10": [
+    2,
+    2
+   ],
+   "consensus_t03": [
+    2,
+    2
+   ],
+   "consensus_t10": [
+    2,
+    2
+   ]
+  }
+ },
+ "tol": 3
+}

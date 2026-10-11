@@ -1,0 +1,45 @@
+{
+ "item": "d08-defect",
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "defect",
+ "truth": {
+  "file": "src/cfnlint/jsonschema/_utils.py",
+  "line": 52,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 50,
+   "message": "条件写反/过宽导致 additionalProperties 校验被大面积禁用。`if property == FUNCTION_TRANSFORM or FUNCTION_TRANSFORM in validator.context.functions: continue` 中第二部分与 property 无关：一旦上下文支持 Fn::Transform，循环会对**每一个** key 都 continue，使 `find_additional_properties` 总是返回空生成器。\n\n而 `Fn::Transform` 在几乎所有校验上下文中都存在：\n- 模板基础上下文 `create_context_for_template` 显式设置 `functions=[\"Fn::Transform\"]`（src/cfnlint/context/context.py:601）；\n- 规则普遍使用 `functions=list(FUNCTIONS)`，而 `FUNCTIONS` 包含 `\"Fn::Transform\"`（src/cfnlint/helpers.py:179），例如 Properties.py:74、Metadata.py:70、Outputs/Value.py:43、Rules、updatepolicy/Configuration.py:38，以及本 Issue 对应的 E3009 CfnInit.py:40。\n\n`find_additional_properties` 的唯一调用点是 `_keywords.additionalProperties`（_keywords.py:47），它被 StandardValidator 和 CfnTemplateValidator（经 _keywords_cfn.additionalProperties 包装）共用。因此补丁会静默丢弃所有 “Additional properties are not allowed (...)” 报错，例如应为预期的用例：test/unit/module/jsonschema/test_validator.py:282-334（`validator` fixture 的 context.functions 就是 FUNCTIONS，含 Fn::Transform）、test/unit/rules/transforms/test_configuration.py:66、test/unit/rules/outputs/test_configuration.py:80、test/unit/rules/metadata/* 等。这是明确回归，而不是只修好复现用例。\n\n修复建议：这里只应针对 `Fn::Transform` 这一键做豁免，不要看 `validator.context.functions` 是否包含它；并优先复用已有的、语义正确的机制 `_ap_exception_fns & set(validator.context.functions)`（src/cfnlint/jsonschema/_keywords_cfn.py:36,61-65），它已按 `err.path[0]` 精确过滤 transform 相关报错。若确实要在 `_utils.py` 里处理，应写成类似：\n\n    if property == FUNCTION_TRANSFORM and FUNCTION_TRANSFORM in validator.context.functions:\n        continue\n\n（如需同时覆盖 Fn::ForEach，再单独判断对应的正则 fn）。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 52,
+   "message": "该补丁未附任何测试改动，也未覆盖同一问题的其他路径/边界：`fn::ForEach`（`_ap_exception_fns` 中的另一项，_keywords_cfn.py:36）与 `Fn::Transform` 同属“可与其它键并存”的例外函数；`patternProperties` 分支、`additionalProperties` 为对象（descend）的分支同样会因上述 `continue` 被一并跳过。修复应只影响 transform 键，并为 E3009/CfnInit（cfn_init.json 中 files/mode/owner/group 与 Fn::Transform 并存）补充回归测试，确认除 transform 键外的未知键仍会被报错。",
+   "suggestion": "为 E3009 增加使用 Issue 复现模板的测试（应无 E3009），同时保留一个“files 下存在真正非法附加键仍报错”的对照用例，确保不是靠关闭整类校验通过。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.060876,
+ "input_tokens": 418792,
+ "cache_hit_tokens": 386816,
+ "output_tokens": 5291,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 58.3
+}

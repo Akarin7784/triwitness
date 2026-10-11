@@ -1,0 +1,45 @@
+{
+ "item": "d01-defect",
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "`if not line: continue` 只过滤了长度为 0 的行，空白字符行仍会走到 `parts = line.split(\",\")` → `parts` 只有 1 个元素 → `parts[1]` 抛 `IndexError: list index out of range`，与 Issue 报告的是同一个错误。例如 `parse_rows(\"a,1\\n \\nb,2\")`（或结尾为 `\"\\n \\n\"`、`\"\\n\\t\\n\"` 的输入）依然崩溃。CSV 数据里「行内只剩空格/Tab」是极常见的情况，按通常语义这类行也是 blank line，因此 Issue 的目标场景没有被完整修复。",
+   "suggestion": "改成按 strip 后判空：`if not line.strip(): continue`（同理也可先 `line = line.strip()` 再解析），并确认 `\"a,1\\n \\nb,2\"`、`\"a,1\\n\\t\\n\"` 等输入不再抛异常。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_basic.py",
+   "line": 4,
+   "message": "补丁只改了 `csvkit_lite/parse.py`，没有为这个 bug 增加任何回归测试（`tests/test_basic.py` 仍只有 `test_basic`），无法防止后续又退回原状，也无法覆盖上面提到的空白行场景。",
+   "suggestion": "在 `tests/test_basic.py` 增加用例，例如断言 `parse_rows(\"a,1\\n\\nb,2\") == [(\"a\", 1), (\"b\", 2)]`、`parse_rows(\"a,1\\nb,2\\n\\n\") == [(\"a\", 1), (\"b\", 2)]`，以及空白字符行 `parse_rows(\"a,1\\n   \\nb,2\") == [(\"a\", 1), (\"b\", 2)]`。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.025892,
+ "input_tokens": 25637,
+ "cache_hit_tokens": 23552,
+ "output_tokens": 5834,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 39.4
+}

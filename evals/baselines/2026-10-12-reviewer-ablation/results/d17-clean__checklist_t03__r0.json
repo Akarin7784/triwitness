@@ -1,0 +1,45 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "新增的 branch_exists() 在 send_pull_request 中额外发起一次 requests.get，破坏了既有测试 tests/test_send_pull_request.py:237 的 `assert mock_get.call_count == 1`。该测试用 `mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})`，其 status_code 是自动生成的 MagicMock，`MagicMock() == 200` 为 False，因此 branch_exists 返回 False、循环不执行，但 requests.get 已被调用一次；随后第 176 行获取 default_branch 又调用一次，call_count 变为 2，断言失败。补丁未同步更新测试，属于回归/未验证。",
+   "suggestion": "更新 test_send_pull_request（及相关用例）以反映新增的分支存在性查询：例如显式设置 mock_get.return_value.status_code = 404（表示分支不存在），并把断言改为 `assert mock_get.call_count == 2`；同时新增一个分支已存在（status_code=200）的用例，验证会生成 -try2/-try3 名称。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "分支存在性检查用的是 base_url（github_issue.owner/github_issue.repo），但实际推送目标是 push_owner = fork_owner if fork_owner else github_issue.owner（第 194 行）。当指定 --fork-owner 时，分支被创建/推送到 fork，却在原始仓库上检查是否存在，导致：1) 原始仓库已有同名分支时会误判并生成不必要的 -tryN；2) fork 上已存在同名分支时检查不到，仍会冲突。修复未覆盖 fork 路径。",
+   "suggestion": "用实际推送目标仓库构造检查 URL，例如 `check_owner = fork_owner if fork_owner else github_issue.owner`，`check_url = f\"https://api.github.com/repos/{check_owner}/{github_issue.repo}\"`，再调用 branch_exists(check_url, ...)。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 144,
+   "message": "branch_exists 仅以 status_code == 200 判定，未区分 404（分支不存在，符合预期）与其他错误（401 认证失败、403 限流/权限、5xx）。这些情况下会返回 False 并继续，可能掩盖真实错误，导致后续 push/PR 以更难诊断的方式失败。",
+   "suggestion": "显式处理：404 返回 False；200 返回 True；其他状态码调用 response.raise_for_status() 或抛出带状态码的异常，避免把 API 错误当成“分支不存在”。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.035125,
+ "input_tokens": 197985,
+ "cache_hit_tokens": 181376,
+ "output_tokens": 3722,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 23.1
+}

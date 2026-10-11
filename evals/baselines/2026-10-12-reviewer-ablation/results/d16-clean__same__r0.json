@@ -1,0 +1,52 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError` 加在整个大 try 上（第 128 行起），而该 try 覆盖了 `self._filter(record)`、动态 format 回调 `self._formatter(record)`、`self._exception_formatter.format_exception()`、`self._serialize_record()`、`self._protected_lock()` 以及 `self._sink.write(...)` / `self._queue.put(...)`。因此任何来自 user sink / filter / patcher 相关回调的 KeyError（例如 sink 内部做 `d[\"k\"]` 查找失败），甚至 `record[\"level\"]`（第 129 行）因 patcher 改坏记录而失败，都会被改写成 “The format string references an unknown key ...” 的误导信息。catch=False 时原来会原样抛出的原始 KeyError 现在被替换成一个类型相同但语义错误的 KeyError（原始异常只留在 `__cause__`），这是行为回归，也和 Issue 想提升可诊断性的目标相反。建议把保护范围收窄到真正的格式化调用（`format_map` 那几处），或在包装前确认 KeyError 的确来自格式字段解析（例如缺失的键在格式串字段集合中），否则原样重新抛出。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 209,
+   "message": "catch=False 分支用 `raise self._make_key_error(e, record) from e` 重建异常，新异常自身没有 traceback（只有 emit 中的 raise 帧），catch=True 分支更是把 `exception=` 换成了这个没有 `__traceback__` 的新异常，而原实现依赖 `self._error_interceptor.print(record)` 走 `sys.exc_info()`，能打印出真正失败的那一行（`precomputed_format.format_map(formatter_record)`）。诊断信息虽然还在，但定位失败点的信息被削弱。",
+   "suggestion": "在 catch=True 分支中改用 `try:\\n    raise self._make_key_error(e, record) from e\\nexcept KeyError:\\n    self._error_interceptor.print(record)`，这样 `ErrorInterceptor.print` 取到的 `sys.exc_info()` 自带 traceback 并通过 `__cause__` 保留原始 KeyError 的堆栈。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "`\", \".join(sorted(record.keys()))` 假设记录键都可排序且可转为字符串。patcher 可以往 record 里塞任意键（例如 `logger.patch(lambda r: r.update({1: \"x\"}))`），此时 `sorted()` 抛出的 TypeError 发生在 `except KeyError` 处理块内部，不再被 emit 的 `except Exception` 保护，会直接冒泡到 `logger.info()` 调用处，违背 Loguru “日志错误不拖垮应用” 的约定。",
+   "suggestion": "用 `sorted(map(str, record.keys()))`（或 `sorted(record.keys(), key=str)`）避免排序/类型问题。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_add_option_format.py",
+   "line": null,
+   "message": "补丁未添加任何测试。新增的两条路径（catch=True 的诊断输出、catch=False 的 KeyError 消息、以及 patcher 添加的键仍可被格式串使用）都属于行为契约，仓库里 tests/test_add_option_format.py、tests/test_add_option_catch.py 已有同类测试可参照；目前只有 tests/test_configure.py::test_reset_previous_extra / test_reset_previous_patcher 顺带走了新代码路径（只断言 KeyError 类型），建议补充针对诊断文本的回归测试。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.134759,
+ "input_tokens": 277385,
+ "cache_hit_tokens": 253696,
+ "output_tokens": 26499,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 141.4
+}

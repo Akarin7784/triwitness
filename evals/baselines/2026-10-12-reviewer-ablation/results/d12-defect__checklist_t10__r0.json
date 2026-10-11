@@ -1,0 +1,45 @@
+{
+ "item": "d12-defect",
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "条件写反了：`if isinstance(v, dict) and \"@id\" in v: raise ValueError(f\"no @id in {v}\")`。只有当字典**含有** @id 时才抛异常，而真正需要拒绝的（不含 @id 的字典，例如 issue 里的 {\"@type\": \"CreativeWork\", \"name\": \"CC-O\", \"url\": \"https://spdx.org/licenses/CC0-1.0\"}）会正常写入。复现：`crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC-O\"}` 仍不报错，随后 `crate.root_dataset[\"license\"]` 在 entity.py:94 继续抛 `ValueError: no @id in {...}`——issue 描述的行为完全没被修复。反向地，`crate.root_dataset[\"author\"] = {\"@id\": \"#joe\"}` 这类合法引用现在会误抛 `no @id in {'@id': '#joe'}`；而这种 dict-with-@id 形式在既有代码/测试中被广泛使用（test/test_model.py:352、test/test_read.py:93、entity.py:108 `{\"@id\": _.id}` 分支、entity.py:167 append_to 同形），属明显回归。",
+   "suggestion": "把 entity.py:106 改为 `if isinstance(v, dict) and \"@id\" not in v: raise ValueError(f\"no @id in {v}\")`（如采纳 issue 的可选建议，可再校验 @id 是否对应 crate 中已有实体），并新增测试断言无 @id 的 dict 赋值抛 ValueError、有 @id 的赋值正常通过。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 105,
+   "message": "即便修正取反，这条校验只覆盖 `Entity.__setitem__`，同一问题的其它写入路径仍未被覆盖：`Entity.append_to`（entity.py:167）会直接 extend 传入的 dict，`ROCrate.update_jsonld`（rocrate.py:605）绕过 __setitem__ 直接 `entity._jsonld.update(jsonld)`，都能把无 @id 的嵌套 dict 塞进实体，写出的 crate 依旧无法用本库读回。建议按 issue 提议同时让 `__getitem__` 更宽容（无 @id 的 dict 原样返回而非抛错），或把校验抽成公共函数在 append_to / update_jsonld 中复用。",
+   "suggestion": "抽取校验函数并在 append_to、update_jsonld 中复用；或让 __getitem__ 对无 @id 的 dict 直接返回原值，避免“写得进读不出”。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.022704,
+ "input_tokens": 83796,
+ "cache_hit_tokens": 71424,
+ "output_tokens": 2226,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 13.3
+}

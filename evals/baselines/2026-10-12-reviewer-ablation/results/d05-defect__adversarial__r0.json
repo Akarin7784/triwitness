@@ -1,0 +1,45 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "只调用 `.lstrip(\"-\")` 无法去掉尾部分隔符，Issue 的核心示例仍然错误。依据：`slugify(\"  Hello,  World!  \")` 中 `text.lower()` = `\"  hello,  world!  \"`，`_NON_WORD = r\"[^a-z0-9]+\"` 逐段替换后得到 `\"-hello-world-\"`，`.lstrip(\"-\")` 仅去掉前导 `-`，结果 `\"hello-world-\"`，而 Issue 期望 `\"hello-world\"`。同理 `slugify(\"Hello!\")` 仍返回 `\"hello-\"`，即\"slug 不得以 `-` 结尾\"这一需求完全没实现（仅 `\"a -- b\"` 这类首尾无分隔符的用例因正则的 `+` 已正确）。",
+   "suggestion": "改为同时去除两端分隔符，例如 `return _NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`；纯符号输入（如 `\"!!!\"`）会得到 `\"\"`，需确认这是可接受行为。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_slug.py",
+   "line": 5,
+   "message": "补丁未新增任何针对本 Issue 的回归测试，现有 `tests/test_slug.py` 只有 `test_simple`（`slugify(\"Hello World\") == \"hello-world\"`），该用例在修改前后都通过，因此无法暴露上面遗留的尾部 `-` 问题。依据：`git show b01a387` 显示本次提交仅改动 `textkit/slug.py` 一行，测试文件未变。",
+   "suggestion": "补充覆盖 Issue 中两个示例的用例：`slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`，并追加边界用例如 `slugify(\"---\") == \"\"`、`slugify(\"Hello!\") == \"hello\"`。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.011374,
+ "input_tokens": 19157,
+ "cache_hit_tokens": 17664,
+ "output_tokens": 2382,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 13.7
+}

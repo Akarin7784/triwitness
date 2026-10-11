@@ -1,0 +1,68 @@
+{
+ "adversarial": {
+  "n_defect": 20,
+  "n_clean": 20,
+  "hit": 17,
+  "hit_blocker": 15,
+  "loose": 17,
+  "fp": 5,
+  "fp_major": 7,
+  "failed": 8,
+  "cost_cny": 3.7329
+ },
+ "checklist_t03": {
+  "n_defect": 20,
+  "n_clean": 20,
+  "hit": 15,
+  "hit_blocker": 14,
+  "loose": 15,
+  "fp": 7,
+  "fp_major": 9,
+  "failed": 4,
+  "cost_cny": 1.1569
+ },
+ "checklist_t10": {
+  "n_defect": 20,
+  "n_clean": 20,
+  "hit": 18,
+  "hit_blocker": 16,
+  "loose": 18,
+  "fp": 5,
+  "fp_major": 8,
+  "failed": 4,
+  "cost_cny": 1.1751
+ },
+ "consensus_t03": {
+  "n_defect": 20,
+  "n_clean": 20,
+  "hit": 14,
+  "hit_blocker": 13,
+  "loose": 14,
+  "fp": 4,
+  "fp_major": 6,
+  "failed": 8,
+  "cost_cny": 4.8898
+ },
+ "consensus_t10": {
+  "n_defect": 20,
+  "n_clean": 20,
+  "hit": 15,
+  "hit_blocker": 13,
+  "loose": 15,
+  "fp": 4,
+  "fp_major": 6,
+  "failed": 8,
+  "cost_cny": 4.908
+ },
+ "same": {
+  "n_defect": 20,
+  "n_clean": 20,
+  "hit": 17,
+  "hit_blocker": 16,
+  "loose": 18,
+  "fp": 3,
+  "fp_major": 8,
+  "failed": 6,
+  "cost_cny": 2.5102
+ }
+}

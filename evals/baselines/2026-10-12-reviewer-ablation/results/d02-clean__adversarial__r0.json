@@ -1,0 +1,31 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_duration.py",
+   "line": 6,
+   "message": "测试仍只覆盖 \"45s\"（本来就是正确的）与非法输入 \"abc\"，本次修复的核心多段输入（h/m/s 混合求和）没有任何回归用例，后续若再次误改系数不会被 CI 捕获。",
+   "suggestion": "补一个用例断言 parse_duration(\"1h30m15s\") == 5415（并可加 assert parse_duration(\"2m\") == 120），不改变现有测试。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.009866,
+ "input_tokens": 14958,
+ "cache_hit_tokens": 13184,
+ "output_tokens": 1957,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 10.9
+}

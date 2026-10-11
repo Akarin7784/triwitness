@@ -1,0 +1,45 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "重复添加了 DOUBLE 条目：第 27 行已有 (\"DOUBLE\", r\"\\bdouble\\b\")，此处第 81 行再次加入完全相同的键值。由于 OrderedDict 对重复键会覆盖值但保留原插入位置，且两处值相同，实际为 no-op（不会崩溃、不改变行为、合并正则中仍只有一个 DOUBLE 命名组），因此不是回归；但属于冗余/易误导的死代码，会让读者以为 DOUBLE 之前缺失。",
+   "suggestion": "删除第 81 行的 (\"DOUBLE\", r\"\\bdouble\\b\")，保留第 27 行原有定义。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/parser.py",
+   "line": 98,
+   "message": "新增的 UNSIGNED_INT token 在 parser 中无任何处理：parser.py 的类型 token 列表（第 98-110、245-250、410-416、728-734、842-848 行）均未包含 UNSIGNED_INT。因此 `unsigned int x;` 会被词法分析为 UNSIGNED_INT INT IDENTIFIER SEMICOLON，随后在 parse_shader 中落入 'Skipping unexpected token' 警告分支，无法端到端解析。issue 明确将本任务限定在 lexer.py 单文件，故不构成本次 blocker，但作为后续跟进项记录。",
+   "suggestion": "后续任务中把 UNSIGNED_INT 加入 parser 的类型 token 列表，并补充 `unsigned int` 的解析/代码生成测试。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.027426,
+ "input_tokens": 126130,
+ "cache_hit_tokens": 113408,
+ "output_tokens": 3109,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 19.1
+}

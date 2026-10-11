@@ -1,0 +1,52 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "`except KeyError` 的 try 块范围远超“格式键解析”。emit() 的 try 从第 128 行开始，覆盖了 `self._filter(record)`（133）、动态 `self._formatter(record)`（137）、`self._exception_formatter.format_exception(...)`（146）、`self._serialize_record(...)`（195），以及最关键的 `self._sink.write(str_record)` / `self._queue.put(str_record)`（204-206）。因此当用户 sink 或 filter 内部抛出 KeyError（例如 `logger.add(lambda m: {}[\"x\"])` 或 filter 里 `d[\"missing\"]`）时，会被这个新分支吞掉，并被重新包装成 “The format string references an unknown key '...'”，key 取自 `original.args[0]`（即 sink 里那个无关的键），并附带完全错误的 `logger.bind`/`extra[key]` 指引。改动前这类 KeyError 会走通用 `except Exception` 分支，打印真实 traceback。这是可观测行为回归，且给出的诊断是误导性的，与 Issue “改善反馈” 的目标相反。修复建议：把格式解析调用单独包一层 try/except KeyError（只覆盖 `precomputed_format.format_map(formatter_record)` 等 format_map 调用），或在该分支内校验异常确实来自 format_map（例如检查 traceback 帧），不要把 sink/filter/serialize 纳入捕获范围。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 251,
+   "message": "新增行为没有任何测试覆盖。Issue 的验收标准（catch=True 时增强诊断出现在 handler 错误输出且不崩溃；catch=False 时抛出的 KeyError 含缺失键与 bind/extra 指引；诊断包含 elapsed/exception/extra/file/level/message 等可用键；patcher 添加的键仍被支持）均无对应测试。现有 tests/test_add_option_catch.py、tests/test_configure.py 只覆盖旧的通用错误路径，无法验证本次改动。建议补充针对上述每条验收标准的测试。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "`_make_key_error` 用 `record.keys()` 生成可用键列表，但实际格式化使用的是 `formatter_record`（record.copy()，见 139 行）。当前两者键集相同所以结果正确，但语义上不一致，一旦将来 formatter_record 增删键就会给出错误的“可用键”列表。建议改为传入/使用实际参与格式化的 formatter_record，或明确注释二者键集一致的前提。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[0] if original.args else \"?\"` 假设 KeyError 来自 format_map 且 args[0] 是缺失键。当 KeyError 来自其他路径（见上面的 blocker）时 args[0] 可能是任意对象，`'%s'` 会把它 str 化后塞进“unknown key”消息，产生误导。与 blocker 同源，修复捕获范围后此处的假设才成立；建议同时用 `repr()` 或校验类型。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.044773,
+ "input_tokens": 198683,
+ "cache_hit_tokens": 175488,
+ "output_tokens": 4517,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 29.0
+}

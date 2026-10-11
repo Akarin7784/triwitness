@@ -1,0 +1,52 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "下发的超时值用错了变量：519-524 行算出的 `effective_timeout` 从未被使用，实际传入的是 `int(timeout or 60)`。当调用方不显式传 timeout、而依赖配置时（Issue 复现方式：`ArtifactSandboxSession(execution_timeout=300)` / `default_timeout=120`，这两个参数经 **kwargs 传入 SessionConfig），ArtifactSandboxSession 依旧固定按 60s 超时，仍不是用户配置的“更大值”，Issue 未真正修复。依据：llm_sandbox/core/config.py:87-89 `get_execution_timeout()` 返回 `execution_timeout or default_timeout`；llm_sandbox/core/session_base.py:390 `actual_timeout = timeout or self.config.get_execution_timeout()` 只有在传入值为假值时才回退配置，所以显式传 60 会覆盖配置；且 session.py:426-428 新 docstring 声称“Defaults to the configuration's execution_timeout”，与代码自相矛盾。旁证：仓库 ruff 配置 select=[\"ALL\"] 且 ignore 列表不含 F841（pyproject.toml:84-109），未使用的 `effective_timeout` 会使静态检查失败。",
+   "suggestion": "把第 533 行改为 `timeout=effective_timeout`（或更简单：`timeout=timeout`，让 BaseSession.run 自己回退 `config.get_execution_timeout()`），使配置 default_timeout/execution_timeout 与 SandboxSession 行为一致；同时保留/修正 docstring。"
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "补丁未同步更新现有单测，测试套件会失败：tests/test_session.py:221-228（test_run_with_plotting_disabled）与 255-262（test_run_with_plotting_enabled_supported_language）都断言 `run_with_artifacts(..., timeout=30)`，而补丁后默认路径实际下发的是 `int(None or 60) == 60`，两处 assert_called_once_with 必然失败（git show e575cdb 只改了 llm_sandbox/session.py，未动 tests/）。这属于把回归测试留在失败状态。",
+   "suggestion": "随实现一起更新断言（改为 None 透传，或按修正后的有效超时值断言），并补充一条覆盖“配置 execution_timeout/default_timeout > 30 时不生效”这一 Issue 场景的回归用例。"
+  },
+  {
+   "severity": "minor",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "`int(timeout or 60)` 与新增的 `timeout: float | None` 签名不一致：小数超时被截断（35.7 → 35，且会因 session_base.py:390 的 `timeout or ...` 真值判断把 0.5→0 视作未设置而回退到配置默认值），`timeout=0` 也被改写为 60。调用方（如 llm_sandbox/mcp_server/server.py:62,88-95 使用 int，但对外 API 已声明 float）传入浮点值时语义会被静默改变。",
+   "suggestion": "不要做 int() 强制转换与 `or 60` 兜底，直接把 `effective_timeout`（可为 float）透传；若下游 `run_with_artifacts(timeout: int = 30)` 的类型标注需要，可一并将该形参及子类实现改为 `float | None`。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.085416,
+ "input_tokens": 424408,
+ "cache_hit_tokens": 390400,
+ "output_tokens": 10900,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 58.8
+}

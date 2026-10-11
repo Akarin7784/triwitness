@@ -1,0 +1,52 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "第 519-524 行算出的 effective_timeout 被完全弃用，第 533 行仍传 int(timeout or 60)，即忽略配置值（config.get_execution_timeout()）。这导致「用配置默认超时」实际并未生效：当 default_timeout/execution_timeout 配置为非 60 的其它值（例如 120）时，ArtifactSandboxSession 仍只会传 60，行为与 SandboxSession（session_base.py:390 使用配置值）不一致，属于与 Issue 期望不符的错误行为。",
+   "suggestion": "直接使用已算好的值：timeout=int(effective_timeout) if effective_timeout is not None else None（并把无超时配置的情形交给 container.run 回落，见下一条）。请勿保留未使用的 effective_timeout。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 412,
+   "message": "`default_timeout=None` 且 `execution_timeout=None` 时，按 SessionConfig 的字段描述（config.py:54-61）意味着「无限运行」，SandboxSession 通过 get_execution_timeout() 返回 None → run 不设超时来支持该语义；但这里 int(timeout or 60) 会把 None 变成 60，使该路径仍会在 60 秒被截断（旧代码为 30，同为错误）。属于同一问题的边界情况未覆盖。",
+   "suggestion": "不要在 None 时强制 60；让 timeout 保持 None 传给 run_with_artifacts/container.run，由 BaseSession.run 的 `timeout or self.config.get_execution_timeout()` 处理默认值。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests",
+   "line": null,
+   "message": "本次改动没有附带针对该 bug 的回归测试（例如 timeout=None/超时配置为 120/超时配置为 None 时 ArtifactSandboxSession.run 实际传给 container.run 的值）。",
+   "suggestion": "补一条单元测试断言 ArtifactSandboxSession.run 在各种 timeout/配置组合下传给语言处理器的超时值，防止再次回归。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.025051,
+ "input_tokens": 117091,
+ "cache_hit_tokens": 104576,
+ "output_tokens": 2611,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 18.7
+}

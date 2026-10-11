@@ -1,0 +1,52 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "索引错位：`next_chr()` 的实现是 `ch = text[at]; at += 1`（第117-118行），所以 `white()` 在这里看到 `self.ch` 时，`self.ch == text[at-1]`，下一未被读取的字符是 `text[at]` 而不是 `text[at+1]`。因此条件实际检测的是 `-X-`（隔一个字符的两个减号），正常的 `--` 注释根本不会被识别。例如 `decode('--c\\n3')`：ch='-'，text[at+1]=text[2]='c'，条件为假，注释未跳过，随后 value() 因 ch=='-' 走 number()，next_digit 抛 mfnumber_minus 被吞掉并返回 0 —— 而基线版本用正则删除 `--.*$` 后可正确得到 3，属行为回归。修复：改为判断 `self.text[self.at] == '-'`（即下一个字符），并加上 `self.at < self.len` 的边界判断。",
+   "suggestion": "def skip_comments(self):\n    if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':\n        ..."
+  },
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "越界 IndexError（未捕获异常）。当 `self.ch == '-'` 且 `self.at + 1 >= self.len` 时，`self.text[self.at + 1]` 抛 IndexError。最小复现：`slpp.decode('-3')`（len=2，next_chr 后 at=1，访问 text[2]）；`slpp.decode('--')`、`slpp.decode('-')` 同理。基线版本对 `'-3'` 返回 0、对 `'--'`/`'-'` 返回 None，不会抛异常，因此这是新的崩溃型回归。现有 tests.py 恰好没覆盖：`decode('-0.45')`/`decode('-3.23e+17')` 的 text[2] 分别是 '0'/'3'，在范围内，所以测试全绿掩盖了该 bug。修复：条件中先判 `self.at < self.len`，或改用切片 `self.text[self.at:self.at+1] == '-'`。",
+   "suggestion": "使用 `self.text.startswith('--', self.at - 1)` 或先做 `self.at < self.len` 边界判断，避免直接索引。"
+  },
+  {
+   "severity": "major",
+   "file": "tests.py",
+   "line": 129,
+   "message": "补丁未新增任何针对本 Issue 的测试：既没有 `slpp.decode('\"--3\"') == '--3'` / `decode(\"'--3'\")`，也没有注释处理的用例（如 `decode('{1, -- c\\n 2}')`、`decode('--c\\n3')`、`decode('-3')`、`decode('--')`）。由于 skip_comments 的越界与错位缺陷在现有用例下恰好不触发（'-0.45' 等使 text[at+1] 落在范围内），测试全绿并不能证明注释逻辑正确。建议补齐上述用例。",
+   "suggestion": "在 TestSLPP 中新增 test_comment / test_string_with_dashes：断言 decode('\"--3\"') == '--3'、decode(\"'--3'\") == '--3'、decode('{\\n-- c\\n1\\n}') 正确、decode('-3') == -3（不抛异常）。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.034593,
+ "input_tokens": 67437,
+ "cache_hit_tokens": 57600,
+ "output_tokens": 5901,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 35.0
+}

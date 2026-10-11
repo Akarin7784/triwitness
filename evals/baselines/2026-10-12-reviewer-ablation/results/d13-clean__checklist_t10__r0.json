@@ -1,0 +1,52 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "自越界崩溃（回归）：`self.text[self.at]` 未做边界检查。next_chr() 的不变式是 `self.ch == self.text[self.at-1]`（读取后 at 自增），因此当 `-` 是文本的最后一个字符时 `self.at == self.len`，`self.text[self.at]` 抛 IndexError。复现：`slpp.decode('-')` —— decode 中 next_chr() 得到 ch='-'、at=1，value() 调用 white()，white() 末尾调用 skip_comments()，执行 `self.text[1]` 而 len==1 → IndexError。同样触发：`slpp.decode('{1, -')`、`slpp.decode('a=-')`、`slpp.decode('{\"x\" -')` 等一切「在取值位置以单个 - 结尾」的输入。补丁前这些输入走 number() → next_digit() 抛 ParseError 被捕获并返回 0，现在是未捕获异常，属于行为回归。修复建议：先判边界再访问，例如 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（或改用 `self.text[self.at:self.at+1] == '-'`）。",
+   "suggestion": "if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':"
+  },
+  {
+   "severity": "major",
+   "file": "tests.py",
+   "line": null,
+   "message": "缺少针对本 Issue 的回归测试：补丁只改了 slpp.py，tests.py 未新增任何用例，因此 `decode('\"--3\"')` 不再被注释正则破坏这一核心行为没有测试保护，后续再次移动注释处理逻辑时容易回退。建议在 TestSLPP 中补充：self.assertEqual(slpp.decode('\"--3\"'), '--3')（以及注释出现在字符串内、含 `--` 的键值等），并对上面第 104 行的边界加 `decode('-')` 的用例。",
+   "suggestion": "在 tests.py 的 TestSLPP 增加 test_comments：断言 decode('\"--3\"') == '--3'、decode('{ a = 1, --c\\n b = 2 }') == {'a':1,'b':2}，以及 decode('-') 不抛异常。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "skip_comments() 在换行分支里递归调用 white()，而 white() 又会调用 skip_comments()，递归深度等于连续注释行数；超过 Python 默认递归上限（约 1000）的连续注释行文件会抛 RecursionError。建议把换行处理改成非递归的循环（消费到行尾后继续 while 循环跳过空白与后续注释），而非通过 white() 递归回到自身。",
+   "suggestion": "改为非递归循环：遇到 '\\n' 时调用 next_chr() 后 continue，把空白消费交给外层 while。"
+  },
+  {
+   "severity": "nit",
+   "file": "slpp.py",
+   "line": 103,
+   "message": "skip_comments 只处理到行尾，`--[[ ... ]]` 长注释（可跨行）仍会被当作代码解析；这与被删除的旧注释 FIXME（仅移除短注释）行为一致，因此不是回归，但既然注释处理已迁入词法层，顺手支持长注释成本很低。可选，不阻塞合并。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.033687,
+ "input_tokens": 73290,
+ "cache_hit_tokens": 63232,
+ "output_tokens": 5591,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 34.8
+}

@@ -1,0 +1,59 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` 取错了下标。日志格式串最终由 `precomputed_format.format_map(formatter_record)` 渲染（如本文件 161/165/175/180/184/192 行，`precomputed_format` 是 `ColoredFormat.strip()/colorize()` 返回的普通 str），而 `str.format_map` 在键缺失时抛出的 `KeyError` 只包含一个参数，即键名本身（`(\"{nonexistent}\".format_map({})).args == ('nonexistent',)`；`{extra[a]}` 缺失时同样是 `('a',)`）。因此在任何真实的缺失键场景下 `original.args[1]` 都会抛 `IndexError: tuple index out of range`，而且这个 `IndexError` 是在 `except KeyError` 分支内抛出的，不会落入紧随其后的 `except Exception`，会直接逃出 `Handler.emit()`。后果：(1) Issue 的复现（`catch=True`）不再打印诊断，而是让 `logger.info()` 抛 `IndexError`，比原行为更糟；(2) `catch=False` 抛出的不是带指引的 `KeyError`，违反“With catch=False, the raised KeyError includes the missing key”的验收标准；(3) 现有测试 `tests/test_configure.py::test_reset_previous_extra`（137-142 行）与 `test_reset_previous_patcher`（147-152 行）使用 `format=\"{extra[a]}\", catch=False` 并断言 `pytest.raises(KeyError)`，补丁后实际抛出 `IndexError`，这两个用例会失败。",
+   "suggestion": "改为取第一个参数并做类型/兜底处理，例如：`key = original.args[0] if original.args and isinstance(original.args[0], str) else str(original)`；同时建议加断言/测试覆盖 `format=\"{nonexistent}\"`（catch True/False）与 `format=\"{extra[a]}\"` 两种场景，确认抛出/打印的是 `KeyError` 而不是 `IndexError`。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError` 放在 `try` 的最外层，会把**任何**来自 sink、filter 或动态 format 可调用对象的 `KeyError` 都误判为“格式串引用了未知键”。例如 `logger.add(lambda m: some_dict[m], catch=True)` 或过滤函数内部 `KeyError`，原来走 `except Exception` → `ErrorInterceptor.print(record)`（使用 `sys.exc_info()`，保留完整 traceback），现在被替换成 “The format string references an unknown key ...”，诊断信息误导；且 `_make_key_error()` 生成的新异常从未 raise，`__traceback__` 为 None，`traceback.print_exception(..., traceback_=None, ...)` 只打印异常本身，丢失了真实的出错位置。catch=False 时也会用新异常替换掉 sink 的原始 `KeyError`。",
+   "suggestion": "只对来自格式渲染步骤的 `KeyError` 做转换：把 `format_map(...)`（以及 `self._formatter(record)` 的动态格式调用）包在内部的 `try/except KeyError` 里并把结果向外传递，或在 `_make_key_error` 前判断异常确实来自格式步骤；其余 `KeyError` 仍走通用分支（保留原始 traceback）。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 256,
+   "message": "当失败的是 `extra` 子键（`format=\"{extra[missing]}\"`）时，消息会把 `missing` 当成 record 的顶层键，输出“The format string references an unknown key 'missing'. Available record keys are: elapsed, exception, extra, ... To include custom data, use 'logger.bind(...)' ...”，而用户其实已经用了 bind，只是键名不匹配，指引容易被误解（可用键列表里出现的 `extra` 也提示不了实际可用子键）。",
+   "suggestion": "区分层次：若 `original.args[0]` 不在 record.keys() 中，按现在的文案；否则提示“extra/level/... 中不存在该键”，并可列出 `record['extra']` 的可用键，如 “Unknown extra key 'missing'. Available extra keys: ...”。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 210,
+   "message": "补丁只改了 `_handler.py`，没有新增任何测试；Issue 的附加验收标准（缺失键被点名、包含 `logger.bind(key=value)`/`extra[key]` 指引、列出含 elapsed/exception/extra/file/level/message 的可用键、catch=True 打印诊断不崩溃、catch=False 抛出带指引的 KeyError、patcher 新增键仍可用）全部没有测试保障，也正是本次 blocker 未被发现的原因。",
+   "suggestion": "参照 `tests/test_add_option_catch.py` 增加用例：catch=True 时用 capsys 断言 stderr 含缺失键名、可用键与 `logger.bind` 指引；catch=False 时 `pytest.raises(KeyError, match=...)`；再加一条 `logger.patch` 向 record 注入自定义键并在 `format` 中引用的正向用例。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.081091,
+ "input_tokens": 295363,
+ "cache_hit_tokens": 272384,
+ "output_tokens": 13166,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 75.5
+}

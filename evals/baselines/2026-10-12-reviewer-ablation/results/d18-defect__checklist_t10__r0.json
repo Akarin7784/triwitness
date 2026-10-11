@@ -1,0 +1,52 @@
+{
+ "item": "d18-defect",
+ "task": "swe-conan-19750",
+ "kind": "defect",
+ "truth": {
+  "file": "conan/internal/api/profile/profile_loader.py",
+  "line": 251,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 251,
+   "message": "版本范围检测写错了对象。`r` 是 `RecipeReference`，`str(r)` 走 `RecipeReference.__str__`（conan/api/model/refs.py:61-71）返回 `\"name/version\"`，例如 `dep/[>=1.0]` 的 `str(r)` 是 `\"dep/[>=1.0]\"`，永远不以 `[` 开头，因此 `errors` 恒为空、`ConanException` 从不抛出。结果是：profile 中带 version range 的 `[platform_requires]`/`[platform_tool_requires]` 仍会被接受，`assert not require.version_range`（conan/internal/graph/graph.py:139）依旧以 AssertionError + traceback 形式炸出，正是 issue 要修的行为，验收标准（正常 profile 读取错误、不暴露 AssertionError）未满足。仓库其他地方一致地检查 `str(ref.version)` 而非 `str(ref)`（conan/api/subapi/graph.py:117、conan/internal/model/lockfile.py:68-70、conan/internal/model/requires.py:175-176），可佐证此处写法错误。",
+   "suggestion": "改为检查版本本身：`errors = [r for r in result if str(r.version).startswith(\"[\")]`（更稳健可用 `if str(r.version).startswith(\"[\") and str(r.version).endswith(\"]\")`）。建议补一个回归测试：profile 内容 `[platform_requires]\\ndep/[>=1.0]`（以及 `[platform_tool_requires]` 同名场景）运行 `conan install`，断言输出为正常 ERROR 且不含 `AssertionError`/traceback。"
+  },
+  {
+   "severity": "minor",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 253,
+   "message": "错误信息把两个 section 一起硬编码（\"[platform_requires]/[platform_tool_requires]\"），无法按验收标准“identifies the offending section”指出到底哪一段出错。由于 `parse_replaces` 被两处共用且未传入 section 名，出错时用户看到的是两段合并的提示。",
+   "suggestion": "给 `parse_replaces` 增加 section 参数（如 `parse_replaces(doc_platform_requires, \"[platform_requires]\")`），在消息中只报告实际出错的那一段；同时 `errors` 列表建议用 `repr(r)` 或显式 `str(r.version)` 以明确展示违规的 range。"
+  },
+  {
+   "severity": "minor",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 250,
+   "message": "补丁未附带任何测试。该改动涉及一个明确验收标准（range 时必须正常报错、不得出现 AssertionError），但没有测试覆盖，无法防止回归，也无法证明修复生效（当前实现实际上并未生效）。",
+   "suggestion": "在 test/integration/graph/test_platform_requires.py 和 test/integration/graph/test_system_tools.py（或 test/integration/command/test_profile.py）中新增用例，覆盖 `[platform_requires]` 与 `[platform_tool_requires]` 含 range 的情形，断言 `assert_error=True`、输出含预期的 ConanException 文本且不含 `AssertionError`。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.057105,
+ "input_tokens": 378800,
+ "cache_hit_tokens": 344448,
+ "output_tokens": 3966,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 31.4
+}

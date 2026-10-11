@@ -1,0 +1,45 @@
+{
+ "item": "d06-clean",
+ "task": "swe-crosstl-257",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新增的 UNSIGNED_INT token 没有被 translator 前端任何地方消费：parser.py 的所有类型分派列表都不含 \"UNSIGNED_INT\"（crosstl/translator/parser.py:98-110 全局/函数分派、:243-250 parse_body、:409-416 parse_assignment_or_function_call、:728-733、:842-848 参数列表）。后果可用代码推出：\n1) 全局 `unsigned int a;`：parse_shader 走到 parser.py:115-119 的 else 分支，仅 `warnings.warn(\"Skipping unexpected token UNSIGNED_INT\")` 后 eat 掉该 token，随后把 INT 当作类型，生成 VariableNode(\"int\", \"a\")，因此 metal_codegen.py:49 的 \"unsigned int\"->\"uint\" 映射永远不会命中，输出类型静默丢掉 unsigned（补丁前这种输入是 SyntaxError，现在变成静默产生错误代码）；\n2) 函数体内 `unsigned int a = 3;`：parse_body 的类型列表（parser.py:243-250）不含 UNSIGNED_INT，直接抛 SyntaxError(\"Unexpected token UNSIGNED_INT\")，即最常用的局部声明处反而不可用；\n3) 顶层 `unsigned int f(...) { }`：UNSIGNED_INT 被 skip 后 IDENTIFIER 变成 return_type，parse_function（parser.py:184-189）在 eat(\"IDENTIFIER\") 处报错。\n也就是说 token 只是“被识别”，并没有真正让前端支持 `unsigned int`，并且引入了静默的错误类型输出。",
+   "suggestion": "在 parser 的类型 token 集合中补上 \"UNSIGNED_INT\"（parser.py:98-110、:243-250、:409-416、:728-733、:842-848），使其走与 UINT/INT 相同的类型路径（token 文本 \"unsigned int\" 正好能被 metal_codegen 的映射消费），并补一个 `unsigned int` 的 parser/codegen 用例；如果确实限定只改 lexer，则至少确认并记录该限制，不要让全局声明静默退化为 int。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "该 hunk 是无效改动：文件第 27 行已有完全相同的 `(\"DOUBLE\", r\"\\bdouble\\b\")`。TOKENS 是 OrderedDict，构造时遇到重复 key 只会用最后一个值覆盖、并保留首次插入的位置，所以这行既没有引入新的 token，也没有把 DOUBLE 移到运算符区（若真被移到 IDENTIFIER 之后，`double d;` 会被当成 IDENTIFIER，tests/test_translator/test_lexer.py:148 的 test_data_types_tokenization 会失败；这里没有发生）。它只是让人误以为补丁新增了 double 支持。",
+   "suggestion": "删除第 81 行；如果本意是新增另一个 double 相关 token，请使用不同的 token 名并放在 IDENTIFIER 之前（可顺手清理文件里既有的 BITWISE_NOT/INCREMENT/DECREMENT 重复项，或至少不要继续增加）。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "`\\bunsigned int\\b` 要求两个词之间恰好一个空格，`unsigned  int` 或跨行的 `unsigned\\nint` 不会合成 UNSIGNED_INT，而会退化成 IDENTIFIER(\"unsigned\") + INT(\"int\")，再落到上面第 1 条的静默降级/SyntaxError 路径，属于该正则的边界缺口。",
+   "suggestion": "若允许空白放宽，可改为 `\\bunsigned\\s+int\\b` 并在 parser 消耗该 token 时把类型文本规范化为单个空格（否则带空白的 token 文本会错过 metal_codegen.py:49 的类型映射）；否则保留单空格写法即可，但要注意该限制。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.240105,
+ "input_tokens": 585844,
+ "cache_hit_tokens": 540032,
+ "output_tokens": 45873,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 248.3
+}

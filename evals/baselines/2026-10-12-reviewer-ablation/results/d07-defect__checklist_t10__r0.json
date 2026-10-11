@@ -1,0 +1,45 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "test/test_ash.py",
+   "line": 16,
+   "message": "No test was added for the exact regression described in the issue. The patch only touches pynmea2/types/proprietary/ash.py; test_ash.py's test_ashratt still uses a 3-decimal timestamp ('130533.620'), which matched under the old regex too. The reported failing input ('$PASHR,122144.75,240.68,T,,,,,,,2*04') is not covered anywhere in the test suite, so a future revert of this regex would not be caught.",
+   "suggestion": "Add a test (e.g. test_ashratt_2dp) that parses a 2-decimal timestamp sentence such as '$PASHR,122144.75,240.68,T,,,,,,,2*04', asserts type(msg) == pynmea2.ash.ASHRATT and msg.timestamp == datetime.time(12, 21, 44, 750000), ideally also asserting render() round-trips."
+  },
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "The issue explicitly recommended '^\\d{6}\\.\\d{2,3}$', but the patch dropped the trailing '$' anchor: '^\\d{6}\\.\\d{2,3}'. The unanchored pattern also matches fields that merely *begin* with such a value (e.g. '122144.75123' or '122144.75X'). ASHRATT.match is only consulted as the fallback for unregistered ASH subtypes (ash.py:23-26), so any unregistered message whose 2nd field starts like a 6-digit time with 2-3 decimals will now be classified as ASHRATT rather than the generic ASH.",
+   "suggestion": "Restore the end anchor as suggested in the issue: r'^\\d{6}\\.\\d{2,3}$'. If broader fraction lengths should also be accepted (the input must be a valid hhmmss[.ss...] timestamp), use r'^\\d{6}\\.\\d+$' instead — but keep the '$' so partial-prefix matches don't cause misclassification."
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.030202,
+ "input_tokens": 112773,
+ "cache_hit_tokens": 101248,
+ "output_tokens": 4163,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 41.6
+}

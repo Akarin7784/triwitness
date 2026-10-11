@@ -1,0 +1,45 @@
+{
+ "item": "d09-defect",
+ "task": "swe-cyclopts-701",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/command_spec.py",
+  "line": 143,
+  "category": "incomplete_fix",
+  "severity": "major",
+  "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "只隐藏了 help_flags，version_flags 未隐藏，Issue 未修复。证据链：(1) 直接注册路径 cyclopts/core.py:1343 是 `for flag in chain(app.help_flags, app.version_flags): app[flag].show = False`，两个都要隐藏；(2) App.version_flags setter（cyclopts/core.py:473-485）会无条件把 version_print 注册成一个子 App（`name=self._version_flags, help=\"Display application version.\"`），其 `show` 默认为 True；(3) help 面板的命令行由 cyclopts/help/help.py:446 `if not app.show: continue` 过滤，所以 show 未置 False 的版本 flag 会照旧显示；(4) Issue 里懒加载输出正是多出 `--version  Display application version.` 这一行，本补丁执行后该行仍然存在——即原 Issue 的 diff 示例仍会复现（只有 `--help -h` 那行被隐藏）。",
+   "suggestion": "与 core.py 保持一致，同时隐藏版本 flag：\n```py\nfor flag in chain(self._resolved.help_flags, self._resolved.version_flags):\n    self._resolved[flag].show = False\n```\n并加一个回归测试：对同一目标分别用 `app.command(subapp)` 与 `app.command(\"a:subapp\", name=\"greet\")` 注册，断言子命令 `greet --help` 输出一致（且都不含 `--help`/`--version` 行）。"
+  },
+  {
+   "severity": "nit",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "`chain(self._resolved.help_flags)` 对单个可迭代对象用 chain 没有意义，看起来是从 core.py 那行 `chain(help_flags, version_flags)` 抄下来时漏改了参数；补上 version_flags 后 chain 才有必要，否则直接 `for flag in self._resolved.help_flags:` 更清楚。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.070191,
+ "input_tokens": 326985,
+ "cache_hit_tokens": 296704,
+ "output_tokens": 8494,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 65.5
+}

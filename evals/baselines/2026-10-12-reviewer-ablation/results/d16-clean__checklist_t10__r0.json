@@ -1,0 +1,45 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError as e:` 放在 `except Exception` 之前，捕获范围是**整个 try 主体**，而不仅是格式解析：包括 `self._filter(record)`（line 133）、动态 formatter `self._formatter(record)`（line 137）、`self._serialize_record(...)`（line 195）以及 `self._sink.write(...)`（line 206）。因此用户 filter、动态 format 回调或 sink 内部抛出的 KeyError，现在都会被套上 “The format string references an unknown key ... Available record keys are: ...” 的文案，指向完全错误的根因。更严重的是 catch=False 分支：原来这些场景会原样向上抛出原始 KeyError（`raise`），现在被替换为 `raise self._make_key_error(e, record) from e`，即抛出一个语义错误、key 名来自 args[0] 的**新** KeyError，改变了既有异常类型/消息（回归）。验证：仓库中没有针对 filter/sink 抛 KeyError 的测试，所以这个回归不会被现有用例发现。",
+   "suggestion": "只对格式解析失败做增强，而不是对所有 KeyError。例如把格式化那几行的 `format_map(formatter_record)` 单独 try/except KeyError 后再走增强提示；或者在 except 分支里先判断异常是否来自格式解析（如解析异常 args 中的 key 是否属于 record 的顶层 key，或用一个内部标记的异常子类）。确保 filter/sink/dynamic formatter 抛出的 KeyError 仍走原来的 `except Exception` 语义（catch=True 打印通用错误、catch=False 原样抛出）。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 256,
+   "message": "对最常见的 `format=\"{extra[missing]}\"` 场景，提示是误导性的。此时 `extra` 是 record 的顶层 key，`format_map` 失败发生在对 `extra` 字典取 `missing` 这一步，抛出的 `KeyError.args[0]` 是 **extra 里的 key**（如 'missing'），而不是顶层 record key。结果消息会声称 \"references an unknown key 'missing'\" 并列出 elapsed/exception/extra/...，而 'missing' 恰恰不在列表里（它在 extra 下），会给出完全错误的修复方向——用户需要 `logger.bind(missing=...)`，而消息却暗示要换成某个 record 顶层 key。验收标准也强调 extra[key] 场景。",
+   "suggestion": "区分两种失败：顶层 key 缺失 vs `extra[...]`/嵌套容器内 key 缺失。可以对 record 顶层键是否存在做一次判断；若 key 属于 `extra` 中缺失，则给出针对性提示（如 \"'missing' is not present in 'extra'; use logger.bind(missing=...) or logger.configure(extra=...)\"）。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 251,
+   "message": "补丁未新增任何测试，而验收标准列出 6 条（catch=True 时增强诊断出现在 handler 错误输出、catch=False 时 KeyError 含缺失 key 与 bind 指引、诊断包含 elapsed/exception/extra/file/level/message 等可用键、patcher 新增键仍可用等）均无对应测试。现有 test_configure.py 的两个用例（line 141、151）只断言 `pytest.raises(KeyError)`，既检验不到消息内容，也发现不了上面两条问题。",
+   "suggestion": "为新增行为补充测试：catch=True 时断言 stderr 中包含缺失 key 名与 `logger.bind` 指引及可用键列表；catch=False 时断言抛出的 KeyError 消息包含 key 名与指引；补一个 patcher 新增键仍能正常格式化的用例；并补一个 filter/sink 抛 KeyError 不被误报为格式错误的回归用例。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.053877,
+ "input_tokens": 313629,
+ "cache_hit_tokens": 286208,
+ "output_tokens": 5183,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 38.6
+}

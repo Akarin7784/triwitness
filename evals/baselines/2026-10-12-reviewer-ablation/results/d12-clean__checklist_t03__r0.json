@@ -1,0 +1,45 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 159,
+   "message": "append_to 直接操作 self._jsonld（第 162-169 行），完全绕过 __setitem__ 中新增的 @id 校验。因此 rd.append_to(\"license\", {\"@type\": \"CreativeWork\", \"name\": \"CC0\"}) 仍会写入无 @id 的嵌套 dict，随后 rd[\"license\"] 会在 __getitem__ 第 94 行抛 ValueError: no @id in {...} —— 与 Issue 描述的“写入成功但读不回来”完全一致。append_to 是 README 中记载的公开 API（README.md:132-146），用于添加嵌套属性，属于同一问题的另一条路径，补丁未覆盖。",
+   "suggestion": "在 append_to 中复用同一校验，例如在 extend 前对 value 逐项检查：if isinstance(v, dict) and \"@id\" not in v: raise ValueError(f\"no @id in {v}\")；或把校验抽成一个私有辅助方法供 __setitem__ 与 append_to 共用。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/rocrate.py",
+   "line": 605,
+   "message": "update_jsonld 通过 entity._jsonld.update(jsonld) 直接写入属性，绕过 __setitem__ 的新校验。因此 crate.update_jsonld({\"@id\": \"./\", \"license\": {\"@type\": \"CreativeWork\", \"name\": \"CC0\"}}) 仍会创建无法通过 crate.root_dataset[\"license\"] 访问的嵌套属性，问题依旧存在。",
+   "suggestion": "改为逐项走 entity[key] = value（或调用与 __setitem__ 相同的校验逻辑），使 update_jsonld 与直接赋值行为一致。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "补丁未新增任何测试（git show 8d6421b 仅改动 entity.py 3 行，test/ 下无相关用例）。Issue 的核心行为（赋值含无 @id dict 应报错、且写入后仍可读回）没有回归测试保护，append_to 路径的遗漏也正因缺少测试而未被发现。",
+   "suggestion": "在 test/test_model.py 中补充用例：断言 crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\"} 抛 ValueError；断言 append_to 同样抛错；并覆盖 list 形式的值（含混合 Entity/dict/str）与带 @id 的正常 dict 仍可写入并读回。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.033239,
+ "input_tokens": 164595,
+ "cache_hit_tokens": 148608,
+ "output_tokens": 3570,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 23.0
+}

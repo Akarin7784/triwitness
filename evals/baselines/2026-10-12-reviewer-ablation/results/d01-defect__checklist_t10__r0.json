@@ -1,0 +1,52 @@
+{
+ "item": "d01-defect",
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "修复方向正确：`text.splitlines()` 对 \"a,1\\n\" 产生 ['a,1']（不产生空元素），而对 \"a,1\\n\\nb,2\" 产生 ['a,1','','b,2']，空字符串的 line 经 split(',') 只有 1 个元素，`parts[1]` 即抛 IndexError。`if not line: continue` 精准覆盖该情况且不改变原有合法行的行为。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "覆盖度不完整（非本次 Issue 要求，故不阻塞）：只处理了“完全空”的行。仅含空白/分隔符的行仍会崩溃，例如 parse_rows(\"a,1\\n  \\nb,2\") 得到 line='  '，split(',') 后 len(parts)==1，第 7 行 `parts[1]` 抛 IndexError；同理 parse_rows(\",\") 会因 int('') 抛 ValueError。若实际输入可能含空白行，建议用 `if not line.strip(): continue` 并把单列/空字段行显式跳过或报出带行号的可读错误。",
+   "suggestion": "改为 `if not line.strip(): continue`（若 CSV 中空白行应视为空行），或在 parts 长度不足 2 时给出明确错误而非裸 IndexError/ValueError。"
+  },
+  {
+   "severity": "nit",
+   "file": "tests/test_basic.py",
+   "line": 5,
+   "message": "没有任何测试覆盖本次修复的空白行场景（仓库中仅 test_basic 一个测试，且输入无空行），即回归保护缺失：改动被回退后现有测试仍会全绿。",
+   "suggestion": "补充断言，如 `assert parse_rows(\"a,1\\n\\nb,2\\n\") == [(\"a\", 1), (\"b\", 2)]`，以锁定该行为。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.005979,
+ "input_tokens": 19959,
+ "cache_hit_tokens": 18176,
+ "output_tokens": 958,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 8.3
+}

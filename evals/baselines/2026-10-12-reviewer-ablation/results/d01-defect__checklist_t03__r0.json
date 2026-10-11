@@ -1,0 +1,45 @@
+{
+ "item": "d01-defect",
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "空行判定只覆盖了严格空串。`text.splitlines()` 对 \"a,1\\n   \\nb,2\" 会产出 '   '（纯空白行），`not line` 为 False，随后 `parts = ['   ']`，`parts[1]` 仍抛 IndexError。Issue 只提到空行，因此不算没修好；但若输入可能含空白行（如带缩进的 CSV），同一类崩溃仍会复现。",
+   "suggestion": "改为 `if not line.strip(): continue`（或 `if not line.strip():` 后再 split），可同时覆盖空行与纯空白行。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_basic.py",
+   "line": 4,
+   "message": "补丁未新增任何针对空行的回归测试，现有 test_basic 只覆盖 \"a,1\\nb,2\"，无法防止该 bug 回归（例如有人日后把 `continue` 改回）。",
+   "suggestion": "增加用例：`assert parse_rows(\"a,1\\n\\nb,2\\n\") == [(\"a\", 1), (\"b\", 2)]`，并视情况加纯空白行用例。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.006246,
+ "input_tokens": 21063,
+ "cache_hit_tokens": 18944,
+ "output_tokens": 937,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 6.5
+}

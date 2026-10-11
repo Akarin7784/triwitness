@@ -1,0 +1,31 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_duration.py",
+   "line": 6,
+   "message": "修复正确，但测试套件仍只覆盖 \"45s\" 与非法输入，未覆盖 Issue 中出错的分钟/多段用例（\"1h30m\"、\"2m\"、\"1h30m15s\"）。这不是回归（既有测试未被改弱），但缺少能防止该 bug 复发的回归测试。",
+   "suggestion": "补充断言：parse_duration(\"1h30m\") == 5400、parse_duration(\"2m\") == 120、parse_duration(\"1h30m15s\") == 5415。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.004787,
+ "input_tokens": 10524,
+ "cache_hit_tokens": 9344,
+ "output_tokens": 855,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 5.1
+}

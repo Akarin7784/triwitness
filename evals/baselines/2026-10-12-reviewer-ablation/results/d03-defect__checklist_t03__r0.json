@@ -1,0 +1,38 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "修复方向写反，Issue 描述的行为没有被修复。本文件的顺序约定是：put 用 `self._data.move_to_end(key)`（last=True，移到队尾=MRU），淘汰用 `self._data.popitem(last=False)`（从队首=LRU 淘汰）。因此队首是 LRU、队尾是 MRU。补丁在 get 中调用 `move_to_end(key, last=False)`，把刚被读取（最近使用）的 key 移到队首，即标记为“最久未使用”，与 put 的约定完全相反。\n\n按 Issue 场景（capacity=2）逐步验证：put(\"a\") → [a]；put(\"b\") → [a, b]；get(\"a\") → move_to_end(\"a\", last=False)，a 本就在队首，顺序仍为 [a, b]；put(\"c\") → [a, b, c] 超容量，popitem(last=False) 淘汰队首 a。结果 \"a\" 仍然消失，\"b\" 反而保留，与 Issue 期望（淘汰 \"b\"）不符。\n\n另外，现有测试 tests/test_lru.py::test_put_get 只做 put(\"a\")/get(\"a\")，无论补丁前后都通过，无法覆盖该场景，补丁也未新增回归测试。",
+   "suggestion": "改为 `self._data.move_to_end(key)`（即 last=True，与 put 的约定一致），使被读取的 key 移到队尾（MRU），淘汰时从队首弹出最久未使用的条目。同时补充 Issue 场景的回归测试，例如：c = LRUCache(2); c.put(\"a\", 1); c.put(\"b\", 2); c.get(\"a\"); c.put(\"c\", 3); 断言 c.get(\"a\") == 1 且 c.get(\"b\") is None（或默认值），并断言 len(c) == 2。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.007931,
+ "input_tokens": 18482,
+ "cache_hit_tokens": 16256,
+ "output_tokens": 1345,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 7.9
+}

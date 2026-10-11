@@ -1,0 +1,38 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "tests/test_autodiscover.py",
+   "line": 45,
+   "message": "补丁修复了 STATICFILES_DIRS 元组场景，但没有任何测试覆盖该行为（git diff tests 无改动，tests/ 下 grep 'tuple|prefix|downloads|webfiles' 无匹配）。现有 TestLoaderSettingsModule 只覆盖 str/Path 形式，无法防止该回归再次出现。",
+   "suggestion": "在 tests/test_autodiscover.py 的 TestLoaderSettingsModule 中新增用例，用 override_settings(STATICFILES_DIRS=[(\"downloads\", <components 目录>)] ) 调用 Loader.get_dirs()，断言返回的目录包含该元组第二项解析出的路径；并补一个非法条目（如长度 3 的元组或 int）用例，断言不抛异常且被跳过。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "元组解包仅处理 len == 2 的情况，且用 Path(component_dir) 做类型校验。Django 的 STATICFILES_DIRS 元组格式为 (prefix, path)，取 [1] 正确；但若元组第二项本身是相对路径，后续 BASE_DIR/SETTINGS_MODULE 拼接逻辑会按相对路径处理，与 Django 要求元组内路径为绝对路径的约定不同，可能静默产生非预期目录。",
+   "suggestion": "可考虑在解包后对第二项做绝对路径校验（或至少在 debug 日志中提示），避免相对路径被静默当作相对目录处理。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.042245,
+ "input_tokens": 198301,
+ "cache_hit_tokens": 183424,
+ "output_tokens": 5925,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 37.2
+}

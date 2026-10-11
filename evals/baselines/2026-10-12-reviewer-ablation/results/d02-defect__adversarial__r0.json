@@ -1,0 +1,38 @@
+{
+ "item": "d02-defect",
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "`_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 60}` 中 `s` 仍是错的，Issue 明确要求 s = 1 s。验证：parse_duration(\"45s\") = 45 * 60 = 2700，而 tests/test_duration.py:7 断言应为 45，现有测试会失败（回归，改动前该用例是通过的）；parse_duration(\"1h30m15s\") = 3600 + 30*60 + 15*60 = 6300，仍不等于 Issue 期望的 5415。只有 h、m 两项改对了。",
+   "suggestion": "将单位表改为 `_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}`，并补充针对 \"1h30m\"、\"1h30m15s\" 的回归测试以覆盖 Issue 场景。"
+  }
+ ],
+ "error": null,
+ "calls": 3,
+ "cost_cny": 0.007991,
+ "input_tokens": 8339,
+ "cache_hit_tokens": 7424,
+ "output_tokens": 1732,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 9.3
+}

@@ -1,0 +1,45 @@
+{
+ "item": "d06-clean",
+ "task": "swe-crosstl-257",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "新增的 (\"DOUBLE\", r\"\\bdouble\\b\") 是对第 27 行已存在的同名键的重复定义。OrderedDict 从键值对序列构造时会对重复键原位覆盖、不改变顺序，因此该行既不会新增条目，也不会让 DOUBLE 参与 _compile_patterns 的 alternation；由于值与被覆盖者完全相同，它纯粹是无效/误导性代码（推测为复制粘贴错误）。同一文件第 54/66、55/67、10/80 行也已有类似重复键，说明该模式在本仓库被容忍，故不影响行为，但应删除该行。",
+   "suggestion": "删除第 81 行的 (\"DOUBLE\", r\"\\bdouble\\b\")，保留第 27 行即可。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新增了 UNSIGNED_INT 词法规则，但 parser 中所有类型 token 白名单均未包含 \"UNSIGNED_INT\"（crosstl/translator/parser.py 第 98-110、243-253、409-416、728-732、842-846 行）。实测路径：`unsigned int x;` 顶层解析时 current_token[0]==\"UNSIGNED_INT\" 不在白名单 → 走 ‘Skipping unexpected token’ 分支被 eat 掉，随后 IDENTIFIER(\"x\") 进入 parse_global_variable 并在 eat(\"IDENTIFIER\") 处因遇到 SEMICOLON 抛 SyntaxError。codegen 中已存在 \"unsigned int\": \"uint\" 的映射（metal_codegen.py:49），说明该 token 的设计意图正是被当作类型处理，但解析侧从未接通，因此这条规则在当前代码库里没有任何下游消费者，功能并未真正可用。另外没有任何测试引用 UNSIGNED_INT（grep 全库仅 lexer 一处），新增行为缺少验证。",
+   "suggestion": "若本任务是让 `unsigned int` 声明端到端可用：在 parser.py 的类型 token 列表中加入 \"UNSIGNED_INT\"（并确保 var_type 取 token 文本 \"unsigned int\"），并补充一个 lexer+parser 测试断言 UNSIGNED_INT 被识别且声明可解析；若严格按 issue 只允许改 lexer.py，则至少在 PR 说明中标注解析侧仍待后续任务处理，避免误以为已修复。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "r\"\\bunsigned int\\b\" 中 `unsigned` 与 `int` 之间是字面量单个空格，只能匹配恰好一个空格的写法；`unsigned  int`（多空格）或 `unsigned\\tint`（制表符）不会命中，会退化为 IDENTIFIER(\"unsigned\") + INT。建议对空白使用 [ \\t]+ 或结合已有 WHITESPACE 处理，使词法规则更健壮。",
+   "suggestion": "将正则改为 r\"\\bunsigned[ \\t]+int\\b\"（或等价地允许任意空白），以覆盖多空格/制表符分隔。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.032656,
+ "input_tokens": 103446,
+ "cache_hit_tokens": 93696,
+ "output_tokens": 5258,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 34.5
+}

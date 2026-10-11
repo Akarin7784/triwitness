@@ -1,0 +1,31 @@
+{
+ "item": "d07-clean",
+ "task": "swe-pynmea2-124",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "test/test_ash.py",
+   "line": 16,
+   "message": "补丁未为 Issue 中的 2 位小数时间戳场景添加回归测试。现有 test_ashratt 使用 '130533.620'（3 位小数），在修复前后都能通过，因此无法防止该正则被改回 `\\d{3}` 而回归。依据：Issue 的样本 `$PASHR,122144.75,240.68,T,,,,,,,2*04` 中 data[1]='122144.75'，旧正则 `^\\d{6}\\.\\d{3}$` 不匹配、新正则 `^\\d{6}\\.\\d{2,3}$` 匹配，但没有任何测试覆盖这一路径。",
+   "suggestion": "在 test/test_ash.py 中新增用例，例如解析 `$PASHR,122144.75,240.68,T,,,,,,,2*04`，断言 type(msg) == pynmea2.ash.ASHRATT 且 msg.timestamp == datetime.time(12, 21, 44, 750000)，以锁定 2 位小数时间戳的行为。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.04213,
+ "input_tokens": 197158,
+ "cache_hit_tokens": 180992,
+ "output_tokens": 5586,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 35.5
+}

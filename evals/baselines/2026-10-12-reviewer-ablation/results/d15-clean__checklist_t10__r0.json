@@ -1,0 +1,38 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "补丁只改了实现（faststream/_internal/application.py），没有为被修复的行为添加任何断言。现有 `test_set_broker` 只检查 `app.broker is broker`，在修复前的代码上也会通过，因此该测试无法防止此 bug 回归（正是 Issue 中「只让复现测试通过」的反面——连复现测试都没覆盖到 fd_config）。",
+   "suggestion": "在 tests/application/test_delayed_broker.py 增加断言：`app.set_broker(broker)` 之后 `broker.config.fd_config.context is app.context`（或直接跑一个订阅者用 `Context(\"app\")` 注入并断言取到 app 实例），并比较与 `FastStream(broker)` 构造路径的等价性。"
+  },
+  {
+   "severity": "nit",
+   "file": "faststream/_internal/application.py",
+   "line": 114,
+   "message": "`_add_broker` 里的 `if broker in self.brokers: raise SetupError(\"Broker ... is already added\")`（115-117 行）在公共 API 下不可达：`set_broker` 已在 109 行对任何第二个 broker 抛错，`_init_setupable_` 调用时 `self.brokers` 必为空。此外该判断走 `==`（brokers 未定义 `__eq__`，目前等价于 `is`），如果将来某个 broker 子类实现值相等语义会误报。",
+   "suggestion": "可删除该重复检查（或改成 `any(b is broker for b in self.brokers)` 以明确语义）；若保留，建议只在直接调用 `_add_broker` 的场景下依赖它。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.059906,
+ "input_tokens": 349425,
+ "cache_hit_tokens": 317056,
+ "output_tokens": 5299,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 48.6
+}

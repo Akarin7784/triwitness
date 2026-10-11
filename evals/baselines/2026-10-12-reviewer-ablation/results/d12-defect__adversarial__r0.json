@@ -1,0 +1,38 @@
+{
+ "item": "d12-defect",
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "判断条件极性反了：`if isinstance(v, dict) and \"@id\" in v: raise ValueError(f\"no @id in {v}\")`。结果是 (a) Issue 要求拦截的无 @id 字典仍然被放行——`crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", ...}`（无 @id）依旧不报错，行为没有任何改变；(b) 合法的带 @id 引用反而被拒绝，例如 `crate.root_dataset[\"license\"] = {\"@id\": \"https://spdx.org/licenses/CC0-1.0\"}` 现在会抛 `ValueError: no @id in {'@id': ...}`。\n\n更严重的是这会打断库自身的核心代码路径：\n1) `rocrate/model/entity.py:38-43` 中 `Entity.__init__` 会把 properties 里非 `@` 键经 `self[name] = value` 写入，而 `rocrate/model/computerlanguage.py:85-90`（cwl）、`softwareapplication.py:63-65`（planemo）、`testservice.py:60-62/69-71/78-80`（jenkins/travis/github）都传入 `\"identifier\"/\"url\": {\"@id\": ...}`，构造即抛异常；`ROCrate.add_workflow`（rocrate.py:485）走 `get_lang` 必然触发，例如 test/test_model.py:420 `foo_crate.add_workflow(\"foo.cwl\", main=True)`、test_model.py:167/237/457、test_workflow_ro_crate.py:136。\n2) `ROCrate.add_workflow(..., main=True)` 在 rocrate.py:493 执行 `self.metadata[\"conformsTo\"] = [{\"@id\": _} for _ in sorted(profiles)]`，同样立刻抛 ValueError（Metadata 未覆写 `__setitem__`，见 metadata.py）。\n\n即补丁相对基线是纯回归，且未实现 Issue 的核心要求。",
+   "suggestion": "把条件改为 `if isinstance(v, dict) and \"@id\" not in v:`（并修正报错信息与 v 的内容一致），然后确认库内部所有传入带 @id dict 的路径（computerlanguage/softwareapplication/testservice 的工厂函数、rocrate.py:493 的 conformsTo）仍然正常；同时补测试：Issue 中的无 @id 示例赋值应抛 ValueError，而 `{\"@id\": \"https://spdx.org/licenses/CC0-1.0\"}`、Entity 实例以及 list 形式赋值仍可正常读写，跑通 test_model.py / test_workflow_ro_crate.py 相关用例。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.048157,
+ "input_tokens": 171381,
+ "cache_hit_tokens": 156800,
+ "output_tokens": 7610,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 41.2
+}

@@ -1,0 +1,23 @@
+{
+ "item": "d09-clean",
+ "task": "swe-cyclopts-701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "没有提交（budget_exhausted：单任务安全上限 max_turns 已用尽：20 / 20）",
+ "served_model": "deepseek-flash",
+ "verdict": null,
+ "findings": [],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.068432,
+ "input_tokens": 375196,
+ "cache_hit_tokens": 342784,
+ "output_tokens": 7291,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 58.5
+}

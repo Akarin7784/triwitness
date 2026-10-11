@@ -1,0 +1,52 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 105,
+   "message": "校验放在 __setitem__ 中会被反序列化路径触发，造成读取回归。Entity.__init__（rocrate/model/entity.py:38-43）对非 '@' 属性调用 self[name] = value，而读取 crate 时正是这样构造实体：rocrate/rocrate.py:180 `self.add(cls(self, identifier, entity))`、rocrate.py:145/148/152/166-171 都传 `properties=<元数据里的 JSON-LD 实体>`。因此任何磁盘上已存在、含\"内联对象（无 @id）\"的 crate 现在一读就抛 ValueError，而不是像 Issue 建议的那样只在访问时才失败（Issue 明确说 \"When accessing values from an RO Crate, it might make sense to be more forgiving\"）。可验证的现有测试直接被打破：test/test_model.py:353-356 构造了 `{\"@id\": \"#correction\", ..., \"badProp\": {\"k\": \"v\"}}` 并写入临时 metadata，test/test_model.py:368 `crate = ROCrate(crate_dir)` 现在会抛 ValueError(\"no @id in {'k': 'v'}\")，而该测试在 414-415 行才期望 `correction[\"badProp\"]` 抛 ValueError——即读取本身应成功。同理，第三方工具产出的 crates 也会变得不可读。",
+   "suggestion": "只在显式赋值 API 上做校验，不要在反序列化路径上做。例如给 __init__ 增加参数（如 `Entity(..., _read=True)` / `properties` 直接写入 `_jsonld`）或在 __init__ 内绕过校验：读取时对非 '@' 键直接 `self._jsonld[name] = value`，把带引用折叠的逻辑（Entity → {\"@id\": ...}）留在 __setitem__；或者引入 `self._validate = True/False` 开关，读取路径设为 False，仅在用户赋值时校验。改完请跑 pytest（至少 test/test_model.py::test_entity_as_mapping 与 test/test_read.py、test/test_jsonld.py）确认无回归，并为新行为补测试。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 167,
+   "message": "append_to（entity.py:159-169）是另一条写入路径，同样会 `current_value.extend([...])` 写入 dict，但没有做新加的 @id 校验。于是 `root[\"x\"] = []` 后 `_ = root.append_to(\"x\", {\"name\": \"CC0\"})` 仍能写进无 @id 的 dict，随后 `root[\"x\"]` 抛 ValueError——正是 Issue 描述的\"写得进、读不出\"的不一致，只是换了入口，Issue 未完全修复。",
+   "suggestion": "把校验抽成一个内部辅助（如 `_check_ref_value(v)` / `_to_ref(value)`），在 __setitem__ 与 append_to 中复用；append_to 在扩展前对每个待加入元素同样校验 isinstance(v, dict) and \"@id\" not in v。"
+  },
+  {
+   "severity": "minor",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "__getitem__ 也接受不了无 @id 的 dict，因此拒绝它们是自洽的；但该条件是 \"dict 必须有 @id\" 的一刀切，会同时拒绝合法的 JSON-LD 值对象/字面量形式（如 `{\"@value\": \"...\", \"@language\": \"en\"}`），这类写法此前可以写入 crate。若确实要支持，建议对含 '@value' 的 value object 放行。",
+   "suggestion": "放宽条件：`if isinstance(v, dict) and \"@id\" not in v and \"@value\" not in v:`（或明确在文档中声明不支持 value object）。"
+  },
+  {
+   "severity": "minor",
+   "file": null,
+   "line": null,
+   "message": "补丁未附带任何测试，且未更新与被改动行为相关的现有测试（test/test_model.py::test_entity_as_mapping 期望\"读得进、访问才报错\"）。Issue 明确要求新行为，按仓库惯例（test/test_jsonld.py 里有 add_jsonld/update_jsonld 的异常用例）应补一个断言 `pytest.raises(ValueError)` 于 `crate.root_dataset[\"license\"] = {\"@type\": ..., \"name\": ...}` 的测试。",
+   "suggestion": "新增测试：赋值无 @id 的 dict 抛 ValueError（含 list 内混有 dict 的情况），并确认有 @id 的 dict / Entity 对象仍然可用。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.078875,
+ "input_tokens": 425063,
+ "cache_hit_tokens": 388992,
+ "output_tokens": 8756,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 60.7
+}

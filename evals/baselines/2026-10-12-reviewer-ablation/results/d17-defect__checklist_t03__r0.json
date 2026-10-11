@@ -1,0 +1,52 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "while branch_exists(...) 在现有测试下会死循环，导致既有测试挂死（回归）。branch_exists 返回 `response.status_code != 404`（第145行）。tests/test_send_pull_request.py 中三个测试（test_send_pull_request:210、test_send_pull_request_git_push_failure:277、test_send_pull_request_permission_error:325）都用 `mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})` 且从未设置 status_code（grep 全文件只有第332行设置 mock_post.status_code=403）。因此 `mock_get.return_value.status_code` 是自动生成的 MagicMock，`MagicMock() != 404` 为 True，branch_exists 恒返回 True，while 循环永不退出，测试会无限循环（挂死）。补丁只改了源文件、未同步更新测试（git show fc6eff5 仅含 send_pull_request.py）。修复建议：让 branch_exists 只在明确 200 时返回 True（见下条），并在测试中把 mock_get 的 status_code 设为 404（或按 URL 区分返回），同时新增「分支已存在→生成 -try2」的用例。",
+   "suggestion": "将 branch_exists 改为 `return response.status_code == 200`（或显式处理 404/200），并更新 tests/test_send_pull_request.py 中 mock_get 的 status_code 为 404，另加分支已存在的测试用例。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 145,
+   "message": "`return response.status_code != 404` 把任何非 404 都当作「分支存在」，包括网络异常、401/403（token 无效或限流）、5xx 等。真实环境下若 API 持续返回 403/5xx，while 循环会不断追加 -try2/-try3… 永不终止（死循环），且不会报错，问题被掩盖。应只在 200 时判定存在，404 判定不存在，其他状态码 raise_for_status 或抛错。",
+   "suggestion": "def branch_exists(...): response = requests.get(...); if response.status_code == 404: return False; response.raise_for_status(); return True"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "while 循环没有尝试次数上限。若远端存在大量同名变体或 API 行为异常，会无限次请求 GitHub API（触发限流）甚至死循环。建议加最大尝试次数（如 100）并在超限时抛错。",
+   "suggestion": "为 attempt 设置上限，例如 while attempt < MAX_ATTEMPTS and branch_exists(...)，超限时 raise RuntimeError。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.019784,
+ "input_tokens": 83591,
+ "cache_hit_tokens": 75264,
+ "output_tokens": 2488,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 16.2
+}

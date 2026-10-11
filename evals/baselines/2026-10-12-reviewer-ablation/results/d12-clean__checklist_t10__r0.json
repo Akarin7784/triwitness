@@ -1,0 +1,52 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "只校验了 `@id` 是否存在，未校验类型。`{\"@id\": 123}` / `{\"@id\": None}` / `{\"@id\": [..]}` 这类值仍会被写入，`__getitem__` 里 `self.crate.get(id_, id_)` 对非字符串 id 会走字典查找（未 hash 的类型直接 TypeError）。Issue 里也提到「可以顺带校验 id 是否指向 crate 中的实体」。",
+   "suggestion": "至少校验 `v[\"@id\"]` 为字符串（非空），或按 Issue 建议让它必须是 crate 中已存在的实体 id（`self.crate.get(v[\"@id\"])`）。"
+  },
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 105,
+   "message": "`__setitem__` 的校验被 `Metadata.generate()` 的序列化-回读流程绕过，Issue 的核心问题没有被真正修掉。`generate()`（rocrate/model/metadata.py:65-74）直接收集 `entity.properties()` 的 `_jsonld`，而 `ROCrate.__init__/read_metadata`（rocrate/rocrate.py:133-180）把读入的 metadata 交给 `Entity.__init__`，其中 `_jsonld` 里已经有 `\"file.jsonld\": {\"@type\": ..., \"name\": ...}` 这类无 `@id` 的 dict 值（对应 test/conftest.py:63 `metadata[\"about\"] == {\"@id\": root_id}` 这类已扁平化/已解引用的嵌套对象）。`__init__` 只对 `properties` 调用 `self[name] = value`，继承自父类的 `_jsonld` 内容不会被校验；构造完成后调用 `crate.update_jsonld({...})` 或直接 `entity[\"file.jsonld\"] = {...}` 时，新的检查只作用于新值，不会清理旧的裸 dict，`_jsonld.update(...)` 在 `entity.update_jsonld`（rocrate/rocrate.py:605）里更是完全绕过 `__setitem__`。于是 `write()` 仍会把无 `@id` 的 dict 写进 `@graph`，重新读回后 `__getitem__` 仍在 entity.py:93-94 抛 `ValueError`——正是 Issue 要消除的场景。",
+   "suggestion": "两类路径都要覆盖：(a) `Entity.__init__` 里对 `properties`（含从 metadata 读入的）统一走校验/规范化（可以复用 `__setitem__`，或在 `Metadata.generate()` 序列化前做一次规范化，把无 `@id` 的内联 dict 提成独立实体或拒绝）；(b) 在 `Entity` 层做校验（或者在 `ROCrate.update_jsonld` 等使用 `entity._jsonld.update()` 的地方改成 `entity[k] = v`），而不是只在 `__setitem__` 加一行。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "配套的测试与文档缺失：`test_entity_as_mapping` 仍然只断言 `correction[\"badProp\"]` 读取时抛 `ValueError`（test/test_model.py:414-415），没有任何测试断言「写入无 @id 的 dict 会报错」这条新行为，Issue 给的复现脚本（`crate.root_dataset[\"license\"] = {...}` 再 `write()` 后重新读回）也没有回归测试。没有测试就无法保证 `append_to`、`update_jsonld`、读入路径也被覆盖，未来很容易再次退化。",
+   "suggestion": "在 test/test_model.py 增加：(1) 写入无 `@id` 的 dict 抛 `ValueError`（含 list 中混有裸 dict 的情形）；(2) Issue 的复现脚本端到端（写盘后 `ROCrate(path)` 重新读取 `root_dataset[\"license\"]` 不抛异常或按预期行为）；(3) 通过 `update_jsonld` / 已有 metadata 的读入路径注入裸 dict 的行为断言。"
+  },
+  {
+   "severity": "minor",
+   "file": "rocrate/model/entity.py",
+   "line": 105,
+   "message": "同一问题的其他写入路径没有同步处理：`append_to`（entity.py:159-169）会把 list 里无 `@id` 的 dict 直接 append 进 `_jsonld`，`setdefault`/`update` 走 `MutableMapping` 的默认实现最终会调用 `__setitem__`，但 `append_to` 不会。如果只靠 `__setitem__` 把关，仍留下写坏 crate 的入口。",
+   "suggestion": "把校验提取成一个内部 helper（如 `_check_value`），在 `__setitem__`、`append_to`、`Entity.__init__`（properties 循环）和 `Metadata.generate()` 之前统一调用。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.05649,
+ "input_tokens": 401095,
+ "cache_hit_tokens": 365568,
+ "output_tokens": 3413,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 25.5
+}

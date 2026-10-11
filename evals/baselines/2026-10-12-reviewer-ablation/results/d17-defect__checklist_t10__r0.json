@@ -1,0 +1,52 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 143,
+   "message": "branch_exists 用 `response.status_code != 404` 判定分支存在：任何非 404 响应（401/403 token 失效、5xx、网络错误等）都会被当作“分支已存在”，while 循环会不停地生成 -try2/-try3... 且没有上限，导致无限循环。测试也印证了这点：tests/test_send_pull_request.py 里 `mock_get.return_value = MagicMock(json=lambda: {...})`（216/283/331 行），其 status_code 是 MagicMock 而非 404，branch_exists 恒返回 True，test_send_pull_request / _git_push_failure / _permission_error 会直接死循环；即使不死循环，`assert mock_get.call_count == 1`（237 行）也因新增了 branches 请求而失败。补丁未同步更新测试（git show fc6eff5 只改了源文件）。",
+   "suggestion": "只把 200 视为存在（`return response.status_code == 200`），并对其他错误 raise_for_status 或明确处理；同时给 while 循环加最大尝试次数保护；并更新测试：为 branches 端点提供 404 的 mock，调整 mock_get.call_count 期望，新增“分支已存在→生成 -try2”的用例。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "分支存在性检查用的是 base_url（= github_issue.owner/github_issue.repo），但后续 push 目标是 `push_owner = fork_owner if fork_owner else github_issue.owner`（194-201 行），PR 的 head 也来自该 fork。当使用 --fork-owner 时，分支推送到 fork 仓库，而这里却在原仓库里查重，检查的是错误的仓库，无法识别 fork 上已存在的同名分支，可能再次引发 push 冲突（正是 issue 想解决的问题）。",
+   "suggestion": "branch_exists 应针对实际推送仓库（push_owner/push_repo 对应的 base_url）进行检查，或在 fork_owner 存在时改用 fork 仓库的 API 端点。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 182,
+   "message": "由于 while 循环最多只保证 GitHub API 上该名字不存在，如果 patch_dir 的本地 git 仓库中已存在同名分支（例如同一次运行中重复执行），`git checkout -b {branch_name}` 仍会因分支已存在而返回非 0 并抛 RuntimeError（187-191 行）。",
+   "suggestion": "可考虑用 `git checkout -B` 或先检查本地分支，避免本地已存在分支导致失败。"
+  }
+ ],
+ "error": null,
+ "calls": 11,
+ "cost_cny": 0.021151,
+ "input_tokens": 101297,
+ "cache_hit_tokens": 91520,
+ "output_tokens": 2386,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 17.9
+}

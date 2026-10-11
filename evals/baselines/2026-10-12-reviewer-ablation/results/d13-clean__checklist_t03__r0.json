@@ -1,0 +1,38 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "skip_comments 中 `self.text[self.at]` 未做边界检查，会抛 IndexError 造成回归。next_chr 的语义是：self.ch = self.text[self.at]; self.at += 1，因此 self.at 始终指向 self.ch 的下一个字符；当 self.ch 是文本最后一个字符时 self.at == self.len，self.text[self.at] 越界。触发路径：decode('-')（text='-'，len=1，next_chr 后 ch='-', at=1），value()→white()→skip_comments() 执行 `self.ch == '-' and self.text[1]` → IndexError: string index out of range。同理 decode('{-')、decode('{1, -') 等以 '-' 结尾的输入也会崩溃。base 版本对 decode('-') 会走 number() 捕获 ParseError 并返回 0（不抛异常），所以这是行为回归，且 skip_comments 外层没有 try/except（slpp.py 仅 225/244/248 处有 except），异常会直接冒泡给调用方。修复建议：在访问前加边界判断，例如 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`。",
+   "suggestion": "改为 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`，避免在 '-' 为末字符时越界。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 107,
+   "message": "skip_comments 用 `re.match('\\n', self.ch)` 逐字符判断换行，语义上等价于 `self.ch == '\\n'`，但依赖 re 且可读性差；另外该实现只处理短注释（到行尾），长注释 `--[[ ... ]]` 仍不被支持（原 FIXME 提到的限制依旧存在，非本次回归）。",
+   "suggestion": "用 `self.ch == '\\n'` 替代 re.match；如需支持长注释可另开 issue。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.024852,
+ "input_tokens": 73025,
+ "cache_hit_tokens": 64128,
+ "output_tokens": 3668,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 24.3
+}

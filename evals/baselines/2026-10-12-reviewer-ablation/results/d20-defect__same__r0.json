@@ -1,0 +1,52 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "第 519-524 行算出的 `effective_timeout` 是死代码，真正传给 handler 的是 `int(timeout or 60)`。因此当 timeout 未显式传入时，无论 `self._session.config.get_execution_timeout()` 返回什么（例如用户设置 `default_timeout=120` 或 `execution_timeout=300`），都会固定用 60 秒。Issue 场景「以 default_timeout / execution_timeout > 30 秒运行 ArtifactSandboxSession」只是从被截断到 30 秒变成被截断到 60 秒，仍未真正修好（典型代码：`with ArtifactSandboxSession(default_timeout=300) as s: s.run(long_code)` 依然在 60 秒被 SandboxTimeoutError 杀掉）。这也与同文件第 426-428 行新写的 docstring「Defaults to the configuration's execution_timeout (typically 60) or 60 if not configured」自相矛盾。建议直接传算好的值：`timeout=effective_timeout`（`BaseSession.run` 里 `actual_timeout = timeout or self.config.get_execution_timeout()` 会正确处理，无需在此再兜底 60）。若要保留兜底，也应写成 `timeout=effective_timeout`，让 config 为 None 时按 docstring 语义处理；注意 `int(timeout or 60)` 这种写法在 timeout=0/0.5 时会把 0 当假值或截断成 0，反而退化为「用 config/无限等待」。",
+   "suggestion": "将第 533 行改为 `timeout=effective_timeout,`，并相应更新 run_with_artifacts 的 timeout 注解（各 handler 目前是 `timeout: int = 30`，可一起放宽为 `float | None`），或至少改为 `timeout=int(effective_timeout)`。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "由上一问题引出的回归：`int(timeout or 60)` 会把显式传入的小数/极小 timeout 吞掉——`run(code, timeout=0.5)` 传下去的是 0，`BaseSession.run` 里 `timeout or self.config.get_execution_timeout()` 认为 0 是假值，于是回落到 config（可能为 None → 无限等待），用户请求的亚秒级超时静默失效；`timeout=1.9` 也会被截成 1。接口签名已声明为 `float | None`，却又强制 int 强转，语义不一致。",
+   "suggestion": "不要把值强转成 int；直接把 float/None 透传给 handler，由 `BaseSession.run` 统一处理（`_execute_with_timeout` 本身就接受 float）。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "补丁改变了默认传参值，但没有同步更新断言：`test_run_with_plotting_disabled`（第 227 行）与 `test_run_with_plotting_enabled_supported_language`（第 261 行）都断言 `run_with_artifacts(..., timeout=30)`，而打补丁后实际传入 60（mock session 的 `config.get_execution_timeout()` 返回 MagicMock，若改成传 `effective_timeout` 则需要给它设置返回值，否则 MagicMock 不可 int 化，测试会报错）。也就是说这次改动会让现有测试失败，且没有任何新增测试覆盖「config timeout > 30 时被正确使用」这一 Issue 核心场景。",
+   "suggestion": "更新这两处断言，并新增一个测试：mock `session.config.get_execution_timeout.return_value = 120`，断言 `run_with_artifacts` 收到 `timeout=120`（或传 None 时由 config 决定），再补一个显式 `run(code, timeout=45)` 透传的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.047398,
+ "input_tokens": 143769,
+ "cache_hit_tokens": 115840,
+ "output_tokens": 4288,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 23.8
+}

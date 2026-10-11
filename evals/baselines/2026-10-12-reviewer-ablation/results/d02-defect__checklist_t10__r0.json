@@ -1,0 +1,45 @@
+{
+ "item": "d02-defect",
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "`_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 60}` 把 `s` 从 1 改成 60，引入回归。Issue 明确写 `s` = 1 s，且指出 `\"45s\"` 原本是 fine（=45）；改动后 `\"45s\"` 返回 2700。对 `\"1h30m15s\"`：3600 + 30*60 + 15*60 = 6300，Issue 期望 5400。即复合串仍算错，只是错点从 m 变成了 s。",
+   "suggestion": "改为 `_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}`。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_duration.py",
+   "line": 7,
+   "message": "测试只覆盖 `\"45s\"` 与非法输入，既没有覆盖 Issue 列举的 `\"1h30m\"` / `\"2m\"` / `\"1h30m15s\"`，也没有任何断言能暴露 `s` 被改成 60 的错误（当前实现下 `45s` 的期望值本应失败，但测试里恰好保留为 45——说明这条测试在本次实现下会失败，未被运行/更新）。",
+   "suggestion": "补充断言：`parse_duration(\"1h30m\") == 5400`、`parse_duration(\"2m\") == 120`、`parse_duration(\"1h30m15s\") == 5415`（按 s=1）、`parse_duration(\"45s\") == 45`、`parse_duration(\"2h\") == 7200`，并跑一次测试确认全部通过。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.005827,
+ "input_tokens": 10968,
+ "cache_hit_tokens": 9728,
+ "output_tokens": 1098,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 7.2
+}

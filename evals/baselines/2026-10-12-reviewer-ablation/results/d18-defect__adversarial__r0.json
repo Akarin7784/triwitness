@@ -1,0 +1,45 @@
+{
+ "item": "d18-defect",
+ "task": "swe-conan-19750",
+ "kind": "defect",
+ "truth": {
+  "file": "conan/internal/api/profile/profile_loader.py",
+  "line": 251,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 251,
+   "message": "校验谓词 `str(r).startswith(\"[\")` 永远为 False，版本范围不会被拦截。`RecipeReference.loads(\"dep/[>=1.0]\")` 返回 name=\"dep\"、version=Version(\"[>=1.0]\")(见 conan/api/model/refs.py:100-125)，而 `RecipeReference.__str__`(conan/api/model/refs.py:61-71) 生成的是 `name/version`，即 \"dep/[>=1.0]\"，第一个字符是 'd' 而不是 '['。因此 `errors` 列表恒为空，raise 分支不可达：在 [platform_requires]/[platform_tool_requires] 里写范围仍然会被静默接受，随后走到 conan/internal/graph/graph_builder.py:300-305 的 platform 匹配（`version_range.contains(d.version)` 对 \"[>=1.0]\" 这种伪版本必然不匹配），require 仍以范围形式进入 graph，最终命中 conan/internal/graph/graph.py:139 `assert not require.version_range` —— 即 Issue 里的 AssertionError 原样复现，验收标准 2 和 3 均未满足，AC1 也未生效。另外，本 diff 没有新增任何断言该报错的测试（现有 test/integration/graph/test_platform_requires.py 的 \"range\" 用例里 profile 都是精确版本，范围只出现在 recipe 的 requires 里），所以“回归通过”不能证明该校验生效。",
+   "suggestion": "按仓库既有做法检查 ref 的 version 字段而不是整串引用（对比 conan/internal/model/requires.py:171-177 `version_range` 与 graph_builder.py:203-205 的 `repr(x.version)` 判断）：`errors = [r for r in result if repr(r.version).startswith(\"[\")]`（可再要求以 \"]\" 结尾，或直接复用 VersionRange 解析）。并补一个测试：profile 为 `[platform_requires]\\ndep/[>=1.0]`（以及 `[platform_tool_requires]` 同理）时 `conan install . -pr=profile` 必须以 ConanException 报错、输出含 version range 提示且不含 AssertionError/traceback。"
+  },
+  {
+   "severity": "major",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 253,
+   "message": "错误信息无法定位出错的 section，不满足验收标准“identifies the offending section and reference”。`parse_replaces` 只接收 refs 文本、不接收 section 名，消息固定为 \"Profile [platform_requires]/[platform_tool_requires] must be exact versions...\"，两个 section 同时出现在文案里；并且 `doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or \"\"`（第 244 行）会把已废弃的 [system_tools] 也走同一条校验，报错时同样不会指出实际来自 [system_tools]。",
+   "suggestion": "给 `parse_replaces(section_name, replaces)` 传入具体的 section 名（如 \"platform_requires\"、\"platform_tool_requires\"，对来自 doc.system_tools 的情况传 \"system_tools\"），错误信息形如 `f'Error in [platform_requires]: version ranges are not allowed, use exact references: {errors}'`。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.072593,
+ "input_tokens": 272300,
+ "cache_hit_tokens": 248832,
+ "output_tokens": 11037,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 63.7
+}

@@ -1,0 +1,38 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "_add_broker 中的 `if broker in self.brokers` 检查实际上不可达：set_broker 在调用前已用 `if self.brokers:` 拦截（第109行），而 _init_setupable_ 调用时 brokers 必为空列表。因此该分支是死代码，不会造成错误行为，但也没有实际防护作用。",
+   "suggestion": "可保留（无害），或移除该冗余检查以避免误导；若意图是防止重复添加，应让 set_broker 直接依赖 _add_broker 的检查而非重复守卫。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "补丁未新增/修改任何测试。现有 test_set_broker 仅断言 `app.broker is broker`，在修复前也会通过，因此无法回归验证本 Issue 的核心行为（set_broker 后 Context 注入生效）。建议补充一个断言 broker.config.fd_config.context 与 app.context 一致（或验证 on_startup 中 Context 依赖可解析）的测试。",
+   "suggestion": "新增测试：app = StartAbleApplication(); broker = RabbitBroker(); app.set_broker(broker); assert broker.config.fd_config.context is app.context（或验证 context 中 'app' 全局存在）。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.052269,
+ "input_tokens": 346588,
+ "cache_hit_tokens": 315264,
+ "output_tokens": 3660,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 33.5
+}

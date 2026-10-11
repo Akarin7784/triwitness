@@ -1,0 +1,45 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "tests/test_send_pull_request.py",
+   "line": 237,
+   "message": "测试未随实现同步更新：新增的 branch_exists() 会对 requests.get 发一次额外请求，而 test_send_pull_request 断言 `assert mock_get.call_count == 1`（原代码只有一次 GET 取 default_branch）。现在该用例会拿到 2 次调用而失败（mock_get.return_value 是 MagicMock，status_code != 200，因此循环不进入但不影响计数）。建议同时更新测试并补充 -try2 场景的用例。",
+   "suggestion": "把 mock 改为 `mock_get.return_value = MagicMock(status_code=404, json=lambda: {\"default_branch\": \"main\"})`，并把断言改为 `assert mock_get.call_count == 2`；再新增用例：branch 存在时（第一次 status_code=200）断言 git 命令与 PR head 使用 `openhands-fix-issue-42-try2`。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "分支存在性只在 github_issue.owner/repo（上游仓库）上检查，但真正被 push 的目标是 push_owner = fork_owner if fork_owner else github_issue.owner（第 194 行）。当指定 fork_owner 且 fork 中已存在同名 openhands-fix-issue-{n} 分支而上游不存在时，仍会 push 到已存在的 fork 分支（非快进会被拒绝，或覆盖上次失败尝试的历史），Issue 想要的 “重新运行时不冲突” 在这种场景下没有解决。",
+   "suggestion": "把 push_owner/push_repo 的计算提前到检查之前，用对应的 repo URL 做存在性检查（或对上游与 fork 都检查）。"
+  },
+  {
+   "severity": "nit",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 145,
+   "message": "branch_exists 把任何非 200 都当作“不存在”，包括 401（token 无效）/403（限流/无权限），会静默地跳过检查后继续 push 或报出误导性错误；另外第 141–143 行出现连续三个空行、branch_exists 与 send_pull_request 之间只有一个空行，不符合 PEP8（函数间两空行）。",
+   "suggestion": "对 404 视为不存在，其余状态码 raise_for_status() 或打印告警；并修正空行。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.060408,
+ "input_tokens": 97923,
+ "cache_hit_tokens": 82048,
+ "output_tokens": 10723,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 57.7
+}

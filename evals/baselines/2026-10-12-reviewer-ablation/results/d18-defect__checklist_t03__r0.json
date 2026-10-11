@@ -1,0 +1,52 @@
+{
+ "item": "d18-defect",
+ "task": "swe-conan-19750",
+ "kind": "defect",
+ "truth": {
+  "file": "conan/internal/api/profile/profile_loader.py",
+  "line": 251,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 251,
+   "message": "校验条件写错，永远不成立，补丁实际未修复 Issue。`RecipeReference.loads(\"dep/[>=1.0]\")` 得到 name=\"dep\"、version=Version(\"[>=1.0]\")；`RecipeReference.__str__`（conan/api/model/refs.py:61-71）返回 `\"/\".join([name, str(version)])`，即 `\"dep/[>=1.0]\"`，以包名开头，`str(r).startswith(\"[\")` 恒为 False。因此 `errors` 永远为空，`ConanException` 永不抛出。\n\n后果：`[platform_requires]`/`[platform_tool_requires]` 中的范围（如 `dep/[>=1.0]`）仍会被接受并存入 `profile.platform_requires`；在 conan/internal/graph/graph_builder.py:299-308 的 `_resolved_system` 中，`require.ref.version = d.version` 会把范围版本写入 require，随后在 conan/internal/graph/graph.py:139 触发 `assert not require.version_range`，即 Issue 描述的 AssertionError 依旧存在。\n\n正确做法是检查版本本身是否为范围，例如 `repr(r.version).startswith(\"[\")`（参见 conan/internal/model/requires.py:171-176 中 `version_range` 的判定方式 `version = repr(self.ref.version); if version[0] == \"[\" and version[-1] == \"]\"`），或直接复用 `Requirement.version_range` 的判定逻辑。",
+   "suggestion": "改为按版本判定，例如：\n```python\ndef parse_replaces(replaces):\n    result = [RecipeReference.loads(r) for r in replaces.splitlines()]\n    errors = [r for r in result if repr(r.version).startswith(\"[\")]\n    if errors:\n        raise ConanException(...)\n    return result\n```\n并补一个测试：profile 中写 `[platform_requires]\\ndep/[>=1.0]` 时 `conan install` 报 ConanException 且输出不含 AssertionError/traceback。"
+  },
+  {
+   "severity": "major",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 253,
+   "message": "错误信息不满足验收标准：要求“identifies the offending section and reference”，但这里把 `[platform_requires]` 与 `[platform_tool_requires]` 合并成一条固定文案，无法区分是哪个 section 出错；且 `parse_replaces` 被两个 section 共用，调用处（256/257 行）也未传入 section 名。建议给 `parse_replaces` 增加 section 参数，在消息中带上具体 section 名与出错引用。",
+   "suggestion": "例如 `def parse_replaces(replaces, section):` 并在消息中写 `f\"Profile [{section}] must be exact versions, not version ranges: {errors}\"`，调用时分别传 \"platform_requires\" / \"platform_tool_requires\"。"
+  },
+  {
+   "severity": "minor",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 249,
+   "message": "补丁未附带任何测试。仓库中 test/integration/graph/test_platform_requires.py、test/integration/graph/test_system_tools.py 覆盖了 platform_requires/platform_tool_requires 的多种场景，但没有覆盖“section 中出现版本范围应报错”的新行为，因此上述死代码问题不会被现有测试发现。建议新增针对该行为的集成测试。",
+   "suggestion": "在 test/integration/graph/test_platform_requires.py（及 test_system_tools.py）中新增用例，断言 profile 含范围时 `conan install` 报 ConanException，且输出中不含 \"AssertionError\" 与 \"Traceback\"。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.043488,
+ "input_tokens": 256716,
+ "cache_hit_tokens": 233600,
+ "output_tokens": 3925,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 27.4
+}

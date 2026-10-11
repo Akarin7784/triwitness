@@ -1,0 +1,31 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "现有测试 test_put_get 完全没有覆盖淘汰顺序（容量 2 但从未触发 eviction），因此 Issue 描述的 bug 在测试套件中无回归保护。补丁本身没有改弱或删除任何测试（diff 仅新增 lru.py 一行），这是仓库既有的覆盖缺口，非本补丁引入。",
+   "suggestion": "建议补充一个针对 Issue 场景的测试：c=LRUCache(2); put('a'); put('b'); get('a'); put('c'); 断言 get('a') 仍命中且 get('b') 返回默认值，以锁定 LRU 语义。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.008022,
+ "input_tokens": 18972,
+ "cache_hit_tokens": 16512,
+ "output_tokens": 1308,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 8.0
+}

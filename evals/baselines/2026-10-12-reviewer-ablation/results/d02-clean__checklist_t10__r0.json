@@ -1,0 +1,23 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.006872,
+ "input_tokens": 17715,
+ "cache_hit_tokens": 16256,
+ "output_tokens": 1272,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 8.8
+}

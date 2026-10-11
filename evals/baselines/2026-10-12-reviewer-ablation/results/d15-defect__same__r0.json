@@ -1,0 +1,52 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "传入了错误的 config：`broker._update_fd_config(FastDependsConfig())` 应该是 `broker._update_fd_config(self.config)`。\n\n依据：`BrokerUsecase._update_fd_config` 是 `self.config.fd_config = config | self.config.fd_config`（faststream/_internal/broker/broker.py:86-88），而 `FastDependsConfig.__or__` 的 context 取**左操作数**：`context=self.context`（faststream/_internal/di/config.py:51-61）。所以：\n- 换成 `self.config`：合并结果的 context 就是应用自身的 ContextRepo（application.py:87 已 `set_global(\"app\", self)`），handler 才能注入 `Context(\"app\")`；\n- 用新建的 `FastDependsConfig()`：context 是一个全新的空 ContextRepo，应用的 context 被丢掉。subscriber 的 handler 包装是延迟到 broker 启动时用 `broker.config.fd_config` 做的（faststream/_internal/endpoint/subscriber/call_item.py:71-88 的 `_setup(config=...)`），所以启动后拿到的就是这个丢失了 \"app\" 全局量的新 context → 报的 Context injection 依旧 broken，等于 Issue 未修复。\n\n另外这是相对原实现的回归：原来的 `_init_setupable_` 传的是 `self.config`；AsgiFastStream（faststream/asgi/app.py:110-124、137-144）和 FastAPI StreamRouter（faststream/_internal/fastapi/router.py:143-150）都会传入自定义 provider/context，现在这些也会被丢弃。",
+   "suggestion": "改为 `broker._update_fd_config(self.config)`（保持与 `_init_setupable_` 原行为一致）。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "补丁没有增加任何覆盖该行为的测试：`test_set_broker` / tests/cli/require_broker/test_app.py:31 都只断言 `app.broker is broker`，因此当前这个错误实现能全绿通过，缺陷无回归保护。",
+   "suggestion": "新增断言/用例，例如 `app = FastStream(); app.set_broker(broker); assert broker.context is app.context`（或注册一个 `field: int = Context(\"app\")` 的 subscriber 并跑 TestClient），并在把 line 120 改成 `self.config` 后应能通过、在原实现下失败。"
+  },
+  {
+   "severity": "nit",
+   "file": "faststream/_internal/application.py",
+   "line": 114,
+   "message": "`_add_broker` 里的 `if broker in self.brokers: raise SetupError(\"Broker {broker} is already added\")` 是准死代码：公开路径 `set_broker` 已先抛出 \"already has a broker...\"（line 109-111），构造函数路径 brokers 必为空；且 `BrokerUsecase` 未定义 `__eq__`，列表 `in` 实际是恒等比较，这条分支只会产生一个与既有测试期望（tests/application/test_delayed_broker.py:26-30 匹配的文案）不一致的错误信息。建议删掉该检查，或在 set_broker 里复用它并统一文案。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.073498,
+ "input_tokens": 327379,
+ "cache_hit_tokens": 301568,
+ "output_tokens": 10414,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 69.9
+}

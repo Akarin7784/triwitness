@@ -1,0 +1,59 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "无边界检查的前瞻索引：`self.text[self.at]` 在 at == len 时抛 `IndexError: string index out of range`，这是本次改动引入的回归（旧实现对同样输入不会抛异常）。逐个跟踪可复现：\n- `decode('-')`：next_chr() 后 at=1=len、ch='-'，value()→white()→skip_comments() 进入 if 后取 self.text[1] → IndexError；旧代码走到 number()→next_digit() 抛 ParseError 并被捕获，打印 'Malformed number...' 后返回 0。\n- `decode(' -')`、`decode('{a=-')`、`decode('{1,-')`（在 '=' 或 ',' 之后的 white() 里 ch='-' 且 at==len）同样 IndexError；这也是被截断的 Lua 文件最常见的形态。\ndecode() 之前不会向外抛 IndexError（只抛 ParseError 或打印后返回 0），解析库暴露 IndexError 属于错误行为。",
+   "suggestion": "加边界判断，例如：`if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（或用 `self.text[self.at:self.at + 1] == '-'`）。"
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "white() 与 skip_comments() 相互递归：white() 末尾调用 skip_comments()（第 101 行），skip_comments() 遇到换行又调用 white()（第 108 行）。每遇到一行连续注释就多嵌套 2 层栈帧，因此 `decode('\\n'.join(['--c'] * N) + '\\n{1}')` 在 N≈500 时会因为超过 Python 默认递归上限（1000）抛 RecursionError。这是有效输入上的崩溃，且完全没必要递归。",
+   "suggestion": "改成循环：skip_comments() 内部 `while self.ch == '-' and ...: while self.ch and self.ch != '\\n': self.next_chr()`，换行由外层 white() 的 `self.space.match` 分支消费；或者把「跳过注释 + 跳空白」放在同一个 while 循环里迭代完成。"
+  },
+  {
+   "severity": "minor",
+   "file": "null",
+   "line": null,
+   "message": "补丁未改 tests.py（git show aff8216 --stat 只有 slpp.py），而 tests.py 中目前没有任何注释相关用例，issue 的回归用例也没有加。没有测试保护的话，未来很容易再引入同类回归。",
+   "suggestion": "在 tests.py 增加回归测试，至少覆盖：`self.assertEqual(slpp.decode('\"--3\"'), '--3')`、`slpp.decode('{1, -- c\\n 2}')`、`slpp.decode('{\"-3\", --c\\n \"--3\"}')`，以及 `slpp.decode('-')` 的容错行为。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 105,
+   "message": "删除了 `# FIXME: only short comments removed`，但长注释仍然不被支持，而且新实现会把它当成短注释：`--[[\\n{a=1}\\n]]\\n{2}` 只跳到第一个换行，随后把长注释体内的 `]]`、`{2}` 当代码解析（与旧行为一致，非新增回归），可读性上不如原来带 FIXME 的显式说明。",
+   "suggestion": "要么在 skip_comments 中识别 `--[[` / `--[=*[` 并跳到对应的 `]]` / `]=*]`，要么保留注释说明仅支持短注释。"
+  },
+  {
+   "severity": "nit",
+   "file": "slpp.py",
+   "line": 107,
+   "message": "`re.match('\\n', self.ch)` 用正则做单字符比较，既不必要也偏离本文件既有写法（word() 里用的是 `self.ch != '\\n'`，__init__ 里也有 `self.newline = '\\n'`）。另外只识别 '\\n'，Lua 同样把 '\\r' 当作换行，纯 '\\r' 行尾的文件中注释会把该行剩余代码一起吃掉（旧正则实现同样如此，故只作提示）。",
+   "suggestion": "改用 `self.ch == '\\n'`（或 `self.ch in ('\\n', '\\r')` / `self.newline`），避免多余的 re 调用。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.160113,
+ "input_tokens": 190099,
+ "cache_hit_tokens": 182912,
+ "output_tokens": 37317,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 212.6
+}

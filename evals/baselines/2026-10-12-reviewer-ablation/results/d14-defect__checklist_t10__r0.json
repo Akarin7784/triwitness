@@ -1,0 +1,52 @@
+{
+ "item": "d14-defect",
+ "task": "swe-marimo-8401",
+ "kind": "defect",
+ "truth": {
+  "file": "marimo/_ast/cell_id.py",
+  "line": 67,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 67,
+   "message": "长度判断用 `< 36` 而不是 `<= 36`，裸 UUID（长度正好 36）不会被排除。对 `\"c9bf9e57-1685-4c89-bafb-ff5af830be8a\"`：`len == 36` → `36 < 36` 为 False，不返回；`uuid_to_test` = 整串 36 字符 UUID；`UUID(..., version=4)` 解析成功；`str(uuid_obj) == uuid_to_test` 为 True → 函数返回 True。这正是 Issue 中 VSCode 场景（cell id 为裸 uuid4，见本函数新 docstring 第 54 行“<uuid> -> VSCode cell (36 chars)”）被误判为 external 的路径：`marimo/_save/save.py:163` 得到 `self._external = True`，随后 `graph = None`、`base_block = None`，调用时 `_prepare_call_execution` 里 `graph_from_scope(self.scope)` 找不到 `app` 就走 `marimo/_save/toplevel.py:22` 的 warning 分支（正是 Issue 报的日志），缓存的图/哈希也随之失效。即 Issue 描述的行为并未被修复，只是形式上加了长度检查。",
+   "suggestion": "把边界改为 `if len(cell_id_str) <= 36: return False`（或显式判断 `cell_id_str[36:]` 非空），确保只有 UUID 前缀后跟非空 suffix 的嵌入式 id 才返回 True。"
+  },
+  {
+   "severity": "blocker",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 62,
+   "message": "新增的 doctest 断言与实现不一致：`>>> is_external_cell_id(\"c9bf9e57-1685-4c89-bafb-ff5af830be8a\")` 期望 `False`，但按当前实现返回 `True`。该 doctest 若被 CI/doctest runner 执行会直接失败，若不执行则等于用一个错误的断言掩盖了上面的逻辑缺陷。",
+   "suggestion": "修正边界条件使其返回 False，并补一个真正的单测（而非仅 doctest）覆盖裸 UUID 与 `uuid + suffix` 两种输入。"
+  },
+  {
+   "severity": "major",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 44,
+   "message": "该行为变更没有任何单测覆盖：`tests/_ast/test_app.py:1646` 只断言 `<uuid>+SETUP_CELL_NAME` 为 True，没有断言裸 UUID 为 False，issue #（VSCode 裸 uuid 场景）也没有回归测试。修复后应新增测试锁死“裸 UUID 非 external”这一语义，否则同类回归无法被发现。",
+   "suggestion": "在 tests 中为 `is_external_cell_id` 增加参数化用例：\"Hbol\"->False、裸 uuid4 字符串->False、\"<uuid4>Hbol\"->True、长度>36 但前缀非 UUID->False。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.03446,
+ "input_tokens": 139986,
+ "cache_hit_tokens": 121088,
+ "output_tokens": 3285,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 35.8
+}

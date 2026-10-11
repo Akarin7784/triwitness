@@ -1,0 +1,52 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "取错了元组元素。Django 的 STATICFILES_DIRS 元组形式是 (prefix, path)，例如 Issue 中的 (\"downloads\", \"/opt/webfiles/stats\")，其中 prefix=\"downloads\"、真正的文件系统路径是第二项 \"/opt/webfiles/stats\"（Django FileSystemFinder 内部即 `prefix, root = root`）。Issue 也明确写道「should consider the second item of STATICFILES_DIRS list item when not a str」。但补丁执行 `component_dir = component_dir[0]`，取到的是 prefix \"downloads\"。后果：Path(\"downloads\") 不会抛 TypeError，于是既不告警也不崩溃，但后续第 59/62/66/86 行都在用 \"downloads\" 去匹配 app 路径、BASE_DIR、settings 目录，真正的 /opt/webfiles/stats 永远不会被加入 directories。也就是说崩溃被掩盖了，Issue 期望的行为没有实现（属于「没修好」）。修复：改为 `component_dir = component_dir[1]`。",
+   "suggestion": "将第 41 行改为 `component_dir = component_dir[1]`（取 path 而非 prefix），并保留长度校验。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_autodiscover.py",
+   "line": 45,
+   "message": "补丁未为元组形式的 STATICFILES_DIRS 增加任何测试。现有 TestLoaderSettingsModule 的用例（test_get_dirs 等）只使用普通路径，无法覆盖本 Issue 的场景，因此 [0]/[1] 取反这类错误不会被发现。建议新增用例：override_settings(STATICFILES_DIRS=[(\"downloads\", <真实存在的组件目录>)])，断言 get_dirs() 返回该真实目录（而非 prefix）。",
+   "suggestion": "在 tests/test_autodiscover.py 增加针对 (prefix, path) 元组的回归测试，断言解析出的是第二项路径。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 42,
+   "message": "`try: Path(component_dir) except TypeError` 在类型检查之后基本只对「长度 != 2 的 tuple/list」或 int 等非路径类型生效，属于防御性代码，可接受；但注意长度 != 2 的元组会走 warning 分支被静默跳过，与 Django 对非法配置直接报错的行为不同。非阻塞，仅提示。",
+   "suggestion": "可保留，但建议在 warning 中说明该条目被忽略。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.020736,
+ "input_tokens": 59981,
+ "cache_hit_tokens": 50944,
+ "output_tokens": 2670,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 16.1
+}

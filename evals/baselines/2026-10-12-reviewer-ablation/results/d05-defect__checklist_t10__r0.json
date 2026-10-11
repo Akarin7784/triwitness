@@ -1,0 +1,45 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "补丁只做了 `lstrip(\"-\")`，尾部仍保留 `-`。Issue 给出的例子 `slugify(\"  Hello,  World!  \")` 中末尾的 `\"  \"` 会被 `[^a-z0-9]+` 替换为一个 `-`，得到 `\"-hello-world-\"`；lstrip 后结果仍是 `\"hello-world-\"`，而期望是 `\"hello-world\"`。同理 `slugify(\"Hello World!\")` 返回 `\"hello-world-\"`。Issue 明确要求 “Slugs should never start **or end** with `-`”，即该行为未修复。注意 regex `[^a-z0-9]+` 本身已把连续分隔符合并成单个 `-`（如 `\"a -- b\"` → `\"a-b\"`），所以唯一遗漏就是尾部裁剪。建议改为 `.strip(\"-\")`（或用 `re.sub(r\"^-+|-+$\", \"\", ...)`）。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_slug.py",
+   "line": 5,
+   "message": "仓库内唯一测试仍是 `assert slugify(\"Hello World\") == \"hello-world\"`，既没有覆盖 Issue 的复现用例（前后有空白/标点），也没有覆盖尾部 `-` 的断言，因此现有测试在补丁下依旧通过，无法防止该 bug。建议新增针对 `\"  Hello,  World!  \"`、`\"Hello World!\"`、`\"a -- b\"` 等用例的断言。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.00529,
+ "input_tokens": 13034,
+ "cache_hit_tokens": 12029,
+ "output_tokens": 1011,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 6.9
+}

@@ -1,0 +1,38 @@
+{
+ "item": "d07-clean",
+ "task": "swe-pynmea2-124",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "修复正确：`^\\d{6}\\.\\d{2,3}$` 可同时匹配 2 位与 3 位小数的时间戳（如 `122144.75` 与 `130533.620`）。但补丁未为该 Issue 的原始输入新增回归测试，现有 test/test_ash.py 仅覆盖 3 位小数（`test_ashratt`），且该文件在 base 与 candidate 间完全未变，即 Issue 的复现场景无测试保护。依据：git show HEAD~1:test/test_ash.py 与当前 test_ash.py 一致。",
+   "suggestion": "在 test/test_ash.py 增加一个用 Issue 中真实报文（如 `$PASHR,122144.75,240.68,T,,,,,,,2*04`）解析并断言 type(msg) == ASHRATT 及 msg.timestamp == datetime.time(12, 21, 44, 750000) 的用例。"
+  },
+  {
+   "severity": "nit",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "`\\d{2,3}` 仍会漏掉 1 位小数（如 `122144.7`）的情况；nmea_utils.timestamp 的 docstring 表明秒的小数位可为 `[.ss]`（可变位数），而该正则限定为 2-3 位。虽超出 Issue 明确范围，但可用 `\\d{2,}` 或 `\\d+` 增强稳健性。",
+   "suggestion": "如无 ASHRATT 与其他 ASHR 子类型冲突顾虑（data[1] 为 HPR/LTN/POS/VEL 等非纯数字串，无碰撞），可放宽为 `^\\d{6}\\.\\d{2,}$`。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.037499,
+ "input_tokens": 130159,
+ "cache_hit_tokens": 105984,
+ "output_tokens": 2801,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 18.4
+}

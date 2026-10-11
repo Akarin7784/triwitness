@@ -1,0 +1,52 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "tuple 元素取错：Django 中 STATICFILES_DIRS 的 tuple/list 形式是 (prefix, path)，见 django/contrib/staticfiles/finders.py 的 FileSystemFinder.__init__：`if isinstance(root, (list, tuple)): prefix, root = root`，前缀在前、文件系统路径在后。因此 `(\"downloads\", \"/opt/webfiles/stats\")` 的真实目录是 `/opt/webfiles/stats`，而这里取了 `component_dir[0]` 即前缀 \"downloads\"。结果是：1) 崩溃虽被消除，但 /opt/webfiles/stats 下的组件永远不会被加载，Issue 的 Expected（“should consider the second item”）没有满足；2) 反而会把 \"downloads\" 当成相对目录，在 `Path(settings.BASE_DIR) / component_dir` 及各 app 目录下碰巧存在的同名目录被误加入 searched_dirs，可能加载到错误的模板目录。",
+   "suggestion": "改为 `component_dir = component_dir[1]`（并建议像 Django 一样支持长度不等于 2 时给出明确的 warning/error，而不是靠 Path() 抛 TypeError 兜底）；顺带补一条测试，如 STATICFILES_DIRS=[(\"downloads\", str(Path(__file__).parent / \"components\"))] 时 get_dirs() 返回真实目录。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 39,
+   "message": "该改动没有任何测试覆盖：tests/test_autodiscover.py::test_get_dirs 只用字符串/Path 形式的 STATICFILES_DIRS，tests/ 下也没有 tuple 前缀形式的用例，所以下标记错的问题不会被测试发现。",
+   "suggestion": "在 tests/test_autodiscover.py 里增加一个 tuple 形式的用例（同时覆盖 len != 2 的告警分支），断言返回的是 tuple 的第二个元素解析出的目录。"
+  },
+  {
+   "severity": "nit",
+   "file": "src/django_components/template_loader.py",
+   "line": 43,
+   "message": "`Path(component_dir)` 只为校验而调用，随后又被反复构造（第 59/63/66/86 行），可读性一般；另外 warning 文案里的类型信息在 tuple 长度不为 2 时打印的是 tuple 本身，容易让人误解。",
+   "suggestion": "可以先把值规整为 Path 变量再复用，并把告警文案改为更明确的 \"unsupported STATICFILES_DIRS entry ...\" 之类。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.027877,
+ "input_tokens": 47846,
+ "cache_hit_tokens": 40960,
+ "output_tokens": 5043,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 33.4
+}

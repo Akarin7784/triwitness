@@ -1,0 +1,59 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "`self.text[self.at + 1]` 未做边界检查，会抛 IndexError。`next_chr()`（113-119 行）在读取字符后把 `self.at` 置为 `index + 1`，所以这里实际访问的是 `text[index + 2]`；只要 `-` 位于 `len-2` 或 `len-1` 就越界。具体：`slpp.decode('-')`（len=1，at=1，访问 text[2]）和 `slpp.decode('--')`（len=2，at=1，访问 text[2]）都会直接抛 IndexError。`decode()`/`value()` 都没有 try/except，异常会冒泡给调用方。这是相对旧实现的回归：旧代码对 `'-'` 会走 `number()` → `next_digit` 抛 ParseError 被捕获、打印错误并返回 0，不会崩。`'--'` 本身还是合法的 Lua 空注释。建议改为 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（注意用 `self.at` 而非 `self.at + 1`，因为 `at` 已指向下一个未读字符），或先做 `self.at + 1 < self.len` 判断。",
+   "suggestion": "if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':"
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "`skip_comments` 在遇到换行时调用 `self.white()`，而 `white()`（101 行）又回调 `self.skip_comments()`，形成按注释行数增长的相互递归。每多一行 `-- ...` 注释就多嵌套一层 white/skip_comments，默认递归上限 1000 时约 500 行连续注释就会抛 RecursionError。Lua 数据文件里连续多行注释很常见。建议把跳过逻辑改成循环（例如在 `white()` 里用 `while` 反复处理空白与注释），而不是递归调用 `white()`。",
+   "suggestion": "把 white() 改成循环：先跳过空白，再在 while 中处理 `--` 注释（跳到行尾/换行后继续跳空白），避免 white/skip_comments 相互递归。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 101,
+   "message": "注释只在 `white()` 中被跳过，而 `white()` 并非所有位置都会调用。例如方括号键 `{[-- c\\n1] = 2}`：`value()` 在 127-128 行遇到 `[` 后直接 `next_chr()`，此时 `ch == '-'` 会落到 131 行被当成负数进入 `number()`，注释未被识别。旧实现用全局正则 `--.*$` 会先删掉该注释，因此这是行为回归（虽然位置较冷门）。建议在 `[` 之后（以及其它可能紧跟注释的位置）也调用 `white()`/`skip_comments()`。",
+   "suggestion": "在 value() 处理 `[` 之后、读取键之前调用 self.white()，或统一在需要跳空白的位置都走 white()。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests.py",
+   "line": 129,
+   "message": "补丁没有为修复添加任何回归测试，Issue 中的复现 `slpp.decode('\"--3\"')` 以及注释相关场景（行尾注释、表内注释、`decode('--')`、`decode('-')`）都未被覆盖，无法防止后续回归。建议在 TestSLPP 中补充：`self.assertEqual(slpp.decode('\"--3\"'), '--3')`、含注释的表解析、以及 `decode('--')`/`decode('-')` 不抛异常。",
+   "suggestion": "新增 test_comments 用例覆盖字符串内 `--`、行尾注释、表内注释与纯注释输入。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.031998,
+ "input_tokens": 104661,
+ "cache_hit_tokens": 96256,
+ "output_tokens": 5417,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 32.7
+}

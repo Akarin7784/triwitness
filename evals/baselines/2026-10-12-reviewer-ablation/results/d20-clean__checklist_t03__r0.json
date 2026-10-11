@@ -1,0 +1,45 @@
+{
+ "item": "d20-clean",
+ "task": "swe-llm-sandbox-101",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "补丁未同步更新既有测试，会导致测试失败。test_run_with_plotting_disabled（第 221-228 行）与 test_run_with_plotting_enabled_supported_language（第 255-262 行）都断言 run_with_artifacts 收到 timeout=30，且 mock_session 是 MagicMock：新代码走 else 分支调用 self._session.config.get_execution_timeout()，返回的是 MagicMock（非 None），随后 int(effective_timeout) 会抛 TypeError: int() argument must be a string... 因此这两个测试既断言值不对、又会直接报错。同时补丁没有为 Issue 的核心场景（timeout/execution_timeout > 30）新增任何回归测试。",
+   "suggestion": "更新这两处断言为新的期望值（例如 mock_session.config.get_execution_timeout.return_value = 60 后断言 timeout=60），并新增用例覆盖：显式 timeout=120 透传、未传 timeout 时回落到 config 的 execution_timeout/default_timeout、以及 timeout 为 None 且 config 也为 None 时的兜底值。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "int(effective_timeout) 截断浮点超时，与 SandboxSession 行为不一致并可能造成误超时。SandboxSession.run 走 session_base.py:390 的 actual_timeout = timeout or self.config.get_execution_timeout()，把 float 原样传给 _execute_with_timeout；而这里强制 int()。当用户传 timeout=0.5（或 execution_timeout=0.5）时，int(0.5)=0，_execute_with_timeout 中 completed.wait(0) 立即返回 False，直接抛 SandboxTimeoutError（mixins.py:108-125），即“设了 0.5 秒却立刻超时”。timeout=30.9 也会被截成 30。",
+   "suggestion": "不要做 int() 转换，直接把 float 传给 run_with_artifacts（其 timeout 参数类型可放宽为 float | None），与 SandboxSession 保持一致；若确实需要整数，应使用 math.ceil 而非截断，避免 0 值。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 520,
+   "message": "timeout=0 的语义与 SandboxSession 不一致。SandboxSession 用 `timeout or self.config.get_execution_timeout()`，0 是 falsy 会回落到配置值；而新代码用 `if timeout is not None`，timeout=0 会被当作有效值，再经 int(0)=0 触发立即超时。同一参数在两个 session 类上行为不同，属于回归/不一致。",
+   "suggestion": "与 SandboxSession 对齐，使用 `effective_timeout = timeout or self._session.config.get_execution_timeout()`，并保留 config 为 None 时的兜底默认值。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.070163,
+ "input_tokens": 458001,
+ "cache_hit_tokens": 411520,
+ "output_tokens": 3863,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 25.5
+}

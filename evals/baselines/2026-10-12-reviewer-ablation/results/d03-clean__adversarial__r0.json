@@ -1,0 +1,31 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "补丁未添加回归测试。现有测试文件里只有 test_put_get（仅验证 get 命中/未命中返回值），没有任何测试覆盖容量淘汰或“get 刷新最近使用顺序”这一被修复的行为；因此本次修复的语义（minicache/lru.py:15 的 move_to_end）一旦被回退，测试仍然全绿。",
+   "suggestion": "在 tests/test_lru.py 增加一条测试，覆盖 Issue 的复现场景，例如：c = LRUCache(2); c.put(\"a\", 1); c.put(\"b\", 2); c.get(\"a\"); c.put(\"c\", 3); assert c.get(\"b\") is None; assert c.get(\"a\") == 1; assert c.get(\"c\") == 3。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.017644,
+ "input_tokens": 23888,
+ "cache_hit_tokens": 20992,
+ "output_tokens": 3582,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 19.6
+}

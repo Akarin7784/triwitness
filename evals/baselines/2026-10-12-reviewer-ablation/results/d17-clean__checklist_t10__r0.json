@@ -1,0 +1,59 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 143,
+   "message": "`branch_exists` 只用 `response.status_code == 200` 判定，任何非 200（403 触达 API 限流、401/422 token 无效、5xx、以及 requests 抛出的 ConnectionError/Timeout）都被当作「分支不存在」。此时 while 循环立刻退出，代码会去 `git checkout -b` + push 一个已存在的分支，push 会以 non-fast-forward 失败，最终抛出与根因无关的 \"Failed to push changes to the remote repository\"，问题在真实场景下仍会复现（尤其 resolver 反复失败时正是易触发限流的场景）。依据：本文件其它 API 调用都做了 `response.raise_for_status()`（如第 176-177 行的 default branch 请求、第 227-230 行的 PR 创建并特判 403），此处缺少同等处理。修复建议：区分状态码——200 → True；404 → False；其余 → 打印/抛出明确错误，例如 `if response.status_code == 404: return False; response.raise_for_status(); return True`，并给 GET 加上 `timeout=`。",
+   "suggestion": null
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_send_pull_request.py",
+   "line": 237,
+   "message": "新逻辑完全没有测试覆盖：`test_send_pull_request` 用 `mock_get.return_value = MagicMock(json=...)`（第 216 行）并断言 `mock_get.call_count == 1`，而通用 MagicMock 的 `status_code == 200` 比较会返回 truthy 的 MagicMock/True，因此 `branch_exists` 恒为真——这条测试实际是在走 `-try2` 分支（还隐式依赖了 MagicMock 的真值语义，不是真实状态码行为），且新增的 while 循环、-try2/-try3 追加、以及 404 时应保留原名这些行为都没有任何断言。这样既不能证明复现测试通过、也不能证明 Issue 描述的行为被修好。修复建议：在测试里按 URL 分派 get 的返回值（分支查询返回 404、仓库信息返回 200 的 default_branch），新增用例覆盖 (a) 分支不存在 → 使用 `openhands-fix-issue-42`、`mock_get` 至少被调用 2 次；(b) 分支已存在 → 使用 `openhands-fix-issue-42-try2` 并传给 checkout/push/PR head；(c) 连续存在 → `-try3`。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "循环没有次数上限（`while True` 语义）且每次 `branch_exists` 都返回 False 以外的判定错误时会无限重试 API 调用，一旦命中限流/网络抖动把请求打成持续失败状态可能长时间挂住。虽然正常情形下会在第一个不存在的分支退出，仍建议加上 `attempt` 上限（如 max_attempts 20）并在超限时给出明确错误。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 144,
+   "message": "分支名存在时选出的新名 `{base}-try{n}` 只在本仓库中唯一，但 fork 场景（`fork_owner` 不为空，见第 194 行）推送目标是 fork，而 `branch_exists` 查询的是 `github_issue.owner/repo` 的 API。若 fork 上已存在 `openhands-fix-issue-N` 而上游不存在，仍会推送到已存在的分支导致 push 失败。依据：第 194 行 `push_owner = fork_owner if fork_owner else github_issue.owner`，而 base_url 只基于上游 owner/repo。建议在存在 fork_owner 时改查 fork 的 repo 分支，或至少注释说明该限制。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "`attempt` 从 1 起、先自增再拼接，得到 -try2/-try3，与 Issue 描述一致；但 `base_branch_name` 与 `branch_name` 现在同时存在且初值相同，命名略绕。可简化为 `branch_name = base_branch_name` 并保留注释说明编号从 try2 开始，避免后续维护者误以为从 try1 计。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.015106,
+ "input_tokens": 31111,
+ "cache_hit_tokens": 23168,
+ "output_tokens": 1675,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 11.3
+}

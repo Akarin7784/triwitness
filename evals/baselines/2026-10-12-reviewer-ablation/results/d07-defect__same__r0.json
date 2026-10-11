@@ -1,0 +1,38 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "去掉结尾 `$` 后正则变成前缀匹配，任何以「6 位数字 + '.' + 2~3 位数字」开头的 data[1] 都会被当作 ASHRATT，例如 `$PASHR,130533.6200,...`、`$PASHR,122144.75x,...` 也会被判为 ATT（原来是回退到通用 ASH）。Issue 建议的写法保留了锚点：`'^\\d{6}\\.\\d{2,3}$'`。当前 ASH 子类中 data[1] 只有 ATT 是纯数字时间戳（HPR/POS/VEL/LTN 都是字母类型），所以实际误判风险很低，但收紧锚点几乎零成本、行为也更可预期。",
+   "suggestion": "改回带锚点的写法：`return re.match(r'^\\d{6}\\.\\d{2,3}$', data[1])`"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.043505,
+ "input_tokens": 104990,
+ "cache_hit_tokens": 96128,
+ "output_tokens": 8180,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 52.5
+}

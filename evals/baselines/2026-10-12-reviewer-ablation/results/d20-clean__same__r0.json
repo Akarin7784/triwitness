@@ -1,0 +1,52 @@
+{
+ "item": "d20-clean",
+ "task": "swe-llm-sandbox-101",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "补丁改变了 ArtifactSandboxSession.run 的默认超时解析，但没有同步更新已有断言，这两个测试现在会失败（同一问题也在第 261 行）。测试里 mock_session 是 MagicMock，`self._session.config.get_execution_timeout()` 返回一个子 MagicMock（不是 None），于是 `int(effective_timeout)` 得到 1（MagicMock 的 __int__ 默认返回 1），实际调用变成 `run_with_artifacts(..., timeout=1)`，与 `assert_called_once_with(..., timeout=30)`（tests/test_session.py:221-228 与 255-262）不符，CI 会红。",
+   "suggestion": "更新这两处断言，例如 `mock_session.config.get_execution_timeout.return_value = 90` 后断言 `timeout=90`，并补一个回归测试明确覆盖“>30s 的 execution_timeout/default_timeout 会传到 run_with_artifacts / container.run”，以免再次退回硬编码 30。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 524,
+   "message": "硬编码兜底 60 破坏了“config 超时为 None 表示无限执行”的既有语义（SessionConfig 字段说明：\"If None, ... will run indefinitely\"），也没有做到与 SandboxSession 对齐。后端构造函数把 default_timeout 的默认值 None 原样传给 SessionConfig（llm_sandbox/docker.py:97,137；kubernetes.py:292,328；podman.py:66,107；micromamba.py:51,112），所以未显式配置时 config.get_execution_timeout() 返回 None，此时 SandboxSession.run() 是无限执行，而本补丁下的 ArtifactSandboxSession.run() 仍会在 60 秒被截断——这正是 Issue 描述的同一类“配置超时不生效”。",
+   "suggestion": "不要用魔法值 60 兜底，直接把 None 透传下去，让 BaseSession.run 内部 `actual_timeout = timeout or self.config.get_execution_timeout()`（llm_sandbox/core/session_base.py:390）统一解析，例如：`timeout = timeout if timeout is not None else self._session.config.get_execution_timeout()` 后 `timeout=timeout`；同时把 run_with_artifacts 的签名（llm_sandbox/language_handlers/base.py:222 及各 handler）从 `timeout: int = 30` 改为 `timeout: float | None = None`，避免 None 语义被默认值 30 再次覆盖。"
+  },
+  {
+   "severity": "minor",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "`int(effective_timeout)` 会静默截断浮点超时：execution_timeout=2.5 → 2；更糟的是显式 `session.run(code, timeout=0.5)` → 0，而 BaseSession.run 里是 `timeout or get_execution_timeout()`，0 会被当成“未提供”，于是用户请求的 0.5 秒被替换成 config 超时。container.run / _execute_with_timeout 本来就接受 float（llm_sandbox/core/mixins.py:54 `timeout: float | None`），这里没有必要强转。",
+   "suggestion": "去掉 int() 转换，直接把 float（或 None）透传给 run_with_artifacts。"
+  },
+  {
+   "severity": "nit",
+   "file": "llm_sandbox/session.py",
+   "line": 427,
+   "message": "docstring 写“Defaults to the configuration's execution_timeout (typically 60) or 60 if not configured”，与实现里 get_execution_timeout() 实际会回落 default_timeout、且在未配置时返回 None（无限执行）的语义不完全一致，容易误导；若采纳上面的透传改法，应改成“默认沿用 session 的 execution_timeout/default_timeout，两者都为 None 时不限时（与 SandboxSession.run 一致）”。",
+   "suggestion": "按最终实现修正文档措辞。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.151467,
+ "input_tokens": 484695,
+ "cache_hit_tokens": 436224,
+ "output_tokens": 23568,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 125.6
+}

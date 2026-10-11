@@ -1,0 +1,38 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "新校验同时作用在「读入已有 crate」的路径上，造成回归：Entity.__init__（本文件 38-43 行）对非 @ 开头的属性执行 self[name] = value，而 ROCrate.__read_contextual_entities（rocrate/rocrate.py:180）和 __read_data_entities（rocrate/rocrate.py:145，RootDataset/Metadata/File 等均由 properties= 传入 JSON-LD 字典）正是用这个构造函数装载磁盘上的 metadata。因此任何原本可以读入的 crate，只要某个属性的值是「不带 @id 的 dict」，现在会在 ROCrate(path) 构造阶段就抛 ValueError(\"no @id in ...\")。仓库现成的测试会直接失败：test/test_model.py::test_entity_as_mapping 的输入 metadata 中 #correction 实体带有 \"badProp\": {\"k\": \"v\"}（test/test_model.py:355），并在 test/test_model.py:368 用 ROCrate(crate_dir) 加载，将在此处抛错，根本走不到 414-415 行原本预期 \"correction['badProp']\" 抛 ValueError 的断言。这也不符合 Issue 的诉求——Issue 明确说对已有 crate 的读取「might make sense to be more forgiving ... return the property if it has no id」，修复应只阻止新写入，而不是让既有 crate 连加载都失败。建议：装载路径绕过该校验（例如在 __read_contextual_entities/__read_data_entities 或 Entity.__init__ 的读取分支直接把属性写进 self._jsonld，不经过 __setitem__），并把 __getitem__ 中 entry 缺少 @id 的分支改为返回原始 dict 而非抛 ValueError。",
+   "suggestion": "让读取路径直接填充 _jsonld（或给 Entity.__init__ 增加不校验的内部装载方式），并放宽 __getitem__：entry 无 @id 时追加原始 entry，而不是 raise ValueError(f\"no @id in {entry}\")。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 167,
+   "message": "修复不完整：append_to 仍可写入不带 @id 的 dict，例如 crate.root_dataset.append_to(\"license\", {\"@type\": \"CreativeWork\", \"name\": \"CC0\"})，之后 entity[\"license\"] 依旧抛 ValueError；并且由于本补丁让读取路径也校验，这样写出的 crate 再用 ROCrate(path) 打开会直接失败，比 Issue 描述的问题更严重。同类绕过路径还有 ROCrate.update_jsonld（rocrate/rocrate.py:605 直接 entity._jsonld.update(jsonld)，完全跳过 __setitem__ 校验），可注入同类无 @id 的值。建议把「Entity -> {\"@id\": ...} / dict 校验」提取成一个公共辅助函数，在 __setitem__、append_to 以及 update_jsonld 统一使用（或在 write 时统一校验），保证所有写入路径行为一致。",
+   "suggestion": "抽出统一的取值转换/校验函数（如 _to_ref_value），在 __setitem__、append_to、update_jsonld 中复用；append_to 对非法 dict 同样抛 ValueError。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.110364,
+ "input_tokens": 446661,
+ "cache_hit_tokens": 403968,
+ "output_tokens": 14898,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 83.0
+}

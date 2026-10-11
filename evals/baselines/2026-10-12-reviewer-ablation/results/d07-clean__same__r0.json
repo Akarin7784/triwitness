@@ -1,0 +1,38 @@
+{
+ "item": "d07-clean",
+ "task": "swe-pynmea2-124",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "修复本身正确，但没有配套回归测试。test/test_ash.py 现有 test_ashratt 只覆盖三位小数时间戳（`130533.620`），若日后有人把正则改回 `{3}`，Issue 里的场景不会失败。",
+   "suggestion": "在 test/test_ash.py 增加用例，例如 data = '$PASHR,122144.75,240.68,T,,,,,,,2*04'（校验和已核对为 0x04），断言 type(msg) == pynmea2.ash.ASHRATT、msg.timestamp == datetime.time(12,21,44,750000)、msg.true_heading == 240.68、msg.is_true_heading == 'T'、msg.render() == data。"
+  },
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "`^\\.\\d{2,3}$` 仍不覆盖 1 位小数或无小数的时间戳（如 `122144.7`、`122144`），这类报文会静默退化成通用 ASH，字段语义丢失——与 Issue 报告的失败模式同类。",
+   "suggestion": "可考虑进一步放宽为 r'^\\d{6}(\\.\\d+)?$'（或至少 `\\.\\d{1,3}`），并同样补一个边界用例；若维护者确认 RT300 输出的小数位只可能是 2~3 位，也可保留现状。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.034499,
+ "input_tokens": 48091,
+ "cache_hit_tokens": 38784,
+ "output_tokens": 6104,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 39.2
+}

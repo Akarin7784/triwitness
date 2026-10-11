@@ -1,0 +1,52 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` 取错了参数。`str.format_map` 对缺失键抛出的是 `KeyError(key)`，其 `args` 是单元素元组 `(key,)`（CPython 行为，见 tests/test_formatting.py:221 也只断言 `isinstance(e.value.__cause__, KeyError)`）。因此 `original.args[1]` 会抛 IndexError。该 IndexError 在 `except KeyError` 处理块内抛出，不会被紧随其后的 `except Exception` 捕获（已处于异常处理中），会直接逃逸出 `emit()`，经 _logger.py:2164 冒泡到调用方。结果是：即便默认 catch=True，复现场景也会让应用崩溃，而不是打印增强诊断；catch=False 时抛出的也不是带缺失键的 KeyError。补丁不仅没修好，还引入了新的崩溃回归。",
+   "suggestion": "改为 `key = original.args[0] if original.args else \"?\"`（或 `str(original)`），并加测试覆盖 catch=True/False 两条路径。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError` 覆盖了整个 try 体，而该 try 体不仅包含 format_map，还包含 `self._filter(record)`（132-134）、`self._formatter(record)`（137）、`self._serialize_record`（195）以及 `self._sink.write(str_record)`（206）。用户自定义 sink/filter 或对象 `__format__`/`__getitem__` 抛出的 KeyError 现在会被误报为“格式字符串引用了未知键”，并附上误导性的 bind/extra 建议，属于行为回归（原本走通用 `except Exception` 分支）。",
+   "suggestion": "只在 format_map 调用处捕获 KeyError（例如把格式化逻辑包在局部 try 中，或用一个内部辅助方法专门处理 format_map 的 KeyError），不要扩大 except 的作用域到 sink/filter/serialize。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 251,
+   "message": "未新增任何测试。验收标准要求覆盖：catch=True 时增强诊断出现在 handler 错误输出且不崩溃、catch=False 时 KeyError 含缺失键与 bind/extra 指引、诊断包含 elapsed/exception/extra/file/level/message 等键、以及 patcher 添加的键仍可用。当前 diff 只改了 _handler.py，无对应测试，无法防止上述 args[1] 崩溃被回归。",
+   "suggestion": "在 tests/test_add_option_catch.py 或 tests/test_add_option_format.py 中新增用例，断言 catch=True 时 stderr 含缺失键名与可用键列表、catch=False 时 `pytest.raises(KeyError, match=...)` 命中缺失键与 bind 指引，并覆盖 patcher 场景。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.038627,
+ "input_tokens": 223444,
+ "cache_hit_tokens": 205568,
+ "output_tokens": 4160,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 28.8
+}

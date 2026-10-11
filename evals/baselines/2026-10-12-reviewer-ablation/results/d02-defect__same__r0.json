@@ -1,0 +1,38 @@
+{
+ "item": "d02-defect",
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "`_UNITS` 中 `\"s\"` 被改成 60，而 Issue 明确要求 `s` = 1 s，且原文里 `\"45s\"`、`\"2h\"` 本来是正确行为。现在 `parse_duration(\"45s\")` 返回 45*60 = 2700，`\"2h\"` → 7200（不应受 s 影响，但 `\"1h30m15s\"` → 3600+1800+900 = 6300，期望 5415），`\"1h30m\"` → 3600+1800 = 5400 恰好对，但任何带秒的输入都会错。仓库已有测试 tests/test_duration.py:7 `assert parse_duration(\"45s\") == 45` 会直接失败，说明这是明确回归。\n\n原始映射是 `{\"h\": 3600, \"m\": 1, \"s\": 1}`，本次只需把 `m` 从 1 改为 60，`s` 应保持 1。",
+   "suggestion": "改为 `_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}`，并补上多段用例的测试（如 `parse_duration(\"1h30m\") == 5400`、`parse_duration(\"1h30m15s\") == 5415`、`parse_duration(\"2m\") == 120`），确保 `m`/`s` 两个单位都被覆盖，避免再次出现只改一个单位就碰坏另一个的回归。"
+  }
+ ],
+ "error": null,
+ "calls": 3,
+ "cost_cny": 0.005378,
+ "input_tokens": 7658,
+ "cache_hit_tokens": 6400,
+ "output_tokens": 998,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 7.3
+}

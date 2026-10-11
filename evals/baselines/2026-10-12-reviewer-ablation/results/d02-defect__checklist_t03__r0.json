@@ -1,0 +1,45 @@
+{
+ "item": "d02-defect",
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "`_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 60}` 把秒的系数从 1 改成了 60，与 Issue 明确给出的期望不符（Issue: `h` = 3600 s, `m` = 60 s, `s` = 1 s）。后果：`parse_duration(\"45s\")` 现在返回 2700（原本正确返回 45），`\"1h30m15s\"` 返回 3600+1800+900=6300 而非期望的 5415，`\"2h\"` 仍为 7200。即修复引入回归，且 Issue 中列出的 `\"1h30m15s\"` 用例依然错误。",
+   "suggestion": "改为 `_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}`，并补充覆盖 `\"1h30m\"`、`\"2m\"`、`\"1h30m15s\"`、`\"45s\"`、`\"2h\"` 的测试。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_duration.py",
+   "line": 6,
+   "message": "现有测试只覆盖 `\"45s\"`（恰好是 Issue 中“原本正常”的用例）和非法输入，没有任何多单位组合用例。补丁把 `s` 改错后，`test_seconds` 会失败（45s -> 2700），但 Issue 中真正出错的 `\"1h30m\"`、`\"2m\"`、`\"1h30m15s\"` 没有任何测试守护，无法防止此类回归。",
+   "suggestion": "新增参数化测试：`(\"45s\", 45)`、`(\"2m\", 120)`、`(\"2h\", 7200)`、`(\"1h30m\", 5400)`、`(\"1h30m15s\", 5415)`。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.005421,
+ "input_tokens": 13651,
+ "cache_hit_tokens": 12288,
+ "output_tokens": 953,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 5.4
+}

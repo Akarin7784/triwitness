@@ -1,0 +1,52 @@
+{
+ "item": "d09-defect",
+ "task": "swe-cyclopts-701",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/command_spec.py",
+  "line": 143,
+  "category": "incomplete_fix",
+  "severity": "major",
+  "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "注释写的是 “Hide help and version flags”，但循环只遍历了 `chain(self._resolved.help_flags)`，完全没有处理 `version_flags`。Issue 的正确（非懒加载）输出里 Commands 面板整体消失（既无 `--help` 也无 `--version`），而错误（懒加载）输出里 `--help -h` 与 `--version` 同时出现。补丁只隐藏 help，`--version` 仍会残留，Issue 描述的行为并未真正修复，只是部分覆盖。\n\n依据：diff 第 141-144 行只使用 help_flags；Issue 的两段控制台输出明确对比出两个 flag。",
+   "suggestion": "同时隐藏版本标志，例如：\n```py\nfor flag in (*self._resolved.help_flags, *self._resolved.version_flags):\n    self._resolved[flag].show = False\n```\n并为该行为补充一个覆盖 `--version` 的回归测试。"
+  },
+  {
+   "severity": "major",
+   "file": "cyclopts/command_spec.py",
+   "line": 144,
+   "message": "`self._resolved[flag].show = False` 是原地修改。在 App 分支里 `self._resolved = target`，而 `target = getattr(module, attr_name)`（第 88 行）取到的是模块级共享对象，即用户自己定义的 `subapp`。对其 help/version 标志置 `show=False` 会全局影响该 App：若同一个 subapp 被单独运行或注册到另一个父应用下，它的 `--help`/`--version` 也会被永久隐藏，属于对用户对象的副作用/潜在回归。\n\n依据：第 88 行 getattr 返回模块属性，第 123 行 `self._resolved = target`，第 143-144 行直接改其子 flag 的 show。",
+   "suggestion": "确认这是否与直接注册路径（App.command(subapp)）的语义一致；若直接路径作用在副本上，则应在此复制后再修改标志，避免污染用户模块级 App 实例。"
+  },
+  {
+   "severity": "nit",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "`chain(self._resolved.help_flags)` 用 `itertools.chain` 包裹单个可迭代对象是无意义的包装，且为此新增了 `from itertools import chain` 导入。",
+   "suggestion": "直接 `for flag in self._resolved.help_flags:` 即可，并在改为同时遍历 help/version 后移除不必要的 chain 导入。"
+  }
+ ],
+ "error": null,
+ "calls": 11,
+ "cost_cny": 0.029481,
+ "input_tokens": 70433,
+ "cache_hit_tokens": 64384,
+ "output_tokens": 5536,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 36.4
+}

@@ -1,0 +1,52 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "effective_timeout 在第 519-524 行被计算出来，但第 533 行传给 run_with_artifacts 的却是 `int(timeout or 60)`，effective_timeout 是死代码。后果：当调用方不传 timeout（timeout=None，即默认路径）时，无论构造时配置的 execution_timeout/default_timeout 是多少，都会被强制成 60。而 Issue 明确写的是“Run ArtifactSandboxSession with default_timeout and/or execution_timeout parameters greater than 30 seconds”，即通过构造参数设置超时。该场景下 config.get_execution_timeout() 的值（例如 120）仍被忽略，只是从原来的 30 秒上限变成 60 秒上限，问题没有真正修复。\n\n依据：session_base.py:390 `actual_timeout = timeout or self.config.get_execution_timeout()`，说明 container.run 本身已支持 None 回退到 config；config.py:87-89 `get_execution_timeout()` 返回 execution_timeout or default_timeout。因此正确做法是把 effective_timeout 传下去（或直接透传 None 让底层回退）。",
+   "suggestion": "把第 533 行改为 `timeout=effective_timeout`（并相应调整 run_with_artifacts 的 timeout 类型注解为 float | None），或直接传 `timeout=timeout` 让 container.run 内部用 config.get_execution_timeout() 回退。同时删除/使用 effective_timeout，避免死代码。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 412,
+   "message": "run() 的 timeout 参数类型由 int 改为 float | None，但下游 run_with_artifacts 的签名仍是 `timeout: int = 30`（language_handlers/base.py:222），且第 533 行用 int() 截断。若按建议传 effective_timeout（float），需同步更新 base.py 的注解与默认值，否则 float 超时（如 0.5s）会被 int() 截断为 0，进而被 `timeout or ...` 当作 falsy 回退，行为不一致。",
+   "suggestion": "同步把 run_with_artifacts 的 timeout 改为 float | None = None，并去掉 int() 截断，保持与 SandboxSession.run 一致的 float 语义。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "现有测试 test_run_with_plotting_disabled（第 227 行）与 test_run_with_plotting_enabled_supported_language（第 261 行）断言 run_with_artifacts 被以 timeout=30 调用。补丁把默认值改为 60 后这两个断言会失败，说明补丁未同步更新测试，也未新增覆盖“构造参数 execution_timeout/default_timeout > 30 时 run() 应使用该值”的回归测试——而这正是 Issue 的核心场景。",
+   "suggestion": "更新这两处断言，并新增测试：构造 ArtifactSandboxSession(execution_timeout=120) 后调用 run(code) 不传 timeout，断言 run_with_artifacts 收到 120（或 None 由底层回退到 120）；再补一个显式传 timeout=120 的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.030004,
+ "input_tokens": 107187,
+ "cache_hit_tokens": 92032,
+ "output_tokens": 3252,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 19.8
+}

@@ -1,0 +1,38 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "修复逻辑正确但没有任何测试覆盖 Issue 的复现场景（repo 中 grep `downloads|webfiles|tuple` 与 `tests/test_autodiscover.py` 均无 STATICFILES_DIRS 元组形式的用例），因此该修复无法被现有测试套件防止回归。虽然不属于“改弱/删除测试”，但建议补一条 Loader.get_dirs() 的单测。",
+   "suggestion": "在 tests/test_autodiscover.py 的 TestLoaderSettingsModule 中增加用例：override_settings(STATICFILES_DIRS=[(\"downloads\", <real component dir>)])，断言 get_dirs() 返回该元组第二项对应的目录。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 46,
+   "message": "告警文案声称合法类型包含 `bytes`，但 `Path(b\"...\")` 在 Python 3 中同样抛 TypeError，会被此 except 分支跳过并打出该文案，与实际接受类型不符，可能误导排查。",
+   "suggestion": "文案改为「expected str or os.PathLike object, or tuple/list of length 2」，或在解包前显式将 bytes 解码/排除。"
+  }
+ ],
+ "error": null,
+ "calls": 15,
+ "cost_cny": 0.035646,
+ "input_tokens": 167657,
+ "cache_hit_tokens": 153856,
+ "output_tokens": 4692,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 33.5
+}

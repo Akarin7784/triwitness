@@ -1,0 +1,31 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "修复本身正确：get 命中后 self._data.move_to_end(key) 把最近使用的键移到末尾，put 中新键插入末尾、淘汰 popitem(last=False)，因此 capacity=2 时 put(a)/put(b)/get(a)/put(c) 会淘汰 b 而不是 a。put 中对已存在键先 move_to_end 再赋值也不会打乱顺序（OrderedDict 对已存在键赋值不改位置），逻辑自洽。唯一不足是本次改动没有附带任何测试。",
+   "suggestion": "在 tests/test_lru.py 中补充回归测试，覆盖 Issue 场景，例如：c = LRUCache(2); c.put(\"a\", 1); c.put(\"b\", 2); c.get(\"a\"); c.put(\"c\", 3); assert c.get(\"b\") is None and c.get(\"a\") == 1 and c.get(\"c\") == 3；另可加一条“get 未命中不应影响淘汰顺序”的断言（get(\"zz\") 后仍淘汰最久未使用者）。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.005262,
+ "input_tokens": 10597,
+ "cache_hit_tokens": 9472,
+ "output_tokens": 987,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 8.5
+}

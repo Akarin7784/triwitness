@@ -1,0 +1,59 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 145,
+   "message": "`return response.status_code != 404` 把“除 404 之外的一切响应”都当成“分支已存在”。当 token 失效(401)、被速率限制(403)、或 GitHub 返回 5xx/网络异常时，`branch_exists` 会一直返回 True，第 171 行的 while 循环将永远把分支名改成 `-try3`、`-try4`… 无限请求 API 并挂住进程，且不给出任何错误信息（不是报错退出，是静默死循环）。建议改为显式判断存在：`if response.status_code == 200: return True; if response.status_code == 404: return False; response.raise_for_status()`（或对非 200/404 直接抛错），并可给 `requests.get` 加上 timeout 与最大尝试次数上限，避免无限循环。",
+   "suggestion": "def branch_exists(...):\n    response = requests.get(f\"{base_url}/branches/{branch_name}\", headers=headers, timeout=10)\n    if response.status_code == 404:\n        return False\n    response.raise_for_status()\n    return True"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "分支探测用的是基础仓库 URL（`https://api.github.com/repos/{github_issue.owner}/{github_issue.repo}`），但第 194-202 行在传入 `fork_owner` 时实际是把分支推到 fork 上。fork 模式下“上一次失败遗留分支”恰恰存在于 fork 里，本补丁查不到，仍会 checkout 一个同名分支并让 `git push` 失败（RuntimeError）——即该 Issue 描述的故障在 fork 工作流下没有修好。建议在确定 push 目标后再探测：`check_owner = fork_owner or github_issue.owner`，用 `repos/{check_owner}/{github_issue.repo}/branches/{branch_name}` 查询（至少尝试按 push 目标仓库探测）。",
+   "suggestion": "先算出 push_owner，再用 f\"https://api.github.com/repos/{push_owner}/{github_issue.repo}\" 作为探测 base_url（或在两个仓库都探测）。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_send_pull_request.py",
+   "line": 216,
+   "message": "补丁只改了源码、未同步更新测试，当前仓库的测试会因此挂住：`mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})` 的 `status_code` 是 MagicMock 属性，`!= 404` 恒为 True，于是 `branch_exists` 恒为 True，`send_pull_request` 进入无限循环（test_send_pull_request 三个参数化用例、test_send_pull_request_git_push_failure、test_send_pull_request_permission_error 均受影响）；即使循环能退出，第 237 行 `assert mock_get.call_count == 1` 也已不再成立（现在至少 2 次 GET）。请在本 PR 内一起更新这些用例（例如给 mock_get 设 `side_effect=[MagicMock(status_code=404), MagicMock(json=lambda: {\"default_branch\": \"main\"})]`，并把 call_count 改为 2），并新增“分支已存在 → 使用 -try2”的用例（.openhands_instructions 也要求新测试用 pytest 写在 tests/ 下）。",
+   "suggestion": "更新 mock_get 为 side_effect 列表并调整 call_count 断言，补充 branch_exists 与 -try2 命名的单元测试。"
+  },
+  {
+   "severity": "nit",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 142,
+   "message": "格式问题：`make_commit` 之后多了一个空行（该处共 3 个空行），第 146 行 `send_pull_request` 前只留了 1 个空行，不符合 black 的两行分隔；dev 依赖里已含 black/ruff，建议跑 black 再提交。另外重复的空行/注释改动与本次功能无关，可精简 diff。",
+   "suggestion": "运行 `black openhands_resolver/send_pull_request.py`，把函数间空行恢复为 2 行。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.061128,
+ "input_tokens": 136114,
+ "cache_hit_tokens": 125312,
+ "output_tokens": 11955,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 66.5
+}

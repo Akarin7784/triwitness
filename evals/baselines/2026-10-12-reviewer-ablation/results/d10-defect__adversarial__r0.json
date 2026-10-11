@@ -1,0 +1,45 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "取错了 tuple 元素：Django 的 STATICFILES_DIRS 形如 `(\"downloads\", \"/opt/webfiles/stats\")`，第一个元素是 URL 前缀（prefix），第二个才是文件系统路径；Django 自己的 FileSystemFinder 实现就是 `prefix, root = root`（django/contrib/staticfiles/finders.py），文档中也称其为 `(prefix, path)`。Issue 原文同样明确要求 “consider the second item of STATICFILES_DIRS list item”，但这里写成了 `component_dir[0]`。后果：(1) `/opt/webfiles/stats` 实际不会被加入搜索目录，Issue 的 Expected 行为没有实现（只是从崩溃变成静默失效，用户在该目录下的组件仍然加载不到）；(2) 前缀通常是相对名字（如 \"downloads\"），它会继续走到第 59/65-68/85-88 行，如果恰好存在 `<BASE_DIR>/downloads` 或 settings 模块父目录下的同名目录，就会被当成组件模板目录加进 `directories`，从而加载到完全无关的模板（同时第 62 行 `path_is_relative_to(\"downloads\", app_config.path)` 是把相对路径与 app 路径做 relpath，判断同样不可靠）。修复：改为 `component_dir = component_dir[1]`。",
+   "suggestion": "将第 40-41 行改为：\n```python\nif isinstance(component_dir, (tuple, list)) and len(component_dir) == 2:\n    component_dir = component_dir[1]  # (prefix, path) -> path\n```\n并在 tuple 长度不为 2 时也给出日志（Django 对这类值会直接报错），避免静默使用错误值。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_component.py",
+   "line": 231,
+   "message": "补丁没有附任何回归测试，现有测试里的 STATICFILES_DIRS 全是字符串/Path（如 tests/test_component.py:231、tests/test_component.py:794、sampleproject/sampleproject/settings.py:137），没有任何用例覆盖 tuple 形式，因此索引取错（[0] 而非 [1]）不会被测试套件发现，正是本 Issue 的核心场景（`STATICFILES_DIRS = [(\"downloads\", <真实组件目录>)]`）完全没有被验证。",
+   "suggestion": "新增一个测试，使用 `@override_settings(BASE_DIR=Path(__file__).resolve().parent, STATICFILES_DIRS=[(\"prefix\", Path(__file__).resolve().parent / \"components\")])`，断言 `Loader().get_dirs()`（或 `django_components.component.search().searched_dirs`）中包含该 components 目录、且不包含名为 \"prefix\" 的目录；同时可加一个异常值（如长度 3 的 tuple）用例断言只记 warning 不抛异常。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.042736,
+ "input_tokens": 61252,
+ "cache_hit_tokens": 54400,
+ "output_tokens": 8699,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 45.8
+}

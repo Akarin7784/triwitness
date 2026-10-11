@@ -1,0 +1,45 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "`broker._update_fd_config(FastDependsConfig())` 传的是新建的空配置，而非本文件的 `self.config`；Issue 明确要求 `_update_fd_config(self.config)`。依据链：\n1) `BrokerUsecase._update_fd_config`（faststream/_internal/broker/broker.py:86-88）执行 `self.config.fd_config = config | self.config.fd_config`；\n2) `FastDependsConfig.__or__`（faststream/_internal/di/config.py:51-61）返回 `context=self.context`，即**左操作数**（传入的 config）的 context 胜出，broker 自己的 context 被丢弃；\n3) `FastDependsConfig()` 的 `context` 是 `field(default_factory=ContextRepo)`（config.py:36），因此第 87 行 `self.config.context.set_global(\"app\", self)` 设置的 app 全局项不会进入 broker 的 fd_config。\n后果：a) Issue 场景 `app = FastStream(); app.set_broker(broker)` 时 handler 里的 `Context(\"app\")` 仍会走 `ContextRepo.resolve` 抛 `ContextError`（repository.py:144-159）——即报告的 bug 并未修好；b) 回归：构造路径 `FastStream(broker)` 旧代码传 `self.config`，现在同样被替换为空 context，`FastStream(broker, context=...)` / `serializer=...`（faststream/app.py:64-68、asgi/app.py:113-117 构造的 config）以及 app 后续 `app.context.set_global(...)` 都不再对 broker/handler 生效；`faststream/_internal/endpoint/subscriber/usecase.py:316` 依赖 `fd_config.context.get(\"app\")` 在 SystemExit 时调用 `app.exit()`，该 context 现在也取不到 app。\n修复：改为 `broker._update_fd_config(self.config)`（这样构造路径与 `set_broker()` 路径行为一致，也才真正把含 `app` 全局项的 app context 注入 broker）。",
+   "suggestion": "将第 120 行改为 `broker._update_fd_config(self.config)`，并补充一个断言 `Context(\"app\")`/`broker.context.get(\"app\") is app` 的测试同时覆盖 `FastStream(broker)` 和 `FastStream().set_broker(broker)` 两种用法。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "补丁未附带任何验证 Issue 的回归测试：现有 `test_set_broker` 只断言 `app.broker is broker`，`test_set_more_than_once_broker`/`test_start_not_setup_broker` 也不检查 context，所以上面把参数传成空 `FastDependsConfig()` 的错误能通过全部确定性验证。Issue 的核心是 `Context` 注入，缺少对应断言就无法防止再次回归。",
+   "suggestion": "在 tests/application/test_delayed_broker.py 增加用例：分别用 `FastStream(broker)` 与 `app = FastStream(); app.set_broker(broker)`，断言 `broker.context.get(\"app\") is app`（或 handler 中注入 `Context(\"app\")` 可正常解析），并可在同一用例中覆盖 `context=`/`serializer=` 透传。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.070034,
+ "input_tokens": 339976,
+ "cache_hit_tokens": 314496,
+ "output_tokens": 9566,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 57.2
+}

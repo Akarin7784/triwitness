@@ -1,0 +1,45 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "正则去掉了结尾的 `$` 锚点，比 Issue 建议的 `'^\\d{6}\\.\\d{2,3}$'` 更宽。去掉 `$` 后，像 `123456.7890`（4 位小数）或 `123456.78XYZ` 这类字段也会被前缀匹配为 ASHRATT，而原实现不会。实际影响很小：match 仅在 `name not in sentence_types` 时调用，已注册的 ASH 子类型（HPR/LTN/POS/VEL）的 data[1] 都不是数字时间戳，因此不会与它们冲突；且把 4 位小数时间戳归为 ASHRATT 也并非错误行为。但这是超出 Issue 需求的不必要放宽。",
+   "suggestion": "按 Issue 建议保留锚点：`re.match(r'^\\d{6}\\.\\d{2,3}$', data[1])`，既修复两位小数时间戳，又不引入前缀误匹配。"
+  },
+  {
+   "severity": "minor",
+   "file": "test/test_ash.py",
+   "line": 16,
+   "message": "未为 Issue 中报告的两位小数时间戳场景新增测试（如 `$PASHR,122144.75,240.68,T,,,,,,,2*04`）。现有 test_ashratt 用的是三位小数 `130533.620`，无法覆盖本次修复的回归点，修复缺少测试保护。",
+   "suggestion": "在 test/test_ash.py 增加一个使用两位小数时间戳的用例，断言 type(msg) == ASHRATT 且 msg.timestamp 正确（如 datetime.time(12,21,44,750000)）。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.025453,
+ "input_tokens": 122894,
+ "cache_hit_tokens": 112128,
+ "output_tokens": 3111,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 23.4
+}

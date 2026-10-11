@@ -1,0 +1,52 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "在 TOKENS 末尾重复添加 `(\"DOUBLE\", r\"\\bdouble\\b\")`（第 27 行已存在同名条目）。`Lexer._compile_patterns()`（第 121-126 行）会把所有条目拼成 `(?P<DOUBLE>...)|...` 的联合正则，同一名称出现两次时 Python `re` 会在 `re.compile()` 阶段直接抛出 `re.error: redefinition of group name 'DOUBLE' as group 3; was group 2`。这不是\"多写一条无害\"，而是让模块级 `Lexer(code)` 无法构造，任何走 translator frontend 的代码（tests/test_translator/test_lexer.py 等）全部报错，属于明确回归。此外 parser.py 只在 5 处白名单里列出 \"DOUBLE\"（如 102、247、412、730、844 行），并不需要第二个 DOUBL 词法条目。",
+   "suggestion": "删除第 81 行新增的重复条目；若意图是修复 double 未被识别，请确认第 27 行的既有条目（位于 IDENTIFIER/INT 之前的优先级）已能覆盖，并在 key/test 用例中验证 `double d;` 确实产出 DOUBLE token。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新增 `(\"UNSIGNED_INT\", r\"\\bunsigned\\b\")` 只在词法层引入新 token 名，但下游没有任何配套：`crosstl/translator/parser.py` 的类型白名单（第 98-110、约 247-248、412-413、730-731、844-845 行的 `\"DOUBLE\"`, `\"UINT\"` 等列表）没有加入 \"UNSIGNED_INT\"，KEYWORDS 表（第 86-96 行）也没有 `unsigned` 条目。结果是 `unsigned int a;` 这类、以及 Issue 所列后端里存在的 `unsigned char/short/int/long` 写法，会在 parse 顶层走到 else 分支报「Unexpected token」。Issue 要求是让 translator frontend 能识别这些 token，只加词法条目并未真正实现该行为。",
+   "suggestion": "把 \"UNSIGNED_INT\" 加入 parser 的类型白名单，并明确它与 \"UINT\" 的对应关系（例如解析时把 `unsigned int` 归并为 UINT）；同时补充 translator 侧的 lexer/parser 用例覆盖 `unsigned int`。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_translator/test_lexer.py",
+   "line": 148,
+   "message": "补丁没有新增或修改任何测试：tests/test_translator/test_lexer.py 仍是原样（`test_data_types_tokenization` 只覆盖 int/uint/float/double/bool，没有 unsigned；`test_unsigned_int_dtype_tokenization` 只存在于 tests/test_backend/test_opengl/ 等后端目录）。新 token UNSIGNED_INT 没有任何断言覆盖，无法防止再次出现本次这种重复条目 / 名称冲突类错误。",
+   "suggestion": "在 tests/test_translator/test_lexer.py 增加 `unsigned int a;` 的 tokenization 断言（UNSIGNED_INT + INT），并（可选）增加一条针对重复 token 名/正则编译的守卫测试或至少在 CI 中确保导入即编译。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.019833,
+ "input_tokens": 93007,
+ "cache_hit_tokens": 84096,
+ "output_tokens": 2310,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 16.1
+}

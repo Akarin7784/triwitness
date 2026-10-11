@@ -1,0 +1,45 @@
+{
+ "item": "d08-defect",
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "defect",
+ "truth": {
+  "file": "src/cfnlint/jsonschema/_utils.py",
+  "line": 52,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 52,
+   "message": "条件 `or FUNCTION_TRANSFORM in validator.context.functions` 位于 per-property 循环内，一旦当前上下文允许 Fn::Transform，就会对**所有**属性 `continue`，从而完全禁用该对象的 additionalProperties 检查。而 Fn::Transform 恰恰是绝大多数校验路径的默认可用函数：`src/cfnlint/context/context.py:601` 模板根上下文即 `functions=[\"Fn::Transform\"]`，`src/cfnlint/helpers.py:162-182` 的 `FUNCTIONS` 含 `\"Fn::Transform\"`，`src/cfnlint/rules/resources/properties/Properties.py:74`（E3002 的主要入口）与 `src/cfnlint/rules/resources/CfnInit.py:40`（E3009）都用 `list(FUNCTIONS)`。后果是资源属性、Metadata、cfn-init 等对象里的错拼/多余键都不再报 “Additional properties are not allowed”。\n\n可复现的现有测试（共享 `validator` fixture 的 `functions` 默认取 `FUNCTIONS`，见 test/unit/conftest.py:69/81）：\n- test/unit/rules/resources/route53/test_recordset_alias.py:41-55 期望 `{'AliasTarget': [...], 'TTL': 10}` 报 \"Additional properties are not allowed ('TTL' was unexpected)\"；打了补丁后 `find_additional_properties` 对 `TTL` 也 `continue`，`extras` 为空，用例必失败。\n- 同类用例还会命中 test/unit/rules/metadata/test_cfn_lint.py:31-35、test/unit/rules/outputs/test_configuration.py:79-83、test/unit/rules/resources/elbv2/test_target_group_*_restrictions.py 等（均在允许 Fn::Transform 的上下文中期望 additionalProperties 错误）。\n\n另外，Issue 场景（Fn::Transform 与 mode/owner/group 并列出现在 cfn-init files 条目里）本来就应该由已有机制处理：`src/cfnlint/jsonschema/_keywords_cfn.py:36,61-65` 已用 `_ap_exception_fns`（含 FUNCTION_TRANSFORM）把这类错误过滤掉，因此这里需要的只是「让 Fn::Transform 这一个键豁免」，不是「整对象豁免」。",
+   "suggestion": "删除 `or FUNCTION_TRANSFORM in validator.context.functions` 这一支，只豁免该属性本身，并且只在上下文确实允许该函数时豁免：\n\n```python\nfor property in instance:\n    if property == FUNCTION_TRANSFORM and (\n        FUNCTION_TRANSFORM in validator.context.functions\n    ):\n        continue\n```\n\n更贴合现有设计的做法是不改 `_utils.py`，而是在 `_keywords_cfn.additionalProperties` 的 `_ap_exception_fns` 过滤链里定位/修正 E3009 这条错误为何没被过滤（例如确认 cfn-init 文件级对象校验时 `err.path[0]` 与 `regex.fullmatch` 的匹配路径），并为 Issue 里的复现模板补一个回归测试。"
+  },
+  {
+   "severity": "major",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 51,
+   "message": "`property == FUNCTION_TRANSFORM` 这一支是无条件豁免：即使当前上下文明确不允许 Fn::Transform（`functions=[]`，例如 `src/cfnlint/rules/jsonschema/CfnLintJsonSchema.py:77-80`、`src/cfnlint/rules/resources/iam/Policy.py:57`、`src/cfnlint/rules/resources/rds/DbClusterInstanceClassEnum.py:40`、`src/cfnlint/rules/resources/ssm/Document.py:56`、stepfunctions StateMachineDefinition 等）以及本就不接受 Fn::Transform 的位置（DeletionPolicy/CreationPolicy/UpdateReplacePolicy、Outputs 等），一个名为 `Fn::Transform` 的键会被静默接受，弱化了严格 schema 的校验能力（例如 IAM policy / SSM document 这类被当作纯 JSON 校验的对象）。",
+   "suggestion": "把豁免与上下文绑定（见上一条建议的 `and` 形式），或在 `_keywords_cfn.additionalProperties` 里统一按 `_ap_exception_fns & set(validator.context.functions)` 处理，避免在 `functions=[]` 的严格校验路径上也放行。"
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.089576,
+ "input_tokens": 478894,
+ "cache_hit_tokens": 439296,
+ "output_tokens": 10298,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 108.7
+}

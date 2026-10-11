@@ -1,0 +1,52 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新增的 UNSIGNED_INT 在 translator 前端没有任何消费方，而且改变了行为：parser 的类型 token 列表都不含 \"UNSIGNED_INT\"（crosstl/translator/parser.py:98-110、243-250、409-416、726-734、841-848），parse_shader 对未识别 token 走 `else: warnings.warn(\"Skipping unexpected token ...\")` + `eat` 分支（parser.py:115-119）。因此：修改前 `unsigned int x;` 会走 parse_global_variable 并在 eat(\"IDENTIFIER\") 处抛 SyntaxError（响亮失败）；修改后 UNSIGNED_INT 被 warn 后丢弃，只剩 INT(x); 正常解析，AST 变成 VariableNode(\"int\", \"x\")，codegen 会按 int 输出（metal_codegen.py:49 期望的类型串是 \"unsigned int\"），即限定符被静默丢掉、生成语义错误的着色器。仓库内搜索确认 \"UNSIGNED_INT\" 只出现在 lexer.py，没有任何测试或 codegen 引用它；tests/test_translator 下也无任何 unsigned 用例。",
+   "suggestion": "要么把该 token 真正接上：在 parser 的类型 token 列表中加入 \"UNSIGNED_INT\"，并在遇到 UNSIGNED_INT 时与紧随的 INT 组合成 \"unsigned int\" 类型串（与 metal_codegen.py:19-52 的键一致），同时补 lexer/parser 层测试；要么本 PR 先不引入该 token，保持 `unsigned` 不可解析时报错而不是被静默降级为 int。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "这一行是无效改动：TOKENS 是 OrderedDict，\"DOUBLE\" 已在第 27 行以完全相同的正则 `\\bdouble\\b` 定义，重复键会被去重（保留首次位置并覆盖值），_compile_patterns 只按 TOKENS.items() 生成命名组（lexer.py:121-126），所以此行对词法行为零影响，也没有为 Issue 增加任何新 token。另外这个位置本身也不对：它在 IDENTIFIER（第 29 行）之后，Python 交替分支按书写顺序取首个匹配，任何词形 token 追加在这里都会被 IDENTIFIER 抢先匹配而永远不生效。",
+   "suggestion": "删除该重复行；如果这里本意是补齐某个本 Issue 需要的 token（例如 parser.py:152-156 里 eat 的 LBRACKET/RBRACKET 在 translator 词法表中并不存在），请把它补在 IDENTIFIER 之前并加对应测试。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_translator/test_lexer.py",
+   "line": 148,
+   "message": "新 token 没有任何测试覆盖：现有 test_data_types_tokenization 只断言 INT/UINT/FLOAT/DOUBLE/BOOL，没有对 `unsigned` 的任何断言，因此这次改动在测试层面完全无法被验证（回归全绿但新行为无保证，token 名称/正则写错也发现不了）。",
+   "suggestion": "在该测试中加入 `unsigned int a;` 并断言 `any(t[0] == \"UNSIGNED_INT\" for t in tokens)`（同时可用于锁定 token 名称与文本），若后续接上 parser 则再加一条解析/生成用例。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.183988,
+ "input_tokens": 549929,
+ "cache_hit_tokens": 515328,
+ "output_tokens": 34770,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 192.6
+}

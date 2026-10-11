@@ -1,0 +1,38 @@
+{
+ "item": "d19-defect",
+ "task": "swe-cyclopts-633",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/parameter.py",
+  "line": 279,
+  "category": "wrong_condition",
+  "severity": "major",
+  "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "cyclopts/parameter.py",
+   "line": 279,
+   "message": "sorted_args 的排序对修复本身并非必需：去重逻辑（`if neg not in out`）与顺序无关，无论 bool 在前还是 NoneType 在前，重复项都会被消除。排序只是让“优先取非 None 类型”的意图更显式，属于可读性选择。对于两个非 None 成员的 union（如 int | bool），key 恒为 True，sorted 稳定，不会改变原有顺序，因此无行为影响。",
+   "suggestion": "可保留；若想简化，可去掉 sorted 直接用 get_args(type_) 迭代并去重，语义等价。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.021596,
+ "input_tokens": 105024,
+ "cache_hit_tokens": 96384,
+ "output_tokens": 2757,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 23.4
+}

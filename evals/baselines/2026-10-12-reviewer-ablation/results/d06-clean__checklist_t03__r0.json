@@ -1,0 +1,45 @@
+{
+ "item": "d06-clean",
+ "task": "swe-crosstl-257",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新增的 UNSIGNED_INT token 在整条流水线中是“孤立”的：全仓库 grep 显示 `UNSIGNED_INT` 仅出现在 lexer.py:24，parser.py 的类型 token 列表（如 parser.py:98-110、243-250、410-414、728-732、842-846）都不含 UNSIGNED_INT，codegen 也无对应处理，tests/test_translator 下没有任何用例使用 `unsigned int`。因此 `unsigned int a;` 会被词法化为单个 UNSIGNED_INT，但 parser 会走到 parser.py:116-119 的 “Skipping unexpected token” 分支，无法生成正确 AST，metal_codegen.py:49 的 `\"unsigned int\": \"uint\"` 映射也永远不会被触发。即：词法层“识别”了，但端到端仍不支持。",
+   "suggestion": "若本任务确实只限 lexer 文件，请在 PR 说明中明确下游支持另开 issue；否则应同步把 UNSIGNED_INT 加入 parser 的各类型 token 列表（parse_global_variable / parse_assignment_or_function_call 等），并补一个 translator 层的 `unsigned int` 用例，确保 token 真正可用。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "此处新增的 `(\"DOUBLE\", r\"\\bdouble\\b\")` 与第 27 行已有的 DOUBLE 完全重复。TOKENS 是 OrderedDict，重复键只保留首次出现的位置与值，因此这一行是无效死代码（不会改变正则分组顺序，也不会引发 re 分组重名错误，因为 items() 只产出唯一的 DOUBLE）。它只会误导后续维护者以为 DOUBLE 被移动到了末尾。",
+   "suggestion": "删除第 81 行的重复 DOUBLE 条目。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "`\\bunsigned int\\b` 要求 `unsigned` 与 `int` 之间恰好一个空格：`unsigned  int`（多空格）或 `unsigned\\tint`（制表符）都不会匹配，会退化为 IDENTIFIER(\"unsigned\") + INT(\"int\") 两个 token，行为不一致。",
+   "suggestion": "改用 `\\bunsigned\\s+int\\b` 以容忍任意空白，或在文档中明确只支持单空格形式。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.039227,
+ "input_tokens": 151899,
+ "cache_hit_tokens": 136576,
+ "output_tokens": 5293,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 28.9
+}

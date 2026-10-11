@@ -1,0 +1,45 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "same",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "方向反了，Issue 未修复。现有约定是「OrderedDict 末尾 = 最近使用，队首 = LRU」：put 里对已存在的 key 调 `self._data.move_to_end(key)`（last=True，挪到末尾），新 key 也是 append 到末尾，淘汰用 `popitem(last=False)` 取队首。而本行 `move_to_end(key, last=False)` 把刚 get 过的 key 挪到**队首**，也就是淘汰时第一个被删的位置。\n\n复现 Issue 的序列：\n- put(\"a\") → [a]\n- put(\"b\") → [a, b]\n- get(\"a\") → a 本来就在队首，move_to_end(last=False) 无任何效果 → [a, b]\n- put(\"c\") → [a, b, c]，len>2 → popitem(last=False) 删除 \"a\"\n仍然是 \"a\" 消失，与 Issue 描述完全一致。\n\n更糟的是它引入了新的错误淘汰：put(\"a\"), put(\"b\"), get(\"b\"), put(\"c\") 时 get(\"b\") 会把 b 挪到队首 → [b, a]，put(\"c\") 后 popitem(last=False) 删掉刚读过的 \"b\"（原实现此时删 \"a\" 才是对的）。",
+   "suggestion": "改成 `self._data.move_to_end(key)`（默认 last=True，挪到末尾），与 put 的新增/更新以及 popitem(last=False) 的淘汰约定保持一致：\n\n    def get(self, key: str, default: Any = None) -> Any:\n        if key not in self._data:\n            return default\n        self._data.move_to_end(key)\n        return self._data[key]\n\n这样 put(\"a\"), put(\"b\"), get(\"a\"), put(\"c\") 得到 [b, a, c] → 淘汰 \"b\"，符合预期。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "没有任何覆盖 Issue 场景的回归测试（文件里只有 test_put_get，且不涉及淘汰顺序），所以这个方向性错误才没有被测试拦住。测试也完全没有覆盖 eviction 分支（popitem）。而且因为 get 在队首时 move_to_end 无操作，这类测试必须用「被读的 key 不在淘汰端」的序列才能暴露问题。",
+   "suggestion": "补充回归测试，例如：\n\n    def test_get_refreshes_recency():\n        c = LRUCache(2)\n        c.put(\"a\", 1); c.put(\"b\", 2)\n        assert c.get(\"a\") == 1\n        c.put(\"c\", 3)\n        assert \"b\" not in c and c.get(\"b\") is None\n        assert c.get(\"a\") == 1\n\n（\"b\" not in c 需要实现 __contains__，或用 c.get(\"b\", sentinel) is sentinel 表达。）"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.013385,
+ "input_tokens": 13252,
+ "cache_hit_tokens": 12032,
+ "output_tokens": 2981,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 19.4
+}

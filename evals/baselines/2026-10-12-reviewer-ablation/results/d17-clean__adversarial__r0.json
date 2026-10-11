@@ -1,0 +1,45 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "tests/test_send_pull_request.py",
+   "line": 237,
+   "message": "既有测试会被这个补丁打断，且新行为完全没有测试覆盖。send_pull_request.py:171 的 while branch_exists(...) 至少会调用一次 requests.get（send_pull_request.py:144 的分支查询），再加上 176 行取 default branch 的那次 GET，函数现在共发 2 次 requests.get。而 test_send_pull_request 在 216 行设置的 mock 是 MagicMock(json=lambda: {'default_branch': 'main'})，其 status_code 是未配置的子 MagicMock，status_code == 200 为 False（同一文件 331-332 行必须显式设置 mock_post.return_value.status_code = 403 才能触发 403 分支，说明未配置的 MagicMock 属性与数字比较为假）。因此 237 行的 assert mock_get.call_count == 1 会变成 2，三个 pr_type 参数化用例都会失败；.github/workflows/ci.yml:23 正是 poetry run pytest tests/test*.py -v，CI 会红。同时没有任何测试覆盖本 Issue 的新行为（已有分支时应落到 openhands-fix-issue-42-try2）。",
+   "suggestion": "同步更新 tests/test_send_pull_request.py：给 mock_get 设置 side_effect（对 /branches/* 返回 status_code=404 的响应，其余返回 default_branch 响应），把 237 行改成 assert mock_get.call_count == 2；并新增用例：分支查询首次返回 200 时，断言 subprocess.run 的 checkout 命令为 git -C {repo_path} checkout -b openhands-fix-issue-42-try2、push 与 PR head 也用该名字，以及 -try2 也存在时继续取 -try3。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "存在性检查与真正推送的目标仓库不一致：循环用 base_url（164 行，始终是 github_issue.owner/repo，即上游仓库）查分支，但 194-202 行在给了 fork_owner 时是把分支 push 到 {fork_owner}/{github_issue.repo}。README 里 --fork-owner 是官方用法，而 resolver 失败重跑时分支通常已经存在于 fork（上次把分支推进去了但后续步骤失败，正是 Issue 描述的场景），本次仍会选中同名 openhands-fix-issue-N，git push 到已存在的同名分支会以 non-fast-forward 被拒，最终在 206 行抛 Failed to push changes to the remote repository，Issue 想解决的问题在 fork 场景下依旧存在。",
+   "suggestion": "把 fork 判定提前，用它决定查询用的 base_url：先算 push_owner = fork_owner if fork_owner else github_issue.owner，再用 https://api.github.com/repos/{push_owner}/{github_issue.repo} 做 branch_exists 检查（或对上游和 fork 两个仓库都检查一次）。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 143,
+   "message": "branch_exists 把所有非 200 状态码都当成“分支不存在”：403（API rate limit / token 权限不足）、401、5xx 都会返回 False，于是 -try 递增逻辑静默失效，随后要么在错误的分支名上继续，要么在 push 阶段抛出与真实原因无关的报错；私有仓库 token 权限不足时 GitHub 同样返回 404，也会被当成不存在。另外 171 行的循环没有次数上限，一旦接口持续返回 200 就会一直发请求。",
+   "suggestion": "区分 404 与其他状态：if response.status_code == 404: return False；否则 response.raise_for_status(); return True（或至少对 403/5xx 抛出带上下文的异常），并给循环加一个最大尝试次数（例如 10 次后抛错）。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.173018,
+ "input_tokens": 340940,
+ "cache_hit_tokens": 318720,
+ "output_tokens": 36106,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 187.9
+}

@@ -1,0 +1,45 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "方向反了，Issue 描述的行为没有被修复，反而在部分场景下驱逐刚被读取的键。该类内部约定是“front = LRU（最久未用），back = MRU”：put 命中时用 self._data.move_to_end(key)（即 last=True）把键移到 back，淘汰时用 popitem(last=False) 取走 front。补丁却用 move_to_end(key, last=False) 把刚 get 的键移到 front，正是淘汰端。\n按其约定逐步推演 Issue 的复现序列（capacity=2）：put(\"a\") → [a]；put(\"b\") → [a, b]；get(\"a\") → move_to_end(\"a\", last=False)，\"a\" 已在 front，顺序仍为 [a, b]；put(\"c\") → [a, b, c]，len 3 > 2，popitem(last=False) 淘汰 \"a\"。即 \"a\" 依然消失，Issue 场景未修复。\n更糟的是 get 非首元素时会产生与 LRU 相反的错误行为：put(\"a\")、put(\"b\")、get(\"b\") → 顺序变为 [b, a]；put(\"c\") → [b, a, c]，popitem(last=False) 淘汰 \"b\" —— 恰好是刚被读取的键。",
+   "suggestion": "改为与 put 一致的方向：self._data.move_to_end(key)（等价 last=True），把最近访问的键移到 back，使 popitem(last=False) 淘汰的始终是最久未用端。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "没有任何测试覆盖 Issue 描述的驱逐场景。现有 test_put_get 只验证单键 put/get 与 default 返回，不涉及容量淘汰，因此补丁即使把淘汰方向搞反也能全部通过，修复没有被测试钉住（这也是缺陷未被发现的直接原因）。",
+   "suggestion": "补充淘汰用例，至少覆盖 Issue 序列：c = LRUCache(2); c.put(\"a\", 1); c.put(\"b\", 2); assert c.get(\"a\") == 1; c.put(\"c\", 3); assert c.get(\"b\") is None 且 c.get(\"a\") == 1；并再加一个 get 非首元素后淘汰的用例（put(\"a\"), put(\"b\"), get(\"b\"), put(\"c\") → 应淘汰 \"a\"），以防方向再次写反。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.009616,
+ "input_tokens": 16017,
+ "cache_hit_tokens": 13568,
+ "output_tokens": 1724,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 10.5
+}

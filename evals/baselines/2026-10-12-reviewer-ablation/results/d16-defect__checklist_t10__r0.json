@@ -1,0 +1,52 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "取缺失键的索引错误。`str.format_map` 在键缺失时抛出的是 `KeyError(key)`，即 `args == (key,)`（单元素元组，复现输出 `KeyError: 'nonexistent'` 即为证据）。代码写的是 `original.args[1] if original.args else \"?\"`，对单元素元组取 `[1]` 会抛 `IndexError: tuple index out of range`。该 IndexError 在 `except KeyError` 处理块内部抛出，不会再被后面的 `except Exception` 捕获，因此会直接冒出 `emit()`：\n- catch=True（默认）时，`logger.info(...)` 抛出 IndexError → 应用崩溃，直接违反 Issue 与验收标准“With catch=True … without crashing the application”，且比改动前（仅打印日志错误）更糟，属回归。\n- catch=False 时抛出的是 IndexError 而非 KeyError，违反验收标准“the raised KeyError includes the missing key”。\n- 已存在测试 tests/test_configure.py:141 与 :151 用 `pytest.raises(KeyError)` 断言 `{extra[a]}` 缺键场景，现会因 IndexError 失败（回归）。\n修复：改为取 `args[0]`（并保留无 args 时回退），例如 `key = original.args[0] if original.args else \"?\"`。",
+   "suggestion": "key = original.args[0] if original.args else \"?\""
+  },
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError` 会捕获 try 块内任意来源的 KeyError，而不仅是格式键解析失败，从而误报并改变既有行为：\n- sink 抛 KeyError（如 `logger.add(lambda m: cfg[\"key\"])`）以前会走 `except Exception` 打印“Logging error in Loguru Handler”并附原始 traceback；现在会被 `_make_key_error` 改写成“The format string references an unknown key …”，诊断信息完全错误、掩盖真实 bug；又因 args 索引缺陷（见上条）实际会抛 IndexError 使 catch=True 失效。\n- 同理，用户 filter、动态 formatter（`self._formatter(record)`）抛出的 KeyError 也会被误报。\n- `_serialize_record`/前缀 record 访问若发生 KeyError 同样被吞并误报。\n建议只在格式字符串插值处（各 `precomputed_format.format_map(formatter_record)` 调用点）做窄范围捕获，例如封装一个 `_format_record()` 只包住 format_map 调用，再对其中 KeyError 生成诊断；或至少校验 KeyError 的来源/键确实不在 formatter_record 中，否则按原逻辑交给 `except Exception` 处理。",
+   "suggestion": "将 KeyError 处理限定在 format_map 调用周围，或判断 `original.args and original.args[0] not in formatter_record` 时才生成格式键诊断，否则走原有 `except Exception` 分支。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 210,
+   "message": "诊断信息未验证随 catch=True 输出，也未验证验收标准中列出的可用键是否真的出现。现有逻辑 `sorted(record.keys())` 输出的原始 record 确实含 elapsed/exception/extra/file/level/message 等键，方向正确；但由于 diff 未新增任何测试，验收标准（明确命名缺失键、给出 logger.bind/extra[key] 指引、列出可用键、catch=False 时 KeyError 含键与指引、patcher 增加键仍受支持）均无回归保护。请求在 tests 中补充覆盖这些场景的用例（catch=True/False、`{extra[nonexistent]}`、patcher 添加键、以及 sink/filter 抛 KeyError 时不被误报）。",
+   "suggestion": "新增测试覆盖两条验收路径与 patcher 场景，并断言 sink/filter 的 KeyError 仍走原有 Logging error 分支。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.055904,
+ "input_tokens": 358209,
+ "cache_hit_tokens": 329344,
+ "output_tokens": 5113,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 34.2
+}

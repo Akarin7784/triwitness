@@ -1,0 +1,52 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "取错元素，问题未真正修复。Django 文档中 STATICFILES_DIRS 的 tuple 形式是 (prefix, path)，路径在索引 1：例如 Issue 里的 (\"downloads\", \"/opt/webfiles/stats\") 中 \"downloads\" 只是 URL 前缀，真实目录是 /opt/webfiles/stats。Issue 原文也明确要求 “should consider the second item of STATICFILES_DIRS list item when not a str”。补丁写的是 component_dir = component_dir[0]，于是把前缀字符串 \"downloads\" 当成目录去 Path(\"downloads\")/is_dir() 判断，结果是 /opt/webfiles/stats 下的 components 目录永远不会被 loader 搜到；只是不再抛 TypeError 而已（因为 Path(\"downloads\") 不会报错，异常被“掩盖”而非问题被解决）。修复建议：改为 component_dir = component_dir[1]，并保留长度校验（len == 2 才取第二项，其它长度走 warning + continue）。",
+   "suggestion": "若 isinstance(component_dir, (tuple, list))：长度必须为 2 才合法（与 Django 一致），取 component_dir[1] 作为路径；长度不为 2 时记 warning 并 continue。"
+  },
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "缺少针对 Issue 场景的回归测试。仓库中没有任何测试使用 (prefix, path) 形式的 STATICFILES_DIRS：tests/test_autodiscover.py 的 TestLoaderSettingsModule/TestBaseDir 以及 tests/test_component.py:231/794 都只传 str/Path。当前补丁方向错误却没有测试失败，说明没有测试能守住该行为。请新增用例（如 override_settings(STATICFILES_DIRS=[(\"downloads\", <某个真实存在的 components 目录>)]) 后断言 Loader.get_dirs() 返回该目录的 resolve()，并补一个长度不为 2 的非法项断言只 warning 不抛异常）。",
+   "suggestion": "在 tests/test_autodiscover.py 增加 tuple 前缀写法与非法长度项的测试。"
+  },
+  {
+   "severity": "major",
+   "file": "src/django_components/component.py",
+   "line": 152,
+   "message": "同一问题还有另一条未覆盖路径。component.py 的 _get_dir_path_from_component_path 遍历 candidate_dirs（来自 search().searched_dirs，最终源自 STATICFILES_DIRS）并对每项直接 os.path.abspath(candidate_dir)；若某处把未解包的 tuple 传进来同样会 TypeError，且此函数在路径不匹配时抛 RuntimeError。补丁只改了 template_loader，未确认/收敛到单一解析点（例如提取一个 normalize_staticfiles_dirs() 供两处共用）。建议核对并统一入口，或在 Loader 出口保证返回的始终是已解包的 Path。",
+   "suggestion": "抽取共享的目录规范化函数，或在 get_dirs() 出口保证所有返回值均为解包后的 Path，并让 component.py 复用。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.021592,
+ "input_tokens": 77326,
+ "cache_hit_tokens": 65920,
+ "output_tokens": 2217,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 17.0
+}

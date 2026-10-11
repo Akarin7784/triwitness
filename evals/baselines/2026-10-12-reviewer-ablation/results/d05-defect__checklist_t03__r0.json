@@ -1,0 +1,38 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t03",
+ "rep": 0,
+ "model": "deepseek/deepseek-flash",
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "修复不完整：`_NON_WORD.sub(\"-\", text.lower()).lstrip(\"-\")` 只剥离前导 `-`，未剥离尾随 `-`。Issue 明确要求 slug 既不能以 `-` 开头也不能以 `-` 结尾。\n\n逐例核对（`_NON_WORD = [^a-z0-9]+`）：\n- `slugify(\"  Hello,  World!  \")` → lower `\"  hello,  world!  \"` → sub `\"-hello-world-\"` → lstrip → `\"hello-world-\"`，期望 `\"hello-world\"`，**仍然错误**（Issue 的原始复现用例没修好）。\n- `slugify(\"Hello!!!\")` → `\"hello-\"`，同样以 `-` 结尾。\n- `slugify(\"a -- b\")` → `\"a-b\"` ✓（这部分本来就由 `+` 量词保证，非本次改动之功）。\n\n另外 `tests/test_slug.py` 只有 `test_simple`（`\"Hello World\"`），该用例在补丁前后都通过，没有任何测试覆盖 Issue 描述的首尾分隔符场景，因此无法证明修复有效。",
+   "suggestion": "两侧都剥离，例如 `return _NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`；并补充回归测试，至少覆盖 `slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`、`slugify(\"---\") == \"\"`。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.007641,
+ "input_tokens": 21038,
+ "cache_hit_tokens": 18944,
+ "output_tokens": 1292,
+ "models": [
+  "deepseek-flash"
+ ],
+ "elapsed_s": 8.8
+}
