@@ -11,7 +11,17 @@ import runpy
 import sys
 
 
+def _hang_dump() -> None:
+    """诊断：设置 TW_HANG_DUMP_S=<秒> 时，每隔这么久把所有线程的调用栈写到 stderr（排查卡住，不影响正常运行）。"""
+    secs = os.environ.get("TW_HANG_DUMP_S", "").strip()
+    if secs.isdigit() and int(secs) > 0 and sys.stderr is not None:
+        import faulthandler
+
+        faulthandler.dump_traceback_later(int(secs), repeat=True, file=sys.stderr)
+
+
 def main() -> None:
+    _hang_dump()
     if len(sys.argv) >= 3 and sys.argv[1] == "-m":
         mod = sys.argv[2]
         sys.argv = [mod, *sys.argv[3:]]

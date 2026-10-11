@@ -19,7 +19,7 @@ from pathlib import Path
 def run_demo(tw: str, tmp: Path, extra: list[str]) -> dict:  # type: ignore[type-arg]
     home = tmp / "home"
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "TW_DEMO_DELAY_S": "0",
-           "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}  # fmt: skip
+           "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1", "TW_HANG_DUMP_S": "60"}  # fmt: skip
     env.pop("TW_HOME", None)
     repo = tmp / f"verses{len(extra)}"
     errf = (tmp / f"stderr{len(extra)}.log").open("w+", encoding="utf-8")
