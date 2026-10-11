@@ -65,6 +65,7 @@ describe('设置（UI-21）', () => {
     expect(s.theme).toBe('light')
     expect(s.fontScale).toBe(1)
     expect('allowPeak' in s).toBe(false)
+    expect(localStorage.getItem('tw.prefs') ?? '').not.toContain('maxCost') // 读入即迁移，不等下次写盘
     p.setPrefs({ permissionMode: 'unrestricted' as never, theme: 'dark' })
     expect(p.getPrefs().permissionMode).toBe('auto_review')
     expect(p.getPrefs().theme).toBe('dark')

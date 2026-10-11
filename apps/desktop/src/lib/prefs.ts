@@ -144,6 +144,8 @@ function load(): Prefs {
   try {
     const raw = JSON.parse(store()?.getItem(KEY) ?? '{}') as Partial<Prefs>
     const p = sanitize({ ...DEFAULTS, ...raw })
+    // 0.3.2 迁移：存储里还有已去掉的预算设置 → 立刻改写，不留旧键
+    if (REMOVED_KEYS.some((k) => k in raw)) store()?.setItem(KEY, JSON.stringify(p))
     if (!THINKING_LEVELS.some((t) => t.id === p.lastThinking) || p.lastThinking === ('off' as Thinking)) {
       p.lastThinking = DEFAULTS.lastThinking
     }
