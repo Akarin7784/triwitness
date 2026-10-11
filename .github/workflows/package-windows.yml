@@ -22,6 +22,7 @@ jobs:
   package:
     name: windows installer (bundled core)
     runs-on: windows-latest
+    timeout-minutes: 60
     outputs:
       installer: ${{ steps.info.outputs.installer }}
     env:
@@ -42,6 +43,7 @@ jobs:
           uv sync --locked --no-dev --group package
           uv run --no-dev --group package python packaging/core/build_core.py
       - name: Smoke-test bundled tw.exe (--version, budget --json, demo JSONL round-trip)
+        timeout-minutes: 10
         run: uv run --no-dev python packaging/core/smoke_core.py apps/desktop/src-tauri/resources/core/tw.exe
 
       - uses: actions/setup-node@v7
@@ -79,19 +81,24 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat "dist/$name.sha256"; ls -l dist
 
-      - name: Silent install + smoke the installed core
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem dist\*-setup.exe | Select-Object -First 1
-          $dir = "$env:RUNNER_TEMP\TriWitness"
-          Start-Process -FilePath $exe.FullName -ArgumentList '/S', "/D=$dir" -Wait
-          Get-ChildItem $dir | Format-Table Name, Length
-          if (-not (Test-Path "$dir\core\tw.exe")) { throw "bundled core missing in install dir" }
-          uv run --no-dev python packaging/core/smoke_core.py "$dir\core\tw.exe"
-
       - uses: actions/upload-artifact@v7
         with:
           name: TriWitness-windows-installer
           path: dist/
           retention-days: 14
           if-no-files-found: error
+
+      - name: Silent install + smoke the installed core
+        timeout-minutes: 12
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist\*-setup.exe | Select-Object -First 1
+          $dir = "$env:RUNNER_TEMP\TriWitness"
+          # 只等安装程序本身退出（Start-Process -Wait 会连子进程一起等，可能挂住）
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList '/S', "/D=$dir" -PassThru
+          if (-not $p.WaitForExit(300000)) { $p.Kill(); throw "installer did not finish in 5 min" }
+          "installer exit code: $($p.ExitCode)"
+          Get-ChildItem $dir | Format-Table Name, Length
+          if (-not (Test-Path "$dir\core\tw.exe")) { throw "bundled core missing in install dir" }
+          Get-Process | Where-Object { $_.Path -like "$dir*" } | Format-Table Id, ProcessName, Path
+          uv run --no-dev python packaging/core/smoke_core.py "$dir\core\tw.exe"
