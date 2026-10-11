@@ -1,0 +1,41 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1TY7PVK0JT613DP9338WG",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "新增的元组/非法条目处理没有任何测试覆盖：candidate 提交（git show 962c514）只改了 src/django_components/template_loader.py，tests/ 下没有新增或修改用例。现有 tests/test_autodiscover.py::TestLoaderSettingsModule 只覆盖 str（'tests/components'）与 Path（tests/test_component.py 里的 override_settings）两种条目，没有任何用例使用 ('prefix', path) 形式的 STATICFILES_DIRS，因此这次修复（含 len(component_dir) == 2 的解包分支和 except TypeError: continue 分支）在回归时无法被发现。建议补一个用例，例如 override_settings(STATICFILES_DIRS=[('prefix', Path(__file__).parent / 'components')]) 后断言 get_dirs() 至少包含该 components 目录，并另加一个非法条目（如 STATICFILES_DIRS=[3]）断言不抛异常，用来锁住本次 Issue 的修复。",
+   "suggestion": "在 tests/test_autodiscover.py 中追加基于 override_settings 的用例：1) STATICFILES_DIRS=[('prefix', Path(__file__).parent / 'components')] → get_dirs() 返回该目录；2) STATICFILES_DIRS=[3]（或长度为 3 的元组）→ get_dirs() 不抛异常并跳过该条目。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 46,
+   "message": "告警文案与代码实际接受类型不一致/场景有误导：文案声称 'expected str, bytes or os.PathLike object'，但 Path(b'/opt/x') 在 Python >= 3.6 会抛 TypeError（pathlib 要求 __fspath__ 返回 str），所以 bytes 条目实际会被丢弃而不是被接受；此外这段告警在未配置 STATICFILES_DIRS、component_dirs 走默认 ['components'] 分支时也会被触发，但文案只提 STATICFILES_DIRS。属于错误提示/运维可读性问题，不影响本次修复的正确性。",
+   "suggestion": "把文案改为与实际校验一致（去掉 bytes，或说明 bytes 不受支持会被忽略），并可在 component_dirs 来自默认值时不使用 STATICFILES_DIRS 的措辞（例如参数化来源名）。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.135812,
+ "input_tokens": 372854,
+ "cache_hit_tokens": 351488,
+ "output_tokens": 26854,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 138.6
+}

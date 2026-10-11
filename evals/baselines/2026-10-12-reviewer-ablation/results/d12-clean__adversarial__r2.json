@@ -1,0 +1,41 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1YBXX5BGMSKFR0MWM20MR",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 105,
+   "message": "新增的校验会作用到读取路径，导致已有 RO-Crate 无法加载（回归）。`Entity.__init__`（rocrate/model/entity.py:38-43）对非 `@` 开头的属性统一走 `self[name] = value`，所以 `ROCrate(path)` 读盘时构造 RootDataset/DataEntity/ContextEntity 都会命中断言。仓库中已有测试正好覆盖该场景：test/test_model.py:337-368 把 `\"badProp\": {\"k\": \"v\"}` 写进元数据文件后执行 `crate = ROCrate(crate_dir)`，而该测试只在 test/test_model.py:414-415 访问 `correction[\"badProp\"]` 时才期望 ValueError；打上本补丁后，第 368 行加载阶段就会抛出 `ValueError: no @id in {'k': 'v'}`，`test_entity_as_mapping` 必然失败。更严重的是行为回归：以前这类 crate（包括 Issue 示例中由旧版本或其它工具写出的 `\"license\": {\"@type\": \"CreativeWork\", ...}`）至少能加载，只是访问该属性时报错；现在整份 crate 都读不进来，与 Issue 明确提出的「读取时更宽容」背离。",
+   "suggestion": "把校验限定在用户显式赋值这一入口：例如让 `Entity.__init__` 在填充属性时绕过校验（直接写 `self._jsonld[name] = ...`，需要时对 Entity 值做 `{\"@id\": _.id}` 归一化），仅在 `__setitem__` 中保留 `no @id` 的 ValueError；并按 Issue 建议让 `__getitem__`（rocrate/model/entity.py:90-94）对无 `@id` 或 id 不在 crate 中的 dict 直接原样返回（或至少保留原有语义），保证读盘与访问兼容。修复后请重跑 test/test_model.py::test_entity_as_mapping 与整套 test。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 159,
+   "message": "仍有公开写入路径绕过新校验，Issue 描述的「库能写出自己访问不了的 crate」依旧可复现：`append_to`（rocrate/model/entity.py:159-169）直接把值 `extend` 进 `self._jsonld`，`ROCrate.update_jsonld`/`add_or_update_jsonld`（rocrate/rocrate.py:605 的 `entity._jsonld.update(jsonld)`）也直接写 `_jsonld`。例如 `crate.root_dataset.append_to(\"license\", {\"@type\": \"CreativeWork\"})` 或 `crate.add_or_update_jsonld({\"@id\": \"./\", \"license\": {\"@type\": \"CreativeWork\"}})` 都不会报错，之后 `crate.root_dataset[\"license\"]` 仍抛 `ValueError: no @id in ...`（entity.py:93-94），写盘后该 crate 又因 finding 1 而无法重新加载。",
+   "suggestion": "把 `@id` 校验抽成一个私有辅助函数，在 `__setitem__`、`append_to` 以及 `ROCrate.update_jsonld` 的 `_jsonld.update` 前统一调用（`Entity` 实例仍按 `_.id` 归一化），保证所有写入 API 行为一致；读取/构造路径保持宽容。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.116646,
+ "input_tokens": 461674,
+ "cache_hit_tokens": 417792,
+ "output_tokens": 16102,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 95.5
+}

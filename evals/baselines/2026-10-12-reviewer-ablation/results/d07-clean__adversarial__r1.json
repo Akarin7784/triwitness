@@ -1,0 +1,34 @@
+{
+ "item": "d07-clean",
+ "task": "swe-pynmea2-124",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0CFHFQSQZPZ6P4SJP205V",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "新支持的“2 位小数时间戳”形态没有任何测试覆盖：test/test_ash.py 的 ASHRATT 用例仍只使用 3 位小数样例 '$PASHR,130533.620,...'，全仓库 grep '122144' 无结果，因此该修复缺少回归保护（不影响本次功能正确性）。",
+   "suggestion": "在 test/test_ash.py 中补充用例，例如 parse('$PASHR,122144.75,240.68,T,,,,,,,2*04')，断言 type(msg) 为 pynmea2.ash.ASHRATT、msg.timestamp == datetime.time(12, 21, 44, 750000)、msg.true_heading == 240.68、msg.render() 能还原原句。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.119522,
+ "input_tokens": 185068,
+ "cache_hit_tokens": 170112,
+ "output_tokens": 25291,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 127.1
+}

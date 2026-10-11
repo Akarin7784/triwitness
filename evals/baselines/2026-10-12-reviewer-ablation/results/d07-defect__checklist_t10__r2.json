@@ -1,0 +1,48 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2JMSJ9EYMCVFRC37TGF5X",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "正则由 '^\\d{6}\\.\\d{3}$' 改为 '^\\d{6}\\.\\d{2,3}'，顺带把结尾的 $ 锚点去掉了。功能上 Issue 的用例仍能匹配（122144.75），且 ASH.__new__ 中该 match 只在名字未注册为具体子类型时调用，data[1] 对 ASH 消息要么是子类型关键字（HPR/LTN/POS/VEL，均不以数字开头）要么就是时间戳，因此实际不会造成误分类，不是回归。但去掉 $ 属于超出必要的放宽（'122144.75xyz'、'122144.7537' 之类也会匹配），无任何必要。建议保留锚点：r'^\\d{6}\\.\\d{2,3}$'，语义更严谨、更贴合原意图。",
+   "suggestion": "改回 r'^\\d{6}\\.\\d{2,3}$'（保留 $ 锚点）。"
+  },
+  {
+   "severity": "major",
+   "file": "test/test_ash.py",
+   "line": 17,
+   "message": "补丁未新增/修改任何测试，Issue 中真正失败的两位小数用例没有被覆盖。现有 test_ashratt 用的是 '130533.620'（三位小数），在修改前的 '^\\d{6}\\.\\d{3}$' 下同样能通过——也就是说整个测试套件在打补丁前后结果相同，无法验证本次修复，也无法防止将来回归。建议新增一条用 Issue 样例的用例，例如 '$PASHR,122144.75,240.68,T,,,,,,,2*04'，断言 type(msg) == pynmea2.ash.ASHRATT 且 msg.timestamp == datetime.time(12,21,44,750000)、msg.render() == 原始串。",
+   "suggestion": "在 test/test_ash.py 增加两位小数时间戳的 ASHRATT 解析/渲染断言。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.034234,
+ "input_tokens": 87374,
+ "cache_hit_tokens": 73984,
+ "output_tokens": 4841,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 43.4
+}

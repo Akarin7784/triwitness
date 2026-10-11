@@ -1,0 +1,48 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0CQ4SFDFB9GJGMJSSA039",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "把 `r'^\\d{6}\\.\\d{3}$'` 改成 `r'^\\d{6}\\.\\d{2,3}'` 时丢掉了结尾的 `$` 锚点。`ASHRATT.match` 是 `ASH.__new__` 里唯一的句子类型判别器（ash.py:21-28），`re.match` 只从串首匹配，因此任何以 6 位数字 + '.' + 2~3 位数字**开头**的字段都会被判成 ATT：例如 `123456.7890`（4 位小数）、`123456.78abc`、`122144.75 ` 这类非 ATT 时间戳字段现在会静默进入 ASHRATT，而锚定版本会正确回退到通用 ASH，属于判别行为被改弱（Issue 本身给出的修法也保留了 `$`：`'^\\d{6}\\.\\d{2,3}$'`）。修复：`return re.match(r'^\\d{6}\\.\\d{2,3}$', data[1])`。",
+   "suggestion": "return re.match(r'^\\d{6}\\.\\d{2,3}$', data[1])"
+  },
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "补丁只改了一行正则，test/test_ash.py 未新增/修改任何用例：现有 `test_ashratt` 用的是 `130533.620`（3 位小数），并不覆盖 Issue 中 2 位小数时间戳（`$PASHR,122144.75,240.68,T,,,,,,,2*04`）这一唯一被报告的场景，也没有用例锁定「前缀相似但非 ATT 的字段必须回退到 ASH」，这正是 `$` 锚点被删掉却没被任何验证发现的原因。",
+   "suggestion": "在 test/test_ash.py 增加断言：解析 Issue 给的 `$PASHR,122144.75,240.68,T,,,,,,,2*04` 得到 ASHRATT 且 `msg.timestamp == datetime.time(12, 21, 44, 750000)`，并补一个如 `$PASHR,122144.7555,...` 应回退为通用 ASH 的负例。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.07158,
+ "input_tokens": 140252,
+ "cache_hit_tokens": 128384,
+ "output_tokens": 14286,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 78.2
+}

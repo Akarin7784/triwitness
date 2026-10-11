@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from reviewer_ablation import classify  # noqa: E402
 
-from triwitness.eval.ablation import compare, mde_paired, render_rows, wilson  # noqa: E402
+from triwitness.eval.ablation import compare, holm, mcnemar, mde_paired, render_rows, wilson  # noqa: E402
 
 ORDER = ["same", "adversarial", "checklist_t03", "checklist_t10", "consensus_t03", "consensus_t10"]
 TOL = 3
@@ -159,8 +159,8 @@ def analyse(by: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, Any], str]:
            render_rows(compare(order, "adversarial"), unit="放行")]  # fmt: skip
     n_items = len({r["item"] for r in by[arms[0]] if r["kind"] == "defect"})
     mde1, mde3 = mde_paired(n_items), mde_paired(3 * n_items)
-    md += ["", f"每臂 {n_items} 道缺陷题 / {n_items} 道干净题、各 1 次：配对检验在 80% 功效下大约要差 {mde1:.0%} "
-           f"才看得出（mde_paired，不一致率按 20% 估）；3 次重复约 {mde3:.0%}。"]  # fmt: skip
+    md += ["", f"每臂 {n_items} 道缺陷题 / {n_items} 道干净题：只跑 1 次的臂，配对检验在 80% 功效下大约要差 {mde1:.0%} "
+           f"才看得出（mde_paired，不一致率按 20% 估）；3 次重复（当独立样本算）约 {mde3:.0%}。"]  # fmt: skip
     data: dict[str, Any] = {"arms": summary, "by_category": per_cat, "tol": TOL}
     reps_md, reps_data = _repeats(by)
     if reps_md:
@@ -222,8 +222,116 @@ def _repeats(by: dict[str, list[dict[str, Any]]]) -> tuple[list[str], dict[str, 
                 tag = "第一轮口径" if legacy else "当前"
                 data[f"diff_{key}{'_legacy' if legacy else ''}"] = [round(d0, 4), round(lo, 4), round(hi, 4)]
                 md.append(f"| {title} | {tag} | {d0:+.0%} | {lo:+.0%}～{hi:+.0%} |")
+        # 只看 r1+ 的当前口径（r0 的记账缺口让“最后一次才提交”记成了没结论，两种口径在 r0 上无法区分）
+        later = {r["rep"] for r in by["adversarial"]} - {0}
+        if later:
+            sub = {a: [r for r in by[a] if r["rep"] in later] for a in arms}
+            for kind, key, title in (("defect", "hit", "检出"), ("clean", "block", "干净放行")):
+                pa = _per_item(sub["adversarial"], kind, key)
+                pb = _per_item(sub["checklist_t10"], kind, key)
+                d0, lo, hi = _cluster_diff(pa, pb)
+                data[f"diff_{key}_later"] = [round(d0, 4), round(lo, 4), round(hi, 4)]
+                tag = f"只看 r{min(later)}–r{max(later)}（当前口径）"
+                md.append(f"| {title} | {tag} | {d0:+.0%} | {lo:+.0%}～{hi:+.0%} |")
         md.append("\n区间不含 0 才算有差异；同一题的几次重复不独立，所以按题重抽。")
+        md += _inconclusive(by, arms, data)
+        md += _majority(by, data)
+        md += _discordant(by, data)
     return md, data
+
+
+def _per_item(rs: list[dict[str, Any]], kind: str, key: str) -> dict[str, list[bool]]:
+    out: dict[str, list[bool]] = {}
+    for r in rs:
+        if r["kind"] == kind:
+            v = bool(r[key])
+            out.setdefault(r["item"], []).append(v if kind == "defect" else not v)
+    return out
+
+
+def _inconclusive(by: dict[str, list[dict[str, Any]]], arms: list[str], data: dict[str, Any]) -> list[str]:
+    """没下结论率（第一轮口径：最后一次调用才提交也算没结论，三次重复可比）。"""
+    md = ["", "没下结论率（第一轮口径，所有重复合并；Wilson 95%）：", "", "| 臂 | 缺陷题 | 干净题 | 合计 |",
+          "|---|---|---|---|"]  # fmt: skip
+    rate: dict[str, Any] = {}
+    for arm in arms:
+        rs = by[arm]
+        nv = {k: [r for r in rs if r["kind"] == k] for k in ("defect", "clean")}
+        cnt = {k: sum((not r["ok"]) or r["last_call"] for r in v) for k, v in nv.items()}
+        tot = cnt["defect"] + cnt["clean"]
+        rate[arm] = {"defect": [cnt["defect"], len(nv["defect"])], "clean": [cnt["clean"], len(nv["clean"])],
+                     "all": [tot, len(rs)]}  # fmt: skip
+        md.append(f"| {arm} | {_w(cnt['defect'], len(nv['defect']))} | {_w(cnt['clean'], len(nv['clean']))} | "
+                  f"{_w(tot, len(rs))} |")  # fmt: skip
+    ia = _per_item_flag(by["adversarial"])
+    ib = _per_item_flag(by["checklist_t10"])
+    d0, lo, hi = _cluster_diff(ia, ib)
+    rate["diff_checklist_minus_adversarial"] = [round(d0, 4), round(lo, 4), round(hi, 4)]
+    md.append(
+        f"\nchecklist_t10 − adversarial 没下结论率：{d0:+.0%}（按题聚类 bootstrap {lo:+.0%}～{hi:+.0%}，越低越好）。"
+    )
+    data["inconclusive"] = rate
+    return md
+
+
+def _per_item_flag(rs: list[dict[str, Any]]) -> dict[str, list[bool]]:
+    out: dict[str, list[bool]] = {}
+    for r in rs:
+        out.setdefault(r["item"], []).append((not r["ok"]) or r["last_call"])
+    return out
+
+
+def _majority(by: dict[str, list[dict[str, Any]]], data: dict[str, Any]) -> list[str]:
+    """按题多数（过半重复成立）后做 McNemar，三个指标一起 Holm；
+    另给逐次合并（item#rep 配对，不独立，只作参考）。"""
+    arms = ("adversarial", "checklist_t10")
+    metrics = (("defect", "hit", "检出"), ("clean", "block", "干净放行"), ("clean", "cons_block", "干净放行·保守"))
+    rows: list[tuple[str, str, Any, int, int]] = []
+    for kind, key, title in metrics:
+        maj, pool = [], []
+        for arm in arms:
+            per = _per_item(by[arm], kind, key)
+            maj.append({it: sum(v) * 2 > len(v) for it, v in per.items()})
+            pool.append({f"{r['item']}#r{r['rep']}": (bool(r[key]) if kind == "defect" else not r[key])
+                         for r in by[arm] if r["kind"] == kind})  # fmt: skip
+        for tag, (a, b) in (("按题多数", maj), ("逐次合并", pool)):
+            common = sorted(set(a) & set(b))
+            t = mcnemar([a[k] for k in common], [b[k] for k in common])
+            rows.append((title, tag, t, sum(a[k] for k in common), sum(b[k] for k in common)))
+    md = ["", "checklist_t10 对 adversarial 的 McNemar（b = 只有 adversarial 成立，c = 只有 checklist_t10 成立；"
+          "Holm 在同一配对方式的 3 个指标内校正）：", "",
+          "| 指标 | 配对方式 | adversarial | checklist_t10 | b/c | p（精确） | p（Holm） |",
+          "|---|---|---|---|---|---|---|"]  # fmt: skip
+    out: dict[str, Any] = {}
+    for tag in ("按题多数", "逐次合并"):
+        sel = [r for r in rows if r[1] == tag]
+        for (title, _, t, ka, kb), ph in zip(sel, holm([r[2].p_exact for r in sel]), strict=True):
+            out[f"{tag}/{title}"] = {"adversarial": [ka, t.n], "checklist_t10": [kb, t.n], "b": t.b, "c": t.c,
+                                    "p": t.p_exact, "p_holm": ph}  # fmt: skip
+            md.append(f"| {title} | {tag} | {ka}/{t.n} | {kb}/{t.n} | {t.b}/{t.c} | {t.p_exact:.3f} | {ph:.3f} |")
+    md.append("\n逐次合并把同一题的 3 次当成独立样本，p 值偏乐观，只作参考；以按题多数和按题聚类区间为准。")
+    data["mcnemar"] = out
+    return md
+
+
+def _discordant(by: dict[str, list[dict[str, Any]]], data: dict[str, Any]) -> list[str]:
+    """逐题对比：两臂在 3 次里成立次数不同的题。"""
+    rows: list[tuple[str, str, str, str]] = []
+    out: dict[str, Any] = {}
+    for kind, key, title in (("defect", "hit", "检出"), ("clean", "block", "放行")):
+        pa = _per_item(by["adversarial"], kind, key)
+        pb = _per_item(by["checklist_t10"], kind, key)
+        for it in sorted(set(pa) & set(pb)):
+            ka, kb = sum(pa[it]), sum(pb[it])
+            if ka != kb:
+                rows.append((it, title, f"{ka}/{len(pa[it])}", f"{kb}/{len(pb[it])}"))
+                out[it] = {"metric": key, "adversarial": [ka, len(pa[it])],
+                                       "checklist_t10": [kb, len(pb[it])]}  # fmt: skip
+    md = ["", f"逐题对比（两臂成立次数不同的 {len(rows)} 题；其余各题两臂一致）：", "",
+          "| 题 | 指标 | adversarial | checklist_t10 |", "|---|---|---|---|"]  # fmt: skip
+    md += [f"| {a} | {b} | {c} | {d} |" for a, b, c, d in rows]
+    data["discordant_items"] = out
+    return md
 
 
 def main(argv: list[str] | None = None) -> int:

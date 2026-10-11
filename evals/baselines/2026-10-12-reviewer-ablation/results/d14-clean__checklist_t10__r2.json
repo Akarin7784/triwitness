@@ -1,0 +1,26 @@
+{
+ "item": "d14-clean",
+ "task": "swe-marimo-8401",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2PFBZQ2WFR3V2YF94HJ14",
+ "max_turns": 20,
+ "path": "没有提交（budget_exhausted：单任务安全上限 max_turns 已用尽：20 / 20）",
+ "served_model": "deepseek-flash",
+ "verdict": null,
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.069487,
+ "input_tokens": 572041,
+ "cache_hit_tokens": 529920,
+ "output_tokens": 4192,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 63.7
+}

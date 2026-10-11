@@ -1,0 +1,34 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0YKJMT0GQGX8RQ755KFDT",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "修复本身正确（`config | broker.fd_config` 在 FastDependsConfig.__or__ 中取左操作数的 context，正是已 set_global(\"app\", self) 的 app context），但补丁没有为该行为添加回归测试：tests/application/test_delayed_broker.py::test_set_broker 只断言 `app.broker is broker`，仓库内也没有任何断言 `broker.context.get(\"app\")` 的用例，因此这条修复路径缺少防回归保护，未来重构可能再次漏掉 `_update_fd_config`。",
+   "suggestion": "在 tests/application/test_delayed_broker.py 增加用例：app = StartAbleApplication(); broker = RabbitBroker(); app.set_broker(broker); assert broker.context.get(\"app\") is app（可选再加一个 subscriber 注入 app 的端到端用例）。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.148472,
+ "input_tokens": 574679,
+ "cache_hit_tokens": 538750,
+ "output_tokens": 25442,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 144.1
+}

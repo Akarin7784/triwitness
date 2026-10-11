@@ -1,0 +1,55 @@
+{
+ "item": "d18-defect",
+ "task": "swe-conan-19750",
+ "kind": "defect",
+ "truth": {
+  "file": "conan/internal/api/profile/profile_loader.py",
+  "line": 251,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2SD28AH5SAH0QHQZQA6C3",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 251,
+   "message": "范围检测条件写错，永远不会命中。`RecipeReference.__str__`（conan/api/model/refs.py:61-71）返回的是 `name/version`，即 \"catch2/[>=3.13.0]\"，它永远以包名开头，不可能以 \"[\" 开头，所以 `str(r).startswith(\"[\")` 恒为 False，`errors` 恒为空，不会抛 ConanException。结果就是原来 `dep/[>=1.0]` 这类条目依然被原样放进 Profile.platform_requires / platform_tool_requires，最终仍然触发 conan/internal/graph/graph.py:139 的 `assert not require.version_range`，Issue 的崩溃与内部 traceback 没有任何改变。判断版本范围应看版本字段本身，例如 `repr(r.version).startswith(\"[\")`（graph_builder.py:203-204 用的就是 `repr(...version)[0] == \"[\"`）或 `str(r.version).startswith(\"[\")`（Version.__str__ 返回 \"[>=1.3.0]\"）。",
+   "suggestion": "把 `errors = [r for r in result if str(r).startswith(\"[\")]` 改为基于版本判断，例如：`errors = [r for r in result if str(r.version).startswith(\"[\")]`（或 `repr(r.version).startswith(\"[\")`）。修好后请补一个端到端测试（如 test/integration/graph/test_platform_requires.py）验证 `[platform_requires]\\ndep/[>=1.0]` 与 `[platform_tool_requires]` 都以普通 `ERROR: ...` 失败且输出中不出现 `AssertionError`/traceback。"
+  },
+  {
+   "severity": "major",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 253,
+   "message": "错误信息未区分出问题的 section，不符合验收标准“identifies the offending section and reference”。`parse_replaces` 被 [platform_requires] 和 [platform_tool_requires] 共用，报错文本恒定写成 \"[platform_requires]/[platform_tool_requires]\"，无论实际是哪一个 section 出错。由于 doc.platform_tool_requires 还可能来自已废弃的 [system_tools]，报错文本也无法指向正确来源。",
+   "suggestion": "给 parse_replaces 增加 section 名参数（如 parse_replaces(doc_platform_requires, \"platform_requires\")、parse_replaces(doc_platform_tool_requires, \"platform_tool_requires\")），在异常信息中使用该名称，并同时列出出错的具体引用。"
+  },
+  {
+   "severity": "minor",
+   "file": "conan/internal/api/profile/profile_loader.py",
+   "line": 249,
+   "message": "解析失败的错误信息里输出的是 RecipeReference 对象的 repr（`{errors}` 会走 __repr__，形如 \"dep/[>=1.0]\"），语义上是包引用而非“版本范围”，用户看到的信息可能不够直观；此外空行/注释行的处理沿用旧逻辑未变（原有行为，不算回归）。",
+   "suggestion": "错误信息中明确列出违反的原始行/版本范围，例如 f\"{section} must use exact versions, not version ranges: {[str(r.version) for r in errors]}\"。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.047997,
+ "input_tokens": 222752,
+ "cache_hit_tokens": 192640,
+ "output_tokens": 3508,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 29.7
+}

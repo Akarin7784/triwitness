@@ -1,0 +1,48 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2HW66JHKJC3G8HQ83GXR2",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "只调用 `.lstrip(\"-\")`，尾部 `-` 未被去除，Issue 的核心行为未修复：`slugify(\"  Hello,  World!  \")` 的 `.lower()` 后经 `_NON_WORD.sub` 得到 `\"--hello--world--\"`，lstrip 后为 `\"hello--world--\"`，仍以 `-` 结尾，与期望的 `\"hello-world\"` 不符；`\"a -- b\"` 得到 `\"a---b\"`，期望 `\"a-b\"`。Issue 明确要求“Slugs should never start or end with `-`, and runs of separators should become a single `-`”。",
+   "suggestion": "改为 `.strip(\"-\")`（或 `re.sub(r\"^-+|-+$\", \"\", ...)`）以同时去掉首尾分隔符；同时把 `_NON_WORD` 的正则保持 `[^a-z0-9]+` 幂等情况即可满足“连续分隔符折叠为单个 -”，即 `return _NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`。"
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_slug.py",
+   "line": 5,
+   "message": "测试未随修复更新/补充：现有唯一用例 `slugify(\"Hello World\") == \"hello-world\"` 在修复前后都通过，无法验证 Issue 描述的行为（首尾 `-`、连续分隔符折叠）。修复后没有新增覆盖 `\"  Hello,  World!  \"` 与 `\"a -- b\"` 的断言，属于修复未经验证。",
+   "suggestion": "新增断言：`slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`，并补充边界用例如 `slugify(\"\") == \"\"`、`slugify(\"---\") == \"\"`、`slugify(\"!@#\") == \"\"`。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.005298,
+ "input_tokens": 15993,
+ "cache_hit_tokens": 14717,
+ "output_tokens": 932,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 9.5
+}

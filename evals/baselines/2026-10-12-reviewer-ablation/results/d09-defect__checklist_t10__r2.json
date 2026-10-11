@@ -1,0 +1,48 @@
+{
+ "item": "d09-defect",
+ "task": "swe-cyclopts-701",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/command_spec.py",
+  "line": 143,
+  "category": "incomplete_fix",
+  "severity": "major",
+  "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2KZ9E5B2HKWE0EGAGAR54",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "补丁只对 help_flags 隐藏，遗漏了 version_flags，因此无法完全修复 Issue 描述的行为。对照直接注册路径 cyclopts/core.py:1343-1344：\n\n    for flag in chain(app.help_flags, app.version_flags):\n        app[flag].show = False\n\n直接注册会同时隐藏 --help/-h 和 --version，而补丁只写了 `for flag in chain(self._resolved.help_flags)`。version_flags 在 App.version_flags setter（core.py:473-485）中会被注册为子应用命令，因此懒加载的子应用 --help 仍会显示 `--version` 行——而 Issue 期望输出中既没有 --help 也没有 --version。也就是说这个补丁只让复现中的 `--help` 消失，`--version` 仍回归。\n\n此外 `chain(self._resolved.help_flags)` 只传一个可迭代对象，等价于直接用 `self._resolved.help_flags`（chain 在此无意义，可能是从 core.py 复制时漏改）。",
+   "suggestion": "改为与直接注册路径一致：\n\n    for flag in chain(self._resolved.help_flags, self._resolved.version_flags):\n        self._resolved[flag].show = False\n\n并确保 chain 的两个参数都在。建议同时补一个覆盖 version_flags（子应用 help 中不出现 --version）以及 App import 与 function import 两条分支的测试。"
+  },
+  {
+   "severity": "minor",
+   "file": "cyclopts/command_spec.py",
+   "line": 141,
+   "message": "隐藏逻辑放在 resolve() 末尾，只在解析时执行一次，对 App-import 分支（self._resolved = target）也会生效，这是对的；但注释“matches the behavior of direct App/function registration in core.py”在当前只处理 help_flags 的情况下并不成立，容易误导后续维护者以为已与 core.py 对齐。",
+   "suggestion": "修正代码使其真正与 core.py:1343 一致（加 version_flags），或在注释中明确说明当前只处理 help_flags 的原因/范围。"
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.046489,
+ "input_tokens": 284673,
+ "cache_hit_tokens": 258176,
+ "output_tokens": 3707,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 43.4
+}

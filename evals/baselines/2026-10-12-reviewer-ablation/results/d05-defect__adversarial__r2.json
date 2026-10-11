@@ -1,0 +1,48 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1M97PQAXMDETYG10RX6Y7",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "修复不完整：textkit/slug.py:7 只用 `.lstrip(\"-\")` 去掉了前导分隔符，没有处理尾部。按 Issue 的用例逐步计算 `slugify(\"  Hello,  World!  \")`：lower → `\"  hello,  world!  \"`；`_NON_WORD.sub`（regex `[^a-z0-9]+`）把首尾的非字母数字串也各替换成一个 `-` → `\"-hello-world-\"`；`lstrip(\"-\")` 后仍是 `\"hello-world-\"`，与 Issue 期望的 `\"hello-world\"` 不符。Issue 明确要求 slug 不得以 `-` 开头**或结尾**，此补丁只满足了前半句。",
+   "suggestion": "改为 `return _NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`（或用 `strip(\"-\")` 同时处理两端）。分隔符压缩成单个 `-` 已由 `[^a-z0-9]+` 保证，`\"a -- b\"` → `\"a-b\"` 无需额外处理。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_slug.py",
+   "line": 5,
+   "message": "tests/test_slug.py 中没有新增任何覆盖该 Issue 的用例，现有唯一测试 `test_simple`（`slugify(\"Hello World\")`）在补丁前后都通过，无法暴露“尾部连字符未去除”的缺陷——这也解释了为什么带 bug 的实现能被判定为验证通过。",
+   "suggestion": "补充断言：`slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`，以及至少一个纯符号输入（如 `slugify(\"!!!\") == \"\"`）来锁定首尾分隔符与连续分隔符行为。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.00636,
+ "input_tokens": 11177,
+ "cache_hit_tokens": 10368,
+ "output_tokens": 1336,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 7.6
+}

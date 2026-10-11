@@ -1,0 +1,48 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0TAE5DJ29NTQQT7T50M88",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "越界前瞻：`self.text[self.at]` 中 `at` 恒等于 `ch` 的下标 +1（见 next_chr：`self.ch = self.text[self.at]; self.at += 1`），所以当 `-` 正好是文本最后一个字符时 `at == self.len`，`self.text[self.at]` 抛 IndexError。实测路径（逐行推演均可复现）：`slpp.decode('-')` → value()→white()→skip_comments()，ch='-'、at=1、len=1 → `text[1]` → IndexError: string index out of range；`slpp.decode('{1,-')`、`slpp.decode('{x=-')`、`slpp.decode('--c\\n-')` 同样在 skip_comments 里抛 IndexError。base 版本对这些输入分别是「打印错误并返回 0」/「抛 ParseError」，本补丁把它变成了未捕获的 IndexError——这是本补丁新增的崩溃路径，且调用方按库的约定只 catch ParseError 时会直接崩掉。",
+   "suggestion": "加边界判断，例如 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（或封装一个 peek()，EOF 时返回 ''）。"
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "white() 与 skip_comments() 相互递归，深度随「连续注释行数」线性增长：white() 末尾调 skip_comments()（101 行），skip_comments() 遇到换行又回调 self.white()（108 行），每多一行注释就多压 2 个栈帧。连续约 500 行注释（如 `slpp.decode('--\\n' * 1000 + '1')`，这是合法 lua：应返回 1）就会触发 RecursionError / RuntimeError: maximum recursion depth exceeded，而 base 版本能正常解析（整块注释会被正则剥掉）。真实场景里“用 -- 整段注释掉旧配置/大段头注释”很容易达到该规模。",
+   "suggestion": "改成迭代：让 white() 在主循环里直接处理注释（空格→next_chr，检测到 `--`→调用只负责跳到行尾的 skip_comments），skip_comments 内部不要回调 white()，例如 `def skip_comments(self): while self.ch and self.ch != '\\n': self.next_chr()`。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests.py",
+   "line": 129,
+   "message": "补丁未给本次修复添加任何回归用例，tests.py 与 base 完全一致，因此 issue 描述的场景（`slpp.decode('\"--3\"')`）以及新引入的注释跳过逻辑都没有测试保护，后续很容易再被破坏。",
+   "suggestion": "在 TestSLPP 中补用例，例如 `assertEqual(slpp.decode('\"--3\"'), '--3')`、`assertEqual(slpp.decode('{a = \"--3\"}'), {'a': '--3'})`、`assertEqual(slpp.decode('{1, -- c\\n2}'), [1, 2])`、`assertEqual(slpp.decode('-- c\\n1'), 1)`。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.276725,
+ "input_tokens": 255960,
+ "cache_hit_tokens": 236672,
+ "output_tokens": 63176,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 362.6
+}

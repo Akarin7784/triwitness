@@ -1,0 +1,41 @@
+{
+ "item": "d20-clean",
+ "task": "swe-llm-sandbox-101",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2EZVDZE5ATAHHR7K18NAA",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "补丁改变了 ArtifactSandboxSession.run 默认路径传给 run_with_artifacts 的 timeout 来源，会使现有两个用例失败。tests/test_session.py:221-228 与 255-262 断言 `mock_language_handler.run_with_artifacts.assert_called_once_with(..., timeout=30)`，但新代码（session.py:519-533）在 timeout 未显式传入时取 `self._session.config.get_execution_timeout()`。这两个用例里 `self._session` 是 `@patch(\"llm_sandbox.session.create_session\")` 返回的普通 MagicMock，`config.get_execution_timeout()` 返回的是 MagicMock（`is not None` 为真），因此 `int(effective_timeout)` 会走 MagicMock 预置的 `__int__` 得到 1，实际调用变成 `timeout=1`，两处 assert_called_once_with 必然 AssertionError（旧代码默认值就是 30，所以这两个用例原本是通过的，补丁前无此失败）。修复建议：随补丁一起更新用例，例如给 mock 设置真实配置 `mock_session.config = SessionConfig(default_timeout=300)` 后断言 `timeout=300`，并补一个“default_timeout/execution_timeout > 30 时实际生效”的回归用例（可用 mock_session.run 或 MagicMock 的 run_with_artifacts 断言），确保 pytest（pyproject.toml 中 testpaths=[\"tests\"]，会全量收集）为绿。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "`timeout=int(effective_timeout)` 与本次把签名/文档改为 `float | None`（session.py:412、426-428）自相矛盾，并引入回归：显式传入的小数超时会被截断，例如 `run(code, timeout=45.9)` 变成 45；更严重的是 `run(code, timeout=0.5)` 变成 0，而 core/session_base.py:390 用 `actual_timeout = timeout or self.config.get_execution_timeout()`，0 是假值，于是会静默回退到 default_timeout（默认 60s）——用户显式指定的短超时被无声忽略；改动前该值是原样透传（0.5 会被真正使用），属于新引入的行为变化。修复建议：显式传入时不要做 int 截断，直接 `timeout=effective_timeout`（容器 run 只在 timeout 为假值时才回退），或至少保留 float 并在 0 < effective_timeout < 1 时不要落到 0。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.110265,
+ "input_tokens": 426635,
+ "cache_hit_tokens": 384512,
+ "output_tokens": 15113,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 104.2
+}

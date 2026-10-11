@@ -1,0 +1,48 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2H2MZ96SEKXDFT1PYM86V",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "get 命中时 self._data.move_to_end(key, last=False) 把最近使用的 key 放到**队首**，但 put 的淘汰是 `self._data.popitem(last=False)`（第 23 行）也从队首删除。两者把队首同时当作 MRU 与 LRU，语义冲突。逐行跟踪 Issue 场景（capacity=2）：put(\"a\")->[a]；put(\"b\")->[a,b]；get(\"a\") 命中后 move_to_end(\"a\", last=False) 仍为 [a,b]；put(\"c\")->[a,b,c]，len>2 触发 popitem(last=False) 删除队首 \"a\"。即 get(\"a\") 后 \"a\" 仍被淘汰，Issue 描述的错误行为完全没有修复——这不是只让测试通过，而是根本没修好。另外与 put 的约定矛盾：put 对已存在 key 用 move_to_end(key)（移到队尾，即队尾=MRU），淘汰却是队首，说明正确约定是队尾=MRU、队首=LRU，get 应移到队尾。",
+   "suggestion": "改为与 put 一致的约定：`self._data.move_to_end(key)`（移到队尾），保留 popitem(last=False) 淘汰队首；或者保持 get 的 last=False 同时把淘汰改成 popitem(last=True)。任选其一但必须让 get 的结果与淘汰端相反。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "补丁未新增任何覆盖 Issue 场景的回归测试。现有唯一测试 test_put_get 只断言 get 返回值与默认值，对 `put(\"a\"),put(\"b\"),get(\"a\"),put(\"c\")` 后应淘汰 \"b\"、保留 \"a\" 的行为毫无覆盖，因此该错误修复在测试中不可见。",
+   "suggestion": "补充回归测试：c=LRUCache(2); c.put(\"a\",1); c.put(\"b\",2); assert c.get(\"a\")==1; c.put(\"c\",3); assert c.get(\"b\") is None; assert c.get(\"a\")==1; assert c.get(\"c\")==3，并补充 len 不超过 capacity 的断言。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.008362,
+ "input_tokens": 14285,
+ "cache_hit_tokens": 13056,
+ "output_tokens": 1718,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 13.2
+}

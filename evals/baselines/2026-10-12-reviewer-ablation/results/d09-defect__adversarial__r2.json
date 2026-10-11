@@ -1,0 +1,33 @@
+{
+ "item": "d09-defect",
+ "task": "swe-cyclopts-701",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/command_spec.py",
+  "line": 143,
+  "category": "incomplete_fix",
+  "severity": "major",
+  "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1TF241V33SPA90MD59JEC",
+ "max_turns": 20,
+ "path": "没有提交（budget_exhausted：单任务安全上限 max_turns 已用尽：20 / 20）",
+ "served_model": "deepseek-flash",
+ "verdict": null,
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.087207,
+ "input_tokens": 432983,
+ "cache_hit_tokens": 382592,
+ "output_tokens": 7291,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 44.6
+}

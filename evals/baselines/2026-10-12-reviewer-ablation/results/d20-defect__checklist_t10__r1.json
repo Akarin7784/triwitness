@@ -1,0 +1,55 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1JS04ZDTVTH0YY23DJY9T",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "补丁计算了 effective_timeout（第519-524行）但从未使用，实际传给 run_with_artifacts 的仍是 `timeout=int(timeout or 60)`。这导致 Issue 描述的主要复现路径没有被修复：Issue 明确说『Run ArtifactSandboxSession with default_timeout and/or execution_timeout parameters greater than 30 seconds』。当用户在会话上配置 execution_timeout=120（或 default_timeout=120）并调用 session.run(code)（不传 per-call timeout）时，effective_timeout 被算成 120 却被丢弃，实际传 60，代码仍在 60s 而非 120s 被终止。反之若用户配置比 60 更小的值（如 10），也会被强制成 60 而失效。即配置项在 ArtifactSandboxSession 路径上完全被忽略，与 SandboxSession 行为不一致（core/session_base.py:390 `actual_timeout = timeout or self.config.get_execution_timeout()` 本应做配置回退）。",
+   "suggestion": "直接把计算出的值传下去，例如 `timeout=effective_timeout`；更好的是让 None 透传，复用底层 session 的配置回退逻辑：`timeout=timeout`（run_with_artifacts -> container.run -> BaseSession.run 内部会把 None 回退到 config.get_execution_timeout()）。注意 run_with_artifacts 的签名是 `timeout: int = 30`，若传 None 需要同步把该签名改为 `float | None = None`，否则 30 这个硬编码默认又会覆盖配置。"
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "既有测试未随补丁更新，会失败。test_run_with_plotting_disabled（第221-228行）与 test_run_with_plotting_enabled_supported_language（第255-262行）在调用 run() 不传 timeout 时断言 `timeout=30`。补丁后 run() 内部传入的是 `int(None or 60)` = 60，断言 30 不再成立，两处测试都会 AssertionError。补丁只改了 llm_sandbox/session.py，未同步修改 tests/test_session.py（git show HEAD 确认该文件不在补丁内）。",
+   "suggestion": "修正这两处断言以匹配修复后的语义（无 per-call timeout 时应回退到 config.get_execution_timeout() 的值，默认 60），并建议新增一条显式用例：会话配置 execution_timeout/default_timeout=120 且 run() 不传 timeout 时，断言传给 run_with_artifacts 的 timeout 为 120，以真正覆盖 Issue 的复现场景。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 524,
+   "message": "即使 intent 是「配置为 None 时用 60」，当前逻辑也与底层不一致：SessionConfig.default_timeout 默认就是 60.0（core/config.py:54-57），get_execution_timeout() = execution_timeout or default_timeout（config.py:87-89）。这里的 `config_timeout if config_timeout is not None else 60` 只有在用户显式把 default_timeout 与 execution_timeout 都设为 None（意图为『无限运行』）时才会用 60，反而把用户显式关闭超时的语义改成了 60 秒，属于对既有行为的回归风险。",
+   "suggestion": "不要在此处自行兜底 60，直接沿用 config.get_execution_timeout() 的结果（可为 None 表示不超时），把 None 透传给底层由它统一处理。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.038076,
+ "input_tokens": 151571,
+ "cache_hit_tokens": 130048,
+ "output_tokens": 3488,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 20.6
+}

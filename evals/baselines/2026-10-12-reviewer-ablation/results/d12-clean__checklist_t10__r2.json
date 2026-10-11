@@ -1,0 +1,48 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2NSHMQS1H8PGQY5B03J9T",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "回归：__setitem__ 被 Entity.__init__ (第 39-43 行: 对非 '@' 开头的 key 调用 self[name] = value) 复用，而读取 crate 时实体就是用 properties 字典构造的（rocrate.py 的 __read_contextual_entities/__read_data_entities）。因此任何已存在的、包含无 @id 的嵌套 dict 属性的 crate 在加载时就会直接抛 ValueError，而不再能被读入。仓库自带的 test/test_model.py::test_entity_as_mapping 就是这样的用例：第 355 行 '{'@id':'#correction', 'badProp': {'k':'v'}, ...}' 构建 metadata，第 368 行 crate = ROCrate(crate_dir) 现在会在构造 #correction 时抛 ValueError('no @id in {'k':'v'}')，测试在第 368 行即失败（原测试期望第 414-415 行才在访问 correction['badProp'] 时抛错）。issue 明确说读取侧应更宽容（'When accessing values ... might make sense to be more forgiving'），此补丁反而让读取更严格。建议把校验限定在写入 API 上，例如只在显式赋值入口做检查，或在 __init__ 读取路径上绕过校验（例如读取时直接填充 _jsonld 而不走 __setitem__，或加一个内部标志跳过校验）。",
+   "suggestion": "让 __init__ 在从 properties 构造时跳过该校验（如直接 self._jsonld[name] = value，或给 __setitem__ 增加内部参数 allow_missing_id 供读取路径使用），只在用户显式赋值时校验，确保加载既有 crate（含 {'k':'v'} 之类嵌套 dict）仍能成功。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 167,
+   "message": "同一问题的另一条公开写入路径 append_to 未被覆盖：第 167 行 current_value.extend([{'@id': _.id} if isinstance(_, Entity) else _ for _ in value]) 会把无 @id 的裸 dict 原样写入 self._jsonld，因此 rd.append_to('license', {'@type':'CreativeWork', ...}) 仍会写出访问时抛 ValueError 的嵌套属性，issue 想要的一致性没有达成。建议在 append_to 中施加同样的检查。",
+   "suggestion": "在 append_to 里对每个待追加的 value 复用同样的 dict/@id 校验逻辑（建议抽出公共的校验函数），否则同类 bug 仍可经该路径复现。"
+  },
+  {
+   "severity": "major",
+   "file": null,
+   "line": null,
+   "message": "补丁没有任何测试改动（git show 显示只改了 rocrate/model/entity.py 的 3 行），对 issue 描述的写入场景、列表形式的 dict 值、以及 append_to 路径均无回归测试，无法防止后续再次退化。",
+   "suggestion": "新增测试：设置 {'@type':'CreativeWork'} 之类无 @id 的 dict（含列表形式）应抛 ValueError；同时保留一个加载含无 @id 嵌套 dict 的 crate 应成功、访问时按既有语义报错的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.045573,
+ "input_tokens": 240787,
+ "cache_hit_tokens": 215296,
+ "output_tokens": 3944,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 33.4
+}

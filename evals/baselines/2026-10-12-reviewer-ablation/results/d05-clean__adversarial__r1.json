@@ -1,0 +1,26 @@
+{
+ "item": "d05-clean",
+ "task": "slugify-edges",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0BYK0X6JTYMVY7JH7JWHT",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.006411,
+ "input_tokens": 11282,
+ "cache_hit_tokens": 10240,
+ "output_tokens": 1291,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 7.5
+}

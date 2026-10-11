@@ -1,0 +1,34 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2GY9PSBT6AJAQ2T38S068",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_lru.py",
+   "line": 5,
+   "message": "补丁本身修复正确（get 命中时 move_to_end 使被读键成为 MRU，Issue 场景下 b 被淘汰、a 保留），但仓库没有为淘汰顺序添加回归测试。现有 tests/test_lru.py 只覆盖 put/get 命中与默认值，若日后有人再次删掉 get 中的 move_to_end，测试仍会全绿而该缺陷会静默复发。",
+   "suggestion": "补充一个覆盖 Issue 场景的断言测试，例如 capacity=2 下 put a、put b、get a、put c 后断言 get('b') 返回默认值且 get('a')==1，以锁定淘汰顺序。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.007185,
+ "input_tokens": 18349,
+ "cache_hit_tokens": 16384,
+ "output_tokens": 1223,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 11.3
+}

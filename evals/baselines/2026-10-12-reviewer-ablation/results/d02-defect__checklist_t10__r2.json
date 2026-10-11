@@ -1,0 +1,48 @@
+{
+ "item": "d02-defect",
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2GQSP45MKD7S22C6W1RRD",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "把 \"s\" 设为 60 是回归。Issue 明确说 \"45s\" 是正常的（应得 45），而现有测试 tests/test_duration.py:7 断言 parse_duration(\"45s\") == 45；补丁后 45*60=2700，该既有测试直接失败，纯秒输入被破坏。同时含秒复合输入仍错：\"1h30m15s\" = 1*3600 + 30*60 + 15*60 = 6300，期望 5415（3600+1800+15）。",
+   "suggestion": "将 _UNITS 改为 {\"h\": 3600, \"m\": 60, \"s\": 1}，只修 \"m\"，保持 \"s\" 为 1。"
+  },
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "补丁只让部分复现输入(如 \"1h30m\"、\"2m\")通过，未真正修复 Issue 描述的行为：Issue 要求 h=3600、m=60、s=1，而 \"1h30m15s\" 仍返回 6300 而非 5415，属\"未修好\"。",
+   "suggestion": "修正 \"s\" 为 1 后，补充针对 \"1h30m15s\"、\"1h30m\"、\"2m\"、\"45s\" 的断言测试以覆盖复合与纯秒场景。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.007147,
+ "input_tokens": 14866,
+ "cache_hit_tokens": 13440,
+ "output_tokens": 1363,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 11.1
+}

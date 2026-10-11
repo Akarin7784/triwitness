@@ -1,0 +1,55 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2TRQ5KGHCHQ56ZY7Z1Z2A",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "计算出的 effective_timeout 被废弃不用：第 519-524 行算好的 effective_timeout（配置的 execution_timeout/default_timeout，缺省 60）在调用 run_with_artifacts 时并未使用，第 533 行传的是 `int(timeout or 60)`。当调用方未显式传 timeout（timeout is None）时，会传入 60，直接忽略用户在 ArtifactSandboxSession(execution_timeout=..., default_timeout=...) 配置的超时。例如配置 execution_timeout=120 后 run(code) 仍会被限制在 60 秒。这正是 Issue 所要求修复的“与 SandboxSession 行为一致”的路径（对照 session_base.py:390 `actual_timeout = timeout or self.config.get_execution_timeout()`）。传入显式 timeout>30 的那条路径确实修好了，但配置路径没有，属于没修完。",
+   "suggestion": "第 533 行改为 `timeout=int(effective_timeout) if effective_timeout is not None else ...`。更稳妥的做法是与 session_base 保持一致：`timeout=effective_timeout`（配置 None 时表示不限时/交给下游处理），避免再用 `or 60` 这种会吞掉 None 语义的写法：\n```python\ntimeout=effective_timeout,\n```\n若下游 run_with_artifacts 的类型标注要求 int，则在 effective_timeout 为 None 时单独决定兜底值，而不要用 `timeout or 60`。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "已有单测 test_run_with_plotting_disabled（第 227 行 `timeout=30`）与 test_run_with_plotting_enabled_supported_language（第 261 行 `timeout=30`）仍断言传给 run_with_artifacts 的 timeout 为 30。改动后未显式传 timeout 时新实现会传 60，这两处断言将失败；说明补丁没有同步更新/新增覆盖新行为的测试，也未见新增验证“配置 execution_timeout 生效”的用例（本该是本次修复的核心断言）。",
+   "suggestion": "更新这两个断言以匹配新行为，并新增用例：显式传 timeout=120 时断言 120 透传；配置 execution_timeout=120 且不传 timeout 时断言配置值生效（这才是 Issue 的核心回归点）。"
+  },
+  {
+   "severity": "minor",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "`int(timeout or 60)` 对 timeout=0 会把 0 当作假值替换为 60，与“不限时/立即超时”的直觉不符；虽然下游 session_base.run 也用 `timeout or ...` 有同样语义，但此处显式 `or 60` 会掩盖 0 值。若确定 0 非法可在入参校验时明确报错，而不是静默替换。",
+   "suggestion": "使用 `if timeout is None` 判定而非真值判定；或对 timeout<=0 显式抛 ValueError。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.020411,
+ "input_tokens": 56312,
+ "cache_hit_tokens": 47360,
+ "output_tokens": 2628,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 18.5
+}

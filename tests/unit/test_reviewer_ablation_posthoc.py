@@ -39,9 +39,11 @@ def _fake_repeats(tmp: Path) -> Path:
     import shutil
 
     d = tmp / "base"
-    shutil.copytree(BASE / "results", d / "results")
+    (d / "results").mkdir(parents=True)
+    for p in (BASE / "results").glob("*__r0.json"):  # 只取第一轮，r1 / r2 用 r0 复制出来
+        shutil.copy(p, d / "results" / p.name)
     led = json.loads((BASE / "ledger_by_run.json").read_text(encoding="utf-8"))
-    for p in sorted((BASE / "results").glob("*.json")):
+    for p in sorted((BASE / "results").glob("*__r0.json")):
         r = json.loads(p.read_text(encoding="utf-8"))
         if r["arm"] not in ("adversarial", "checklist_t10"):
             continue
@@ -60,6 +62,23 @@ def test_posthoc_repeats_section(tmp_path: Path) -> None:
     d0, lo, hi = data["repeats"]["diff_hit"]
     assert lo <= d0 <= hi and abs(d0 - 0.05) < 1e-9  # 三次完全相同 → 差值等于第一轮的 90% − 85%
     assert "按题聚类" in md
+    assert data["repeats"]["discordant_items"]  # 第一轮两臂有 3 题不一致，复制后仍然不一致
+    assert data["repeats"]["mcnemar"]["按题多数/检出"]["adversarial"][1] == 20
+
+
+def test_posthoc_round2_merged() -> None:
+    """入库的第一轮 + 第二轮（Eva 本机，r1 / r2）合并：两臂各 3 次，账本对得上，结论与 README 一致。"""
+    data, md = ph.analyse(ph.load(BASE))
+    arms = data["arms"]
+    assert arms["adversarial"]["n_defect"] == arms["checklist_t10"]["n_defect"] == 60
+    assert arms["adversarial"]["hit"] == arms["checklist_t10"]["hit"] == 49
+    led = json.loads((BASE / "ledger_by_run.json").read_text(encoding="utf-8"))
+    assert len(led) == 320 and abs(sum(v["cost_cny"] for v in led.values()) - 18.9878) < 1e-3
+    rep = data["repeats"]
+    assert all(m["p_holm"] >= 0.05 for k, m in rep["mcnemar"].items() if k.startswith("按题多数"))
+    _lo, hi = rep["inconclusive"]["diff_checklist_minus_adversarial"][1:]
+    assert hi < 0  # checklist_t10 没下结论显著更少
+    assert "逐题对比" in md
 
 
 def test_ledger_by_run_prefers_task_id_and_keeps_existing(tmp_path: Path) -> None:

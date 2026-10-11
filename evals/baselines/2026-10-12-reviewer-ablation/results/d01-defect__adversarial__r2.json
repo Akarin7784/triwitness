@@ -1,0 +1,48 @@
+{
+ "item": "d01-defect",
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1K38CM6NYMQ9QQF6RDZT0",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "`if not line: continue` 只跳过严格空串（splitlines() 产出的 \"\"），对只含空白字符的“空行”无效。例如 parse_rows(\"a,1\\n   \\nb,2\") 中 line == \"   \" 时 `not line` 为 False，继续执行 `parts = [\"   \"]`，`int(parts[1])` 仍然抛出 IndexError: list index out of range——即 Issue 所述的异常在含空白符的空行上依然可复现，这类行在真实 CSV（含缩进/空格填充）里并不罕见。建议改为 `if not line.strip(): continue`（或 `if not line.strip():` 后再 split），并把该输入补进测试。",
+   "suggestion": "把守卫改为 `if not line.strip(): continue`，以同时覆盖空串与仅含空白字符的行。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_basic.py",
+   "line": 5,
+   "message": "补丁未新增任何覆盖空行场景的回归测试，tests/test_basic.py 仅有原始 happy path（\"a,1\\nb,2\"），无法防止后续改动重新引入该 IndexError。",
+   "suggestion": "增加用例，如 parse_rows(\"a,1\\n\\nb,2\") == [(\"a\", 1), (\"b\", 2)]、parse_rows(\"a,1\\n\") == [(\"a\", 1)]、parse_rows(\"\") == []，以及（若接受上面建议）parse_rows(\"a,1\\n   \\nb,2\") == [(\"a\", 1), (\"b\", 2)]。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.01542,
+ "input_tokens": 18983,
+ "cache_hit_tokens": 17664,
+ "output_tokens": 3437,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 19.2
+}

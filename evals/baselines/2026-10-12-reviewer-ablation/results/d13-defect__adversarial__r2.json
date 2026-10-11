@@ -1,0 +1,55 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P20EK13ZR4X7BR611X0SJF",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "注释检测差一位，普通 `--` 注释不会被跳过（相对 base 的回归）。依据：`next_chr()`（slpp.py:113-119）里 `self.ch = self.text[self.at]; self.at += 1`，所以进入 `skip_comments()` 时 `self.at` 已经指向 `self.ch` 的下一个字符，判断 `--` 必须用 `self.text[self.at] == '-'`；写成 `self.text[self.at + 1]` 实际看的是 `--` 之后的第三个字符，只有 `---…`/`----…` 才碰巧被识别。\n实测（按代码逐字符推演）：\n- base 里 `reg.sub('--.*$', re.M)` 会把注释整行删掉，`decode('-- x\\n{1}')` 返回 `{0: 1}`；打补丁后同一输入走 `value()→number()`，`next_digit` 对第二个 '-' 抛 `mfnumber_minus`（打印 'Malformed number (no digits after initial minus).'）后返回 0，结果是 `0`。\n- `decode('{1,\\n-- c\\n}')`：base 得到 `[1]`；打补丁后注释字符 'c' 被当成表元素，得到 `[1, 'c']`（k 在 '}' 分支写入 o[idx]）。\n- `decode('{1, -- a, b\\n 2}')`：base 得到 `[1, 2]`；打补丁后注释里的 ',' 触发 `o[idx] = k`，得到 `[1, 'a', 'b']`。\n即：修复字符串用例的同时，把 FIXME 所抱怨的注释处理从「能用」变成「不可用」，属于 blocker 级回归。",
+   "suggestion": "把条件改为 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（边界保护见另一条）。同时在 tests.py 补回归用例：`decode('\"--3\"')`、含注释的表（如 `{1,\\n-- c\\n}` 期望 `[1]`）、以及注释在文本开头的情况，避免再出现「修 A 坏 B」。"
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "`self.text[self.at + 1]` 在文本以 '-' 结尾（或 '-' 位于最后两个字符内）时越界抛 IndexError。例：`decode('--')` → `self.at == 1`、`len == 2`，取 `text[2]` 抛 `IndexError: string index out of range`，而 base 版本中该输入被 regex 清成空串后 `return None`；`decode('-')`、`decode('{1,--')` 同样抛 IndexError，base 分别是 0 和 ParseError/0。该异常没有捕获，会直接抛给调用方，比 base 的行为更糟。",
+   "suggestion": "加长度判断：`self.at < self.len and self.text[self.at] == '-'`，使单个尾部 '-' 退回旧的 number() 分支行为，注释行则正常走到文本结尾由 `while self.ch` 自然退出。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "`skip_comments()` 遇到换行时递归调用 `self.white()`，而 `white()` 末尾又调用 `skip_comments()`（slpp.py:101），因此连续 N 行注释会产生约 2N 层递归。等注释检测修好后（普通 `--` 也能识别），一个开头有 500+ 行连续注释的 Lua 文件就可能触发 RecursionError（默认 1000 层上限）。",
+   "suggestion": "把注释+空白的跳过改成循环（例如在 `white()` 内 `while` 中：遇空白 next_chr，遇 `--` 则消费到行尾），不要用 white↔skip_comments 互相递归。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.106987,
+ "input_tokens": 68549,
+ "cache_hit_tokens": 59904,
+ "output_tokens": 24286,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 125.3
+}

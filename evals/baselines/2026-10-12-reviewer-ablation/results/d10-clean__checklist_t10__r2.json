@@ -1,0 +1,48 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2MYW6952YNPP9K0S9YFMH",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "没有为本次修复添加回归测试。tests/test_autodiscover.py 中已有多个 get_dirs() 测试（TestLoaderSettingsModule / TestBaseDir），但没有任何用例覆盖 STATICFILES_DIRS 含 (prefix, path) 元组的情况（grep 'tuple|downloads|webfiles' 在 tests/ 下无匹配）。虽然补丁行为正确，但缺少测试意味着该路径将来可能再次回归而无法被察觉。",
+   "suggestion": "在 tests/test_autodiscover.py 中新增一个用例，用 @override_settings(STATICFILES_DIRS=[(\"downloads\", <real_dir>)]) 断言 loader.get_dirs() 返回解包后的第二个元素对应目录而非抛异常。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "元组第一项（prefix）被直接丢弃（component_dir = component_dir[1]）。Django 中该 prefix 用于静态文件 URL 映射，此处仅用于“查找组件目录”，丢弃 prefix 对查找语义是可接受的，但建议加一行注释说明为什么只要第二项，避免后续读者误解为遗漏。另外，长度为 1 或 >2 的 tuple/list 不会被解包，会走到 except 分支被 skip（Django 本身也只接受长度 2，故不算 bug）。",
+   "suggestion": "在解包行上方补一句注释，例如说明 (prefix, path) 中只有 path 与组件目录查找相关。"
+  },
+  {
+   "severity": "nit",
+   "file": "src/django_components/template_loader.py",
+   "line": 42,
+   "message": "try: Path(component_dir) 的返回值被丢弃，仅用于类型校验，逻辑上等价于一次“类型探测”。这本身可用，但可读性上更清晰的做法是直接对非 str/bytes/PathLike 类型做判断（如 os.fspath 探测）。当前实现功能无问题，bytes 类型会被 Path() 抛 TypeError 并被 warning+continue 优雅跳过，而非崩溃，属可接受的宽松处理。",
+   "suggestion": "可保留现状；若想更明确，可改用 isinstance 或 os.fspath 探测并复用返回值。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.027083,
+ "input_tokens": 92696,
+ "cache_hit_tokens": 81152,
+ "output_tokens": 3479,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 27.3
+}

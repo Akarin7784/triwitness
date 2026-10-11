@@ -1,0 +1,41 @@
+{
+ "item": "d12-defect",
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1Z5M4KYM6K3C072MP6KKY",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "条件取反了，逻辑与 Issue 的诉求完全相反，且引入严重回归。\n\n1) Issue 未被修复：`if isinstance(v, dict) and \"@id\" in v: raise ValueError(f\"no @id in {v}\")` 只在字典**包含** `@id` 时抛错，而 Issue 的例子 `crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC-O\", ...}`（无 `@id`）依然被静默接受，随后 `crate.root_dataset[\"license\"]` 仍然会在 entity.py:94 抛出 `ValueError: no @id in {...}`——即 Issue 描述的“写得进、读不出”问题原样保留。\n\n2) 回归：`{\"@id\": ...}` 正是 JSON-LD 引用的规范形式，也是库内部和读取 crate 时的常见属性值，现在一律被拒绝。\n- 读取任意 crate：`rocrate/rocrate.py:148` 用 `entities.pop(metadata_id)` 作为 properties 构造 `Metadata` 实体，而元数据条目通常含 `\"about\": {\"@id\": \"./\"}`、`\"conformsTo\": {\"@id\": ...}`（见 `test/test-data/read_crate/ro-crate-metadata.json:7-12`）；`Entity.__init__` 在 entity.py:43 走 `self[name] = value`，于是直接命中本行抛错。RootDataset 同理（rocrate.py:145 传入的 `\"mainEntity\": {\"@id\": ...}`）。这意味着 `ROCrate(path)` 对正常 crate 基本无法工作（test_read.py / test_readwrite.py 覆盖的路径）。\n- 库内部调用点也会炸：`rocrate/rocrate.py:493` `self.metadata[\"conformsTo\"] = [{\"@id\": _} for _ in sorted(profiles)]`（`add_workflow(..., main=True)` 路径，test_model.py:237-244 覆盖）会抛 `ValueError: no @id in {'@id': ...}`。\n\n修复：把条件改为 `if isinstance(v, dict) and \"@id\" not in v:`，并补一个回归测试：设置 `{\"@id\": ...}`/Entity/标量应成功，设置无 `@id` 的字典（如 Issue 中的 license 示例）应抛 `ValueError`。",
+   "suggestion": "for v in values:\n    if isinstance(v, dict) and \"@id\" not in v:\n        raise ValueError(f\"no @id in {v}\")"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.056637,
+ "input_tokens": 179588,
+ "cache_hit_tokens": 160256,
+ "output_tokens": 8525,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 49.9
+}

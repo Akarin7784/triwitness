@@ -1,0 +1,41 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2P5DEP1WB4C79KF0MA4XF",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "`self.text[self.at]` 越界：next_chr 的语义是 self.ch == text[self.at-1]、self.at 指向下一个字符（见 slpp.py:117-118）。当 self.ch 恰为输入最后一个字符（此时 self.at == self.len）时，self.text[self.at] 抛 IndexError，而 decode() 外层没有 try/except（slpp.py:43-51），异常会直接抛给调用方。可复现：slpp.decode('-')、slpp.decode(' -')、slpp.decode('\\t-') —— 之前会走 number()->next_digit 抛 ParseError 被捕获返回 0（slpp.py:226-227, 244-247），现在直接崩溃，是回归。",
+   "suggestion": "判断时先做边界保护，例如：`if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`；或写成 `self.ch == '-' and self.text[self.at:self.at+1] == '-'`。同时建议给 decode() 对这类畸形输入补一个用例，明确期望返回 0 还是 None。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 103,
+   "message": "没有为 Issue 中的场景补回归测试。tests.py 未被我改动（git show 仅 slpp.py），grep 也找不到任何 comment 相关用例，因此 '--3' 出现在字符串内这一修复点没有测试守护，后续很容易被再次破坏。",
+   "suggestion": "在 TestSLPP 增加用例，例如 self.assertEqual(slpp.decode('\"--3\"'), '--3')、self.assertEqual(slpp.decode('{a = \"--3\"}'), {'a': '--3'})，并补一条短注释（含行尾注释、注释后无换行）的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.02879,
+ "input_tokens": 78343,
+ "cache_hit_tokens": 70144,
+ "output_tokens": 4797,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 37.4
+}

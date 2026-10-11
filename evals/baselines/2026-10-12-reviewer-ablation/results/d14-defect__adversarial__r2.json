@@ -1,0 +1,48 @@
+{
+ "item": "d14-defect",
+ "task": "swe-marimo-8401",
+ "kind": "defect",
+ "truth": {
+  "file": "marimo/_ast/cell_id.py",
+  "line": 67,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P21ASG0DPFZ9AR01J0Q7XN",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 67,
+   "message": "判据写反了一格：`if len(cell_id_str) < 36: return False` 对 36 字符的裸 UUID 不生效，函数会继续走到 `return str(uuid_obj) == uuid_to_test`。对 36 字符的合法 uuid4 字符串（如 \"c9bf9e57-1685-4c89-bafb-ff5af830be8a\"），`uuid_to_test` 就是整个字符串，`UUID(..., version=4)` 会原样 round-trip（version=4 时 variant/version 位本就是 4/RFC4122），所以仍返回 True。\n\n这正是补丁自己在 docstring（第 54 行 \"<uuid> -> VSCode cell (36 chars)\"、第 50 行 \"including ... bare UUIDs (e.g. from VSCode)\"）里声明的要修的场景，也就是说 VSCode 单元格 ID 依旧被判定为 external：marimo/_save/save.py:163 会置 `_external = True`，于是 164-167 行不取 graph/glbls，`base_block` 保持 None；首次调用时 marimo/_save/save.py:272-279 走 `graph_from_scope(self.scope)`，而 scope 里没有 App 实例，于是 marimo/_save/toplevel.py:19-26 打出 Issue 里那条 “The scope does not contain a valid 'app' instance. marimo behavior may be undefined.”，graph/cell_id 退化为空，缓存仍然失败。\n\n另一个直接证据：补丁新增的 doctest 第 61-62 行断言 `is_external_cell_id(\"c9bf9e57-1685-4c89-bafb-ff5af830be8a\")` 为 False，但按当前实现它返回 True，该 doctest 会失败。",
+   "suggestion": "把提前返回改成排除裸 UUID（即要求 UUID 之后还有非空后缀），例如：`if len(cell_id_str) <= 36: return False`；或保留提前返回并用 `return str(uuid_obj) == uuid_to_test and len(cell_id_str) > 36`。注意外置/嵌套 app 的 cell id 是 `uuid4()` + 4 字符后缀（marimo/_ast/app.py:239、287 与 CellIdGenerator.create_cell_id），长度 40，改成 >36 后仍能被正确识别。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/_ast/test_app.py",
+   "line": 1646,
+   "message": "没有任何测试覆盖“裸 UUID 不是 external”这一被声称修复的行为。全仓库对 is_external_cell_id 的唯一断言是 tests/_ast/test_app.py:1646（external_prefix() + 4 字符后缀，长度 40，改动前后都返回 True），所以本次 off-by-one 不会被现有测试发现；补丁新增的检查只是 doctest（marimo/_ast/cell_id.py:57-62），而 pyproject.toml:522 的 pytest addopts 里没有 --doctest-modules，CI 不会执行它——而且该 doctest 本身当前就是失败的（见上一条）。",
+   "suggestion": "在 tests/_ast/ 下补一个用例，直接断言 `is_external_cell_id(str(uuid4()))` 为 False、`is_external_cell_id(str(uuid4()) + \"Hbol\")` 为 True（可另测普通 4 字符 id 为 False），并确认它能在修改前的实现上失败，作为回归保护。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.103228,
+ "input_tokens": 506051,
+ "cache_hit_tokens": 463872,
+ "output_tokens": 12943,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 88.2
+}

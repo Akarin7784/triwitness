@@ -1,0 +1,41 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1FNQDCG57HFRA8JEA1W2R",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "`_add_broker` 里新增的 `if broker in self.brokers: raise SetupError(...)` 实际上不可达：唯一调用方 `set_broker` 已在前面用 `if self.brokers: raise` 挡住，而 `_init_setupable_` 调用时 `self.brokers` 刚初始化为 `[]` 且只调用一次。属冗余/死代码，不影响正确性。",
+   "suggestion": "若想保留重复添加的防御，可让 `set_broker` 不再单独判空而统一走 `_add_broker` 的检查；否则删除该分支以免误导。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 14,
+   "message": "diff 未新增任何测试。现有 `test_set_broker` 仅断言 `app.broker is broker`，无法覆盖本 Issue 的核心症状（`set_broker` 后 Context 注入/`_update_fd_config` 是否被调用）——修复前该测试也会通过，属于“没测到真正的行为”。这不是改弱测试，但缺少针对修复点的回归测试。",
+   "suggestion": "补一个测试：构造无 broker 的 App，`app.set_broker(broker)` 后断言 `broker.config.fd_config.context` 与 `app.context` 一致，或在 broker 的 subscriber 上验证 Context 注入可用。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.053409,
+ "input_tokens": 210756,
+ "cache_hit_tokens": 183040,
+ "output_tokens": 5508,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 46.9
+}

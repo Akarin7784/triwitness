@@ -1,14 +1,14 @@
 {
  "adversarial": {
-  "n_defect": 20,
-  "n_clean": 20,
-  "hit": 17,
-  "hit_blocker": 15,
-  "loose": 17,
-  "fp": 5,
-  "fp_major": 7,
-  "failed": 8,
-  "cost_cny": 3.7329
+  "n_defect": 60,
+  "n_clean": 60,
+  "hit": 49,
+  "hit_blocker": 44,
+  "loose": 50,
+  "fp": 15,
+  "fp_major": 24,
+  "failed": 20,
+  "cost_cny": 11.5269
  },
  "checklist_t03": {
   "n_defect": 20,
@@ -22,15 +22,15 @@
   "cost_cny": 1.1569
  },
  "checklist_t10": {
-  "n_defect": 20,
-  "n_clean": 20,
-  "hit": 18,
-  "hit_blocker": 16,
-  "loose": 18,
-  "fp": 5,
-  "fp_major": 8,
-  "failed": 4,
-  "cost_cny": 1.1751
+  "n_defect": 60,
+  "n_clean": 60,
+  "hit": 49,
+  "hit_blocker": 44,
+  "loose": 50,
+  "fp": 16,
+  "fp_major": 26,
+  "failed": 8,
+  "cost_cny": 3.6539
  },
  "consensus_t03": {
   "n_defect": 20,
@@ -44,15 +44,15 @@
   "cost_cny": 4.8898
  },
  "consensus_t10": {
-  "n_defect": 20,
-  "n_clean": 20,
-  "hit": 15,
-  "hit_blocker": 13,
-  "loose": 15,
-  "fp": 4,
-  "fp_major": 6,
-  "failed": 8,
-  "cost_cny": 4.908
+  "n_defect": 60,
+  "n_clean": 60,
+  "hit": 42,
+  "hit_blocker": 37,
+  "loose": 43,
+  "fp": 13,
+  "fp_major": 19,
+  "failed": 21,
+  "cost_cny": 15.1808
  },
  "same": {
   "n_defect": 20,

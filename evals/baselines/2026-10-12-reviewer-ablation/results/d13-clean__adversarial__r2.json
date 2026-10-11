@@ -1,0 +1,41 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P203EE0MMX0VQBG7S2VMWM",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "`self.text[self.at]` 没有边界检查，输入以孤立 '-' 结尾时抛 IndexError。`next_chr()` 的不变式是 `self.ch == self.text[self.at-1]`，所以 `self.text[self.at]` 取的是“下一个字符”；当 `self.ch` 已是最后一个字符时 `self.at == self.len`，此处必然越界。复现：`slpp.decode('-')`（len=1，at=1 → `self.text[1]`，IndexError: string index out of range）、`slpp.decode('{-')`、`slpp.decode('{1,-')`，甚至只有注释且以 '-' 结尾的输入 `slpp.decode('--c\\n-')`。对照：`decode('- ')`（末尾有空格）不会崩，仍走 `number()` 的 'mfnumber_minus' 分支返回 0——说明这是纯 EOF 越界。这是相对基线的回归：基线中 `decode('-')` 会打印 'Malformed number (no digits after initial minus).' 并返回 0（ERRORS['mfnumber_minus'] 是专门设计的错误路径），现在变成未捕获的 IndexError，调用方统一 `except ParseError` 的处理会直接失效。",
+   "suggestion": "加上边界判断，例如 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`（或改为比较 `self.ch == self.text[self.at-1]` 之外的安全写法）。"
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "`white()`（101 行）调用 `skip_comments()`，而 `skip_comments()` 遇到换行又回调 `self.white()`（108 行），两者互递归：每多一行**连续注释**就多压大约 2 层栈帧（white + skip_comments），且这些帧要等整段注释块处理完才返回。N 行连续注释需要 O(N) 栈，CPython 默认 recursionlimit=1000，约 500 行连续注释后 `decode()` 会抛 RecursionError。连续长注释块在 Lua 配置/生成文件里是合法且常见的输入，tests.py 没有覆盖所以回归测试发现不了。",
+   "suggestion": "改成迭代实现，避免互递归，例如：`while self.ch == '-' and self.at < self.len and self.text[self.at] == '-':` 里先把注释消费到 '\\n'，再在方法内直接跳过空白（`while self.ch and self.space.match(self.ch): self.next_chr()`），然后由外层 while 继续判断下一行是否又是注释，而不是调用 `self.white()`。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.323933,
+ "input_tokens": 268485,
+ "cache_hit_tokens": 258816,
+ "output_tokens": 77272,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 427.7
+}

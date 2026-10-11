@@ -1,0 +1,48 @@
+{
+ "item": "d08-defect",
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "defect",
+ "truth": {
+  "file": "src/cfnlint/jsonschema/_utils.py",
+  "line": 52,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1CXE3C5FX4ZQMS6KAQSSR",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 50,
+   "message": "新增条件的第二部分 `or FUNCTION_TRANSFORM in validator.context.functions` 会在整个 object 上跳过所有属性（`continue` 对每个 property 都命中），而不仅是跳过键名恰为 `Fn::Transform` 的那一项，等于彻底关闭 additionalProperties 检查。依据：`Fn::Transform` 存在于 `cfnlint.helpers.FUNCTIONS`（src/cfnlint/helpers.py:179），而本 Issue 相关的 E3009 `CfnInit.validate` 正是用 `functions=list(FUNCTIONS)`（src/cfnlint/rules/resources/CfnInit.py:40）来 evolve 上下文；同源的 E3028 `Metadata`（src/cfnlint/rules/resources/Metadata.py:70）与 E3002 `Properties`（src/cfnlint/rules/resources/properties/Properties.py:74）也使用 `FUNCTIONS`。因此在 cfn-init（cfn_init.json 大量依赖 `additionalProperties: false` 捕获错拼键，见 src/cfnlint/data/schemas/other/resources/cfn_init.json:2,38,41 等）以及所有资源 Properties 校验中，任何 `... was unexpected` 的额外属性错误都会被静默吞掉。这属于典型回归：`files`/`commands`/`packages` 下写错属性名、或 properties 中传错键名都不再报错。",
+   "suggestion": "删除第二个条件，仅保留 `if property == FUNCTION_TRANSFORM: continue`。这样只放行字面量键 `Fn::Transform`，其余额外属性仍交由 additionalProperties 校验。若确需按上下文决定是否允许该函数，也应单独判断被跳过项本身（`property == FUNCTION_TRANSFORM` 与上下文的组合），而不要用 `FUNCTION_TRANSFORM in validator.context.functions` 作为整个循环的旁路。"
+  },
+  {
+   "severity": "major",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 50,
+   "message": "该修复未覆盖真正的根因位置并且缺少回归测试。Issue 的报错来自 E3009 对 `Resources/*/Metadata/AWS::CloudFormation::Init` 的校验，其 schema（cfn_init.json）中对 `files/<path>` 使用 `additionalProperties: false` + 显式 properties（content/mode/owner/group 等），而 `Fn::Transform` 是合法内联函数。当前实现没有针对测试的定向用例，也没有覆盖同一问题在 `Metadata`（E3028）与资源 `Properties`（E3002）下的行为，容易在后续改动中再次回归。",
+   "suggestion": "在 test/unit/rules/resources/test_cfn_init.py（或新增用例）中加入含 `Fn::Transform` 于 cfn-init files 节点的模板，断言无 E3009 错误；同时补一个“错误属性名仍应报错”的反例用例，确保 additionalProperties 未被关闭。"
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.053239,
+ "input_tokens": 446947,
+ "cache_hit_tokens": 418176,
+ "output_tokens": 4026,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 52.8
+}

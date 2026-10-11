@@ -1,0 +1,34 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P27CA02GQ1KA90YN2GD4J5",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "新增的 branch_exists 检查（send_pull_request.py:171 的 while 循环，经 :144 调用 requests.get）会在原有 default_branch 查询之前额外发一次 GET，使 tests/test_send_pull_request.py:237 的 `assert mock_get.call_count == 1` 变为 2 而失败（基线版本只有 1 次 GET，断言原本成立；parametrize 的 branch/draft/ready 三个用例都会失败）。该文件不在本次 diff 中，即纯源码补丁会留下红灯的测试套件。",
+   "suggestion": "随补丁更新该测试：把 mock_get.call_count 断言改为 2（或按分支存在性 mock 的调用数），并补一个用例让第一次 /branches/... 返回 200、第二次返回 404，断言 checkout 使用 f\"git -C {repo_path} checkout -b openhands-fix-issue-42-try2\"，以覆盖新增的重试命名逻辑；若流水线另外应用测试补丁，可忽略此条。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.141212,
+ "input_tokens": 173148,
+ "cache_hit_tokens": 157824,
+ "output_tokens": 30683,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 192.6
+}

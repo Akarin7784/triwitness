@@ -1,0 +1,48 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1C558R8GCGNMYMNCA8G5X",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "执行者把正则改成 `^\\d{6}\\.\\d{2,3}`，相对 Issue 明确建议的 `^\\d{6}\\.\\d{2,3}$` 去掉了结尾锚点 `$`。去掉锚点后该正则不再要求匹配到字段结尾，因此会额外接受 `122144.751`、`122144.7589` 等 4 位及以上小数、或 `122144.75XYZ` 这类带尾随内容的字段。当前所有已知 ASH 子类型（HPR/LTN/POS/VEL/ATT）的 data[1] 都是字母或合法 ATT 时间戳，未发现会被误判成 ASHRATT 的真实报文，故实际回归风险较低，不构成 blocker；但这属于超出需求的放松匹配。",
+   "suggestion": "建议恢复锚点并保留对更多小数的支持，例如 r'^\\d{6}\\.\\d{2,3}$'（Issue 的建议），如确需接受任意位数小数可写 r'^\\d{6}\\.\\d{2,}$'。"
+  },
+  {
+   "severity": "nit",
+   "file": "test/test_ash.py",
+   "line": 16,
+   "message": "补丁只改了源码，未为 Issue 报告的场景（两位小数时间戳，如 `$PASHR,122144.75,240.68,T,,,,,,,2*04`）添加回归测试，现有 test_ashratt 仅覆盖三位小数的 `130533.620`。这不是改弱测试（原有测试未被删除或跳过），但缺少对该 bug 的直接保护，未来若正则再收紧可能无人察觉。",
+   "suggestion": "新增一条测试，用 Issue 中的两位小数报文解析并断言 type(msg) == pynmea2.ash.ASHRATT 且 msg.timestamp == datetime.time(12,21,44,750000)。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.026663,
+ "input_tokens": 122714,
+ "cache_hit_tokens": 111232,
+ "output_tokens": 3239,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 32.8
+}

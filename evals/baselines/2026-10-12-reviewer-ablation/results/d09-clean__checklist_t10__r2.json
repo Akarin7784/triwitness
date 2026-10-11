@@ -1,0 +1,34 @@
+{
+ "item": "d09-clean",
+ "task": "swe-cyclopts-701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2KCBZ7KA4CTPZDRZZXQFE",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "cyclopts/command_spec.py",
+   "line": 141,
+   "message": "该三行 chain(...)+show=False 逻辑与 core.py:1343-1344 直接注册路径完全重复。两处若未来独立演化（例如核心路径改用共享 helper 或调整隐藏规则）容易产生漂移，导致惰性加载与直接注册行为再次不一致——正是本 Issue 的成因。建议抽出一个共用函数（如 core 中的 _hide_help_version_flags(app)）并在两处调用。仅为可维护性建议，不影响正确性。",
+   "suggestion": "在 cyclopts/core.py 中提供 _hide_help_version_flags(app) 辅助函数，core.command 与 CommandSpec.resolve 共用。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.03952,
+ "input_tokens": 245396,
+ "cache_hit_tokens": 225278,
+ "output_tokens": 3724,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 51.7
+}

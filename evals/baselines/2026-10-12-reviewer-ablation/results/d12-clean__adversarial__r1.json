@@ -1,0 +1,48 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0QCHEPN7F2MANMBPWR86X",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "校验放在 __setitem__ 里会连带影响从磁盘读取 crate 的路径，造成回归：Entity.__init__ 对 properties 的非 '@' 键调用 self[name] = value（entity.py:38-43），而加载 crate 时 ROCrate.__read_contextual_entities 正是用 ContextEntity(self, identifier, entity) 传入整份 JSON-LD（rocrate.py:175-180）。因此只要 metadata 中存在形如 {\"@type\": \"CreativeWork\", ...} 这类无 @id 的嵌套字典，ROCrate(<dir>) 在构造阶段就抛 ValueError，而不是像以前那样只在访问该属性时抛。仓库现有测试即可复现：test/test_model.py:355 的 \"badProp\": {\"k\": \"v\"} 在 test/test_model.py:368 处 crate = ROCrate(crate_dir) 会直接失败，第 414-415 行原本期望的 pytest.raises(ValueError) 根本执行不到（第 368 行在 raises 块之外），即该测试由通过变为报错。这也与 issue 中 \"When accessing values from an RO Crate, it might make sense to be more forgiving\" 的诉求相违背——本应无法访问的只是那个属性，现在整个 crate 都打不开。",
+   "suggestion": "把校验限定在用户主动赋值路径上，同时让读取保持宽容：例如让 Entity.__init__ 直接写入原始值（象 '@' 开头键那样 self._jsonld[name] = value，或抽出一个 _set_property(name, value, check_id=False) 供加载使用），并在 __getitem__ 中把无 @id 的 dict 原样返回（替换 entity.py:91-94 的 raise ValueError）而不是抛出异常；同时同步更新/新增测试，覆盖\"加载含无 @id 嵌套字典的 crate 不报错 + 赋值时抛错\"两种行为。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 167,
+   "message": "append_to 仍会把非 Entity 的 dict 原样写入 _jsonld，未做 @id 校验：rd.append_to(\"license\", {\"@type\": \"CreativeWork\", \"name\": \"CC-0\"}) 不会报错，之后 rd[\"license\"] 依旧抛 ValueError（entity.py:94），即 issue 中\"写入能成功、读回却失败\"的问题在这条公开 API 上依然存在（compare 新增校验只在 __setitem__ 生效）。",
+   "suggestion": "在 append_to 中对扩展进 current_value 的值做同样的 isinstance(v, dict) and \"@id\" not in v 校验并抛 ValueError，保证所有写入入口行为一致。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/rocrate.py",
+   "line": 605,
+   "message": "ROCrate.update_jsonld 通过 entity._jsonld.update(jsonld) 直接改底层字典，完全绕过 __setitem__ 的新校验（同文件 608-627 的 add_or_update_jsonld 也走这条路径）。用户按 README 记录的方式调用 crate.update_jsonld({\"@id\": \"./\", \"license\": {\"@type\": \"CreativeWork\", ...}}) 后，root_dataset[\"license\"] 仍会抛 ValueError，即 issue 描述的不可读状态仍可通过文档化的公开 API 制造出来。",
+   "suggestion": "update_jsonld 改为逐项走 entity[key] = value（或在写入前对每个非 '@' 键复用与 __setitem__ 相同的校验函数），使 add_jsonld/update_jsonld/直接赋值三者行为一致。"
+  }
+ ],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.165611,
+ "input_tokens": 910784,
+ "cache_hit_tokens": 851328,
+ "output_tokens": 22282,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": true,
+ "elapsed_s": 139.0
+}

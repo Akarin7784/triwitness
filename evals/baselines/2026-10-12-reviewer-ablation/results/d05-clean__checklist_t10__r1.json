@@ -1,0 +1,41 @@
+{
+ "item": "d05-clean",
+ "task": "slugify-edges",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1BFY9WJA6SK01BHYR5ECY",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "tests/test_slug.py",
+   "line": 4,
+   "message": "补丁未新增任何测试来锁定 Issue 描述的行为：现有唯一测试 test_simple 只覆盖 \"Hello World\" → \"hello-world\"（旧实现同样通过），无法防止未来回归。Issue 明确要求首尾不出现 '-' 且分隔符折叠，应补断言，例如 assert slugify(\"  Hello,  World!  \") == \"hello-world\"、assert slugify(\"a -- b\") == \"a-b\"、assert slugify(\"---\") == \"\"。这里只是缺测试，不是把已有测试改弱（未发现删改/skip/特判）。",
+   "suggestion": "在 tests/test_slug.py 增加上述边界用例，覆盖纯分隔符输入得到空串、以及内部连续分隔符折叠。"
+  },
+  {
+   "severity": "minor",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "行为覆盖的边界确认：_NON_WORD = re.compile(r\"[^a-z0-9]+\") 使用 + 量词，因此 \"a -- b\".lower() 中 \" -- \" 被整体替换为单个 \"-\" 得到 \"a-b\"，\"  Hello,  World!  \" 得到 \"-hello-world-\" 再 strip 为 \"hello-world\"，纯分隔符输入（如 \"---\" 或 \"!!!\"）得到 \"\"，均符合 Issue 预期，无异常路径。",
+   "suggestion": "无需修改实现；若担心 Unicode 空白/其他分隔符，可补充测试而非改逻辑。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.006123,
+ "input_tokens": 16198,
+ "cache_hit_tokens": 14974,
+ "output_tokens": 1150,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 9.5
+}

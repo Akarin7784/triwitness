@@ -1,0 +1,55 @@
+{
+ "item": "d14-defect",
+ "task": "swe-marimo-8401",
+ "kind": "defect",
+ "truth": {
+  "file": "marimo/_ast/cell_id.py",
+  "line": 67,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1FEZJAY26NJE1022CS0NP",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 44,
+   "message": "这批改动没有修好 Issue 描述的行为。Issue 的告警文本来自 marimo/_save/toplevel.py:19-28 的 get_app_from_scope()（scope 中没有 App 实例时 LOGGER.warning(\"The scope does not contain a valid 'app' instance...\") 并返回 None），进而由 graph_from_scope()/get_cell_id_from_scope() 返回空图与空 cell_id，使 marimo/_save/save.py:271-279 的 _build_base_block 使用空 graph/cell_id 导致 mo.cache 缓存失败。本 diff 只把 is_external_cell_id() 的切片改为 len()<36 提前返回并更新 docstring，而 is_external_cell_id 的唯一调用点在 marimo/_save/save.py:163，仅影响 self._external 的判定；对 scope 中缺少 app、或在 cell 中发现不到同名 fn（get_cell_id_from_scope:55-57 get_cell_data_by_name 返回 None）这些真正触发缓存失败的路径完全没有改动。也就是说 Issue 的核心行为（告警 + 缓存失败）未被修复。",
+   "suggestion": "在 _save/save.py:_set_context / _prepare_call_execution 的 external 分支中修复 scope 解析：例如优先使用 safe_get_context().app（或 ctx.execution_context 对应的 app）作为 graph 源，而不是依赖 scope[\"app\"]；并在 get_app_from_scope/get_cell_id_from_scope 找不到 app/cell 时不要静默返回空 graph + CellId_t(\"\")，应保证哈希所需的最小 cell/graph 信息（或去掉误报的 warning）。同时补充一个与 Issue 复现一致的回归测试：在 kernel/embedded app 中 @mo.cache 装饰函数并调用，断言没有该 warning 且第二次调用命中缓存。"
+  },
+  {
+   "severity": "major",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 67,
+   "message": "本次修改引入了未覆盖的行为分支且没有测试。新逻辑用 len(cell_id_str) < 36 直接返回 False、>= 36 时取前 36 字符；等价分支（长度恰为 36 的裸 UUID，以及 <36 且前 36 字符恰好等于其本身）没有任何单元测试。仓库中对 is_external_cell_id 的断言仅有一处 tests/_ast/test_app.py:1646 的 assert is_external_cell_id(setup_cell_ids[0])，对裸 UUID（VSCode 形态，正是 docstring 新增的用例）没有任何断言。",
+   "suggestion": "在 tests/_ast/ 下为 is_external_cell_id 增加参数化单测，覆盖：4 字符普通 cell id、裸 36 字符 UUID4、UUID4+后缀、长度 36/37 边界、非 UUID 的 36+ 字符串（应返回 False）。"
+  },
+  {
+   "severity": "minor",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 65,
+   "message": "docstring 中“UUID4 prefix (36 chars)”与实现不完全一致：UUID(uuid_to_test, version=4) 只强制 version nibble，任何 v1/v5 等格式正确的 UUID 字符串同样会返回 True（且外部前缀确实由 external_prefix() -> uuid4() 生成）。当前注释会让读者以为会校验版本；若真要按版本判定需自行检查 uuid_obj.version == 4，否则应收窄措辞。",
+   "suggestion": "把文档改为“UUID 格式前缀（由 uuid4 生成）”，或在需要时显式校验 uuid_obj.version == 4 并补测试。"
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.057669,
+ "input_tokens": 414456,
+ "cache_hit_tokens": 378240,
+ "output_tokens": 3472,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 48.1
+}

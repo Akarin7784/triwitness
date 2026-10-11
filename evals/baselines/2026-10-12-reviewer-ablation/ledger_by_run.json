@@ -1118,5 +1118,1125 @@
   "first_ts": "2026-10-11T16:02:56.905850+00:00",
   "last_ts": "2026-10-11T16:03:12.424790+00:00",
   "peak_calls": 0
+ },
+ "d01-clean__adversarial__r1": {
+  "calls": 5,
+  "cost_cny": 0.014718,
+  "first_ts": "2026-10-11T17:32:09.832139+00:00",
+  "last_ts": "2026-10-11T17:32:20.080159+00:00",
+  "peak_calls": 0
+ },
+ "d01-clean__adversarial__r2": {
+  "calls": 6,
+  "cost_cny": 0.017536,
+  "first_ts": "2026-10-11T17:53:46.040498+00:00",
+  "last_ts": "2026-10-11T17:54:01.025022+00:00",
+  "peak_calls": 0
+ },
+ "d01-clean__checklist_t10__r1": {
+  "calls": 7,
+  "cost_cny": 0.006166,
+  "first_ts": "2026-10-11T17:49:05.408126+00:00",
+  "last_ts": "2026-10-11T17:49:11.520666+00:00",
+  "peak_calls": 0
+ },
+ "d01-clean__checklist_t10__r2": {
+  "calls": 6,
+  "cost_cny": 0.004802,
+  "first_ts": "2026-10-11T18:09:53.174307+00:00",
+  "last_ts": "2026-10-11T18:09:58.732226+00:00",
+  "peak_calls": 0
+ },
+ "d01-defect__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.014335,
+  "first_ts": "2026-10-11T17:32:10.101436+00:00",
+  "last_ts": "2026-10-11T17:32:17.224045+00:00",
+  "peak_calls": 0
+ },
+ "d01-defect__adversarial__r2": {
+  "calls": 6,
+  "cost_cny": 0.01542,
+  "first_ts": "2026-10-11T17:53:54.457526+00:00",
+  "last_ts": "2026-10-11T17:54:03.271592+00:00",
+  "peak_calls": 0
+ },
+ "d01-defect__checklist_t10__r1": {
+  "calls": 6,
+  "cost_cny": 0.008539,
+  "first_ts": "2026-10-11T17:49:15.443733+00:00",
+  "last_ts": "2026-10-11T17:49:20.210097+00:00",
+  "peak_calls": 0
+ },
+ "d01-defect__checklist_t10__r2": {
+  "calls": 6,
+  "cost_cny": 0.005276,
+  "first_ts": "2026-10-11T18:09:55.851200+00:00",
+  "last_ts": "2026-10-11T18:10:02.011153+00:00",
+  "peak_calls": 0
+ },
+ "d02-clean__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.018054,
+  "first_ts": "2026-10-11T17:32:10.077346+00:00",
+  "last_ts": "2026-10-11T17:32:16.796437+00:00",
+  "peak_calls": 0
+ },
+ "d02-clean__adversarial__r2": {
+  "calls": 7,
+  "cost_cny": 0.012149,
+  "first_ts": "2026-10-11T17:54:04.548662+00:00",
+  "last_ts": "2026-10-11T17:54:13.266782+00:00",
+  "peak_calls": 0
+ },
+ "d02-clean__checklist_t10__r1": {
+  "calls": 3,
+  "cost_cny": 0.002535,
+  "first_ts": "2026-10-11T17:49:18.447604+00:00",
+  "last_ts": "2026-10-11T17:49:20.448143+00:00",
+  "peak_calls": 0
+ },
+ "d02-clean__checklist_t10__r2": {
+  "calls": 7,
+  "cost_cny": 0.006105,
+  "first_ts": "2026-10-11T18:10:01.872177+00:00",
+  "last_ts": "2026-10-11T18:10:08.469509+00:00",
+  "peak_calls": 0
+ },
+ "d02-defect__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.006388,
+  "first_ts": "2026-10-11T17:32:10.124825+00:00",
+  "last_ts": "2026-10-11T17:32:13.969654+00:00",
+  "peak_calls": 0
+ },
+ "d02-defect__adversarial__r2": {
+  "calls": 4,
+  "cost_cny": 0.005805,
+  "first_ts": "2026-10-11T17:54:07.063783+00:00",
+  "last_ts": "2026-10-11T17:54:10.804196+00:00",
+  "peak_calls": 0
+ },
+ "d02-defect__checklist_t10__r1": {
+  "calls": 5,
+  "cost_cny": 0.00612,
+  "first_ts": "2026-10-11T17:49:22.725207+00:00",
+  "last_ts": "2026-10-11T17:49:26.688088+00:00",
+  "peak_calls": 0
+ },
+ "d02-defect__checklist_t10__r2": {
+  "calls": 5,
+  "cost_cny": 0.007147,
+  "first_ts": "2026-10-11T18:10:05.814700+00:00",
+  "last_ts": "2026-10-11T18:10:12.310376+00:00",
+  "peak_calls": 0
+ },
+ "d03-clean__adversarial__r1": {
+  "calls": 5,
+  "cost_cny": 0.012914,
+  "first_ts": "2026-10-11T17:32:16.706474+00:00",
+  "last_ts": "2026-10-11T17:32:23.505594+00:00",
+  "peak_calls": 0
+ },
+ "d03-clean__adversarial__r2": {
+  "calls": 7,
+  "cost_cny": 0.016307,
+  "first_ts": "2026-10-11T17:54:13.436794+00:00",
+  "last_ts": "2026-10-11T17:54:26.061010+00:00",
+  "peak_calls": 0
+ },
+ "d03-clean__checklist_t10__r1": {
+  "calls": 5,
+  "cost_cny": 0.006999,
+  "first_ts": "2026-10-11T17:49:27.256578+00:00",
+  "last_ts": "2026-10-11T17:49:31.450873+00:00",
+  "peak_calls": 0
+ },
+ "d03-clean__checklist_t10__r2": {
+  "calls": 6,
+  "cost_cny": 0.007185,
+  "first_ts": "2026-10-11T18:10:12.423299+00:00",
+  "last_ts": "2026-10-11T18:10:18.436479+00:00",
+  "peak_calls": 0
+ },
+ "d03-defect__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.014492,
+  "first_ts": "2026-10-11T17:32:27.887334+00:00",
+  "last_ts": "2026-10-11T17:32:36.765985+00:00",
+  "peak_calls": 0
+ },
+ "d03-defect__adversarial__r2": {
+  "calls": 6,
+  "cost_cny": 0.013524,
+  "first_ts": "2026-10-11T17:54:13.658288+00:00",
+  "last_ts": "2026-10-11T17:54:24.292595+00:00",
+  "peak_calls": 0
+ },
+ "d03-defect__checklist_t10__r1": {
+  "calls": 5,
+  "cost_cny": 0.008828,
+  "first_ts": "2026-10-11T17:49:31.748708+00:00",
+  "last_ts": "2026-10-11T17:49:37.919486+00:00",
+  "peak_calls": 0
+ },
+ "d03-defect__checklist_t10__r2": {
+  "calls": 5,
+  "cost_cny": 0.008362,
+  "first_ts": "2026-10-11T18:10:16.880513+00:00",
+  "last_ts": "2026-10-11T18:10:22.273412+00:00",
+  "peak_calls": 0
+ },
+ "d04-clean__adversarial__r1": {
+  "calls": 5,
+  "cost_cny": 0.024349,
+  "first_ts": "2026-10-11T17:32:28.746576+00:00",
+  "last_ts": "2026-10-11T17:32:46.046508+00:00",
+  "peak_calls": 0
+ },
+ "d04-clean__adversarial__r2": {
+  "calls": 8,
+  "cost_cny": 0.025961,
+  "first_ts": "2026-10-11T17:54:17.275601+00:00",
+  "last_ts": "2026-10-11T17:54:34.161477+00:00",
+  "peak_calls": 0
+ },
+ "d04-clean__checklist_t10__r1": {
+  "calls": 6,
+  "cost_cny": 0.006627,
+  "first_ts": "2026-10-11T17:49:36.032075+00:00",
+  "last_ts": "2026-10-11T17:49:40.587285+00:00",
+  "peak_calls": 0
+ },
+ "d04-clean__checklist_t10__r2": {
+  "calls": 8,
+  "cost_cny": 0.009396,
+  "first_ts": "2026-10-11T18:10:23.758227+00:00",
+  "last_ts": "2026-10-11T18:10:35.226107+00:00",
+  "peak_calls": 0
+ },
+ "d04-defect__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.01229,
+  "first_ts": "2026-10-11T17:32:31.491284+00:00",
+  "last_ts": "2026-10-11T17:32:37.028937+00:00",
+  "peak_calls": 0
+ },
+ "d04-defect__adversarial__r2": {
+  "calls": 5,
+  "cost_cny": 0.017392,
+  "first_ts": "2026-10-11T17:54:19.805548+00:00",
+  "last_ts": "2026-10-11T17:54:28.547306+00:00",
+  "peak_calls": 0
+ },
+ "d04-defect__checklist_t10__r1": {
+  "calls": 3,
+  "cost_cny": 0.004496,
+  "first_ts": "2026-10-11T17:49:43.129477+00:00",
+  "last_ts": "2026-10-11T17:49:45.198275+00:00",
+  "peak_calls": 0
+ },
+ "d04-defect__checklist_t10__r2": {
+  "calls": 6,
+  "cost_cny": 0.008477,
+  "first_ts": "2026-10-11T18:10:30.134058+00:00",
+  "last_ts": "2026-10-11T18:10:38.078165+00:00",
+  "peak_calls": 0
+ },
+ "d05-clean__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.006411,
+  "first_ts": "2026-10-11T17:32:31.725670+00:00",
+  "last_ts": "2026-10-11T17:32:35.519241+00:00",
+  "peak_calls": 0
+ },
+ "d05-clean__adversarial__r2": {
+  "calls": 5,
+  "cost_cny": 0.011839,
+  "first_ts": "2026-10-11T17:54:30.296091+00:00",
+  "last_ts": "2026-10-11T17:54:40.050622+00:00",
+  "peak_calls": 0
+ },
+ "d05-clean__checklist_t10__r1": {
+  "calls": 6,
+  "cost_cny": 0.006123,
+  "first_ts": "2026-10-11T17:49:45.303268+00:00",
+  "last_ts": "2026-10-11T17:49:51.328030+00:00",
+  "peak_calls": 0
+ },
+ "d05-clean__checklist_t10__r2": {
+  "calls": 3,
+  "cost_cny": 0.002455,
+  "first_ts": "2026-10-11T18:10:38.138114+00:00",
+  "last_ts": "2026-10-11T18:10:40.554079+00:00",
+  "peak_calls": 0
+ },
+ "d05-defect__adversarial__r1": {
+  "calls": 4,
+  "cost_cny": 0.008554,
+  "first_ts": "2026-10-11T17:32:39.217331+00:00",
+  "last_ts": "2026-10-11T17:32:43.024310+00:00",
+  "peak_calls": 0
+ },
+ "d05-defect__adversarial__r2": {
+  "calls": 4,
+  "cost_cny": 0.00636,
+  "first_ts": "2026-10-11T17:54:33.346491+00:00",
+  "last_ts": "2026-10-11T17:54:37.148786+00:00",
+  "peak_calls": 0
+ },
+ "d05-defect__checklist_t10__r1": {
+  "calls": 8,
+  "cost_cny": 0.011812,
+  "first_ts": "2026-10-11T17:49:49.593268+00:00",
+  "last_ts": "2026-10-11T17:49:59.265212+00:00",
+  "peak_calls": 0
+ },
+ "d05-defect__checklist_t10__r2": {
+  "calls": 6,
+  "cost_cny": 0.005298,
+  "first_ts": "2026-10-11T18:10:43.031901+00:00",
+  "last_ts": "2026-10-11T18:10:48.744304+00:00",
+  "peak_calls": 0
+ },
+ "d06-clean__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.166141,
+  "first_ts": "2026-10-11T17:32:44.599467+00:00",
+  "last_ts": "2026-10-11T17:34:56.367448+00:00",
+  "peak_calls": 0
+ },
+ "d06-clean__adversarial__r2": {
+  "calls": 17,
+  "cost_cny": 0.1922,
+  "first_ts": "2026-10-11T17:54:39.803860+00:00",
+  "last_ts": "2026-10-11T17:56:44.758263+00:00",
+  "peak_calls": 0
+ },
+ "d06-clean__checklist_t10__r1": {
+  "calls": 6,
+  "cost_cny": 0.013075,
+  "first_ts": "2026-10-11T17:49:54.819286+00:00",
+  "last_ts": "2026-10-11T17:50:02.276360+00:00",
+  "peak_calls": 0
+ },
+ "d06-clean__checklist_t10__r2": {
+  "calls": 12,
+  "cost_cny": 0.027039,
+  "first_ts": "2026-10-11T18:10:43.706190+00:00",
+  "last_ts": "2026-10-11T18:11:02.501461+00:00",
+  "peak_calls": 0
+ },
+ "d06-defect__adversarial__r1": {
+  "calls": 18,
+  "cost_cny": 0.159369,
+  "first_ts": "2026-10-11T17:32:44.816077+00:00",
+  "last_ts": "2026-10-11T17:34:58.200966+00:00",
+  "peak_calls": 0
+ },
+ "d06-defect__adversarial__r2": {
+  "calls": 13,
+  "cost_cny": 0.127241,
+  "first_ts": "2026-10-11T17:54:41.039886+00:00",
+  "last_ts": "2026-10-11T17:56:48.097157+00:00",
+  "peak_calls": 0
+ },
+ "d06-defect__checklist_t10__r1": {
+  "calls": 10,
+  "cost_cny": 0.022632,
+  "first_ts": "2026-10-11T17:50:05.513786+00:00",
+  "last_ts": "2026-10-11T17:50:25.852455+00:00",
+  "peak_calls": 0
+ },
+ "d06-defect__checklist_t10__r2": {
+  "calls": 11,
+  "cost_cny": 0.040809,
+  "first_ts": "2026-10-11T18:10:52.693903+00:00",
+  "last_ts": "2026-10-11T18:11:20.285102+00:00",
+  "peak_calls": 0
+ },
+ "d07-clean__adversarial__r1": {
+  "calls": 10,
+  "cost_cny": 0.119522,
+  "first_ts": "2026-10-11T17:32:49.084391+00:00",
+  "last_ts": "2026-10-11T17:34:31.028454+00:00",
+  "peak_calls": 0
+ },
+ "d07-clean__adversarial__r2": {
+  "calls": 14,
+  "cost_cny": 0.165896,
+  "first_ts": "2026-10-11T17:54:44.821911+00:00",
+  "last_ts": "2026-10-11T17:57:36.285969+00:00",
+  "peak_calls": 0
+ },
+ "d07-clean__checklist_t10__r1": {
+  "calls": 12,
+  "cost_cny": 0.019293,
+  "first_ts": "2026-10-11T17:50:06.008801+00:00",
+  "last_ts": "2026-10-11T17:50:30.104397+00:00",
+  "peak_calls": 0
+ },
+ "d07-clean__checklist_t10__r2": {
+  "calls": 12,
+  "cost_cny": 0.026283,
+  "first_ts": "2026-10-11T18:10:52.664555+00:00",
+  "last_ts": "2026-10-11T18:11:18.372842+00:00",
+  "peak_calls": 0
+ },
+ "d07-defect__adversarial__r1": {
+  "calls": 12,
+  "cost_cny": 0.07158,
+  "first_ts": "2026-10-11T17:32:56.869725+00:00",
+  "last_ts": "2026-10-11T17:33:59.008347+00:00",
+  "peak_calls": 0
+ },
+ "d07-defect__adversarial__r2": {
+  "calls": 11,
+  "cost_cny": 0.106327,
+  "first_ts": "2026-10-11T17:54:47.808438+00:00",
+  "last_ts": "2026-10-11T17:56:08.386951+00:00",
+  "peak_calls": 0
+ },
+ "d07-defect__checklist_t10__r1": {
+  "calls": 12,
+  "cost_cny": 0.026663,
+  "first_ts": "2026-10-11T17:50:07.028551+00:00",
+  "last_ts": "2026-10-11T17:50:31.913429+00:00",
+  "peak_calls": 0
+ },
+ "d07-defect__checklist_t10__r2": {
+  "calls": 9,
+  "cost_cny": 0.034234,
+  "first_ts": "2026-10-11T18:11:08.222993+00:00",
+  "last_ts": "2026-10-11T18:11:38.748271+00:00",
+  "peak_calls": 0
+ },
+ "d08-clean__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.150404,
+  "first_ts": "2026-10-11T17:34:17.015138+00:00",
+  "last_ts": "2026-10-11T17:37:26.154973+00:00",
+  "peak_calls": 0
+ },
+ "d08-clean__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.103122,
+  "first_ts": "2026-10-11T17:56:14.383396+00:00",
+  "last_ts": "2026-10-11T17:57:54.044469+00:00",
+  "peak_calls": 0
+ },
+ "d08-clean__checklist_t10__r1": {
+  "calls": 20,
+  "cost_cny": 0.06624,
+  "first_ts": "2026-10-11T17:50:12.130695+00:00",
+  "last_ts": "2026-10-11T17:50:57.147505+00:00",
+  "peak_calls": 0
+ },
+ "d08-clean__checklist_t10__r2": {
+  "calls": 19,
+  "cost_cny": 0.047318,
+  "first_ts": "2026-10-11T18:11:23.089075+00:00",
+  "last_ts": "2026-10-11T18:12:20.802779+00:00",
+  "peak_calls": 0
+ },
+ "d08-defect__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.071566,
+  "first_ts": "2026-10-11T17:34:58.239666+00:00",
+  "last_ts": "2026-10-11T17:36:27.141178+00:00",
+  "peak_calls": 0
+ },
+ "d08-defect__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.115301,
+  "first_ts": "2026-10-11T17:57:01.380782+00:00",
+  "last_ts": "2026-10-11T17:58:47.270250+00:00",
+  "peak_calls": 0
+ },
+ "d08-defect__checklist_t10__r1": {
+  "calls": 19,
+  "cost_cny": 0.053239,
+  "first_ts": "2026-10-11T17:50:31.888218+00:00",
+  "last_ts": "2026-10-11T17:51:19.401261+00:00",
+  "peak_calls": 0
+ },
+ "d08-defect__checklist_t10__r2": {
+  "calls": 20,
+  "cost_cny": 0.058241,
+  "first_ts": "2026-10-11T18:11:32.238619+00:00",
+  "last_ts": "2026-10-11T18:12:37.425476+00:00",
+  "peak_calls": 0
+ },
+ "d09-clean__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.106665,
+  "first_ts": "2026-10-11T17:35:21.087988+00:00",
+  "last_ts": "2026-10-11T17:37:17.361159+00:00",
+  "peak_calls": 0
+ },
+ "d09-clean__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.082486,
+  "first_ts": "2026-10-11T17:57:42.111800+00:00",
+  "last_ts": "2026-10-11T17:58:25.729920+00:00",
+  "peak_calls": 0
+ },
+ "d09-clean__checklist_t10__r1": {
+  "calls": 18,
+  "cost_cny": 0.055904,
+  "first_ts": "2026-10-11T17:50:36.174046+00:00",
+  "last_ts": "2026-10-11T17:51:06.912380+00:00",
+  "peak_calls": 0
+ },
+ "d09-clean__checklist_t10__r2": {
+  "calls": 18,
+  "cost_cny": 0.03952,
+  "first_ts": "2026-10-11T18:11:32.365054+00:00",
+  "last_ts": "2026-10-11T18:12:19.451629+00:00",
+  "peak_calls": 0
+ },
+ "d09-defect__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.084261,
+  "first_ts": "2026-10-11T17:35:52.793050+00:00",
+  "last_ts": "2026-10-11T17:36:46.036498+00:00",
+  "peak_calls": 0
+ },
+ "d09-defect__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.087207,
+  "first_ts": "2026-10-11T17:57:55.920077+00:00",
+  "last_ts": "2026-10-11T17:58:39.083697+00:00",
+  "peak_calls": 0
+ },
+ "d09-defect__checklist_t10__r1": {
+  "calls": 19,
+  "cost_cny": 0.041759,
+  "first_ts": "2026-10-11T17:50:40.227430+00:00",
+  "last_ts": "2026-10-11T17:51:09.945795+00:00",
+  "peak_calls": 0
+ },
+ "d09-defect__checklist_t10__r2": {
+  "calls": 19,
+  "cost_cny": 0.046489,
+  "first_ts": "2026-10-11T18:11:51.740333+00:00",
+  "last_ts": "2026-10-11T18:12:28.024036+00:00",
+  "peak_calls": 0
+ },
+ "d10-clean__adversarial__r1": {
+  "calls": 18,
+  "cost_cny": 0.150044,
+  "first_ts": "2026-10-11T17:36:28.721501+00:00",
+  "last_ts": "2026-10-11T17:39:02.506423+00:00",
+  "peak_calls": 0
+ },
+ "d10-clean__adversarial__r2": {
+  "calls": 17,
+  "cost_cny": 0.135812,
+  "first_ts": "2026-10-11T17:58:11.460836+00:00",
+  "last_ts": "2026-10-11T17:59:55.711376+00:00",
+  "peak_calls": 0
+ },
+ "d10-clean__checklist_t10__r1": {
+  "calls": 8,
+  "cost_cny": 0.023427,
+  "first_ts": "2026-10-11T17:50:59.431372+00:00",
+  "last_ts": "2026-10-11T17:51:19.657489+00:00",
+  "peak_calls": 0
+ },
+ "d10-clean__checklist_t10__r2": {
+  "calls": 10,
+  "cost_cny": 0.027083,
+  "first_ts": "2026-10-11T18:12:24.082522+00:00",
+  "last_ts": "2026-10-11T18:12:45.686870+00:00",
+  "peak_calls": 0
+ },
+ "d10-defect__adversarial__r1": {
+  "calls": 13,
+  "cost_cny": 0.109032,
+  "first_ts": "2026-10-11T17:36:56.924400+00:00",
+  "last_ts": "2026-10-11T17:38:37.534086+00:00",
+  "peak_calls": 0
+ },
+ "d10-defect__adversarial__r2": {
+  "calls": 15,
+  "cost_cny": 0.09791,
+  "first_ts": "2026-10-11T17:58:28.149089+00:00",
+  "last_ts": "2026-10-11T17:59:59.018644+00:00",
+  "peak_calls": 0
+ },
+ "d10-defect__checklist_t10__r1": {
+  "calls": 8,
+  "cost_cny": 0.034668,
+  "first_ts": "2026-10-11T17:51:12.356371+00:00",
+  "last_ts": "2026-10-11T17:51:26.064306+00:00",
+  "peak_calls": 0
+ },
+ "d10-defect__checklist_t10__r2": {
+  "calls": 13,
+  "cost_cny": 0.031237,
+  "first_ts": "2026-10-11T18:12:27.930963+00:00",
+  "last_ts": "2026-10-11T18:12:48.156241+00:00",
+  "peak_calls": 0
+ },
+ "d11-clean__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.211864,
+  "first_ts": "2026-10-11T17:37:29.204874+00:00",
+  "last_ts": "2026-10-11T17:41:20.945383+00:00",
+  "peak_calls": 0
+ },
+ "d11-clean__adversarial__r2": {
+  "calls": 17,
+  "cost_cny": 0.158209,
+  "first_ts": "2026-10-11T17:58:40.576273+00:00",
+  "last_ts": "2026-10-11T18:00:54.170098+00:00",
+  "peak_calls": 0
+ },
+ "d11-clean__checklist_t10__r1": {
+  "calls": 11,
+  "cost_cny": 0.030976,
+  "first_ts": "2026-10-11T17:51:15.015917+00:00",
+  "last_ts": "2026-10-11T17:51:36.764730+00:00",
+  "peak_calls": 0
+ },
+ "d11-clean__checklist_t10__r2": {
+  "calls": 10,
+  "cost_cny": 0.028527,
+  "first_ts": "2026-10-11T18:12:35.378342+00:00",
+  "last_ts": "2026-10-11T18:12:56.676558+00:00",
+  "peak_calls": 0
+ },
+ "d11-defect__adversarial__r1": {
+  "calls": 13,
+  "cost_cny": 0.173799,
+  "first_ts": "2026-10-11T17:37:29.280628+00:00",
+  "last_ts": "2026-10-11T17:40:45.495320+00:00",
+  "peak_calls": 0
+ },
+ "d11-defect__adversarial__r2": {
+  "calls": 13,
+  "cost_cny": 0.126588,
+  "first_ts": "2026-10-11T17:58:49.270778+00:00",
+  "last_ts": "2026-10-11T18:00:50.349576+00:00",
+  "peak_calls": 0
+ },
+ "d11-defect__checklist_t10__r1": {
+  "calls": 10,
+  "cost_cny": 0.021847,
+  "first_ts": "2026-10-11T17:51:24.781253+00:00",
+  "last_ts": "2026-10-11T17:51:33.786959+00:00",
+  "peak_calls": 0
+ },
+ "d11-defect__checklist_t10__r2": {
+  "calls": 8,
+  "cost_cny": 0.026725,
+  "first_ts": "2026-10-11T18:12:39.729640+00:00",
+  "last_ts": "2026-10-11T18:12:56.062943+00:00",
+  "peak_calls": 0
+ },
+ "d12-clean__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.165611,
+  "first_ts": "2026-10-11T17:38:46.475325+00:00",
+  "last_ts": "2026-10-11T17:40:49.485380+00:00",
+  "peak_calls": 0
+ },
+ "d12-clean__adversarial__r2": {
+  "calls": 17,
+  "cost_cny": 0.116646,
+  "first_ts": "2026-10-11T18:00:03.786461+00:00",
+  "last_ts": "2026-10-11T18:01:14.095791+00:00",
+  "peak_calls": 0
+ },
+ "d12-clean__checklist_t10__r1": {
+  "calls": 12,
+  "cost_cny": 0.04624,
+  "first_ts": "2026-10-11T17:51:24.826525+00:00",
+  "last_ts": "2026-10-11T17:51:46.142806+00:00",
+  "peak_calls": 0
+ },
+ "d12-clean__checklist_t10__r2": {
+  "calls": 14,
+  "cost_cny": 0.045573,
+  "first_ts": "2026-10-11T18:12:51.395293+00:00",
+  "last_ts": "2026-10-11T18:13:15.997458+00:00",
+  "peak_calls": 0
+ },
+ "d12-defect__adversarial__r1": {
+  "calls": 12,
+  "cost_cny": 0.070169,
+  "first_ts": "2026-10-11T17:39:25.945927+00:00",
+  "last_ts": "2026-10-11T17:40:11.736874+00:00",
+  "peak_calls": 0
+ },
+ "d12-defect__adversarial__r2": {
+  "calls": 13,
+  "cost_cny": 0.056637,
+  "first_ts": "2026-10-11T18:00:30.095555+00:00",
+  "last_ts": "2026-10-11T18:01:10.295986+00:00",
+  "peak_calls": 0
+ },
+ "d12-defect__checklist_t10__r1": {
+  "calls": 13,
+  "cost_cny": 0.031586,
+  "first_ts": "2026-10-11T17:51:31.627063+00:00",
+  "last_ts": "2026-10-11T17:51:47.185223+00:00",
+  "peak_calls": 0
+ },
+ "d12-defect__checklist_t10__r2": {
+  "calls": 5,
+  "cost_cny": 0.016623,
+  "first_ts": "2026-10-11T18:12:56.884742+00:00",
+  "last_ts": "2026-10-11T18:13:04.361306+00:00",
+  "peak_calls": 0
+ },
+ "d13-clean__adversarial__r1": {
+  "calls": 9,
+  "cost_cny": 0.276725,
+  "first_ts": "2026-10-11T17:40:22.611592+00:00",
+  "last_ts": "2026-10-11T17:46:17.840042+00:00",
+  "peak_calls": 0
+ },
+ "d13-clean__adversarial__r2": {
+  "calls": 9,
+  "cost_cny": 0.323933,
+  "first_ts": "2026-10-11T18:01:00.635146+00:00",
+  "last_ts": "2026-10-11T18:05:47.504578+00:00",
+  "peak_calls": 0
+ },
+ "d13-clean__checklist_t10__r1": {
+  "calls": 8,
+  "cost_cny": 0.047968,
+  "first_ts": "2026-10-11T17:51:40.407650+00:00",
+  "last_ts": "2026-10-11T17:52:21.410117+00:00",
+  "peak_calls": 0
+ },
+ "d13-clean__checklist_t10__r2": {
+  "calls": 10,
+  "cost_cny": 0.02879,
+  "first_ts": "2026-10-11T18:13:03.546748+00:00",
+  "last_ts": "2026-10-11T18:13:30.128968+00:00",
+  "peak_calls": 0
+ },
+ "d13-defect__adversarial__r1": {
+  "calls": 7,
+  "cost_cny": 0.090486,
+  "first_ts": "2026-10-11T17:40:52.125077+00:00",
+  "last_ts": "2026-10-11T17:42:49.417500+00:00",
+  "peak_calls": 0
+ },
+ "d13-defect__adversarial__r2": {
+  "calls": 6,
+  "cost_cny": 0.106987,
+  "first_ts": "2026-10-11T18:01:12.047120+00:00",
+  "last_ts": "2026-10-11T18:03:10.665942+00:00",
+  "peak_calls": 0
+ },
+ "d13-defect__checklist_t10__r1": {
+  "calls": 9,
+  "cost_cny": 0.014316,
+  "first_ts": "2026-10-11T17:51:45.232463+00:00",
+  "last_ts": "2026-10-11T17:51:51.901981+00:00",
+  "peak_calls": 0
+ },
+ "d13-defect__checklist_t10__r2": {
+  "calls": 10,
+  "cost_cny": 0.026286,
+  "first_ts": "2026-10-11T18:13:05.590129+00:00",
+  "last_ts": "2026-10-11T18:13:20.099727+00:00",
+  "peak_calls": 0
+ },
+ "d14-clean__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.094378,
+  "first_ts": "2026-10-11T17:41:07.192980+00:00",
+  "last_ts": "2026-10-11T17:42:37.799458+00:00",
+  "peak_calls": 0
+ },
+ "d14-clean__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.119693,
+  "first_ts": "2026-10-11T18:01:21.755330+00:00",
+  "last_ts": "2026-10-11T18:02:38.919926+00:00",
+  "peak_calls": 0
+ },
+ "d14-clean__checklist_t10__r1": {
+  "calls": 18,
+  "cost_cny": 0.112839,
+  "first_ts": "2026-10-11T17:51:55.268230+00:00",
+  "last_ts": "2026-10-11T17:52:50.511672+00:00",
+  "peak_calls": 0
+ },
+ "d14-clean__checklist_t10__r2": {
+  "calls": 20,
+  "cost_cny": 0.069487,
+  "first_ts": "2026-10-11T18:13:13.739984+00:00",
+  "last_ts": "2026-10-11T18:14:16.145199+00:00",
+  "peak_calls": 0
+ },
+ "d14-defect__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.119547,
+  "first_ts": "2026-10-11T17:41:32.126211+00:00",
+  "last_ts": "2026-10-11T17:43:14.389576+00:00",
+  "peak_calls": 0
+ },
+ "d14-defect__adversarial__r2": {
+  "calls": 18,
+  "cost_cny": 0.103228,
+  "first_ts": "2026-10-11T18:01:40.924703+00:00",
+  "last_ts": "2026-10-11T18:03:00.284413+00:00",
+  "peak_calls": 0
+ },
+ "d14-defect__checklist_t10__r1": {
+  "calls": 19,
+  "cost_cny": 0.057669,
+  "first_ts": "2026-10-11T17:51:55.391103+00:00",
+  "last_ts": "2026-10-11T17:52:36.749045+00:00",
+  "peak_calls": 0
+ },
+ "d14-defect__checklist_t10__r2": {
+  "calls": 18,
+  "cost_cny": 0.066378,
+  "first_ts": "2026-10-11T18:13:26.349417+00:00",
+  "last_ts": "2026-10-11T18:14:24.796145+00:00",
+  "peak_calls": 0
+ },
+ "d15-clean__adversarial__r1": {
+  "calls": 18,
+  "cost_cny": 0.148472,
+  "first_ts": "2026-10-11T17:42:43.041894+00:00",
+  "last_ts": "2026-10-11T17:45:03.874678+00:00",
+  "peak_calls": 0
+ },
+ "d15-clean__adversarial__r2": {
+  "calls": 17,
+  "cost_cny": 0.119068,
+  "first_ts": "2026-10-11T18:03:09.591138+00:00",
+  "last_ts": "2026-10-11T18:04:49.602847+00:00",
+  "peak_calls": 0
+ },
+ "d15-clean__checklist_t10__r1": {
+  "calls": 16,
+  "cost_cny": 0.053409,
+  "first_ts": "2026-10-11T17:52:02.297970+00:00",
+  "last_ts": "2026-10-11T17:52:43.638966+00:00",
+  "peak_calls": 0
+ },
+ "d15-clean__checklist_t10__r2": {
+  "calls": 19,
+  "cost_cny": 0.044273,
+  "first_ts": "2026-10-11T18:13:41.390384+00:00",
+  "last_ts": "2026-10-11T18:14:29.741448+00:00",
+  "peak_calls": 0
+ },
+ "d15-defect__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.167516,
+  "first_ts": "2026-10-11T17:42:56.827971+00:00",
+  "last_ts": "2026-10-11T17:45:14.603942+00:00",
+  "peak_calls": 0
+ },
+ "d15-defect__adversarial__r2": {
+  "calls": 19,
+  "cost_cny": 0.11049,
+  "first_ts": "2026-10-11T18:03:13.469588+00:00",
+  "last_ts": "2026-10-11T18:04:27.931970+00:00",
+  "peak_calls": 0
+ },
+ "d15-defect__checklist_t10__r1": {
+  "calls": 6,
+  "cost_cny": 0.025537,
+  "first_ts": "2026-10-11T17:52:40.296518+00:00",
+  "last_ts": "2026-10-11T17:52:49.753750+00:00",
+  "peak_calls": 0
+ },
+ "d15-defect__checklist_t10__r2": {
+  "calls": 17,
+  "cost_cny": 0.047913,
+  "first_ts": "2026-10-11T18:13:41.413093+00:00",
+  "last_ts": "2026-10-11T18:14:20.954845+00:00",
+  "peak_calls": 0
+ },
+ "d16-clean__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.212977,
+  "first_ts": "2026-10-11T17:43:28.043582+00:00",
+  "last_ts": "2026-10-11T17:47:01.003193+00:00",
+  "peak_calls": 0
+ },
+ "d16-clean__adversarial__r2": {
+  "calls": 15,
+  "cost_cny": 0.151329,
+  "first_ts": "2026-10-11T18:03:17.410509+00:00",
+  "last_ts": "2026-10-11T18:05:44.864757+00:00",
+  "peak_calls": 0
+ },
+ "d16-clean__checklist_t10__r1": {
+  "calls": 14,
+  "cost_cny": 0.044068,
+  "first_ts": "2026-10-11T17:52:43.879125+00:00",
+  "last_ts": "2026-10-11T17:53:13.841182+00:00",
+  "peak_calls": 0
+ },
+ "d16-clean__checklist_t10__r2": {
+  "calls": 9,
+  "cost_cny": 0.036422,
+  "first_ts": "2026-10-11T18:14:17.480083+00:00",
+  "last_ts": "2026-10-11T18:14:35.560908+00:00",
+  "peak_calls": 0
+ },
+ "d16-defect__adversarial__r1": {
+  "calls": 11,
+  "cost_cny": 0.169594,
+  "first_ts": "2026-10-11T17:45:07.254135+00:00",
+  "last_ts": "2026-10-11T17:48:08.766779+00:00",
+  "peak_calls": 0
+ },
+ "d16-defect__adversarial__r2": {
+  "calls": 16,
+  "cost_cny": 0.162031,
+  "first_ts": "2026-10-11T18:04:38.008879+00:00",
+  "last_ts": "2026-10-11T18:07:24.360701+00:00",
+  "peak_calls": 0
+ },
+ "d16-defect__checklist_t10__r1": {
+  "calls": 16,
+  "cost_cny": 0.046441,
+  "first_ts": "2026-10-11T17:52:49.285501+00:00",
+  "last_ts": "2026-10-11T17:53:17.712111+00:00",
+  "peak_calls": 0
+ },
+ "d16-defect__checklist_t10__r2": {
+  "calls": 16,
+  "cost_cny": 0.049577,
+  "first_ts": "2026-10-11T18:14:28.976504+00:00",
+  "last_ts": "2026-10-11T18:15:08.131682+00:00",
+  "peak_calls": 0
+ },
+ "d17-clean__adversarial__r1": {
+  "calls": 8,
+  "cost_cny": 0.065031,
+  "first_ts": "2026-10-11T17:45:22.797945+00:00",
+  "last_ts": "2026-10-11T17:46:25.503880+00:00",
+  "peak_calls": 0
+ },
+ "d17-clean__adversarial__r2": {
+  "calls": 10,
+  "cost_cny": 0.141212,
+  "first_ts": "2026-10-11T18:04:59.085854+00:00",
+  "last_ts": "2026-10-11T18:06:42.400915+00:00",
+  "peak_calls": 0
+ },
+ "d17-clean__checklist_t10__r1": {
+  "calls": 9,
+  "cost_cny": 0.02998,
+  "first_ts": "2026-10-11T17:52:55.244694+00:00",
+  "last_ts": "2026-10-11T17:53:11.322782+00:00",
+  "peak_calls": 0
+ },
+ "d17-clean__checklist_t10__r2": {
+  "calls": 7,
+  "cost_cny": 0.020632,
+  "first_ts": "2026-10-11T18:14:30.705027+00:00",
+  "last_ts": "2026-10-11T18:14:38.462812+00:00",
+  "peak_calls": 0
+ },
+ "d17-defect__adversarial__r1": {
+  "calls": 7,
+  "cost_cny": 0.090052,
+  "first_ts": "2026-10-11T17:46:25.201350+00:00",
+  "last_ts": "2026-10-11T17:47:48.479688+00:00",
+  "peak_calls": 0
+ },
+ "d17-defect__adversarial__r2": {
+  "calls": 8,
+  "cost_cny": 0.063619,
+  "first_ts": "2026-10-11T18:05:52.110900+00:00",
+  "last_ts": "2026-10-11T18:06:47.881306+00:00",
+  "peak_calls": 0
+ },
+ "d17-defect__checklist_t10__r1": {
+  "calls": 6,
+  "cost_cny": 0.020125,
+  "first_ts": "2026-10-11T17:52:57.215393+00:00",
+  "last_ts": "2026-10-11T17:53:09.678725+00:00",
+  "peak_calls": 0
+ },
+ "d17-defect__checklist_t10__r2": {
+  "calls": 10,
+  "cost_cny": 0.033879,
+  "first_ts": "2026-10-11T18:14:35.702777+00:00",
+  "last_ts": "2026-10-11T18:14:56.402070+00:00",
+  "peak_calls": 0
+ },
+ "d18-clean__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.098953,
+  "first_ts": "2026-10-11T17:46:35.652232+00:00",
+  "last_ts": "2026-10-11T17:47:59.727033+00:00",
+  "peak_calls": 0
+ },
+ "d18-clean__adversarial__r2": {
+  "calls": 18,
+  "cost_cny": 0.13151,
+  "first_ts": "2026-10-11T18:07:00.994720+00:00",
+  "last_ts": "2026-10-11T18:09:16.789759+00:00",
+  "peak_calls": 0
+ },
+ "d18-clean__checklist_t10__r1": {
+  "calls": 20,
+  "cost_cny": 0.035828,
+  "first_ts": "2026-10-11T17:53:16.628164+00:00",
+  "last_ts": "2026-10-11T17:53:41.014239+00:00",
+  "peak_calls": 0
+ },
+ "d18-clean__checklist_t10__r2": {
+  "calls": 16,
+  "cost_cny": 0.076094,
+  "first_ts": "2026-10-11T18:14:47.725249+00:00",
+  "last_ts": "2026-10-11T18:15:24.489198+00:00",
+  "peak_calls": 0
+ },
+ "d18-defect__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.104834,
+  "first_ts": "2026-10-11T17:47:21.226608+00:00",
+  "last_ts": "2026-10-11T17:48:44.863999+00:00",
+  "peak_calls": 0
+ },
+ "d18-defect__adversarial__r2": {
+  "calls": 18,
+  "cost_cny": 0.096431,
+  "first_ts": "2026-10-11T18:07:36.442911+00:00",
+  "last_ts": "2026-10-11T18:08:59.530643+00:00",
+  "peak_calls": 0
+ },
+ "d18-defect__checklist_t10__r1": {
+  "calls": 12,
+  "cost_cny": 0.043274,
+  "first_ts": "2026-10-11T17:53:17.345283+00:00",
+  "last_ts": "2026-10-11T17:53:38.734208+00:00",
+  "peak_calls": 0
+ },
+ "d18-defect__checklist_t10__r2": {
+  "calls": 14,
+  "cost_cny": 0.047997,
+  "first_ts": "2026-10-11T18:14:49.686167+00:00",
+  "last_ts": "2026-10-11T18:15:12.398728+00:00",
+  "peak_calls": 0
+ },
+ "d19-clean__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.046446,
+  "first_ts": "2026-10-11T17:48:13.794358+00:00",
+  "last_ts": "2026-10-11T17:49:04.123401+00:00",
+  "peak_calls": 0
+ },
+ "d19-clean__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.11617,
+  "first_ts": "2026-10-11T18:08:08.394970+00:00",
+  "last_ts": "2026-10-11T18:09:51.038401+00:00",
+  "peak_calls": 0
+ },
+ "d19-clean__checklist_t10__r1": {
+  "calls": 17,
+  "cost_cny": 0.031609,
+  "first_ts": "2026-10-11T17:53:21.257494+00:00",
+  "last_ts": "2026-10-11T17:53:50.650265+00:00",
+  "peak_calls": 0
+ },
+ "d19-clean__checklist_t10__r2": {
+  "calls": 18,
+  "cost_cny": 0.021453,
+  "first_ts": "2026-10-11T18:15:06.902008+00:00",
+  "last_ts": "2026-10-11T18:15:29.970686+00:00",
+  "peak_calls": 0
+ },
+ "d19-defect__adversarial__r1": {
+  "calls": 20,
+  "cost_cny": 0.065447,
+  "first_ts": "2026-10-11T17:48:15.002712+00:00",
+  "last_ts": "2026-10-11T17:49:16.859871+00:00",
+  "peak_calls": 0
+ },
+ "d19-defect__adversarial__r2": {
+  "calls": 20,
+  "cost_cny": 0.10611,
+  "first_ts": "2026-10-11T18:08:11.744811+00:00",
+  "last_ts": "2026-10-11T18:09:49.453551+00:00",
+  "peak_calls": 0
+ },
+ "d19-defect__checklist_t10__r1": {
+  "calls": 18,
+  "cost_cny": 0.021085,
+  "first_ts": "2026-10-11T17:53:23.708330+00:00",
+  "last_ts": "2026-10-11T17:53:38.493375+00:00",
+  "peak_calls": 0
+ },
+ "d19-defect__checklist_t10__r2": {
+  "calls": 17,
+  "cost_cny": 0.051457,
+  "first_ts": "2026-10-11T18:15:15.206522+00:00",
+  "last_ts": "2026-10-11T18:16:01.576910+00:00",
+  "peak_calls": 0
+ },
+ "d20-clean__adversarial__r1": {
+  "calls": 17,
+  "cost_cny": 0.121945,
+  "first_ts": "2026-10-11T17:48:16.577952+00:00",
+  "last_ts": "2026-10-11T17:49:51.834729+00:00",
+  "peak_calls": 0
+ },
+ "d20-clean__adversarial__r2": {
+  "calls": 17,
+  "cost_cny": 0.110265,
+  "first_ts": "2026-10-11T18:09:08.474961+00:00",
+  "last_ts": "2026-10-11T18:10:38.851888+00:00",
+  "peak_calls": 0
+ },
+ "d20-clean__checklist_t10__r1": {
+  "calls": 13,
+  "cost_cny": 0.050965,
+  "first_ts": "2026-10-11T17:53:42.409038+00:00",
+  "last_ts": "2026-10-11T17:54:11.831293+00:00",
+  "peak_calls": 0
+ },
+ "d20-clean__checklist_t10__r2": {
+  "calls": 14,
+  "cost_cny": 0.048599,
+  "first_ts": "2026-10-11T18:15:20.463605+00:00",
+  "last_ts": "2026-10-11T18:15:49.808010+00:00",
+  "peak_calls": 0
+ },
+ "d20-defect__adversarial__r1": {
+  "calls": 12,
+  "cost_cny": 0.08182,
+  "first_ts": "2026-10-11T17:48:54.168274+00:00",
+  "last_ts": "2026-10-11T17:49:58.041949+00:00",
+  "peak_calls": 0
+ },
+ "d20-defect__adversarial__r2": {
+  "calls": 16,
+  "cost_cny": 0.121234,
+  "first_ts": "2026-10-11T18:09:26.257176+00:00",
+  "last_ts": "2026-10-11T18:11:06.387348+00:00",
+  "peak_calls": 0
+ },
+ "d20-defect__checklist_t10__r1": {
+  "calls": 9,
+  "cost_cny": 0.038076,
+  "first_ts": "2026-10-11T17:53:43.952588+00:00",
+  "last_ts": "2026-10-11T17:53:56.020245+00:00",
+  "peak_calls": 0
+ },
+ "d20-defect__checklist_t10__r2": {
+  "calls": 7,
+  "cost_cny": 0.020411,
+  "first_ts": "2026-10-11T18:15:34.388523+00:00",
+  "last_ts": "2026-10-11T18:15:44.253095+00:00",
+  "peak_calls": 0
  }
 }

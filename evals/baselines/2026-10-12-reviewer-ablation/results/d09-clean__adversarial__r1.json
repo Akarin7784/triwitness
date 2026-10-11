@@ -1,0 +1,26 @@
+{
+ "item": "d09-clean",
+ "task": "swe-cyclopts-701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0H3ZJBK87P9EPJ85PWX91",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.106665,
+ "input_tokens": 342654,
+ "cache_hit_tokens": 315136,
+ "output_tokens": 18211,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": true,
+ "elapsed_s": 128.1
+}

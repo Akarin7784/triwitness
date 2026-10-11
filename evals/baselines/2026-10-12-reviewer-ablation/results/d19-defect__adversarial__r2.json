@@ -1,0 +1,33 @@
+{
+ "item": "d19-defect",
+ "task": "swe-cyclopts-633",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/parameter.py",
+  "line": 279,
+  "category": "wrong_condition",
+  "severity": "major",
+  "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2D8EK2AHP6ED0EZY7EVM9",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.10611,
+ "input_tokens": 411318,
+ "cache_hit_tokens": 368384,
+ "output_tokens": 13952,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": true,
+ "elapsed_s": 104.1
+}

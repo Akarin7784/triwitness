@@ -1,0 +1,55 @@
+{
+ "item": "d09-defect",
+ "task": "swe-cyclopts-701",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/command_spec.py",
+  "line": 143,
+  "category": "incomplete_fix",
+  "severity": "major",
+  "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1D5JPFAHXY36T7TD71F0N",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "补丁只对 help_flags 设置 show=False，遗漏了 version_flags：\n\n  for flag in chain(self._resolved.help_flags):\n      self._resolved[flag].show = False\n\n而直接注册路径 cyclopts/core.py:1343-1344 对两者都做了隐藏：\n\n  for flag in chain(app.help_flags, app.version_flags):\n      app[flag].show = False\n\n依据：Issue 的“bug 输出”显示懒加载子 app 的 Commands 面板同时出现 `--help -h` 和 `--version` 两行，而期望输出（无懒加载）两者都不出现。App.version_flags 默认 `[\"--version\"]` 会在 version_flags setter 中作为命令注册（core.py:473-485），因此当前补丁执行后 `--version` 仍会以 show=True 显示，回归只修复了一半，Issue 复现场景仍会残留 `--version` 行。此外 `chain(help_flags)` 只传一个可迭代对象，等价于直接迭代 help_flags，chain 是多余的。\n\n修复建议：与 core.py 保持一致，改为\n\n  for flag in chain(self._resolved.help_flags, self._resolved.version_flags):\n      self._resolved[flag].show = False\n\n并补充一个测试断言懒加载子 app 的 `--help` 输出中同时不含 `--help`/`-h` 与 `--version`（对齐 Issue 的期望输出）。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "cyclopts/command_spec.py",
+   "line": 141,
+   "message": "缺少针对 version 标志的验证，且未覆盖 App 类型与函数类型两条注册路径的差异。建议在测试中分别覆盖（a）`app.command(\"mod:subapp\", name=...)` 导入 App 的分支（command_spec.py:123 分支）与（b）导入函数并包装的分支（command_spec.py:138 分支），二者都要验证 `--help`/`--version` 均被隐藏，避免只覆盖其中一条路径导致同类回归漏检。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "隐藏标志的循环放在 resolve() 的公共尾部，但注意 resolve() 的 `self._resolved` 有缓存：若父 app 的 help_flags/version_flags 在首次 resolve 之后被修改（setter 会重注册命令），子 app 已缓存的 show 值不会随之更新。直接注册路径无此缓存，行为存在差异。若属已知设计取舍可忽略，否则建议在 resolve 时或在父 app 标志变更时重新应用。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.041759,
+ "input_tokens": 287075,
+ "cache_hit_tokens": 264192,
+ "output_tokens": 3398,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 34.7
+}

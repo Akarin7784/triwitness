@@ -1,0 +1,55 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1H3KSF0PABWEPYW0E3JMJ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` 取参数索引错误。`str.format_map()`（第180/184/192行对普通 dict 调用）在键缺失时由 `Formatter.get_value` 抛出 `KeyError(key)`，其 `args == (key,)` 只有一个元素（如 `\"{nonexistent}\".format_map({})` → `KeyError('nonexistent')`, args=('nonexistent',)）。因此 `original.args[1]` 必然抛 `IndexError: tuple index out of range`，且它发生在 `except KeyError` 处理块内部，会向上传播：catch=True 时 `_error_interceptor.print` 被跳过，应用直接抛出 IndexError（与 Issue 要求『不崩溃、给出清晰诊断』完全相反）；catch=False 时抛出的也是 IndexError 而非 KeyError，不满足验收标准『raised KeyError includes the missing key』。同时会破坏既有测试：tests/test_configure.py:141 与 :151（`format=\"{extra[a]}\", catch=False` 后 `pytest.raises(KeyError)`）将因抛出 IndexError 而失败，属回归。建议改为 `key = original.args[0] if original.args else \"?\"`（或 `str(original)[1:-1]`），并让缺失键路径真正返回 KeyError。",
+   "suggestion": "key = original.args[0] if original.args else \"?\"；并补一个针对 `logger.add(lambda m: ..., format=\"{nonexistent}\")` 的回归测试，覆盖 catch=True/False 与 `{extra[...]}` 两种缺失键形态。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError` 位于 `except Exception` 之前，会捕获整个 try 块中任意来源的 KeyError，而不仅是 format_map 的键缺失：例如用户 sink（第206行 `self._sink.write`）、`self._filter`（第133行）、`self._serialize_record`（第195行）内部抛出的 KeyError 现在都会被 `_make_key_error` 重新包装并错误地诊断为『format string references an unknown key』，改变/误导了既有的通用错误反馈（原先由 `except Exception` 输出原始异常）。这属于行为回归。建议仅对格式化调用（第161/165/175/180/184/192行的 `format_map`）做局部 try/except，或在处理前判断 `e` 是否确实来自格式化步骤。",
+   "suggestion": "把 format_map 调用包裹在局部 try/except KeyError 中产生诊断，emit 末尾保留原来的通用 `except Exception` 分支。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 251,
+   "message": "补丁未新增或修改任何测试（git show HEAD 显示仅改动 loguru/_handler.py）。验收标准（诊断包含可用键列表、bind/'extra[key]' 指引、catch=False 的 KeyError 含指引、patcher 新增键仍可用）均无自动化覆盖，且当前实现实际无法通过任何这些用例。请补充对应测试后再提交。",
+   "suggestion": "在 tests/test_add_option_catch.py 或 tests/test_formatting.py 增加缺失键诊断的断言测试。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.046441,
+ "input_tokens": 265925,
+ "cache_hit_tokens": 245376,
+ "output_tokens": 5246,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 34.3
+}

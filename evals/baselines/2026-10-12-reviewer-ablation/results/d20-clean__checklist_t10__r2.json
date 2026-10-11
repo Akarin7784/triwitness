@@ -1,0 +1,48 @@
+{
+ "item": "d20-clean",
+ "task": "swe-llm-sandbox-101",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2TB41W0415AHC9V61PD5T",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 519,
+   "message": "既有测试被打破（回归）。tests/test_session.py:221-228 与 255-262 都断言 run_with_artifacts 以 timeout=30 被调用，而 patch 未同步更新测试。这两个用例里 mock_session 是普通 MagicMock：`self._session.config.get_execution_timeout()` 返回 MagicMock（is not None 为真），`int(MagicMock)` 返回 1，因此实际传入 timeout=1，与断言的 30 不符，两个用例必然失败。同时补丁自己声明的默认值 60 也没有任何测试覆盖，属于改了公共方法行为却未同步测试。",
+   "suggestion": "同步更新这两个用例（例如让 mock 的 config.get_execution_timeout 返回确定值，并断言相应 timeout），并新增覆盖“未传 timeout 时使用 config.execution_timeout/default_timeout”的用例，以确保修复真正被验证而非只改代码。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 524,
+   "message": "与 SandboxSession 行为不一致：当用户显式配置 execution_timeout=None 且 default_timeout=None（core/config.py:56,60 文档明确写 “If None, ... run indefinitely”）时，get_execution_timeout() 返回 None，SandboxSession.run 会把 None 透传给 _execute_with_timeout 从而“无限运行”；但本补丁在此处强制替换为 60，静默给一个有意设为无限期的会话加了 60 秒上限。Issue 的诉求正是“与 SandboxSession 行为一致”，此边界未对齐。",
+   "suggestion": "在未指定 timeout 时直接透传 config_timeout（允许 None），让底层 _execute_with_timeout(timeout=None) 走无限分支；若确实想保留 60 的兜底，应仅在没有 config、或显式说明并加测试的前提下使用，且与 SandboxSession 保持一致。"
+  },
+  {
+   "severity": "minor",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "签名改为 `timeout: float | None`，但随后 `int(effective_timeout)` 截断为整数：timeout=0.5 → 0，而 core/session_base.py:390 使用 `actual_timeout = timeout or self.config.get_execution_timeout()`，0 为假值会被替换为 config 默认值，调用方传入的超时被静默忽略；SandboxSession 则保留 float 精度，二者不一致。timeout=0 同样会被忽略而非按 0 处理。",
+   "suggestion": "改为透传 float（去掉 int()），或者显式校验并拒绝 <1 的值、明确语义，避免静默丢弃调用方的超时设置。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.048599,
+ "input_tokens": 278269,
+ "cache_hit_tokens": 253696,
+ "output_tokens": 4738,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 37.5
+}

@@ -1,0 +1,55 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2455H69C71PWQ3DENJKVQ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "`broker._update_fd_config(FastDependsConfig())` 传入的是全新的默认配置，不是应用配置，Issue 没被真正修掉，且构造路径出现回归。依据：faststream/_internal/broker/broker.py:88 是 `self.config.fd_config = config | self.config.fd_config`，而 faststream/_internal/di/config.py:51-61 的 `__or__` 取的是左操作数的 context（`context=self.context`），所以 `FastDependsConfig()` 会让 broker 的 ContextRepo 被替换成一个全新的空 repo。而 application.py:87 是把 \"app\" 全局变量写到 `self.config.context` 上的，handler 注入却走 broker 的 `fd_config.context`（endpoint/subscriber/usecase.py:171 / 325、di/config.py:88），两者不再是同一个对象。后果：(1) `Context(\"app\")`（faststream/annotations.py:10 `FastStream = Annotated[FS, Context(\"app\")]`）以及 startup hook 里 set_global 的全局量在 handler 中仍然拿不到——正是 Issue 报告的现象，`set_broker` 场景没有修复；(2) 原本正确的 `FastStream(broker)` 路径也被改坏：main 分支此前是 `b._update_fd_config(self.config)`，现在同样被换成空 Context，例如 tests/docs/getting_started/context/test_custom_global.py 依赖 on_startup 写入 app context 的 \"secret_str\" 在 handler 的 `Context()` 里可见，现在会失败。修复建议：`broker._update_fd_config(self.config)`；并补一个针对 Issue 的回归测试（如 `app = StartAbleApplication(); app.set_broker(broker); assert broker.config.fd_config.context is app.context`，或 handler 注入 `Context(\"app\")` 后运行成功）。",
+   "suggestion": null
+  },
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "同一行还使应用级 fd 配置不再合并进 broker，破坏 FastAPI StreamRouter 集成与 FastStream(serializer=/context=) 用法。依据：faststream/_internal/di/config.py:57-60 中 `serializer=self.serializer or value.serializer`、`get_dependent=self.get_dependent or value.get_dependent` 都取左操作数（应用配置）优先，`FastDependsConfig()` 的 get_dependent 为 None，于是 faststream/_internal/fastapi/router.py:143-150 传入的 `get_dependent=get_fastapi_dependant`（以及 faststream/app.py:61-75 里 `FastStream(..., serializer=..., context=...)` 构造的配置）在构造路径上丢失，build_call 会退回 `build_call_model`（di/config.py:75-84），handler 的 FastAPI 依赖注入与上下文不再生效。tests/brokers/base/fastapi.py、tests/asyncapi/base/v3_0_0/fastapi.py 覆盖该路径。修复方式同上：把 `self.config` 传进 `_update_fd_config`。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "新增的 \"Broker ... is already added\" 检查目前不可达：`_add_broker` 的两个调用点中，`_init_setupable_` 刚把 `self.brokers` 置空，`set_broker` 又已在 109-111 行先 `if self.brokers: raise SetupError`，所以 `broker in self.brokers` 永远是 `broker in []`。不是行为缺陷，但会让人误以为多 broker 保护在这层；要么删掉，要么把去重语义（含 \"同一 broker 重复 set\"）统一放在这一处并相应调整 set_broker 的守卫与测试。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.11049,
+ "input_tokens": 601712,
+ "cache_hit_tokens": 561280,
+ "output_tokens": 14708,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 84.5
+}

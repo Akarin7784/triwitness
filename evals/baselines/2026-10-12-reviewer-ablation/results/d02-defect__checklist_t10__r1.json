@@ -1,0 +1,55 @@
+{
+ "item": "d02-defect",
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1ASWFXNYKXSAZXM1CGKPG",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "`_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 60}` 中 \"s\" 被错设为 60，Issue 明确要求 s = 1。按此实现：parse_duration(\"45s\") = 45*60 = 2700（原实现返回 45，属正确行为，现被改成错误 → 回归）；\"1h30m15s\" = 3600 + 30*60 + 15*60 = 6300，期望 5415，Issue 描述的混合时长仍然算错。补丁只让 \"2m\"/\"2h\" 之类单一 m 单位凑对，未真正修复 Issue 行为。",
+   "suggestion": "改为 `_UNITS = {\"h\": 3600, \"m\": 60, \"s\": 1}`，并核对 \"1h30m15s\" == 5415、\"45s\" == 45、\"2m\" == 120。"
+  },
+  {
+   "severity": "blocker",
+   "file": null,
+   "line": null,
+   "message": "测试方面：仓库仅有 tests/test_duration.py:test_seconds（断言 parse_duration(\"45s\") == 45）与 test_invalid。当前补丁会让 test_seconds 失败（45*60=2700），且没有为 Issue 的核心用例（\"1h30m15s\"、\"2m\"）补充任何测试。属于未覆盖目标行为 + 使既有正确用例失败。",
+   "suggestion": "修正 \"s\" 后补充/恢复测试：test_seconds(\"45s\"==45)、test_minutes(\"2m\"==120)、test_mixed(\"1h30m15s\"==5415)；不要删除或放宽 test_seconds。"
+  },
+  {
+   "severity": "minor",
+   "file": "timefmt/duration.py",
+   "line": 10,
+   "message": "边界情况未被考虑：_PART 允许重复单位（\"1h1h\"、\"5s5s\"）与空片段，校验仅依赖 `_PART.sub(\"\", text)` 判空，因此 \"1h\" 与 \"0h\" 等输入均可通过；虽与本次 Issue 无直接冲突，但若预期是规范化校验，应在补丁一起明确（至少为重复/零值补测试）。",
+   "suggestion": "视需求决定是否拒绝重复单位；无论哪种，都补上 \"0h\"、\"1h1h\"、\"\" 等边界测试以固定行为。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.00612,
+ "input_tokens": 13648,
+ "cache_hit_tokens": 12416,
+ "output_tokens": 1160,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 9.0
+}

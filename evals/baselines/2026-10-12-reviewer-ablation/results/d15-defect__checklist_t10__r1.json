@@ -1,0 +1,48 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1GTTWXP84C73E500E7GV8",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "参数传错：`broker._update_fd_config(FastDependsConfig())` 传的是新建的空配置，而不是 `self._add_broker` 所属 app 的 `self.config`。\n\n依据：`BrokerUsecase._update_fd_config`（faststream/_internal/broker/broker.py:86-88）实现为 `self.config.fd_config = config | self.config.fd_config`；而 `FastDependsConfig.__or__`（faststream/_internal/di/config.py:51-61）返回 `context=self.context`，即取**左侧（传入参数）**的 context。因此 broker 的 `config.fd_config.context` 被替换为这个全新 `FastDependsConfig()` 的空 ContextRepo（config.py:36 `default_factory=ContextRepo`），app 在 application.py:87 `self.config.context.set_global(\"app\", self)` 设置的全局 app、以及后续注入到 handler 的上下文全部丢失。这正是 Issue 报告的现象（`set_broker` 后 context 注入失效），补丁没有修好它。\n\n同时该行在构造期路径（application.py:92-93 `if broker: self._add_broker(broker)`）也会执行，原实现是 `b._update_fd_config(self.config)`，因此 `FastStream(broker)` 这一“本来正常”的用法也被改坏，属于回归。可佐证：subscriber/usecase.py:316 `self._outer_config.fd_config.context.get(\"app\")` 依赖该 context，broker.context（broker.py:68 返回 fd_config.context）也不再等于 app.context。\n\n修复建议：改为 `broker._update_fd_config(self.config)`。",
+   "suggestion": "broker._update_fd_config(self.config)"
+  },
+  {
+   "severity": "major",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "复现测试没有覆盖 Issue 的核心行为：`test_set_broker` 只断言 `app.broker is broker`，即使 context 被替换成空 ContextRepo 也会通过。因此该测试无法证明 bug 被修复（这正是上述 blocker 未被发现的原因）。\n\n建议新增断言，验证 broker 的 context 与 app 共享同一个 ContextRepo 且包含全局 app，例如：`assert app.broker.context is app.context` 以及 `assert app.broker.context.get(\"app\") is app`（对构造期 `FastStream(broker)` 与 `app.set_broker(broker)` 两条路径都断言）。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.025537,
+ "input_tokens": 59278,
+ "cache_hit_tokens": 42752,
+ "output_tokens": 2039,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 14.9
+}

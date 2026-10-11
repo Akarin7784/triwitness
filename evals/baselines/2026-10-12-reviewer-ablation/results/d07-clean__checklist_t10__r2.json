@@ -1,0 +1,41 @@
+{
+ "item": "d07-clean",
+ "task": "swe-pynmea2-124",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2J5KB8VRGTYRM1S20EX4K",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "行为本身修好了：`$PASHR,122144.75,240.68,T,,,,,,,2*04` 中 data[1]='122144.75'，放宽后的 `^\\d{6}\\.\\d{2,3}$` 能匹配，__new__（ash.py L23-26）因此返回 ASHRATT 而非退化为通用 ASH。但补丁未为该回归用例添加测试，而仓库已有 test/test_ash.py（含 test_ashratt、test_ash_undefined）。这属于修复覆盖不足，容易被将来再次改坏。",
+   "suggestion": "在 test/test_ash.py 中新增一个用例，例如 `data = '$PASHR,122144.75,240.68,T,,,,,,,2*04'`，断言 `type(msg) == pynmea2.ash.ASHRATT` 且 `msg.timestamp == datetime.time(12, 21, 44, 750000)`、`msg.true_heading == 240.68`，并验证 `msg.render() == data`。"
+  },
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "正则仍不覆盖更少/更多小数位的边界（如 `122144.7` 一位小数、`122144.7500` 四位小数、无小数点的 `122144`）。Issue 只报告了两位小数且作者建议即为 `{2,3}`，故不算缺陷；但需确认这不是有意限制——nmea_utils.timestamp 通过 `float(ms_s)*1000000` 处理小数位，理论上可支持任意位数。",
+   "suggestion": "若不希望限定小数位，可放宽为 `^\\d{6}\\.\\d{2,}$` 或 `^\\d{6}(\\.\\d+)?$`；若确为 RT300 格式约束，建议在 match 上加注释说明允许的小数位。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.026283,
+ "input_tokens": 104702,
+ "cache_hit_tokens": 96256,
+ "output_tokens": 3978,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 31.9
+}

@@ -1,0 +1,41 @@
+{
+ "item": "d06-clean",
+ "task": "swe-crosstl-257",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0CB5A78H943CVRQEKDJZZ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "重复定义 DOUBLE：第 27 行已有 (\"DOUBLE\", r\"\\bdouble\\b\")，此处值与之一字不差。TOKENS 是 OrderedDict，重复键在构造时保留首次插入位置且只覆盖值，而 _compile_patterns 只通过 TOKENS.items()（lexer.py:124）取去重后的条目，因此该行对 token 顺序、组合正则的命名分组和最终 token 流都没有任何影响——是可删除的死代码，不是功能缺陷（base 中 BITWISE_NOT/INCREMENT/DECREMENT 也存在同类冗余，可一并清理）。",
+   "suggestion": "删除第 81 行；若确实想让 double 出现在数据类型的末尾，需要同步调整第 27 行的位置，仅追加重复键不会改变任何行为。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新识别的 UNSIGNED_INT 在 parser 侧无法消费：parser.py 的类型 token 白名单（98-110 顶层、243-250 函数体、409-416 赋值/声明）都不含 \"UNSIGNED_INT\"。因此只有把类型名整体透传的 parse_struct/parse_cbuffer 成员声明（parser.py:148-151）能真正用上该 token，其它上下文（函数体内声明会抛 \"Unexpected token UNSIGNED_INT\"；顶层会走 parser.py:115-119 的 warn+skip 分支）仍然失败。改动前这些写法同样失败，所以不是回归，也没有静默改变语义；但「支持 unsigned int」目前只是部分生效。另：正则 \\bunsigned int\\b 只匹配单个空格，`unsigned  int`/`unsigned\\tint` 不会被识别。",
+   "suggestion": "属于本 Issue（明确只改 translator/lexer.py）之外的后续项，建议在对应的 parser 任务里把 \"UNSIGNED_INT\" 加入上述类型 token 列表；同时可把正则改为 r\"\\bunsigned\\s+int\\b\" 以容忍多空白。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.166141,
+ "input_tokens": 486550,
+ "cache_hit_tokens": 461952,
+ "output_tokens": 33076,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 188.1
+}

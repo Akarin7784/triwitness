@@ -243,7 +243,7 @@ Q1–Q6 由 Eva 于 2026-10-11 21:35 决定（Q1–Q4 维持现状，Q5/Q6 按�
 本轮合计 ¥0.1013（账本 ¥17.7409 → ¥17.8422），高峰价调用 0。命令审批在这几次运行里由默认的 auto_review 模式自动批准（`configs/permissions.default.yaml`），
 所以终端只弹了计划确认；auto_review 本身的实测按 Eva 21:36 决定延后，本轮没有专门测。
 
-## 13. W4-14 第二轮（待 Eva 本机跑）
+## 13. W4-14 第二轮（已跑，2026-10-12 01:32–02:16 UTC+8，¥10.2728）
 
 只跑 adversarial 与 checklist_t10，在同样 40 题上补 r1、r2（加第一轮 r0 共 3 次），约 ¥10：
 
@@ -254,8 +254,13 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\run-reviewer-ablation.p
 结果与第一轮在同一个 `-OutDir` 里合并（已有 r0 按文件名跳过）；`reviewer_ablation_posthoc.py` 给出逐次稳定性、按题聚类的
 差值区间，以及按第一轮口径（最后一次调用里的提交算没结论）的复算。
 
+结果（每臂 40 题 × 3 次，`evals/baselines/2026-10-12-reviewer-ablation/`）：checklist_t10 − adversarial 检出 +0%（−18%～+18%）、
+干净放行 −2%（−5%～+0%）、没下结论 −13%（−23%～−5%）；按题多数 McNemar 三个指标 Holm p 全部 1.000；花费约 1/3、耗时约 1/3.5。
+**Q8 / ADR-0007 确认**，默认值不变。
+
 ## 变更记录
 
 - 2026-10-11：初稿 + 首版实现（W4-01/03/04/05/06/07/15 部分）；补 §12 实测记录与 Q5/Q6；新增 `configs/harness/orchestrated-1m-consensus.yaml`。
+- 2026-10-12（凌晨）：§13 第二轮结果，Q8 / ADR-0007 确认。
 - 2026-10-12：Eva 01:01 决定 Q8——默认评审 checklist、共识关、强制提交 + reviewer_inconclusive（§6.2 / §6.2.1，ADR-0007）；§13 第二轮重复。
 - 2026-10-11（晚）：Eva 21:35 / 21:36 决定 Q1–Q6（Q2 改为评测完全放开）；实现 Q5 终端 y/N、Q6 计划确认续跑点；新增 §8.1 ask_human、§8.2 跨厂商评审、Q7 人工确认点（依赖 / CI 配置）；§12.1 第二轮实测。

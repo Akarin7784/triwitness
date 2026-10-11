@@ -1,0 +1,48 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0BTV3KHZZJ9EGW0YPAD3N",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "移动方向反了，Issue 未被修复，并且引入更差的淘汰行为。本文件中左端 = 淘汰端：`put` 对已存在 key 调用 `move_to_end(key)`（默认 last=True，即右端为 MRU），淘汰时用 `popitem(last=False)` 淘汰左端。因此 `get` 应把 key 移到右端，而 `move_to_end(key, last=False)` 恰恰把它移到淘汰端。\n\n按 Issue 场景（capacity=2）逐步核对打补丁后的代码：put(\"a\")→有序 [a]；put(\"b\")→[a,b]；get(\"a\") 时 \"a\" 已位于 `last=False` 的目标位置（最左端），move 是空操作→仍为 [a,b]；put(\"c\")→[a,b,c]，len>2 触发 `popitem(last=False)` 仍然淘汰 \"a\"。即 \"a\" 依旧消失，`get(\"a\")` 返回 default，Issue 原样复现。\n\n反向场景更糟：put(\"a\"), put(\"b\"), get(\"b\"), put(\"c\") 时，get(\"b\") 把刚读过的 \"b\" 移到最左端，put(\"c\") 随即淘汰 \"b\"——读取操作把条目从 MRU 降级成最先被淘汰的对象。",
+   "suggestion": "改为 `self._data.move_to_end(key)`（即 last=True，移到右端/MRU 端），与 `put` 中已存在 key 的处理及 `popitem(last=False)` 的淘汰端保持一致。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": null,
+   "message": "tests/test_lru.py 只有 `test_put_get`（put/get 命中与 default），没有任何覆盖淘汰顺序的用例，Issue 里的 capacity=2、put(\"a\")/put(\"b\")/get(\"a\")/put(\"c\") 场景未被断言——当前这个方向写反的补丁因此能通过现有测试。",
+   "suggestion": "新增回归测试，按 Issue 场景断言 `get(\"a\") == 1`（未被淘汰）且 `get(\"b\")` 返回 default（\"b\" 应被淘汰），并补一条 read-then-insert 的顺序断言（如 put(a),put(b),get(a),put(c) 后 len(cache)==2 且内容为 {a, c}）。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.014492,
+ "input_tokens": 12425,
+ "cache_hit_tokens": 11136,
+ "output_tokens": 3245,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 16.7
+}

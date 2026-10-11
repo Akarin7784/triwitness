@@ -1,0 +1,33 @@
+{
+ "item": "d08-defect",
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "defect",
+ "truth": {
+  "file": "src/cfnlint/jsonschema/_utils.py",
+  "line": 52,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1RSSR57HKEBPRFX6GY15E",
+ "max_turns": 20,
+ "path": "没有提交（budget_exhausted：单任务安全上限 max_turns 已用尽：20 / 20）",
+ "served_model": "deepseek-flash",
+ "verdict": null,
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.115301,
+ "input_tokens": 597829,
+ "cache_hit_tokens": 560384,
+ "output_tokens": 16662,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 107.8
+}

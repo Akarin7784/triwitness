@@ -1,0 +1,48 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2490P4ZW5R4WG342QDXKM",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError as e:` 覆盖的是整个 emit 的 try 体（第 128-206 行），而不仅仅是格式解析。该 try 体内还包含用户代码：`self._filter(record)`（第 133 行）、动态 format 可调用对象 `self._formatter(record)`（第 137 行）以及 `self._sink.write(str_record)`（第 206 行，enqueue=False 时同步执行）。因此这些地方抛出的 KeyError 会被误报为「The format string references an unknown key ...」——例如 `logger.add(lambda m: cache[m.record[\"extra\"][\"job\"]])` 或 `logger.add(..., filter=lambda r: r[\"extra\"][\"task\"] == \"x\")`，真实原因（sink/filter 里的字典查找失败）被替换成格式字符串诊断，与 issue 想要「提高可诊断性」的目标相反。更严重的是在 catch=True 分支里传给 `_error_interceptor.print(record, exception=...)` 的是新建的 KeyError，它没有 traceback（见 loguru/_error_interceptor.py:20 使用 `exception.__traceback__`，此处为 None），所以输出里连「Traceback (most recent call last)」都没有了；基线行为的 `self._error_interceptor.print(record)` 走的是 `sys.exc_info()`，会打印 sink/filter 的完整栈。catch=False 分支同样由 `raise self._make_key_error(e, record) from e` 把原始 KeyError 的消息替换掉（调用方 `except KeyError as e: ...e.args[0]` 拿到的是格式字符串文本）。建议把 KeyError 转换限制在格式解析步骤：只把各分支的 `precomputed_format.format_map(formatter_record)`（第 161/165/175/180/184/192 行）包一层独立的 try/except KeyError，在其中构造/抛出诊断异常后 return，其余部分（filter、动态 format、sink.write、queue.put）继续由第 211 行的通用 `except Exception` 处理，从而保留原异常与 traceback。",
+   "suggestion": "在 emit 内为格式解析单独加一层保护，例如：\n```python\ntry:\n    formatted = precomputed_format.format_map(formatter_record)  # 仅格式化部分\nexcept KeyError as e:\n    error = self._make_key_error(e, record)\n    if not self._error_interceptor.should_catch():\n        raise error from e\n    self._error_interceptor.print(record, exception=error)\n    return\n```\n并删除第 207-210 行的宽泛 `except KeyError`，使用户 filter / 动态 format / sink 抛出的 KeyError 仍由第 211 行按原样上报（含真实 traceback）。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "`\", \".join(sorted(record.keys()))` 在 record 的键不是同一种可比类型时会抛 TypeError。Logger.patch/configure(patcher=...) 允许对 record 做任意 in-place 修改（见 loguru/_logger.py:1552-1599、1752-1782 的文档），若 patcher 写入非字符串键（如 `logger.patch(lambda r: r.update({1: \"x\"}))`），一旦同时出现缺失的格式键，sorted() 会在 except KeyError 处理器内部抛出 TypeError 并逃出 emit，最终从 `logger.info(...)` 抛给调用方——即使 catch=True 也会让应用崩溃，违背「日志错误不应中断应用」的既有约定。",
+   "suggestion": "先转成字符串再排序，例如 `available = \", \".join(sorted(map(str, record.keys())))`（或用 repr），保证异常路径自身不会失败。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 251,
+   "message": "本次提交只修改了 loguru/_handler.py（`git show --stat HEAD` 仅 1 个文件、16 行），没有为新增的诊断行为补任何测试，而 issue 的多条验收标准（缺失键名、logger.bind/extra[key] 指引、可用键列表、catch=True/False 两种路径、patcher 新增键仍可用）都缺少回归保障。",
+   "suggestion": "在 tests/test_add_option_catch.py 或新测试文件中补充用例：catch=True 时断言 stderr 含缺失键名、`logger.bind`、`{extra[key]}` 及 elapsed/exception/extra/file/level/message；catch=False 时用 `pytest.raises(KeyError, match=...)` 断言同样信息；并加一条「sink 抛出的 KeyError 不应被误报为格式键错误」的用例，防止本次的过度捕获再次出现。"
+  }
+ ],
+ "error": null,
+ "calls": 15,
+ "cost_cny": 0.151329,
+ "input_tokens": 417843,
+ "cache_hit_tokens": 386304,
+ "output_tokens": 28016,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 154.7
+}

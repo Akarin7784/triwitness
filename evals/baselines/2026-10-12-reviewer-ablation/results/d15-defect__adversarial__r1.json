@@ -1,0 +1,41 @@
+{
+ "item": "d15-defect",
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0Z11FQJ9TSJC9D9289S7H",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "faststream/_internal/application.py",
+   "line": 120,
+   "message": "传入了全新 `FastDependsConfig()` 而不是应用自己的 `self.config`，导致 Issue 未真正修复且引入回归。\n\n依据链：\n1) `BrokerUsecase._update_fd_config` 的实现是 `self.config.fd_config = config | self.config.fd_config`（faststream/_internal/broker/broker.py:86-88），而 `FastDependsConfig.__or__` 的合并结果是 `context=self.context`（左操作数，即传入的 config，见 faststream/_internal/di/config.py:51-61）。也就是说，谁被传进来，谁的 `ContextRepo` 就成为 broker 的 `fd_config.context`。\n2) `ContextRepo` 的 `_global_context` 是实例级字典（faststream/_internal/context/repository.py:20,30-40），`FastDependsConfig()` 默认 `context=ContextRepo()` 每次都是新的空 context。因此这里传空 config 后，`app.context`（其中在 application.py:87 通过 `set_global(\"app\", self)` 写入了 app，以及 on_startup 钩子里 `context.set_global(...)` 写入的全局量）与 `broker.config.fd_config.context` 仍然是两个不同对象——这正是 Issue 描述的 “breaks Context injection” 的根因，修复没有生效；`SubscriberUsecase` 的 handler 注入（subscriber/usecase.py:171 `config=self._outer_config.fd_config`）用的就是 broker 的 fd_config.context，取不到 app 级全局量（`ContextRepo.resolve` 找不到 key 时抛 `ContextError`，见 repository.py:144-164）。\n3) 同时是回归：base 版本在 `_init_setupable_` 里执行的是 `b._update_fd_config(self.config)`，所以 `FastStream(broker)`、以及 `FastStream(..., config=my_config)` 这条路径过去会把 app 的 context/自定义 config 合并给 broker，现在被替换成了无关联的新 config，例如文档示例 docs/docs_src/getting_started/context/nats/custom_global_context.py（`app = FastStream(broker)`，on_startup 里 `set_global(\"secret_str\")`，handler 里 `Annotated[str, Context()]` 断言取到该值）在真实运行时将取不到值。\n\n修复建议：改为 `broker._update_fd_config(self.config)`。另外建议补一个回归用例（例如在 tests/application/test_delayed_broker.py 中：`app = FastStream()`；在 app 的 on_startup 里 `context.set_global(\"key\", value)`；`app.set_broker(broker)`；发布一条消息并断言 handler 通过 `Context(\"key\")` 拿到该值 / 断言 `broker.config.fd_config.context is app.context`），否则这个缺陷仍不会被现有测试发现（现有 test_set_broker 只断言 `app.broker is broker`）。",
+   "suggestion": "将 `_add_broker` 最后一行改为 `broker._update_fd_config(self.config)`，并补充覆盖 `set_broker` 后 context 注入的回归测试。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.167516,
+ "input_tokens": 740373,
+ "cache_hit_tokens": 687360,
+ "output_tokens": 25189,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 145.9
+}

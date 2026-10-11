@@ -1,0 +1,48 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0C5X209SJW2BVBC2HG9SF",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "修复不完整：只调用了 `.lstrip(\"-\")`，未去除末尾分隔符。按 Issue 样例推演：`\"  Hello,  World!  \".lower()` 经 `_NON_WORD.sub(\"-\", ...)` 得到 `\"-hello-world-\"`，`lstrip(\"-\")` 后为 `\"hello-world-\"`，仍以 `-` 结尾，与期望的 `\"hello-world\"` 不符，Issue 的核心诉求（slug 不得以 `-` 开头或结尾）未真正满足。注意仓库现有测试 `tests/test_slug.py::test_simple` 只覆盖 `\"Hello World\"`，改动前后均通过，无法发现该问题。",
+   "suggestion": "改为 `.strip(\"-\")`（同时去除首尾），即 `return _NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`；并补充回归用例，例如 `slugify(\"  Hello,  World!  \") == \"hello-world\"` 与 `slugify(\"a -- b\") == \"a-b\"`。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_slug.py",
+   "line": 5,
+   "message": "补丁未新增任何覆盖 Issue 场景的回归测试，唯一用例 `slugify(\"Hello World\")` 在修复前后结果相同，无法防止首尾分隔符问题回归（当前末尾 `-` 的缺陷正是漏测导致的）。",
+   "suggestion": "新增断言覆盖：`slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`，以及纯分隔符输入（如 `slugify(\"---\") == \"\"`）。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.008554,
+ "input_tokens": 11144,
+ "cache_hit_tokens": 10112,
+ "output_tokens": 1830,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 9.8
+}

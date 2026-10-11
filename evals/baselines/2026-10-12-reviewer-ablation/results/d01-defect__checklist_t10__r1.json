@@ -1,0 +1,48 @@
+{
+ "item": "d01-defect",
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1AJS549CTCVS5CVGW8BZB",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "The guard only skips lines that are exactly empty. A whitespace-only line (e.g. \"a,1\\n   \\nb,2\" or a trailing \"\\t\") is truthy, so `\"   \".split(\",\")` -> `[\"   \"]` and `parts[1]` still raises `IndexError: list index out of range` — the same failure class the issue reports, just triggered by a slightly different blank-line shape. If the input has trailing spaces on an otherwise blank line (very common in real CSVs/files), the bug is not actually fixed.",
+   "suggestion": "Strip once and test the stripped value, e.g.:\n```python\nfor line in text.splitlines():\n    line = line.strip()\n    if not line:\n        continue\n    parts = line.split(\",\")\n    ...\n```\nThis also makes the later `parts[0].strip()` redundant-consistent."
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_basic.py",
+   "line": 5,
+   "message": "No regression test was added for the reported bug. `test_basic` only covers 'a,1\\nb,2'. Nothing pins the new skip behavior, so a future edit could reintroduce the IndexError unnoticed, and the whitespace-only variant above is likewise unprotected.",
+   "suggestion": "Add a test asserting blank-line inputs, e.g. `assert parse_rows(\"a,1\\n\\nb,2\\n\") == [(\"a\", 1), (\"b\", 2)]` and a whitespace-only-line case `assert parse_rows(\"a,1\\n   \\nb,2\") == [(\"a\", 1), (\"b\", 2)]`."
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.008539,
+ "input_tokens": 16731,
+ "cache_hit_tokens": 14976,
+ "output_tokens": 1621,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 11.8
+}

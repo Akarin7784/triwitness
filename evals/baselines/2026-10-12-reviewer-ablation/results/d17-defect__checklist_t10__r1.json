@@ -1,0 +1,62 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1HBBKQPM703WHTV0D6R0Y",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 145,
+   "message": "branch_exists 用 `response.status_code != 404` 判定存在，但 GitHub 对以下情况同样返回非 404：token 无效/过期返回 401、权限不足或触发限流返回 403、服务端错误返回 5xx。此时 branch_exists 恒定返回 True，第 171 行的 `while branch_exists(...)` 会无限循环、attempt 无限增长、branch_name 无限追加 `-tryN`，函数永不返回。真实场景（token 失效）即可触发挂死。",
+   "suggestion": "只在 404 时返回 False，其它状态显式区分：`if response.status_code == 404: return False`；对 200 返回 True；对 401/403/5xx 调用 `response.raise_for_status()` 抛出明确异常，而不是当作“存在”。"
+  },
+  {
+   "severity": "blocker",
+   "file": null,
+   "line": null,
+   "message": "patch 未同步更新既有测试，导致其被破坏且新增行为无测试覆盖。tests/test_send_pull_request.py:216 与 :331 中 `mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})` 未配置 status_code，MagicMock 的 status_code != 404 为真，branch_exists 恒为 True → 第 171 行死循环，测试会挂起；即便能退出，:237 的 `assert mock_get.call_count == 1`（现在至少 2 次 get）与 :243/:250/:260/:269 中无后缀的 `openhands-fix-issue-42` 断言也会失败。",
+   "suggestion": "更新 mock 为按 URL 区分的 side_effect（分支查询返回 404/200 的 status_code），把 call_count 断言改为与实际调用次数一致；并新增‘分支已存在 → 使用 openhands-fix-issue-N-try2’的用例与‘401/403/5xx 应报错而非死循环’的用例。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "查重与推送的目标仓库不一致。branch_exists 使用的是 base_url = github_issue.owner/github_issue.repo（第 164 行），而实际推送目标是 push_owner = fork_owner if fork_owner else github_issue.owner、push_repo = github_issue.repo（第 194-195 行）。当指定 fork_owner 时，检查的是上游仓库分支，无法反映 fork 上是否已存在同名分支，可能仍推送到已存在的分支而失败或覆盖。",
+   "suggestion": "按实际推送目标构造查询 URL（fork_owner 存在时查 fork_owner/repo 的 branches），使唯一性判断与推送仓库一致。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "循环没有次数上限。即使修好状态码判断，若远端持续返回“存在”或数据异常，仍可能无限追加 -tryN。",
+   "suggestion": "设置一个最大尝试次数（如 100），超出后抛出明确的 RuntimeError，便于诊断而非挂死。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.020125,
+ "input_tokens": 40223,
+ "cache_hit_tokens": 34304,
+ "output_tokens": 3380,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 19.1
+}

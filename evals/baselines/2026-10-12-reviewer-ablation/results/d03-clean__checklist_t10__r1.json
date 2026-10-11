@@ -1,0 +1,41 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1AYAATA3K87EM7143WZ60",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "minicache/lru.py",
+   "line": 16,
+   "message": "`get` performs two ordered-dict lookups (`in` check + `move_to_end` + `self._data[key]`). Correctness is fine and this matches the diff scope; `value = self._data[key]; self._data.move_to_end(key); return value` or try/except KeyError would be marginally cheaper. Purely optional, no behavior change.",
+   "suggestion": null
+  },
+  {
+   "severity": "nit",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "The reproduction from the issue (capacity 2: put a, put b, get a, put c → expect b evicted) is not encoded as a regression test. Behavior is fixed, but adding an LRU-order test would lock it in. Not required for merge since existing tests are untouched and still pass.",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.006999,
+ "input_tokens": 15239,
+ "cache_hit_tokens": 13184,
+ "output_tokens": 1170,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 8.8
+}

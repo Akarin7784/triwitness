@@ -1,0 +1,48 @@
+{
+ "item": "d06-clean",
+ "task": "swe-crosstl-257",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1MFGV2YEX5X334QADYG9C",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "这一行是无效改动（no-op），属于“看着像加权限、实际什么都没做”。第 27 行已经存在同样的 `(\"DOUBLE\", r\"\\bdouble\\b\")`；而 `TOKENS` 是 `OrderedDict`，用 list-of-tuples 初始化时重复 key 只会覆盖已存在 key 的值、并保留首次插入位置（文档明示 “If a new entry overwrites an existing entry, the original insertion position is left unchanged”），且此处新旧 pattern 完全相同，所以 `_compile_patterns()`（lexer.py:123-125，`TOKENS.items()`）里 DOUBLE 仍然只有一份、仍在第 27 行的位置。也就是说这行既不新增 token、也不改变匹配优先级；如果作者本意是调整 `double` 的匹配顺序或补一个缺失 token，都被静默吞掉。",
+   "suggestion": "删除第 81 行；若确实要改变 `double` 的匹配优先级，请直接修改/移动第 27 行的条目，而不是在 OrderedDict 末尾追加同名 key。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "`\\bunsigned int\\b` 里是字面空格，只能匹配“恰好一个空格”的写法。该 lexer 是合并正则从左到右 first-match（lexer.py:121-126、135-148），空白本身由 `WHITESPACE = \\s+`（lexer.py:43）处理，所以 `unsigned  int`（两个空格）、`unsigned\\nint`、`unsigned\\tint` 都会退化成 IDENTIFIER(\"unsigned\") + INT(\"int\")，随后在 parser 的类型列表（parser.py:98-110/243-250/409-416）处报 SyntaxError，与单空格写法行为不一致。仓库里多词 token 的既有写法是 `\\s+`：crosstl/backend/Metal/MetalLexer.py:27 `(\"ELSE_IF\", r\"\\belse\\s+if\\b\")`。",
+   "suggestion": "改为 `r\"\\bunsigned\\s+int\\b\"`（若下游依赖 token 文本与 metal_codegen.py:49 的键 `\"unsigned int\"` 完全一致，则在生成 token 文本时把内部空白规范化为单个空格）。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "新增的 `UNSIGNED_INT` 在 translator 前端没有任何消费方，patch 之后 `unsigned int` 仍然不能被翻译：parser.py 的类型/语句 token 列表（98-110、243-250、409-416、727-734）都不含 `UNSIGNED_INT`。顶层声明会走 parser.py:115-119 的 `warnings.warn(\"Skipping unexpected token ...\")` 分支把整块 `unsigned int` 静默丢弃后再报错；函数体内则直接抛 `SyntaxError(\"Unexpected token UNSIGNED_INT\")`（parser.py:253）。注意 codegen 侧其实已经准备好接收这个类型（crosstl/translator/codegen/metal_codegen.py:49 `\"unsigned int\": \"uint\"`，AST 里存的是 token 文本），所以缺的只是 parser 放行。",
+   "suggestion": "至少在 parser.py 的几处类型 token 列表中把 `UNSIGNED_INT` 与 `INT`/`UINT` 并列（parse_shader:98-110、parse_body:243-250、parse_assignment_or_function_call:409-416），这样该 token 才真正可用；若本 PR 严格限定只改 lexer，请在 PR/issue 中明确 `unsigned int` 端到端支持仍不可用，避免被当成已完成。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.1922,
+ "input_tokens": 401924,
+ "cache_hit_tokens": 376192,
+ "output_tokens": 39736,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 211.6
+}

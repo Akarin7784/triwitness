@@ -1,0 +1,34 @@
+{
+ "item": "d03-clean",
+ "task": "lru-get-refresh",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1KNSHRGFGZ4D2N0TBNNJG",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "修复了 LRU 淘汰顺序，但没有为 Issue 中给出的回归场景补测试。现有唯一用例 test_put_get（tests/test_lru.py:4-8）只有容量 2 下的 put/get，不涉及容量溢出淘汰，在打补丁前的错误实现上同样能通过，无法防止该 bug 回归。",
+   "suggestion": "补充一个回归测试，例如：c = LRUCache(2); c.put(\"a\", 1); c.put(\"b\", 2); assert c.get(\"a\") == 1; c.put(\"c\", 3); assert c.get(\"b\") is None and c.get(\"a\") == 1，并断言 len(c) == 2。属可选的加固项，不阻塞合并。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.016307,
+ "input_tokens": 28122,
+ "cache_hit_tokens": 25856,
+ "output_tokens": 3381,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 19.9
+}

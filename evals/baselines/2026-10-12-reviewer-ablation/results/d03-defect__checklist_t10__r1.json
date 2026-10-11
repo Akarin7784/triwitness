@@ -1,0 +1,48 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1B2PPFST3QWQVB2AW4HYG",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "修复方向反了，Issue 的行为仍然存在。put 用 `move_to_end(key)`（last=True，移到队尾=MRU），淘汰用 `popitem(last=False)` 从队首（LRU 端）取；因此“最近使用”应位于队尾。但 get 新增的是 `move_to_end(key, last=False)`，把刚被读取的 key 移到队首——恰恰是淘汰端。逐步跟踪 Issue 的用例：put(\"a\")→[a]；put(\"b\")→[a,b]；get(\"a\")→a 已在队首，move_to_end(last=False) 后仍为 [a,b]；put(\"c\")→[a,b,c]，len 3>2 → popitem(last=False) 淘汰队首 a。结果 “a” 依旧消失、“b” 依旧存活，与报告的错误行为完全一致，补丁等于没修。",
+   "suggestion": "把 get 中的移动改为 `self._data.move_to_end(key)`（即 last=True，与 put 一致，将读取的 key 移到 MRU 端）；这样 get(\"a\") 后顺序为 [b,a]，put(\"c\") 时淘汰队首 b，符合 Issue 期望。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": 1,
+   "message": "测试未覆盖淘汰（eviction）路径，因此无法证明修复。现有 test_put_get 只断言单键读写与未命中默认值，capacity=2 下从不触发 popitem；上面那个方向反转的改动也能让它通过（确定性验证据此判为通过并不可靠）。",
+   "suggestion": "补充回归测试，直接复现 Issue 场景：capacity=2 下 put(\"a\"), put(\"b\"), get(\"a\"), put(\"c\")，断言 get(\"b\") 为默认值（已淘汰）且 get(\"a\")==1（存活）；再补一条纯 LRU 顺序用例（不触发 get）确认淘汰最久未使用者。"
+  }
+ ],
+ "error": null,
+ "calls": 5,
+ "cost_cny": 0.008828,
+ "input_tokens": 15357,
+ "cache_hit_tokens": 13568,
+ "output_tokens": 1692,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 11.4
+}

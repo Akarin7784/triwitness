@@ -1,0 +1,62 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2RTH03Y067ZW9PMH6T6FR",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "tests/test_send_pull_request.py",
+   "line": 237,
+   "message": "既有测试被改弱/失败：新增的 `branch_exists()`（send_pull_request.py:143-145）在 send_pull_request 中先发 GET `{base_url}/branches/{branch_name}` 并判断 `response.status_code == 200`（第145行），但测试中 `mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})`（第216、283、331行）是一个完整的 MagicMock，其 `.status_code` 属性仍是 MagicMock，`MagicMock == 200` 为 False，因此循环不会执行；而 `assert mock_get.call_count == 1`（第237行）必然失败——实际 call_count 至少为 2（branch_exists 的 branches 调用 + 第176行的 repo 元数据调用）。也就是说补丁没有同步更新任何测试，测试套件处于红灯状态，且没有一个测试覆盖『分支已存在 → 生成 -try2』这一核心新行为。修复建议：把 mock_get 改为 `side_effect`，区分 `/branches/...`（首次 404 / 已存在时 200）与 repo 元数据（200 + default_branch），并据此更新 call_count 断言；另新增一个用例：第一次 branch_exists 返回 200（已存在），断言产生的分支名为 `openhands-fix-issue-42-try2`、push 与 PR 的 head 均用该名字。",
+   "suggestion": "用 `mock_get.side_effect` 分别为 `/branches/{name}` 与仓库元数据 URL 返回带 status_code 的响应；修正/放宽 `call_count` 断言；增加『分支已存在时回退到 -try2/-try3』的正向用例。"
+  },
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 144,
+   "message": "该 API 调用缺少错误处理，导致新行为本身不可靠：`requests.get(...)` 未加超时，也未 `raise_for_status()`/区分类状态码。任何非 200 的返回（包括 401/403 鉴权失败、404 之外被 GitHub 限流返回 403/429、网络错误）都会被 `response.status_code == 200` 一律判为『分支不存在』，于是静默用 base 分支名继续；如果真实原因是鉴权/限流，接下来 push 或 PR 创建才失败，报错信息与真正原因不符。更重要的是，若请求因网络错误抛出异常，会直接中断整个流程而没有明确提示。建议：加上 timeout（如 `requests.get(url, headers=headers, timeout=30)`），并显式处理 404→False、200→True、其它状态码→raise（带状态码与响应体）。",
+   "suggestion": "`resp = requests.get(f\"{base_url}/branches/{branch_name}\", headers=headers, timeout=30)`；`if resp.status_code == 404: return False` / `resp.raise_for_status(); return resp.status_code == 200`。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "并发/竞态与无限循环的边界未覆盖：`while branch_exists(...)` 只是『先查后建』，多个 resolver 实例同时处理同一 issue，或在循环判定与 `git checkout -b`/push 之间分支被别人创建，仍会走到建分支/推送失败（此时 checkout -b 因本地已有分支而失败或 push 冲突）。原实现靠 git 报错抛出 RuntimeError，新逻辑并没有真正消除该失败路径，Issue 期望的『自动顺延 -tryN』在竞态下仍不生效。建议至少在 checkout -b/push 失败且失败原因显示分支已存在时重试下一编号；另外若仓库存在大量 `-tryN` 历史，循环将持续对该仓库每个编号发一次 API 请求，建议加上尝试次数上限并在超出时报错。",
+   "suggestion": "为 checkout/push 的分支已存在类失败增加带 -tryN 顺延的重试，并对 attempt 设上限。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 218,
+   "message": "回归风险（fork 场景）：分支名唯一性是通过 `{base_url}/branches/{branch_name}` 在 **原仓库** (owner/repo) 上探测的，但第194-202行的实际推送目标是 `fork_owner`。当 fork 中已存在同名 `openhands-fix-issue-N`（例如 fork 是更早的同步点，或前一次运行只 push 到 fork），探测会返回 404 而认为名字可用，push 时冲突/覆盖，Issue 想解决的『分支已存在』问题在 --fork-owner 路径下没有被修复。建议在 fork_owner 存在时对 fork 仓库的 branches 端点做探测。",
+   "suggestion": "`check_owner = push_owner` 后探测 `https://api.github.com/repos/{check_owner}/{push_repo}/branches/{branch_name}`。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 182,
+   "message": "`git -C {patch_dir} checkout -b {branch_name}` 使用 shell=True 拼接未加引号的分支名（与推送命令同一模式）。分支名由 issue number 与固定前缀生成，当前不受外部输入影响，但既然新增了基于远端状态的命名逻辑，建议改用参数列表形式（shell=False）或在 retry 逻辑中保持对分支名的严格校验，避免后续有人把外部输入接进来时形成命令注入。",
+   "suggestion": "改用 subprocess.run([\"git\", \"-C\", patch_dir, \"checkout\", \"-b\", branch_name], ...)。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.020632,
+ "input_tokens": 67136,
+ "cache_hit_tokens": 55808,
+ "output_tokens": 2047,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 16.7
+}

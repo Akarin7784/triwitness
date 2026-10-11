@@ -1,0 +1,48 @@
+{
+ "item": "d19-defect",
+ "task": "swe-cyclopts-633",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/parameter.py",
+  "line": 279,
+  "category": "wrong_condition",
+  "severity": "major",
+  "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1J57G2EJ4KHTDE8HGJWGQ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "cyclopts/parameter.py",
+   "line": 279,
+   "message": "cyclopts/parameter.py:279 的 sorted_args 排序对最终结果没有实际作用：真正的修复来自 283-284 行的 `if neg not in out` 去重（排序只影响去重前遍历顺序，而输出顺序本就由负号集合的插入顺序决定）。非 None 成员的相对顺序被 sorted 保持稳定，但 NoneType 与 bool 的输出内容在去重后与纯插入顺序等价。依据：内层循环对每个成员再次调用 get_negatives 并把结果扁平加入到 out 并去重，顺序差异只有在存在 \"--\" 前缀负号（line 297-302 提前返回 out）时才可能与 None 分支输出交错，而该分支对同一 Parameter 的两个成员结果相同、去重后一致。",
+   "suggestion": "可保留排序作为可读性说明，或直接删掉 sorted 只留去重，减少无谓分配；若保留请把注释改为强调「去重」而非「优先级排序」。"
+  },
+  {
+   "severity": "nit",
+   "file": null,
+   "line": null,
+   "message": "工作区 tests/ 下只有 fixture（tests/apps/config.toml、tests/apps/cyclopts-demo/pyproject.toml），没有可运行的测试文件，无法验证 Issue 复现场景（`--help` 输出中只出现一次 --negative）是否被自动化测试覆盖。这不是本补丁引入的问题，但意味着该行为修复目前缺乏回归测试保护。",
+   "suggestion": "在可用的测试套件中补充一个用例：`Annotated[bool | None, Parameter(negative=\"--negative\")]` 下断言 get_negatives 返回 ('--negative',)，以及纯 `None` 类型仍返回 negative_none 派生的负号，防止回归。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.021085,
+ "input_tokens": 135465,
+ "cache_hit_tokens": 125184,
+ "output_tokens": 2075,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 20.2
+}

@@ -1,0 +1,41 @@
+{
+ "item": "d08-clean",
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2K39Z5TXT8585WE93DSB3",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 50,
+   "message": "修复位置与门控条件正确：E3009 (src/cfnlint/rules/resources/CfnInit.py:40) 用 functions=list(FUNCTIONS) 演化 context，其中包含 Fn::Transform (src/cfnlint/helpers.py:179)，因此 files 下与 mode/owner/group 并列的 Fn::Transform 会被跳过；而当该路径不允许 Fn::Transform 时仍会报错，属上下文门控的合理例外，与 _keywords_cfn.additionalProperties 的既有做法一致。但该补丁未附带回归测试（test/unit/rules/resources/test_cfn_init.py 中无 Fn::Transform 用例），后续回归无保护。",
+   "suggestion": "在 test_cfn_init.py 的合法用例中增加一个 files 项内含 Fn::Transform (Name: AWS::Include) 且与 mode/owner/group 并列的用例，断言无错误。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/cfnlint/jsonschema/_utils.py",
+   "line": 51,
+   "message": "跳过逻辑直接写在通用工具 find_additional_properties 中，只对 Fn::Transform 做特判，而 _keywords_cfn 的 _ap_exception_fns 还包含 FUNCTION_FOR_EACH。此处两类容器语义不同：只要 context.functions 含 Fn::Transform（模板默认就含），任何对象里出现的该键都不再被判为额外属性，范围可能比 E3009 场景更宽。鉴于 CloudFormation 允许多处并列使用 Fn::Transform、且与既有实现一致，不构成 blocker。",
+   "suggestion": "可考虑复用 _keywords_cfn 中的例外集合（或在注释中说明为何只排除 Fn::Transform），以便未来统一维护例外函数列表。"
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.047318,
+ "input_tokens": 307599,
+ "cache_hit_tokens": 284160,
+ "output_tokens": 4549,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 64.8
+}

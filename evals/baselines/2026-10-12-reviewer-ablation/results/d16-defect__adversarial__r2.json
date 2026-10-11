@@ -1,0 +1,48 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P26QQBCF1E8NGMJ7J5TXD1",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` 取错了下标，会让整个补丁在最核心场景下抛 IndexError。依据：(1) 缺失 key 由 _handler.py:161/175/180/184/192 的 `precomputed_format.format_map(formatter_record)` 触发，formatter_record 是 `record.copy()`（loguru/_logger.py:2113 构造的普通 dict），dict 查找失败只会抛 `KeyError(key)`，即只有一个元素 `args=(key,)`；(2) Issue 里给出的原始输出 `KeyError: 'nonexistent'` 本身就是证据——`KeyError.__str__` 只有在 len(args)==1 时才打印 `repr(args[0])`，两个参数会打印成 `KeyError: ('nonexistent', ...)`；仓库文档同样（docs/resources/troubleshooting.rst:323 `# KeyError: 'key1, key2'`）。(3) 因此 `original.args[1]` 必然抛 `IndexError: tuple index out of range`，且它在 `except KeyError` 分支体内部抛出，不会被同一个 try 的 `except Exception` 子句接住（_handler.py:211），会直接冒出 Handler.emit；而 loguru/_logger.py:2163-2164 是裸调用 `handler.emit(...)`（logger.info -> _log 也无保护），于是 IndexError 一路抛给 `logger.info(\"Hello world\")` 的调用方：catch=True 时应用崩溃，比改前更糟，直接违反验收条件「catch=True ... without crashing the application」。catch=False 时 `raise self._make_key_error(e, record) from e`（_handler.py:209）也变成抛 IndexError 而非 KeyError，违反「raised KeyError includes the missing key and the same actionable guidance」，并且会让现有测试失败：tests/test_configure.py:141（test_reset_previous_extra，format=\"{extra[a]}\" 且 extra 被清空）与 tests/test_configure.py:151（test_reset_previous_patcher）都断言 `pytest.raises(KeyError)`，实际会拿到 IndexError（IndexError 与 KeyError 只是 LookupError 下的兄弟类）。修复：改为 `key = original.args[0] if original.args else \"?\"`（如需更稳健可在 args 非单元素时退化为 `str(original)`），其余逻辑可保留。",
+   "suggestion": "把 `original.args[1]` 改为 `original.args[0]`，例如：\n```python\nkey = original.args[0] if original.args else \"?\"\n```\n并补一条覆盖 Issue 复现路径的测试：catch=True 断言 stderr 含缺失 key 且 `logger.info()` 不抛异常（同时断言可用 key 列表与 logger.bind 提示），catch=False 断言 `pytest.raises(KeyError)` 且消息含该 key 与 `extra[key]` 提示（含 `{extra[a]}` 这类嵌套缺失 key 的情况）。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError` 覆盖了整个 emit 方法体，范围过宽：第 133 行的用户 filter、第 137 行的动态 format 回调 `self._formatter(record)`、第 206 行的 `self._sink.write(str_record)` 都在同一个 try 内。这些用户代码抛出的 KeyError（例如自定义 sink 里的 `d[\"k\"]`）原本由 `except Exception`（211-214 行）按原样报告并带原始 traceback；现在会被 `_make_key_error` 改写为「The format string references an unknown key ...」的误导性消息，而且传给 `ErrorInterceptor.print(record, exception=...)` 的是一个新建的 KeyError（`__cause__` 未设置、`__traceback__` 为 None），`traceback.print_exception` 只会打印一行消息（_error_interceptor.py:20/29），真正出错位置（sink 内部的 traceback 帧）在 catch=True 的输出里丢失了。依据：_handler.py:128-214 的 try 范围与 200-206 行的 sink 写入。修复建议：把新逻辑收窄到格式串求值本身，例如只把各处 `formatted = precomputed_format.format_map(formatter_record)`（161/165/175/180/184/192）包一层 `try/except KeyError`，或在走 print 时保留原始异常（把原始 e 作为 cause 一起报告），避免把用户代码的 KeyError 误判为格式串问题。",
+   "suggestion": "仅在格式化步骤捕获 KeyError（例如抽一个 `_format_record(...)` 内部函数，在其中 try/except KeyError 后转成诊断异常），或者至少 `raise self._make_key_error(e, record) from e` 的同时在 catch=True 分支让 `print` 保留原始异常对象/`__cause__`，使 sink 等用户代码的 KeyError 仍显示原始 traceback。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.162031,
+ "input_tokens": 437293,
+ "cache_hit_tokens": 408704,
+ "output_tokens": 31317,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 178.2
+}

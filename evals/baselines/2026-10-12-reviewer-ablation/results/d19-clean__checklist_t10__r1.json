@@ -1,0 +1,41 @@
+{
+ "item": "d19-clean",
+ "task": "swe-cyclopts-633",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1J2TXQ27YKE0RQDFYMSV1",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "cyclopts/parameter.py",
+   "line": 275,
+   "message": "Fix is correct but no regression test was added. The diff touches only cyclopts/parameter.py; tests/test_parameter.py has negative-related tests (e.g. test_parameter_get_negatives_custom_single) but none covering a union with None. Without a test like `Parameter(negative='--negative', name='--param').get_negatives(bool | None) == ('--negative',)` and the default `bool | None` case, the behavior could silently regress later.",
+   "suggestion": "Add a test in tests/test_parameter.py asserting no duplicate for bool | None (both custom `negative` and default negative_bool/negative_none paths), e.g. assert ('--negative',) == p.get_negatives(bool | None)."
+  },
+  {
+   "severity": "nit",
+   "file": "cyclopts/parameter.py",
+   "line": 279,
+   "message": "The sort key `is_nonetype(x) or x is None` only affects ordering; the dedup alone already collapses the identical custom negative strings from bool and NoneType. For the default path NoneType yields no negatives (negative_none default is empty prefix), so ordering is a no-op. The sort is harmless but the comment overstates its necessity ('ensures that ... we only include it once'); the `if neg not in out` check is what actually deduplicates.",
+   "suggestion": "Optional: simplify by dropping the redundant sort, or adjust the comment to attribute deduplication to the membership check."
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.031609,
+ "input_tokens": 130929,
+ "cache_hit_tokens": 121216,
+ "output_tokens": 4868,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 33.2
+}

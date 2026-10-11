@@ -1,0 +1,48 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2QAC1RJYZ0AXBXW4ZHQN8",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "The new duplicate-guard `if broker in self.brokers` in `_add_broker` is unreachable: its only callers are `_init_setupable_` (list is guaranteed empty at that point) and `set_broker` (already guarded by `if self.brokers: raise SetupError(...)`). So the guard can never fire and adds dead code / an untested branch.",
+   "suggestion": "Either drop the guard (keep the single location of the `already has a broker` check in `set_broker`), or if the intent is to guard all future callers, add a test that exercises it directly (e.g. call `app._add_broker(b)` twice) so the branch is covered."
+  },
+  {
+   "severity": "nit",
+   "file": "faststream/_internal/application.py",
+   "line": 88,
+   "message": "`self.brokers: list[BrokerUsecase[Any, Any]] = []` annotates with `BrokerUsecase`, which is imported only under TYPE_CHECKING. This is safe in this codebase (the identical pattern already exists and runs fine in `faststream/specification/asyncapi/factory.py:40`), so no runtime NameError. Noting only for awareness.",
+   "suggestion": "No change required; optionally keep consistent with the existing factory pattern."
+  },
+  {
+   "severity": "minor",
+   "file": null,
+   "line": null,
+   "message": "No regression test was added asserting that `set_broker` propagates the app config to the broker via `_update_fd_config` (the exact behavior the issue reports). Existing tests still pass but would not catch a future re-break of this path.",
+   "suggestion": "Add a test in tests/application/test_delayed_broker.py asserting the app context/config is applied after `set_broker`, e.g. check `broker.config.fd_config.context['app'] is app` or that context injection into a handler works after a delayed `set_broker`."
+  }
+ ],
+ "error": null,
+ "calls": 19,
+ "cost_cny": 0.044273,
+ "input_tokens": 316373,
+ "cache_hit_tokens": 296576,
+ "output_tokens": 4636,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 54.3
+}

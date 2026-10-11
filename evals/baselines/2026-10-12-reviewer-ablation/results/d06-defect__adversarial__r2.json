@@ -1,0 +1,48 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1MGPM45XCCY9Q5CG7FXHY",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "新增的 `(\"DOUBLE\", r\"\\bdouble\\b\")` 是无效改动：`DOUBLE` 在第 27 行已存在，且第 5 行的 `TOKENS` 是 `OrderedDict`——用已存在键构造时只更新值、保持首次插入位置，所以第 124 行 `_compile_patterns` 里 `TOKENS.items()` 仍然只产出一个 `DOUBLE` 组，正则在 \"double\" 上的匹配结果与改动前完全一致（tests/test_translator/test_lexer.py:161 在改动前就已通过）。也就是说，若本意是调整 `DOUBLE` 的匹配优先级，这个改动没有任何效果。另外它比较脆弱：其他前端 lexer（如 crosstl/backend/Opengl/OpenglLexer.py:7、MetalLexer.py:7）用的是 `tuple` 并允许同名重复项，一旦有人把这里也改成 tuple/list，拼接命名分组时会直接 `re.error: redefinition of group name 'DOUBLE'` 导致模块导入失败。",
+   "suggestion": "删除第 81 行这个重复条目；若确实需要调整优先级，请把第 27 行的原条目移到目标位置（注意 OrderedDict/去重语义），并用 `python -c \"from crosstl.translator.lexer import Lexer; print(Lexer('double d;').tokens)\"` 验证只有单个 DOUBLE token。"
+  },
+  {
+   "severity": "nit",
+   "file": "tests/test_translator/test_lexer.py",
+   "line": 148,
+   "message": "补丁为 lexer 增加了新 token 类型 `UNSIGNED_INT`，但没有任何测试覆盖（`test_data_types_tokenization` 只断言 INT/UINT/FLOAT/DOUBLE/BOOL，见第 158-162 行；grep `unsigned` 在 tests/test_translator 下无匹配），而仓库惯例是每个新增 token 都有 tokenization 用例（如 tests/test_backend/test_opengl/test_lexer.py:152）。后续任何改动（例如把 `UNSIGNED_INT` 移到 `IDENTIFIER` 之后）都不会被测试拦住。",
+   "suggestion": "在 test_data_types_tokenization 的示例代码中加入 `unsigned int f;` 并断言 `any(t[0] == \"UNSIGNED_INT\" for t in tokens)`，或新增一个独立的 unsigned tokenization 测试。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.127241,
+ "input_tokens": 319237,
+ "cache_hit_tokens": 299392,
+ "output_tokens": 25352,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 138.6
+}

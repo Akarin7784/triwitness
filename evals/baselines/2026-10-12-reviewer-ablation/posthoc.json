@@ -21,24 +21,24 @@
    "elapsed_sum_min": 44.0
   },
   "adversarial": {
-   "n_defect": 20,
-   "n_clean": 20,
-   "hit": 17,
-   "blocked": 16,
-   "fp": 5,
-   "fp_conservative": 10,
-   "no_verdict_defect": 3,
-   "no_verdict_clean": 5,
-   "valid_hit": 17,
-   "valid_defect": 17,
-   "valid_fp": 5,
-   "valid_clean": 15,
-   "calls": 517,
-   "cost_cny": 3.8123,
-   "cost_per_review_cny": 0.0953,
-   "elapsed_median_s": 84.6,
-   "elapsed_p90_s": 187.9,
-   "elapsed_sum_min": 61.0
+   "n_defect": 60,
+   "n_clean": 60,
+   "hit": 49,
+   "blocked": 46,
+   "fp": 15,
+   "fp_conservative": 27,
+   "no_verdict_defect": 8,
+   "no_verdict_clean": 12,
+   "valid_hit": 49,
+   "valid_defect": 52,
+   "valid_fp": 15,
+   "valid_clean": 48,
+   "calls": 1559,
+   "cost_cny": 11.6063,
+   "cost_per_review_cny": 0.0967,
+   "elapsed_median_s": 95.0,
+   "elapsed_p90_s": 189.3,
+   "elapsed_sum_min": 196.6
   },
   "checklist_t03": {
    "n_defect": 20,
@@ -61,24 +61,24 @@
    "elapsed_sum_min": 14.8
   },
   "checklist_t10": {
-   "n_defect": 20,
-   "n_clean": 20,
-   "hit": 18,
-   "blocked": 17,
-   "fp": 5,
-   "fp_conservative": 9,
-   "no_verdict_defect": 0,
-   "no_verdict_clean": 4,
-   "valid_hit": 18,
-   "valid_defect": 20,
-   "valid_fp": 5,
-   "valid_clean": 16,
-   "calls": 456,
-   "cost_cny": 1.1854,
-   "cost_per_review_cny": 0.0296,
-   "elapsed_median_s": 25.4,
-   "elapsed_p90_s": 41.6,
-   "elapsed_sum_min": 16.9
+   "n_defect": 60,
+   "n_clean": 60,
+   "hit": 49,
+   "blocked": 46,
+   "fp": 16,
+   "fp_conservative": 23,
+   "no_verdict_defect": 1,
+   "no_verdict_clean": 7,
+   "valid_hit": 49,
+   "valid_defect": 59,
+   "valid_fp": 16,
+   "valid_clean": 53,
+   "calls": 1358,
+   "cost_cny": 3.6642,
+   "cost_per_review_cny": 0.0305,
+   "elapsed_median_s": 26.9,
+   "elapsed_p90_s": 50.9,
+   "elapsed_sum_min": 55.2
   },
   "consensus_t03": {
    "n_defect": 20,
@@ -101,24 +101,24 @@
    "elapsed_sum_min": 61.0
   },
   "consensus_t10": {
-   "n_defect": 20,
-   "n_clean": 20,
-   "hit": 15,
-   "blocked": 15,
-   "fp": 4,
-   "fp_conservative": 8,
-   "no_verdict_defect": 3,
-   "no_verdict_clean": 5,
-   "valid_hit": 15,
-   "valid_defect": 17,
-   "valid_fp": 4,
-   "valid_clean": 15,
-   "calls": 973,
-   "cost_cny": 4.9977,
-   "cost_per_review_cny": 0.1249,
-   "elapsed_median_s": 84.6,
-   "elapsed_p90_s": 187.9,
-   "elapsed_sum_min": 61.0
+   "n_defect": 60,
+   "n_clean": 60,
+   "hit": 42,
+   "blocked": 41,
+   "fp": 13,
+   "fp_conservative": 19,
+   "no_verdict_defect": 8,
+   "no_verdict_clean": 13,
+   "valid_hit": 42,
+   "valid_defect": 52,
+   "valid_fp": 13,
+   "valid_clean": 47,
+   "calls": 2917,
+   "cost_cny": 15.2705,
+   "cost_per_review_cny": 0.1273,
+   "elapsed_median_s": 95.0,
+   "elapsed_p90_s": 189.3,
+   "elapsed_sum_min": 197.0
   }
  },
  "by_category": {
@@ -128,24 +128,24 @@
     1
    ],
    "adversarial": [
-    1,
-    1
+    3,
+    3
    ],
    "checklist_t03": [
     1,
     1
    ],
    "checklist_t10": [
-    1,
-    1
+    3,
+    3
    ],
    "consensus_t03": [
     1,
     1
    ],
    "consensus_t10": [
-    1,
-    1
+    3,
+    3
    ]
   },
   "incomplete_fix": {
@@ -154,24 +154,24 @@
     2
    ],
    "adversarial": [
-    1,
-    2
+    3,
+    6
    ],
    "checklist_t03": [
     2,
     2
    ],
    "checklist_t10": [
-    2,
-    2
+    6,
+    6
    ],
    "consensus_t03": [
     1,
     2
    ],
    "consensus_t10": [
-    1,
-    2
+    3,
+    6
    ]
   },
   "missing_edge_case": {
@@ -180,24 +180,24 @@
     1
    ],
    "adversarial": [
-    1,
-    1
+    3,
+    3
    ],
    "checklist_t03": [
     0,
     1
    ],
    "checklist_t10": [
-    0,
-    1
+    1,
+    3
    ],
    "consensus_t03": [
     0,
     1
    ],
    "consensus_t10": [
-    0,
-    1
+    1,
+    3
    ]
   },
   "off_by_one": {
@@ -206,24 +206,24 @@
     3
    ],
    "adversarial": [
-    3,
-    3
+    9,
+    9
    ],
    "checklist_t03": [
     3,
     3
    ],
    "checklist_t10": [
-    3,
-    3
+    8,
+    9
    ],
    "consensus_t03": [
     3,
     3
    ],
    "consensus_t10": [
-    3,
-    3
+    8,
+    9
    ]
   },
   "spec_violation": {
@@ -232,24 +232,24 @@
     1
    ],
    "adversarial": [
-    1,
-    1
+    3,
+    3
    ],
    "checklist_t03": [
     1,
     1
    ],
    "checklist_t10": [
-    1,
-    1
+    3,
+    3
    ],
    "consensus_t03": [
     1,
     1
    ],
    "consensus_t10": [
-    1,
-    1
+    3,
+    3
    ]
   },
   "wrong_argument": {
@@ -258,24 +258,24 @@
     2
    ],
    "adversarial": [
-    2,
-    2
+    6,
+    6
    ],
    "checklist_t03": [
     2,
     2
    ],
    "checklist_t10": [
-    2,
-    2
+    6,
+    6
    ],
    "consensus_t03": [
     2,
     2
    ],
    "consensus_t10": [
-    2,
-    2
+    6,
+    6
    ]
   },
   "wrong_condition": {
@@ -284,24 +284,24 @@
     4
    ],
    "adversarial": [
-    2,
-    4
+    5,
+    12
    ],
    "checklist_t03": [
     2,
     4
    ],
    "checklist_t10": [
-    4,
-    4
+    9,
+    12
    ],
    "consensus_t03": [
     2,
     4
    ],
    "consensus_t10": [
-    2,
-    4
+    5,
+    12
    ]
   },
   "wrong_constant": {
@@ -310,24 +310,24 @@
     1
    ],
    "adversarial": [
-    1,
-    1
+    3,
+    3
    ],
    "checklist_t03": [
     1,
     1
    ],
    "checklist_t10": [
-    1,
-    1
+    3,
+    3
    ],
    "consensus_t03": [
     1,
     1
    ],
    "consensus_t10": [
-    1,
-    1
+    3,
+    3
    ]
   },
   "wrong_index": {
@@ -336,24 +336,24 @@
     1
    ],
    "adversarial": [
-    1,
-    1
+    3,
+    3
    ],
    "checklist_t03": [
     1,
     1
    ],
    "checklist_t10": [
-    1,
-    1
+    3,
+    3
    ],
    "consensus_t03": [
     1,
     1
    ],
    "consensus_t10": [
-    1,
-    1
+    3,
+    3
    ]
   },
   "wrong_regex": {
@@ -362,8 +362,8 @@
     2
    ],
    "adversarial": [
-    2,
-    2
+    5,
+    6
    ],
    "checklist_t03": [
     0,
@@ -371,7 +371,7 @@
    ],
    "checklist_t10": [
     1,
-    2
+    6
    ],
    "consensus_t03": [
     0,
@@ -379,7 +379,7 @@
    ],
    "consensus_t10": [
     1,
-    2
+    6
    ]
   },
   "wrong_variable": {
@@ -388,26 +388,330 @@
     2
    ],
    "adversarial": [
-    2,
-    2
+    6,
+    6
    ],
    "checklist_t03": [
     2,
     2
    ],
    "checklist_t10": [
-    2,
-    2
+    6,
+    6
    ],
    "consensus_t03": [
     2,
     2
    ],
    "consensus_t10": [
-    2,
-    2
+    6,
+    6
    ]
   }
  },
- "tol": 3
+ "tol": 3,
+ "repeats": {
+  "per_rep": {
+   "adversarial#r0": {
+    "hit": 17,
+    "n_defect": 20,
+    "fp": 5,
+    "n_clean": 20,
+    "no_verdict": 8,
+    "last_call": 0
+   },
+   "adversarial#r1": {
+    "hit": 17,
+    "n_defect": 20,
+    "fp": 5,
+    "n_clean": 20,
+    "no_verdict": 6,
+    "last_call": 3
+   },
+   "adversarial#r2": {
+    "hit": 15,
+    "n_defect": 20,
+    "fp": 5,
+    "n_clean": 20,
+    "no_verdict": 6,
+    "last_call": 1
+   },
+   "checklist_t10#r0": {
+    "hit": 18,
+    "n_defect": 20,
+    "fp": 5,
+    "n_clean": 20,
+    "no_verdict": 4,
+    "last_call": 0
+   },
+   "checklist_t10#r1": {
+    "hit": 16,
+    "n_defect": 20,
+    "fp": 5,
+    "n_clean": 20,
+    "no_verdict": 2,
+    "last_call": 0
+   },
+   "checklist_t10#r2": {
+    "hit": 15,
+    "n_defect": 20,
+    "fp": 6,
+    "n_clean": 20,
+    "no_verdict": 2,
+    "last_call": 0
+   }
+  },
+  "diff_hit": [
+   0.0,
+   -0.1833,
+   0.1833
+  ],
+  "diff_hit_legacy": [
+   0.0,
+   -0.1833,
+   0.1833
+  ],
+  "diff_block": [
+   -0.0167,
+   -0.05,
+   0.0
+  ],
+  "diff_block_legacy": [
+   -0.0333,
+   -0.0833,
+   0.0
+  ],
+  "diff_hit_later": [
+   -0.025,
+   -0.2,
+   0.15
+  ],
+  "diff_block_later": [
+   -0.025,
+   -0.1,
+   0.05
+  ],
+  "inconclusive": {
+   "adversarial": {
+    "defect": [
+     9,
+     60
+    ],
+    "clean": [
+     15,
+     60
+    ],
+    "all": [
+     24,
+     120
+    ]
+   },
+   "checklist_t10": {
+    "defect": [
+     1,
+     60
+    ],
+    "clean": [
+     7,
+     60
+    ],
+    "all": [
+     8,
+     120
+    ]
+   },
+   "diff_checklist_minus_adversarial": [
+    -0.1333,
+    -0.2333,
+    -0.05
+   ]
+  },
+  "mcnemar": {
+   "按题多数/检出": {
+    "adversarial": [
+     17,
+     20
+    ],
+    "checklist_t10": [
+     16,
+     20
+    ],
+    "b": 3,
+    "c": 2,
+    "p": 1.0,
+    "p_holm": 1.0
+   },
+   "按题多数/干净放行": {
+    "adversarial": [
+     14,
+     20
+    ],
+    "checklist_t10": [
+     14,
+     20
+    ],
+    "b": 0,
+    "c": 0,
+    "p": 1.0,
+    "p_holm": 1.0
+   },
+   "按题多数/干净放行·保守": {
+    "adversarial": [
+     10,
+     20
+    ],
+    "checklist_t10": [
+     11,
+     20
+    ],
+    "b": 1,
+    "c": 2,
+    "p": 1.0,
+    "p_holm": 1.0
+   },
+   "逐次合并/检出": {
+    "adversarial": [
+     49,
+     60
+    ],
+    "checklist_t10": [
+     49,
+     60
+    ],
+    "b": 7,
+    "c": 7,
+    "p": 1.0,
+    "p_holm": 1.0
+   },
+   "逐次合并/干净放行": {
+    "adversarial": [
+     45,
+     60
+    ],
+    "checklist_t10": [
+     44,
+     60
+    ],
+    "b": 3,
+    "c": 2,
+    "p": 1.0,
+    "p_holm": 1.0
+   },
+   "逐次合并/干净放行·保守": {
+    "adversarial": [
+     33,
+     60
+    ],
+    "checklist_t10": [
+     37,
+     60
+    ],
+    "b": 4,
+    "c": 8,
+    "p": 0.387695,
+    "p_holm": 1.0
+   }
+  },
+  "discordant_items": {
+   "d01-defect": {
+    "metric": "hit",
+    "adversarial": [
+     3,
+     3
+    ],
+    "checklist_t10": [
+     1,
+     3
+    ]
+   },
+   "d06-defect": {
+    "metric": "hit",
+    "adversarial": [
+     2,
+     3
+    ],
+    "checklist_t10": [
+     1,
+     3
+    ]
+   },
+   "d07-defect": {
+    "metric": "hit",
+    "adversarial": [
+     3,
+     3
+    ],
+    "checklist_t10": [
+     0,
+     3
+    ]
+   },
+   "d08-defect": {
+    "metric": "hit",
+    "adversarial": [
+     0,
+     3
+    ],
+    "checklist_t10": [
+     2,
+     3
+    ]
+   },
+   "d09-defect": {
+    "metric": "hit",
+    "adversarial": [
+     0,
+     3
+    ],
+    "checklist_t10": [
+     3,
+     3
+    ]
+   },
+   "d13-defect": {
+    "metric": "hit",
+    "adversarial": [
+     3,
+     3
+    ],
+    "checklist_t10": [
+     2,
+     3
+    ]
+   },
+   "d17-defect": {
+    "metric": "hit",
+    "adversarial": [
+     2,
+     3
+    ],
+    "checklist_t10": [
+     3,
+     3
+    ]
+   },
+   "d19-defect": {
+    "metric": "hit",
+    "adversarial": [
+     0,
+     3
+    ],
+    "checklist_t10": [
+     1,
+     3
+    ]
+   },
+   "d17-clean": {
+    "metric": "block",
+    "adversarial": [
+     1,
+     3
+    ],
+    "checklist_t10": [
+     0,
+     3
+    ]
+   }
+  }
+ }
 }

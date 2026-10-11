@@ -1,0 +1,34 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1KD3SW8SGYP7J5E32G3ZQ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_duration.py",
+   "line": 7,
+   "message": "现有测试仅覆盖 \"45s\" 和非法输入 \"abc\"，Issue 中实际出错的复合/分钟用例（\"1h30m\"、\"2m\"、\"1h30m15s\"）没有回归测试；若 _UNITS 再次被误改（例如 m 改回 1），现有测试仍会全部通过，无法防止问题复现。",
+   "suggestion": "补充参数化用例，如 assert parse_duration(\"1h30m\") == 5400、parse_duration(\"2m\") == 120、parse_duration(\"1h30m15s\") == 5415，锁定本次修复的行为。"
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.012149,
+ "input_tokens": 22629,
+ "cache_hit_tokens": 20608,
+ "output_tokens": 2429,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 15.2
+}

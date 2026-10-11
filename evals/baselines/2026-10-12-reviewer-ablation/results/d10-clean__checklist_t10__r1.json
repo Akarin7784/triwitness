@@ -1,0 +1,41 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1DRAV0NG7N4KEBZY2DTPZ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "The fix has no regression test. `tests/test_autodiscover.py` (TestLoaderSettingsModule / TestBaseDir) and `tests/test_component.py` only exercise STATICFILES_DIRS with plain Path/str entries; no test feeds a `(\"prefix\", \"/abs/path\")` tuple through `Loader.get_dirs()`, even though the issue is precisely about that form. A future refactor could silently reintroduce the bug.",
+   "suggestion": "Add a test (e.g. `test_get_dirs_with_tuple` in tests/test_autodiscover.py) using `override_settings(STATICFILES_DIRS=[(\"downloads\", Path(__file__).parent.resolve() / \"components\")])` and assert `loader.get_dirs()` returns the expected dir and does not raise."
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 43,
+   "message": "`Path(component_dir)` validation also rejects `bytes` paths (`pathlib` does not accept bytes: `TypeError: argument should be a str or an os.PathLike object ...`). Django's staticfiles layer uses `os.path` and does support bytes dir entries, so a valid bytes STATICFILES_DIRS entry is now silently skipped with a warning rather than honored. This is not a regression (the previous code crashed on it), but it is an uncovered edge case relative to the issue's 'consider non-str entries' intent.",
+   "suggestion": "If bytes support is desired, normalize with `os.fsdecode(component_dir)` (or `Path(os.fsdecode(component_dir))`) inside the try block before validation."
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.023427,
+ "input_tokens": 69976,
+ "cache_hit_tokens": 60544,
+ "output_tokens": 3196,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 25.3
+}

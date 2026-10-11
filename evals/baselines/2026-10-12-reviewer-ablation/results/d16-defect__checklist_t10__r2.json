@@ -1,0 +1,62 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2RRV4PAYWEK06NEBETHPY",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` indexes the wrong element. A formatter `KeyError` comes from `precomputed_format.format_map(formatter_record)` (lines 180/184/192) i.e. `str.format_map` on a plain `str` with a `dict`, which always raises `KeyError(<key>)` with `e.args == (key,)` (a single-element tuple), e.g. `\"{x}\".format_map({})` -> `KeyError: 'x'`, `args == ('x',)`. Because a 1-tuple is truthy, `original.args[1]` is evaluated and raises **IndexError** before any message is produced. Consequences: (a) with catch=True the `IndexError` escapes the `except KeyError` block in `emit()` and propagates out, crashing the application — the exact opposite of the issue's requirement that logging errors never crash; (b) with catch=False the caller sees `IndexError`, not the promised `KeyError` carrying the missing key and guidance; (c) it breaks the existing tests `tests/test_configure.py::test_reset_previous_extra` (line 141) and `::test_reset_previous_patcher` (line 151), which expect `pytest.raises(KeyError)`. Fix: use `original.args[0] if original.args else \"?\"` (and add a test asserting the produced message on both catch=True and catch=False paths).",
+   "suggestion": "key = original.args[0] if original.args else \"?\""
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "The new `except KeyError` is placed around the whole `try` block, so it intercepts *any* `KeyError` raised inside it, not just format-key lookups — e.g. a filter, `self._exception_formatter.format_exception()`, `self._serialize_record()`, or most importantly `self._sink.write(str_record)` (line 206). A user sink raising `KeyError(\"x\")` would be relabeled as \"The format string references an unknown key 'x'\" with entirely misleading guidance (and, given finding #1, currently triggers an uncaught IndexError instead). Scope the diagnostic to the `format_map` resolution: wrap the three `formatted = ...format_map(formatter_record)` calls (or a small helper) in their own try/except, and only apply `_make_key_error` when the missing key is absent from `formatter_record`.",
+   "suggestion": "Extract the format_map calls into a helper that catches KeyError and re-raises the enriched error, and remove the blanket `except KeyError` around the entire emit body."
+  },
+  {
+   "severity": "major",
+   "file": null,
+   "line": null,
+   "message": "No tests were added for the new behavior, and the existing suite is not compatible with the change. The acceptance criteria explicitly require verifiable behavior for catch=True, catch=False, the listed common keys (elapsed, exception, extra, file, level, message), and patcher-added keys. At minimum add tests under tests/ (e.g. test_add_option_format.py) covering: catch=True prints the enriched diagnostic and does not raise; catch=False raises KeyError whose str contains the key and the `logger.bind` guidance; the message lists the available keys; a patcher-added key still formats correctly. The current existing tests test_configure.py::test_reset_previous_extra/_patcher must also pass after fixing finding #1.",
+   "suggestion": "Add targeted tests; verify against tests/test_configure.py and tests/test_add_option_catch.py."
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 261,
+   "message": "`return KeyError(message)` makes `e.args == (message,)`, so the exception no longer carries the bare missing key as its argument. Criteria only require the key to appear in the message, but callers that inspect `e.args[0]` (as the current code itself attempts to do) would get the long prose. Consider `KeyError(message)` documented, or preserve the key by constructing the error such that `str(e)` is the full guidance while `.args` remains meaningful — at least ensure the `from e` chaining in the catch=False path is retained (it is, which is good).",
+   "suggestion": "Document that `.args` now holds the prose message, or keep the original key available on the new error."
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.049577,
+ "input_tokens": 219795,
+ "cache_hit_tokens": 200320,
+ "output_tokens": 6524,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 46.1
+}

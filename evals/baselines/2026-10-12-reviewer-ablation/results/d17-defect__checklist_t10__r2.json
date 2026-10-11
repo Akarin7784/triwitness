@@ -1,0 +1,62 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2RZD9WABJT53946W59GDA",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 143,
+   "message": "branch_exists 只把 404 视为\"不存在\"，其余状态码（401 无效 token、403 限流/无权限、5xx、以及 requests 抛出的连接异常）全部被当成\"分支已存在\"返回 True。由于 while 循环每次都会生成新的候选名继续探测（send_pull_request.py:171-173），只要服务端持续返回非 404（例如 token 失效时每个请求都 401/403），循环就永远不会退出，并持续打 GitHub API（触发限流）。这属于错误行为，不是纯健壮性问题。",
+   "suggestion": "显式区分：200 → True，404 → False，其他状态码调用 response.raise_for_status()（或抛出明确异常），不要用 status_code != 404 作为判据。"
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_send_pull_request.py",
+   "line": 216,
+   "message": "既有测试没有随实现同步更新，补丁会导致现有测试死循环。test_send_pull_request(210)、test_send_pull_request_git_push_failure(277)、test_send_pull_request_permission_error(325) 都只做 mock_get.return_value = MagicMock(json=...)，其 status_code 是自动生成的 MagicMock（真值），因此新加的 branch_exists 永远返回 True，send_pull_request.py:171 的 while 循环不会退出（test_send_pull_request_git_push_failure/permission_error 甚至到不了 git push 分支，预期异常永远不会抛出）。CI（.github/workflows/ci.yml:23 运行 pytest tests/test*.py）会挂起/超时。另外即使 mock 改成 404，第 237 行 assert mock_get.call_count == 1 也已失效（分支探测 + 取 default_branch 共 2 次请求）。",
+   "suggestion": "更新三个测试的 requests.get mock，使其对 /branches/ 返回 404、对仓库信息返回 200；把 mock_get.call_count 断言改为 2（或按 URL 分别断言）；并新增一个用例：base 分支已存在时 checkout/push/PR head 使用 openhands-fix-issue-42-try2，再存在时用 -try3。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "分支存在性检查查的是上游仓库（base_url = github_issue.owner/github_issue.repo），但实际 push 目标是 fork：push_owner = fork_owner if fork_owner else github_issue.owner（第 194-202 行）。--fork-owner 是文档化用法（README.md:91-95）且被 GitHub Actions 工作流使用。当分支只存在于 fork、上游不存在时，检查会认为无冲突，push 仍然会失败/覆盖 fork 上已有的同名分支——即 Issue 描述的场景在 fork 路径下并未修好。",
+   "suggestion": "把 push_owner 的计算提到 while 之前，用 f\"https://api.github.com/repos/{push_owner}/{github_issue.repo}\" 作为检查目标（如需同时兼顾上游，可对两个仓库分别检查）。"
+  },
+  {
+   "severity": "minor",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "while 循环没有尝试次数上限，且检查与 push 之间存在竞态：并发运行（例如同一 issue 被两个 workflow 触发）可能同时选中同一个候选分支名，导致 push 互相覆盖或非快进失败。Issue 的诉求只是避免名字冲突，这里不阻塞合并，但建议限额。",
+   "suggestion": "加上最大尝试次数（如 100），超过则抛出明确异常；push 时使用 --force-with-lease 或先 fetch 校验分支是否已存在，以降低竞态窗口。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.033879,
+ "input_tokens": 130996,
+ "cache_hit_tokens": 116352,
+ "output_tokens": 4227,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 31.1
+}

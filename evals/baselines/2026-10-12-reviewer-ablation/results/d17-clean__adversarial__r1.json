@@ -1,0 +1,48 @@
+{
+ "item": "d17-clean",
+ "task": "swe-openhands-resolver-123",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P13FJV8ZXT040FR3AQWZZZ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "补丁新增的 `while branch_exists(...)` 让 `send_pull_request` 多出一次 `requests.get` 调用（探测分支 + 后面取默认分支，共 2 次），但测试没有同步更新：tests/test_send_pull_request.py:236-237 仍写着 `assert mock_get.call_count == 1`，且 mock 是 `mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})`（`status_code` 是 MagicMock，`== 200` 为 False → 探测返回 False、循环退出 → 随后又调用一次取默认分支），实际 call_count 会是 2，`test_send_pull_request[branch|draft|ready]` 三个参数用例都会失败；CI 会执行 `poetry run pytest tests/test*.py -v`（.github/workflows/ci.yml:23）。此外补丁也没有为“分支已存在 → 生成 -try2”这个 Issue 的核心新行为添加任何测试。",
+   "suggestion": "同步更新 tests/test_send_pull_request.py：把该用例的 GET mock 改成 side_effect（如 `[MagicMock(status_code=404), MagicMock(json=lambda: {\"default_branch\": \"main\"})]`）并把断言改为 `mock_get.call_count == 2`；再补一个“首次探测返回 200、第二次返回 404”的用例，断言 `git checkout -b openhands-fix-issue-42-try2` 被调用。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "探测用的 `base_url` 是上游仓库（第 164 行 `github_issue.owner/github_issue.repo`），但实际 push 的目标是 `push_owner = fork_owner if fork_owner else github_issue.owner`（第 194-195 行）。README.md:91-95 明确支持 `--fork-owner`：上一轮失败时分支建在 fork 上，而上游仓库查不到该分支，`branch_exists` 返回 False，于是仍复用 `openhands-fix-issue-N`，随后第 203-206 行的 `git push` 因非快进被拒绝，抛出 “Failed to push changes to the remote repository”——正是本 Issue 想消除的失败。",
+   "suggestion": "先确定 push 目标仓库，再对同一仓库做存在性探测，例如把 `push_owner`/`push_repo` 的计算提前，用 `https://api.github.com/repos/{push_owner}/{push_repo}/branches/{branch_name}` 探测（PR 创建仍用上游 `base_url`）。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 144,
+   "message": "`branch_exists` 只判断 `status_code == 200`，且未调用 `raise_for_status()` 或对异常做处理：401/403（token 权限不足或 API 限流）、5xx 等错误都会被当成“分支不存在”，从而复用旧分支名，最终仍会在 push 阶段以难以定位的错误失败；这一点与探测本身要解决的问题直接相关，不是纯理论边界（GitHub API 403 限流很常见）。",
+   "suggestion": "只在 404 时返回 False，其它状态码抛出异常（如 `if response.status_code == 404: return False; response.raise_for_status(); return True`）；同时给该 `requests.get` 加 `timeout` 避免网络挂起时无限阻塞。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.065031,
+ "input_tokens": 121050,
+ "cache_hit_tokens": 105472,
+ "output_tokens": 11836,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 72.5
+}

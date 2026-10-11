@@ -1,0 +1,34 @@
+{
+ "item": "d13-clean",
+ "task": "swe-slpp-32",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1F0BAS5J8S3MBM1M6ENHV",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "`skip_comments` 用 `self.text[self.at]` 判断第二个 `-`，但 `next_chr`（113-119 行）是先取 `self.text[self.at]` 再把 `self.at` 自增，因此读到最后一个字符后 `self.at == self.len`。当输入以单个 `-` 结尾时，`white()`（94-101 行）在跳出空白循环后无条件调用 `skip_comments()`，此时 `self.ch == '-'` 且 `self.at == self.len`，`self.text[self.at]` 抛 `IndexError: string index out of range`。\n\n可复现：`slpp.decode('-')` → `self.at == 1 == self.len`，`self.text[1]` 越界；`slpp.decode('  -')` 消耗空白后同理。基准版本对这两者是优雅处理的：进入 `number()` 后 `next_digit` 抛 `ParseError('mfnumber_minus')`，在 244-247 行被捕获并返回 0。因此本补丁把“可容忍的非法输入”变成了未捕获异常，属于新引入的行为回归（虽然触发条件较窄：整个输入必须以单个 `-` 结尾）。\n\n建议：在判断前加边界保护，例如 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`，或改用不会越界的比较 `self.text[self.at:self.at+1] == '-'`。若希望严格，可用 `ParseError` 替代裸 `IndexError`。",
+   "suggestion": "改为 `if self.ch == '-' and self.text[self.at:self.at + 1] == '-':`（或加 `self.at < self.len` 判断），避免末尾 `-` 越界。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.047968,
+ "input_tokens": 63031,
+ "cache_hit_tokens": 56064,
+ "output_tokens": 9970,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 59.4
+}

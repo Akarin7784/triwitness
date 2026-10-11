@@ -1,0 +1,55 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2RDKSHE73WD0A4VN3BMSR",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "The new `except KeyError` wraps the entire `emit` body (try starts at line 128 and extends through line 206 `self._sink.write(str_record)`), not just format-string resolution. Therefore any KeyError raised by user code invoked inside the handler is now misdiagnosed:\n- `self._filter(record)` (line 133)\n- `self._formatter(record)` for dynamic formats (line 137)\n- `self._exception_formatter.format_exception(...)` (line 146)\n- `self._serialize_record(...)` (line 195)\n- `self._sink.write(str_record)` (line 206)\n\nReproduction of the regression:\n```python\ndef sink(m):\n    raise KeyError('my_sink_key')\nlogger.add(sink, format='{message}', catch=False)\nlogger.info('x')\n```\nBefore: raises `KeyError('my_sink_key')` (the real exception). After: raises a fabricated `KeyError(\"The format string references an unknown key 'my_sink_key'. Available record keys are: ...\")` chained `from e`. The message is false (the format string is valid; the sink raised), and user code doing `pytest.raises(KeyError, match='my_sink_key')` / catching that key now breaks. With catch=True the handler error output likewise shows a bogus 'invalid format key' diagnostic instead of the real sink traceback.\n\nFix: scope the special handling to format resolution only, e.g. wrap just the `precomputed_format.format_map(formatter_record)` calls (lines 161/165/175/180/184/192) in their own try/except KeyError, and leave the outer `except Exception` to handle everything else. Distinguishing by re-raising on non-format errors is also acceptable.",
+   "suggestion": "Move the `except KeyError` into a small helper/try-block that covers only the `.format_map(...)` calls, so KeyErrors originating from the filter, dynamic formatter, exception formatter, serializer or sink keep their current generic handling and original exception."
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 210,
+   "message": "The fabricated `KeyError` is passed to `ErrorInterceptor.print(..., exception=...)` instead of the original `e`. `_make_key_error` builds a fresh `KeyError(message)` that was never raised, so `exception.__traceback__` is None. In `ErrorInterceptor.print` this means `traceback.print_exception(type, value, None, ...)` prints the fabricated error with **no frames**, losing the entire original traceback that the previous generic branch produced via `sys.exc_info()`. The intended diagnostic is clearer, but debuggability of *where* the format failed is reduced. Consider using the original exception `e` for the traceback while overriding the message (e.g. set `e.args` and pass `exception=e`) so the frame is preserved.",
+   "suggestion": "Pass the original exception (with its traceback) to the interceptor rather than the freshly-constructed KeyError, while substituting the enhanced message."
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "When the missing key is inside `extra` (e.g. `format=\"{extra[foo]}\"` with no `foo` bound), the raised KeyError arg is `foo`, but `available` lists only top-level record keys (`elapsed, exception, extra, file, ...`), which does not contain `foo`. The message then says the format references an unknown key 'foo' and lists keys that don't include it, plus advises `logger.bind(...)` which the user may already be doing. This is not a correctness failure for the acceptance criteria but is a misleading hint for the very common `extra[...]` case.",
+   "suggestion": "When the key is absent from the record but `extra` exists, additionally list the available `extra` sub-keys (or reference `extra[...]`) so the diagnostic matches where the lookup actually failed."
+  },
+  {
+   "severity": "nit",
+   "file": "loguru/_handler.py",
+   "line": 209,
+   "message": "`_make_key_error(e, record)` is invoked twice in the two branches (line 209 for raise, line 210 for print), constructing the same exception object twice. Minor duplication; compute it once into a local variable.",
+   "suggestion": "Compute `error = self._make_key_error(e, record)` once and reuse it in both branches."
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.036422,
+ "input_tokens": 94800,
+ "cache_hit_tokens": 79488,
+ "output_tokens": 4880,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 31.9
+}

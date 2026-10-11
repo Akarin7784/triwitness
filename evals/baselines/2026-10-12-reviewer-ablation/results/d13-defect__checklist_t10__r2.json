@@ -1,0 +1,62 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2P7DAA5GG741XNSRFBS59",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "off-by-one：`next_chr()` 的语义是 `ch = text[at]` 后 `at += 1`，即不变量为 `ch == text[at-1]`，下一个未消费字符是 `text[at]`。这里却检查 `self.text[self.at + 1]`，多前进了一位。\n\n验证（手工追踪 + decode 首次调用 next_chr）：\n- `decode('--x\\n1')`：next_chr 后 ch='-', at=1；`text[at+1]`=text[2]='x' ≠ '-' → 不视为注释 → 落入 `value()`→`number()`，`next_digit` 抛 mfnumber_minus 被吞掉并返回 0。基线用正则能剥掉短路注释，现在完全失效。\n- `decode('{1, -- c\\n2}')`：在 '-' 处 `text[at+1]`=' ' ≠ '-' → 同样不跳过。\n- 仅当第二个 '-' 之后恰好还有一个字符时才偶然命中（如 `'---'`），行为不一致。\n\n即 Issue 的 `\"--3\"` 例子碰巧能过（因为白名单路径根本没走 white()），但被删掉的那段注释能力（短注释、表内注释）实际上没被替代实现，属于回归。\n修复建议：改为 `self.text[self.at] == '-'`（并注意 `at` 可能等于 len 的边界），例如：\n```python\nif self.ch == '-' and self.at < self.len and self.text[self.at] == '-':\n```",
+   "suggestion": "把 `self.text[self.at + 1]` 改成 `self.text[self.at]`，并加 `self.at < self.len` 边界保护。"
+  },
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "当 `ch` 是文本最后一个字符时，`self.at == self.len`，`self.text[self.at + 1]` 直接越界抛 IndexError。\n\n复现：`decode('-')` → next_chr 后 ch='-', at=1, len=1 → `white()` 不消费 '-' → `skip_comments()` 求值 `text[2]` → IndexError。基线行为是 `value()`→`number()` 捕获 ParseError 打印后返回 0，不会抛异常；`decode('--')`、任何以 `-` 结尾的输入同理。\n\n这既是新增崩溃路径，也改变了既有行为（异常类型从被兜底改为未捕获的 IndexError）。修复建议：在比较前判断 `self.at < self.len`（见上一条），并考虑为 `skip_comments` 增加针对末尾 `-` 的边界测试。",
+   "suggestion": "在访问 `self.text[self.at]` 前加 `self.at < self.len` 保护；并补 `decode('-')`、`decode('--')`、`decode('a=-')` 等边界用例。"
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 107,
+   "message": "newline 判定用 `re.match('\\n', self.ch)` 而进入循环前未对 `self.ch is None` 做保护——虽然外层 `while self.ch` 能保证非 None，但更实质的问题是 `skip_comments()` 命中换行后调用 `self.white()`（第 108 行），而 `white()` 第 101 行又会调用 `skip_comments()`，构成相互递归：连续多行注释（如 `'--a\\n--b\\n--c\\n1'`）每行都会加深一层栈，长注释文件可能触发 RecursionError。建议把注释跳过的换行处理改成迭代（消费到 '\\n' 后 continue 而不是递归 white()）。",
+   "suggestion": "在 `skip_comments` 内改成 `while` 循环：跳过字符直到 '\\n' 或 EOF，再 continue 外层，避免 white()/skip_comments() 互递归。"
+  },
+  {
+   "severity": "major",
+   "file": "tests.py",
+   "line": 160,
+   "message": "补丁只改了 slpp.py，未新增任何测试。Issue 的回归点（引号/方括号字符串内的 `--`、真正的注释、行尾注释、表内注释、末尾 `-` 边界）都没有覆盖，端到端无法防回归。建议至少加入：`slpp.decode('\"--3\"') == '--3'`、`slpp.decode(\"{'a--b'}\")`、`slpp.decode('-- c\\n1') == 1`、`slpp.decode('{1, -- c\\n2}') == [1, 2]`、`slpp.decode('{\\n--c\\n a = 1\\n}') == {'a': 1}` 等。",
+   "suggestion": "在 tests.py 的 TestSLPP 中新增 test_comments 用例，覆盖字符串内 '--' 与各类真实注释（行首/行尾/表内），以及以 '-' 结尾输入的边界。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.026286,
+ "input_tokens": 68871,
+ "cache_hit_tokens": 61568,
+ "output_tokens": 4438,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 35.1
+}

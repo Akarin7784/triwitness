@@ -1,0 +1,55 @@
+{
+ "item": "d12-clean",
+ "task": "swe-ro-crate-py-193",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1EH4DV902GRCFDHKAWY3X",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/rocrate.py",
+   "line": 605,
+   "message": "update_jsonld 通过 `entity._jsonld.update(jsonld)` 直接写内部字典，完全绕过 Entity.__setitem__ 的新校验。因此 issue 描述的同一类 bug 仍可通过公共 API 触发：`crate.update_jsonld({\"@id\": \"./\", \"license\": {\"@type\": \"CreativeWork\", \"name\": \"CC-O\"}})` 会写入无 @id 的嵌套 dict，之后 `crate.root_dataset[\"license\"]` 仍抛 `ValueError: no @id in {...}`。issue 明确要求防止库自身写出无法再被本库读取的 RO-Crate，这条路径没有修好。",
+   "suggestion": "在 update_jsonld（以及 add_jsonld/append_to 等所有写入 _jsonld 的入口）复用同一个校验；建议把校验抽成 helper（例如 `_check_no_id_dict(v)` 或让 update_jsonld 走 `entity[k] = v`），保证所有写入路径一致。"
+  },
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 105,
+   "message": "校验加在被反序列化复用的 __setitem__ 上：Entity.__init__(properties=...) 对非 '@' 键调用 self[name] = value，而 ROCrate.__read_data_entities / __read_contextual_entities 正是用磁盘上的 JSON-LD 作为 properties 构造实体（rocrate.py:145/148/166/171/180）。结果是任何已存在于磁盘、含无 @id 嵌套 dict 值的 crate（旧版本本库或其它工具生成）现在连加载都会失败，抛 `ValueError: no @id in ...`；此前这类 crate 可以正常读出，只在访问该属性时才报错。这是读取路径上的行为回归，且与 issue 中\"访问时更宽容\"的建议方向相反。",
+   "suggestion": "仅对用户设置路径严格校验，读取/构造路径应放行（例如在 __init__ 中直接写 _jsonld 而不是走 setitem，或给 __setitem__ 加一个内部开关），并让 __getitem__ 对无 @id 的嵌套 dict 返回原值而非抛错，以覆盖 issue 中\"访问时更宽容\"的诉求。"
+  },
+  {
+   "severity": "minor",
+   "file": "rocrate/model/entity.py",
+   "line": 167,
+   "message": "append_to 同样直接 extend 到 _jsonld，未做 @id 校验。仓库内调用方传入的都是 Entity 实例（会被转成 {\"@id\": ...}），当前没有可复现的失败路径，但这是第三个绕过校验的写入入口，容易在后续引入同类缺陷。",
+   "suggestion": "与 __setitem__ 共用同一校验逻辑，保持所有写入路径行为一致。"
+  },
+  {
+   "severity": "minor",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "补丁未新增任何测试来覆盖新行为（合法 list/dict、无 @id 的 dict、含 @id 的 dict、以及读取含无 @id 嵌套值的 crate）。在修复多路径不一致的同时补上测试可避免后续回归。",
+   "suggestion": "添加针对 __setitem__ 与 update_jsonld 的测试，并加一条读取含无 @id 嵌套值 crate 的测试以固化期望行为。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.04624,
+ "input_tokens": 208552,
+ "cache_hit_tokens": 184576,
+ "output_tokens": 4643,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 28.5
+}

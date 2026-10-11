@@ -1,0 +1,34 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2GM045ZNSB2JYEWN6VG0G",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "timefmt/duration.py",
+   "line": 3,
+   "message": "Existing tests (tests/test_duration.py) only cover \"45s\" and the invalid case; neither `m` nor `h` is exercised, so this exact bug was not caught by the suite. Not a blocker (the patch does not modify tests), but a follow-up test for \"1h30m\", \"2m\", \"1h30m15s\" would pin the fix.",
+   "suggestion": "Add assertions such as parse_duration(\"1h30m\") == 5400, parse_duration(\"2m\") == 120, parse_duration(\"1h30m15s\") == 5415."
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.006105,
+ "input_tokens": 20044,
+ "cache_hit_tokens": 18048,
+ "output_tokens": 937,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 10.5
+}

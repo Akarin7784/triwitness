@@ -1,0 +1,48 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1F522J6BC30KQT9YMJV2Q",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "当当前字符是文本最后一个字符 `-` 且其后没有内容时，`self.text[self.at + 1]` 会越界。虽然 Python 中 `text[len]` 抛 IndexError 而不是返回 None，但由于被 `self.ch == '-'` 短路保护，只有「唯一/末尾的 `-`」这一种情形会触发——而这类输入在 number() 中本就会因 'no digits after initial minus' 而失败，属未被支持的输入，因此不是实际错误行为。建议仍显式做边界判断以求稳健。",
+   "suggestion": "改为 `if self.ch == '-' and self.at + 1 < self.len and self.text[self.at + 1] == '-':`，避免在末尾 `-` 上抛 IndexError。"
+  },
+  {
+   "severity": "minor",
+   "file": "slpp.py",
+   "line": 103,
+   "message": "skip_comments 只在 white() 中被调用，而 white() 只消费空白，因此 `--` 的非注释用法（如 `data=--5`）无法识别为注释并会报错。这属于比本 issue 更宽的功能/健壮性缺口（原全局正则替换因为删掉 `--...` 而“支持”它），可另开 issue；本补丁范围内的诉求（字符串中的 `--` 不被当注释）已完整满足。",
+   "suggestion": "如需支持该写法，可在 value()/word() 的 token 边界也调用 skip_comments（例如在 value() 开头判断当前 token 起始位置）。"
+  }
+ ],
+ "error": null,
+ "calls": 9,
+ "cost_cny": 0.014316,
+ "input_tokens": 63367,
+ "cache_hit_tokens": 56064,
+ "output_tokens": 1473,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 12.4
+}

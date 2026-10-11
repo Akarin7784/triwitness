@@ -1,0 +1,55 @@
+{
+ "item": "d20-defect",
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2FH74NJK0MZ4ZW2SPY8AZ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "真正传给 run_with_artifacts 的是 `int(timeout or 60)`，而不是上面 519-524 行算出的 `effective_timeout`，导致该变量成为死代码、会话配置超时被完全忽略：\n- 只要调用方不显式传 timeout，`timeout or 60` 恒为 60，`self._session.config.get_execution_timeout()`（core/config.py:87-89：`execution_timeout or default_timeout`，默认 default_timeout=60.0、execution_timeout=None）永远不生效。\n- 复现：`with ArtifactSandboxSession(lang=\"python\", execution_timeout=120) as s: s.run(\"import time; time.sleep(90)\")` → 传给 handler 的是 60，仍会在 60s 被终止，而不是配置的 120s。这正是 Issue 描述的场景（“Run ArtifactSandboxSession with default_timeout and/or execution_timeout parameters greater than 30 seconds … terminate at 30 seconds, and not the greater value”），现在只是把 30 变成了 60，问题未修复；默认配置恰好是 60，掩盖了这个缺陷。\n- 与 SandboxSession 语义不一致：core/session_base.py:390 是 `actual_timeout = timeout or self.config.get_execution_timeout()`，所以 SandboxSession 能正确使用 120s，而 ArtifactSandboxSession 不能，违背 Issue 的“behave as they do for SandboxSession”。\n- 另外新增的 `effective_timeout`（第 521、524 行）只有赋值没有读取，ruff 配置 `select = [\"ALL\"]`（pyproject.toml:84）且 pre-commit 跑 ruff-check（.pre-commit-config.yaml:21），会报 F841，与本补丁自称实现的行为自相矛盾。\n修复建议：直接透传 `timeout=timeout`（让 BaseSession.run 做 `timeout or config.get_execution_timeout()`，同时保留 config 全为 None 时“不超时”的语义），或改为 `timeout=effective_timeout` 并删掉多余的 519-524 行；不要再引入 `or 60` 这种覆盖配置的兜底。",
+   "suggestion": "把第 533 行改为 `timeout=timeout,`（推荐，与 SandboxSession 完全一致），或 `timeout=effective_timeout,` 并删除无用的 519-524 行；同时把 docstring 描述与实际实现对齐。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "签名已改为 `timeout: float | None = None` 并允许小数，但实现里 `int(timeout or 60)` 会把小数截断，且截断到 0 时会被下游当作 falsy 再回退到配置值：\n- `session.run(code, timeout=2.9)` 实际按 2s 执行；`session.run(code, timeout=0.5)` 得到 `int(0.5)==0`，随后 core/session_base.py:390 的 `actual_timeout = timeout or self.config.get_execution_timeout()` 会把 0 当作未设置，回退到配置超时（默认 60s）——用户请求的 0.5s 变成 60s。\n- 修改前的代码是把 timeout 原样转发（`timeout=timeout`），0.5 这类亚秒超时是生效的，因此这是本补丁新引入的行为回归。\n建议：不要做 int() 强转，把 float 原样传递；若必须整数，请在签名上保持 int 语义或在文档/参数校验层处理，而不是静默截断。",
+   "suggestion": "去掉 `int(...)`，改为直接透传原始 timeout 值（如 `timeout=timeout`）。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_session.py",
+   "line": 227,
+   "message": "本补丁改变了默认超时行为，但仓库内现有测试未同步更新，会直接失败：tests/test_session.py:227（以及 :261）中的 `mock_language_handler.run_with_artifacts.assert_called_once_with(..., timeout=30)` 仍按旧默认 30 断言，而新代码在 `timeout=None` 时传入 60（session.py:533 `int(timeout or 60)`），断言必然不匹配。\n修复时应把这两处断言与最终实现（配置透传语义）对齐：例如 mock `mock_session.config.get_execution_timeout.return_value = <值>` 并断言该值被传给 run_with_artifacts，而不是把 60 再硬编码进测试，以便真正覆盖本次 Issue（配置超时 > 默认值时不生效）。",
+   "suggestion": "更新 tests/test_session.py 中两处 run_with_artifacts 调用断言，使其校验配置超时（mock get_execution_timeout）被正确传递，而不是固定的 30/60。"
+  }
+ ],
+ "error": null,
+ "calls": 16,
+ "cost_cny": 0.121234,
+ "input_tokens": 547353,
+ "cache_hit_tokens": 505856,
+ "output_tokens": 17405,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 115.0
+}

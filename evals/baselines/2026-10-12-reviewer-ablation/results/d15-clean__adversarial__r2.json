@@ -1,0 +1,41 @@
+{
+ "item": "d15-clean",
+ "task": "swe-faststream-2701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P241C952SE8JR6XWQ537TD",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "faststream/_internal/application.py",
+   "line": 115,
+   "message": "`_add_broker()` 里的重复校验是死代码：`_init_setupable_()` 在调用前刚把 `self.brokers` 置空（第 88 行），而唯一的另一个调用点 `set_broker()` 在第 109 行已用 `if self.brokers: raise SetupError(\"`{self}` already has a broker...\")` 拦截了所有“已有 broker”的情况（包括同一个 broker），所以第 115-117 行的 `Broker ... is already added` 分支在任何当前调用路径下都不可达，且与 `set_broker` 的错误信息不一致（tests/application/test_delayed_broker.py:26-30 断言的是旧消息）。不是行为错误，但会给人“同一 broker 重复 set 会被这里拦下”的错觉。",
+   "suggestion": "二选一：要么让 `set_broker()` 只保留“多 broker”检查、把重复添加的提示放到 `_add_broker()` 并用同一条 SetupError 消息（同时更新 tests/application/test_delayed_broker.py 的 match），要么删掉 `_add_broker()` 中的这段不可达校验。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/application/test_delayed_broker.py",
+   "line": 8,
+   "message": "补丁只改了实现，未为本次修复补回归测试。现有 set_broker 相关测试（tests/application/test_delayed_broker.py、tests/cli/require_broker/test_app.py:31-48、tests/asgi/testcase.py:106-120）都只断言 `app.broker is broker`/启动不报错，无法捕获“忘记调用 `_update_fd_config`”这一回归（即 `broker.config.fd_config.context` 不是 `app.context`）。",
+   "suggestion": "在 tests/application/test_delayed_broker.py 增加断言，例如 `app = StartAbleApplication(); broker = RabbitBroker(); app.set_broker(broker); assert broker.config.fd_config.context is app.config.context`（或加一个 TestClient 级别的 Context 注入用例），防止后续再次回归。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.119068,
+ "input_tokens": 398296,
+ "cache_hit_tokens": 369918,
+ "output_tokens": 20823,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 109.5
+}

@@ -1,0 +1,41 @@
+{
+ "item": "d10-clean",
+ "task": "swe-django-components-489",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0K6101CDKGRZRWVSKY383",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "新增的 tuple/list 分支（第 40-49 行）没有任何测试覆盖：本 diff 未改动 tests/，而仓库中现有的 loader 测试（tests/test_autodiscover.py::TestLoaderSettingsModule / TestBaseDir）使用的都是默认的 `component_dirs = [\"components\"]` 或字符串目录，没有任何用例把 STATICFILES_DIRS 设为 `[(\"prefix\", path)]`。也就是说这个新分支裸奔，一旦被回退（例如有人把 `component_dir[1]` 改回原样），现有测试仍然全绿，Issue 会静默复发。",
+   "suggestion": "参照 tests/test_component.py:229-234 的写法加一个用例，例如：@override_settings(BASE_DIR=Path(__file__).resolve().parent, STATICFILES_DIRS=[(\"components\", Path(__file__).resolve().parent / \"components\")]) 后断言 Loader(Engine.get_default()).get_dirs() 不再抛异常且返回 test/components 目录（可顺带覆盖非法值被跳过 + 产生 warning 的分支）。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 44,
+   "message": "`except TypeError: logger.warning(...); continue` 把“配置写错”从硬失败降级为静默跳过：Django 自身对非法条目是直接报错（django/contrib/staticfiles/finders.py 里 `prefix, root = root` 会抛 ValueError），而这里只有一条日志（且 get_dirs 被 search()/组件类创建频繁调用，可能被日志级别过滤或刷屏）后继续，用户会遇到“组件目录莫名搜不到”而不是明确的配置错误。对 2 元组这条主路径无影响，属健壮性取舍，非阻断问题。",
+   "suggestion": "保持 2 元组正常处理即可；如果想更贴近 Django 语义，可在条目既不是 str/os.PathLike 也不是可解包的 2 元组时直接抛出 ImproperlyConfigured（或至少把 warning 提升为对同一配置只提示一次），避免静默降级掩盖配置错误。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.150044,
+ "input_tokens": 413276,
+ "cache_hit_tokens": 393216,
+ "output_tokens": 30530,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 177.2
+}

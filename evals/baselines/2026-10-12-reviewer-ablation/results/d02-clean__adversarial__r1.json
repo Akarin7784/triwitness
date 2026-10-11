@@ -1,0 +1,34 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0B9EGQ17SGSV7TH0EGSVE",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_duration.py",
+   "line": 6,
+   "message": "修复本身正确，但测试文件中仍只有 \"45s\" 和非法输入两个用例，Issue 中明确提到的多段时长（\"1h30m\"、\"2m\"、\"1h30m15s\"）没有任何断言覆盖；`m: 1` 这类单位系数错误无法被现有测试发现，一旦回归不会被拦截。",
+   "suggestion": "在 tests/test_duration.py 中补充回归用例，例如：assert parse_duration(\"1h30m\") == 5400、assert parse_duration(\"2m\") == 120、assert parse_duration(\"1h30m15s\") == 5415，并保留 \"2h\" == 7200 以确认 h 未受影响。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.018054,
+ "input_tokens": 12630,
+ "cache_hit_tokens": 11392,
+ "output_tokens": 4147,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 21.6
+}

@@ -1,0 +1,26 @@
+{
+ "item": "d08-clean",
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1CA4NFPV83RCRHKSPYCX0",
+ "max_turns": 20,
+ "path": "没有提交（budget_exhausted：单任务安全上限 max_turns 已用尽：20 / 20）",
+ "served_model": "deepseek-flash",
+ "verdict": null,
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.06624,
+ "input_tokens": 490953,
+ "cache_hit_tokens": 445952,
+ "output_tokens": 3080,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 47.2
+}

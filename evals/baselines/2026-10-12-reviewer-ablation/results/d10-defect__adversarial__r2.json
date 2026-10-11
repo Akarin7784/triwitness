@@ -1,0 +1,48 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1VEH8TQB2B23PEN9FA0BA",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "取错了 tuple 元素：`component_dir = component_dir[0]` 拿到的是前缀，而不是真实目录。Django 对 `STATICFILES_DIRS` 的 2 元组约定是 `(prefix, path)`：`FileSystemFinder.__init__` 里执行 `prefix, root = root`，随后 `FileSystemStorage(location=root)` 并用 `prefix` 作为 URL 前缀（文档示例 `(\"downloads\", \"/opt/webfiles/stats\")` 中真正落盘的是第二个元素，第一个只决定 URL 命名空间）；Issue 的 Expected 也明确写着“should consider the second item”。\n\n后果（本文件 59/62/66/86 行都把这个值当文件系统目录用）：以文档示例为例，`component_dir` 变成相对路径 `\"downloads\"`，`Path(\"downloads\").is_dir()`（相对 CWD）与 `(BASE_DIR / \"downloads\")`、`(settings_module_dir / \"downloads\")` 基本都不会命中，于是 `/opt/webfiles/stats` 永远不会进入 `search().searched_dirs`——`__init__.py:32` 的 `search(search_glob=\"**/*.py\")` 自动发现和 `utils.search()` 的模板目录解析都找不到该目录下的组件。也就是说崩溃虽然没了，Issue 描述的场景仍然失效；此外若工程里恰好存在名为 `downloads` 的目录（第 66 行 BASE_DIR 分支），还会把一个无关目录注册成模板/组件目录。\n\n修复：改为 `component_dir = component_dir[1]`。",
+   "suggestion": "```python\nif isinstance(component_dir, (tuple, list)) and len(component_dir) == 2:\n    component_dir = component_dir[1]  # (prefix, path) -> path\n```"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_autodiscover.py",
+   "line": 45,
+   "message": "这次修复没有任何回归测试覆盖 tuple 形式的 STATICFILES_DIRS：现有测试（tests/test_autodiscover.py 的 get_dirs 用例、tests/test_component.py:231/794）都只使用纯 str/Path 条目，所以 `[0]`/`[1]` 写错不会被测试发现。建议补一个用例，把 `STATICFILES_DIRS` 设为 `[(\"myprefix\", str(Path(__file__).parent / \"components\"))]`，断言 `Loader(...).get_dirs()` 返回值等于该 `components` 目录（即第 2 个元素生效）。",
+   "suggestion": "在 tests/test_autodiscover.py 中新增：\n```python\ndef test_get_dirs_with_tuple(self):\n    components_dir = Path(__file__).parent.resolve() / \"components\"\n    loader = Loader(Engine.get_default())\n    with override_settings(STATICFILES_DIRS=[(\"myprefix\", str(components_dir))]):\n        self.assertEqual(sorted(loader.get_dirs()), [components_dir.resolve()])\n```"
+  }
+ ],
+ "error": null,
+ "calls": 15,
+ "cost_cny": 0.09791,
+ "input_tokens": 293422,
+ "cache_hit_tokens": 275584,
+ "output_tokens": 18640,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 95.6
+}

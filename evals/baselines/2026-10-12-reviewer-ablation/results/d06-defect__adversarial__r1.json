@@ -1,0 +1,48 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0CBC3C4630X025CGGZRVB",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "新增的 (\"DOUBLE\", r\"\\bdouble\\b\") 是无效改动：TOKENS 是 OrderedDict(list of tuples)，重复键只保留“首次插入位置 + 最后一次的值”，而同一键已在第 27 行（位于 IDENTIFIER 之前）定义过，因此 _compile_patterns() (lexer.py:123-125) 生成的 alternation 里 DOUBLE 只会出现一次，这一行对 tokenization 零影响（`double d;` 在补丁前就已经产出 DOUBLE，见 tests/test_translator/test_lexer.py:161 的断言，基线即通过）。另外，即使第 27 行不存在，把它放在 IDENTIFIER(第 29 行) 之后也永远匹配不到纯单词 token —— 单词型 token 落在 IDENTIFIER 之后只能靠 lexer.py:143 的 KEYWORDS 重映射生效，而 \"double\" 不在 KEYWORDS 里。",
+   "suggestion": "删掉第 81 行这条重复定义（仓库里 BITWISE_NOT/INCREMENT/DECREMENT 已有同类冗余，不宜再增加）；若想表达“double 是关键字”，只需保留第 27 行、必要时把它并入 KEYWORDS 机制。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "UNSIGNED_INT 的匹配范围与 token 名不一致，且没有任何下游消费者：正则 `\\bunsigned\\b` 只吃掉关键字 unsigned，`unsigned int x;` 现在被切成 (UNSIGNED_INT,\"unsigned\") + (INT,\"int\") + IDENTIFIER，而全仓库 grep 显示 UNSIGNED_INT 只出现在本文件——parser.py 的类型/语句白名单（parser.py:98-110、243-250、409-416、727-733、841-847）只有 UINT/INT/DOUBLE 等，没有 UNSIGNED_INT。后果是：函数体里出现该 token 会直接走到 parser.py:253 的 raise SyntaxError(\"Unexpected token UNSIGNED_INT\")，shader 顶层则走 parser.py:115-119 的 warn+跳过，静默丢类型；也就是说补丁只把失败形式从 IDENTIFIER 换成了新 token，端到端仍无法翻译 `unsigned int`，codegen 里 \"unsigned int\": \"uint\"（crosstl/translator/codegen/metal_codegen.py:49）这条映射也依然取不到。考虑到 Issue 明确说只改 lexer 这一个文件，这不算阻断合并，但属于“应改/需确认语义”。",
+   "suggestion": "二选一并写明意图：(a) 若目标是把 `unsigned int` 作为整体类型识别，把正则改为 r\"\\bunsigned\\s+int\\b\"（token 文本即 \"unsigned int\"，与 metal_codegen 的类型映射键一致），并在 parser.py 的上述类型白名单中补 UNSIGNED_INT；(b) 若只想要单独的 unsigned 关键字 token，至少在 parser/codegen 侧补上 UNSIGNED_INT 分支，否则该 token 无法被消费，建议补一条覆盖 `unsigned int a = 3;` 的 lexer 断言测试以固定预期 token 形状。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.159369,
+ "input_tokens": 531626,
+ "cache_hit_tokens": 495360,
+ "output_tokens": 28299,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 156.2
+}

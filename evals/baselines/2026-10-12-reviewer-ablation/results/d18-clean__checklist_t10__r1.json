@@ -1,0 +1,26 @@
+{
+ "item": "d18-clean",
+ "task": "swe-conan-19750",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1HYA7JKS8YXCEZ1CTQ2PH",
+ "max_turns": 20,
+ "path": "没有提交（budget_exhausted：单任务安全上限 max_turns 已用尽：20 / 20）",
+ "served_model": "deepseek-flash",
+ "verdict": null,
+ "findings": [],
+ "error": null,
+ "calls": 20,
+ "cost_cny": 0.035828,
+ "input_tokens": 273428,
+ "cache_hit_tokens": 255616,
+ "output_tokens": 3226,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 25.7
+}

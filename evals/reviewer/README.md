@@ -57,6 +57,8 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\run-reviewer-ablation.p
 消融里关掉了编排器默认的“最后一次强制提交”，与第一轮协议一致；结果 JSON 多了 `task_id`（对账）与 `verdict_on_last_call`。
 结果包默认只带没下结论 / 出错那几次的轨迹（`bundle --all-runs` 带全部）。
 
+第二轮已跑（2026-10-12 01:32–02:16 UTC+8，¥10.2728），与第一轮合并后的结果与判定（ADR-0007 确认）见 `evals/baselines/2026-10-12-reviewer-ablation/README.md`。
+
 脚本会克隆 / 更新仓库 → 构建 `evals/reviewer/Dockerfile` 镜像（构建时下载基线源码）→ 在容器里并发跑 → 评分 → 把结果、轨迹和账本打成 `%USERPROFILE%\tw-ablation-out\reviewer-ablation-<时间>.zip`。密钥只经 `docker run -e DEEPSEEK_API_KEY` 透传，不进镜像和结果包。中断后重跑同一命令会跳过已完成的题。
 
 ### 在 Linux / box 上

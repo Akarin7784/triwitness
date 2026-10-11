@@ -1,0 +1,48 @@
+{
+ "item": "d07-defect",
+ "task": "swe-pynmea2-124",
+ "kind": "defect",
+ "truth": {
+  "file": "pynmea2/types/proprietary/ash.py",
+  "line": 37,
+  "category": "wrong_regex",
+  "severity": "major",
+  "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1MQBMKN9SQ86X250FD9RN",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "正则结尾锚点被删除，ASHRATT 的匹配条件被放宽为前缀匹配：`re.match(r'^\\d{6}\\.\\d{2,3}', data[1])` 现在会匹配 '122144.7555'、'122144.75xyz' 这类字段，而旧代码（`^\\d{6}\\.\\d{3}$`）不会。ASH.__new__（ash.py:23-26）在 name 未注册时用 ASHRATT.match 做类型判定，因此任何 data[1] 仅以前 6 位数字+'.'+2~3 位数字开头的未知 PASHR 语句（例如时间戳带 4 位以上小数，或字段后跟其它字符）都会被静默识别为 ASHRATT，进而按 RT300 字段表解释数据（timestamp/heading/roll 等属性被错误映射），而修改前这类语句会回退到通用 ASH，用户可通过 msg.data 拿到原始字段。Issue 本身给出的修复就是带锚点的 `'^\\d{6}\\.\\d{2,3}$'`，本补丁偏离了该修复并引入行为回归。",
+   "suggestion": "把结尾锚点补回：`return re.match(r'^\\d{6}\\.\\d{2,3}$', data[1])`，使匹配仍然覆盖整个字段，仅放宽小数位数为 2~3 位。"
+  },
+  {
+   "severity": "minor",
+   "file": "test/test_ash.py",
+   "line": 16,
+   "message": "补丁只改了 ash.py，未为 Issue 中报告的 2 位小数时间戳加任何回归测试；test/test_ash.py 中现有用例只有 3 位小数的 '$PASHR,130533.620,...' 和回退用例 '$PASHR,XYZ,123'，因此“2 位小数是否被识别为 ASHRATT”这一修复目标没有测试保护（也无法防止未来把锚点之类的约束再次放错）。",
+   "suggestion": "新增用例，例如 data = '$PASHR,122144.75,240.68,T,,,,,,,2*04'（该样例校验和与 7 个逗号一致，XOR('PASHR,122144.75,240.68,T,,,,,,,2') == 0x04），断言 type(msg) == pynmea2.ash.ASHRATT、msg.timestamp == datetime.time(12, 21, 44, 750000)、msg.render() == data。"
+  }
+ ],
+ "error": null,
+ "calls": 11,
+ "cost_cny": 0.106327,
+ "input_tokens": 210343,
+ "cache_hit_tokens": 174208,
+ "output_tokens": 16677,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 84.8
+}

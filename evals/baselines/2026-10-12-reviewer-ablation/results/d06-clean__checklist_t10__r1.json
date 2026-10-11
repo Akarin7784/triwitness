@@ -1,0 +1,41 @@
+{
+ "item": "d06-clean",
+ "task": "swe-crosstl-257",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1BS7NX847F37VFEP5SY0W",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "重复的 token 名 `DOUBLE`：第 27 行已有 `(\"DOUBLE\", r\"\\bdouble\\b\")`，diff 在文件末尾又追加了一条同名的 `(\"DOUBLE\", r\"\\bdouble\\b\")`。`_compile_patterns()` 会把 TOKENS 的每个条目拼成 `(?P<DOUBLE>...)|(?P<DOUBLE>...)`，Python `re` 不允许重复的组名，会在 `re.compile` 时抛 `re.error: redefinition of group name 'DOUBLE'`。也就是说 `Lexer(code)` 的 `__init__` 无条件崩溃，凡是 import/使用该 lexer 的路径全部失效——这是明确回归（原文件没有这个问题），也不可能是“修复”。",
+   "suggestion": "删除第 81 行新增的 `(\"DOUBLE\", r\"\\bdouble\\b\")`（第 27 行已有该定义）。补充：文件里 `INCREMENT`/`DECREMENT`(第54/55 与 66/67)、`BITWISE_NOT`(第10/80) 也是重复名，虽为改动前既有问题，但请一并去重，否则同类崩溃仍会被后续维护引入。"
+  },
+  {
+   "severity": "major",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "`UNSIGNED_INT` 只加了正则，未接入 KEYWORDS 映射、也未在 parser 中识别。TOKENS 在第 24 行加入 `(\"UNSIGNED_INT\", r\"\\bunsigned int\\b\")`，但 KEYWORDS 中没有对应项（属于 multi-word，实际靠正则而非 KEYWORDS，尚可），真正的问题在 parser：crosstl/translator/parser.py:98-110 的允许类型列表只含 VOID/FLOAT/VECTOR/DOUBLE/UINT/INT/MATRIX/IDENTIFIER/SAMPLER2D/SAMPLERCUBE/SAMPLER，没有 UNSIGNED_INT。因此 `unsigned int x;` 会被 lexer 正确切成 UNSIGNED_INT，但 parser 走到 else 分支报错，行为未真正修复（只为分词而分词）。",
+   "suggestion": "若目标语料确实包含 `unsigned int`，需同时在 parser.py 的类型判定分支（全局变量、函数返回类型、参数等出现类型列表的位置，至少 line 98-110、line 247、412、730、844 附近）加入 \"UNSIGNED_INT\"，并在 codegen 中将其映射为对应后端类型（metal_codegen 已有 \"unsigned int\"→\"uint\" 的映射可复用）。若本任务确实只要求词法识别，请在说明/测试中明确只覆盖 lexer，并补一条仅断言 token 流包含 UNSIGNED_INT 的测试。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.013075,
+ "input_tokens": 37009,
+ "cache_hit_tokens": 31488,
+ "output_tokens": 1731,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 12.2
+}

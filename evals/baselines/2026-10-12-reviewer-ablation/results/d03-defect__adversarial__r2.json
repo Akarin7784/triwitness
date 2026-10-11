@@ -1,0 +1,48 @@
+{
+ "item": "d03-defect",
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1KP0DHKB7Q7QFZDNJY1BP",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "minicache/lru.py",
+   "line": 15,
+   "message": "`move_to_end(key, last=False)` 把刚访问的 key 移到 OrderedDict 的头部，而本类的淘汰端恰好是头部：put 用 `move_to_end(key)`（默认 last=True）把写入/更新的 key 放到尾部，并用 `popitem(last=False)` 从头部淘汰（lru.py:20、23）。因此这行等于把 MRU 放到最先被淘汰的位置，LRU 语义被反转。\n\n按 Issue 场景推演（capacity=2）：put(a) → [a]；put(b) → [a,b]；get(a) → a 已在头部，顺序不变 [a,b]；put(c) → [a,b,c]，popitem(last=False) 仍淘汰 a —— Issue 描述的 \"a disappears instead\" 原样保留，补丁没修好。\n\n更糟的是引入了新回归：put(a), put(b), get(b), put(c) 在改动前顺序为 [a,b]，淘汰 a（正确）；改动后 get(b) 把 b 移到头部得 [b,a]，put(c) 后淘汰 b，即刚读过的 key 最先被踢出，与 LRU 完全相反。\n\n正确修复应与 put 保持一致，移到尾部（MRU 端）：`self._data.move_to_end(key)`（即 last=True）。",
+   "suggestion": "把第 15 行改为 `self._data.move_to_end(key)`（等价于 move_to_end(key, last=True)），并补充覆盖 Issue 场景的回归测试。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_lru.py",
+   "line": 4,
+   "message": "补丁未新增任何测试，现有唯一用例 test_put_get 只验证 get 返回值和不存在的 key 返回 default，不涉及淘汰顺序，因此上面那个把 MRU 移到淘汰端的错误改动可以完整通过测试。Issue 给出的具体场景（capacity=2: put a, put b, get a, put c → 应淘汰 b，get(\"b\") 为 None/default 且 get(\"a\") 仍为原值）没有任何测试覆盖。",
+   "suggestion": "新增测试断言 Issue 场景的淘汰结果，例如：c = LRUCache(2); c.put(\"a\", 1); c.put(\"b\", 2); c.get(\"a\"); c.put(\"c\", 3); assert c.get(\"b\") is None and c.get(\"a\") == 1；并加一条 put 更新已有 key 也刷新最近使用顺序的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.013524,
+ "input_tokens": 21260,
+ "cache_hit_tokens": 19584,
+ "output_tokens": 2864,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 16.6
+}

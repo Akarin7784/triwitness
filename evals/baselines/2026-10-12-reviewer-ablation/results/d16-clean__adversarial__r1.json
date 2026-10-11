@@ -1,0 +1,48 @@
+{
+ "item": "d16-clean",
+ "task": "swe-loguru-1451",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0ZZGXG5PY0AM3TPMQKBQ3",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "`except KeyError as e:` 覆盖了整段 emit 主体（try 从第 129 行到第 206 行），而不仅仅是格式字符串解析。第 133 行 `self._filter(record)`、第 137 行 `self._formatter(record)`（callable format）、第 204 行 `self._queue.put(str_record)`（pickle）、第 206 行 `self._sink.write(str_record)` 抛出的 KeyError 都会被这条分支截获并改写成 `_make_key_error()` 生成的“格式字符串引用了未知键”的诊断。证据：只需 `logger.add({}.__getitem__, format=\"{message}\", catch=True)` 后 `logger.info(\"hi\")`，格式串完全合法（`{message}`），却会打印 “The format string references an unknown key 'hi'. Available record keys are: …”，这是与事实相反的诊断，会把用户引向完全错误的方向；catch=False 时调用方收到的不再是 sink 抛出的异常，`e.args[0]` 从原始键变成整段指引文本，任何 `except KeyError as e: if e.args[0] == ...` 之类的调用方代码/测试行为都会改变（本仓库 tests/test_add_option_catch.py:24-29 这类“catch=False 应原样抛出 sink 异常”的契约也说明异常原样透传是有意为之）。相比之下 `ErrorInterceptor` 的存在意义就是如实报告发生位置。修复建议：只在格式解析处捕获，例如抽出 `def _format(precomputed_format, formatter_record)`（或在 6 处 `format_map`/`self._formatter(record)` 调用外局部 try/except KeyError），仅在该范围内把 KeyError 转换为增强消息，sink/filter/序列化/队列仍走原来的 `except Exception` 分支原样上报。",
+   "suggestion": "把 KeyError 的处理收窄到格式字符串解析本身：新增一个只包住 `self._formatter(record)` 与各 `precomputed_format.format_map(formatter_record)` 调用的 try/except（或内部辅助函数），在其中生成增强 KeyError 并沿用现有 catch 语义；其余代码继续由 `except Exception:` 处理。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 210,
+   "message": "catch=True 分支把 `self._make_key_error(e, record)` 新建的异常直接交给 `ErrorInterceptor.print(record, exception=...)`，但该异常从未被 raise：它的 `__traceback__` 为 None，且因为在 except 块里只是“创建”而非“抛出”，`__context__` 也不会被设置（`raise ... from e` 只出现在 catch=False 分支）。`ErrorInterceptor.print` 用 `exception.__traceback__` 走 `traceback.print_exception(type_, value, None, None, stderr)`，因此输出里完全没有 “Traceback (most recent call last)” 段和任何帧，只剩一行 `KeyError: \"…\"`；而修改前同一场景会打印出原始异常及完整调用栈。对真正的格式键错误而言丢失的是 loguru 内部帧（影响有限），但结合上一条，用户的 sink/filter 抛出的 KeyError 会连带丢掉定位问题的全部线索，属诊断能力倒退。修复建议：让增强异常保有因果关系，例如 `error = self._make_key_error(e, record); error.__cause__ = e`（或在 catch=True 分支 `raise error from e` 后由调用方/拦截器打印），这样既保留清晰标题也保留原始 traceback。",
+   "suggestion": "在打印前保留因果链，例如：`enhanced = self._make_key_error(e, record)`；若希望输出保留原始栈，设置 `enhanced.__cause__ = e`，再 `self._error_interceptor.print(record, exception=enhanced)`。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "`available = \", \".join(sorted(record.keys()))` 假定 record 的键全为字符串，但 record 是用户可修改的普通 dict：`logger.patch(lambda r: r.update({1: \"x\"}))` / `logger.configure(patcher=...)` 可以插入非字符串键（`_logger.py:2157-2161` 直接对 log_record 调 patcher）。此时一旦 format 命中缺失键，`sorted()` 会在这个 except 处理器内部抛 TypeError，而 except 处理器自身抛出的异常不会被同级 `except Exception:` 接住，会直接冒泡到 `logger.info()` 调用方 —— 即使 `catch=True` 也破坏“日志错误不崩溃应用”的既有保证，且完全绕过错误拦截器。修复建议：`sorted(map(str, record.keys()))` 或对键做 `try/except` 兜底（例如失败时退化为 `\"<unavailable>\"`）。",
+   "suggestion": "改为 `\", \".join(sorted(str(k) for k in record.keys()))`，或把键列表构造包在 try/except 中并在失败时输出占位文本。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.212977,
+ "input_tokens": 557964,
+ "cache_hit_tokens": 516864,
+ "output_tokens": 40385,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 232.9
+}

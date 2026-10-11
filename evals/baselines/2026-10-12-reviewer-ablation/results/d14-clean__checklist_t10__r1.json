@@ -1,0 +1,41 @@
+{
+ "item": "d14-clean",
+ "task": "swe-marimo-8401",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1FEVQSWZ1VVNX3K73SFBD",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 61,
+   "message": "修复正确，但缺少会在 CI 中运行的回归测试。新增的仅是一行 doctest（line 61），而本仓库 pytest 配置（pyproject.toml:522 addopts）没有 --doctest-modules，也没有任何测试文件收集该 doctest，因此这行断言不会被执行。既有的 tests/_ast/test_app.py:1646 只覆盖了 '<uuid>setup'（40 字符）这一真·external 情形，并不覆盖本次修复的裸 UUID（36 字符）情形。这意味着若日后有人把 len<=36 的判断改回 [:36] 截断，测试不会失败。建议新增 tests/_ast/test_cell_id.py，覆盖三类：normal（'Hbol'）→False、裸 UUID4（36 字符）→False、'<uuid4>Hbol'（37+）→True，并补一个 kernel 级用例验证 VSCode 风格 UUID cell id 下 @mo.cache 能正常命中（不再出现 app-scope 警告）。",
+   "suggestion": "添加 tests/_ast/test_cell_id.py 的单元测试（False/False/True），并在 tests/_save/test_cache.py 中用 exec_req.get_with_id(cell_id='<uuid4>', ...) 增加一个回归测试，断言不产生 'valid \\'app\\' instance' 警告且缓存命中。"
+  },
+  {
+   "severity": "minor",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 67,
+   "message": "修复点放在分类函数 is_external_cell_id 上，属于收敛型修复：它让裸 UUID 不再被判为 external，从而 save.py:163 走正常 graph/globals 分支，不再触发 save.py:275 graph_from_scope→toplevel.py:22 的 'valid app instance' 警告与空 graph/空 cell_id。逻辑上正确，但调用链上真正的隐患（save.py:275 _prepare_call_execution 在 _external 分支调用 graph_from_scope 时，self.scope 若确实不含 'app' 就只会返回空 DirectedGraph/空 cell_id 而不报错）依旧存在：任何其它仍被判定为 external 但 scope 里没有 app 的场景仍会静默产生空图，可能造成错误的缓存键。可选加固：在 graph_from_scope/get_cell_id_from_scope 返回空结果时给出更明确的处理，而非仅一条 warning 后继续。",
+   "suggestion": "评估是否需要在 _prepare_call_execution 的 external 分支对空 graph/app 做显式处理（例如抛错或降级为不缓存），避免静默生成错误的缓存键。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.112839,
+ "input_tokens": 826298,
+ "cache_hit_tokens": 752640,
+ "output_tokens": 6032,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 61.9
+}

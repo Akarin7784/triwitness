@@ -1,0 +1,48 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1C3NX8XMC6A6Z3A18Q77M",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "新增的 ('DOUBLE', r'\\bdouble\\b') 是重复键：第 27 行已存在同名 DOUBLE 条目。TOKENS 由列表构造的 OrderedDict，重复键会保留首次插入位置（27 行）并用最后一次的值覆盖，由于值完全相同，此行不产生任何行为变化，属死代码。不影响正确性（正则命名组也不会重复），但建议删除以免误导读者以为新增了 DOUBLE 支持。",
+   "suggestion": "删除第 81 行重复的 (\"DOUBLE\", r\"\\bdouble\\b\")。"
+  },
+  {
+   "severity": "nit",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "UNSIGNED_INT 仅为独立单词 unsigned 建立令牌，parser.py 的类型白名单（第 98-110、245-250、410-415、728-733、842-847 行等处）只识别 UINT/INT/DOUBLE 等，未包含 UNSIGNED_INT，因此 `unsigned int a;` 在 translator 解析阶段会被第 115-119 行的 else 分支以 SyntaxWarning 跳过。issue 明确将范围限定为 lexer 识别令牌（单文件 lexer.py），故不算本补丁缺陷；仅提示如后续需要端到端支持，parser/codegen 仍需补充处理。",
+   "suggestion": "如目标是端到端支持 unsigned，需在 parser 相应类型列表中补充 UNSIGNED_INT（本次按 issue 范围可不做）。"
+  }
+ ],
+ "error": null,
+ "calls": 10,
+ "cost_cny": 0.022632,
+ "input_tokens": 95103,
+ "cache_hit_tokens": 85632,
+ "output_tokens": 2862,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 24.4
+}

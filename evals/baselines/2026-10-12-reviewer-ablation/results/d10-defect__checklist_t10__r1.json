@@ -1,0 +1,55 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1E4YR109MVAVSPRZH9H0E",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "取错了元素。Django 的 STATICFILES_DIRS 元组形式是 (prefix, path)，第一个元素是 URL 前缀、第二个才是文件系统目录（Django 的 FileSystemFinder 正是 `prefix, root = root`；Issue 里的例子 (\"downloads\", \"/opt/webfiles/stats\") 也表明 \"downloads\" 只是前缀，/opt/webfiles/stats 才是目录）。Issue 明确要求“should consider the second item”。补丁写成 component_dir = component_dir[0]，对 Issue 的示例会得到 \"downloads\"，后续 Path(\"downloads\")、path_is_relative_to(\"downloads\", ...) 仍解析不到 /opt/webfiles/stats，即没有修复 Issue 描述的行为。应改为 component_dir = component_dir[1]。",
+   "suggestion": "改为 component_dir = component_dir[1]（并同样对 list 形式生效）。"
+  },
+  {
+   "severity": "major",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "新增的元组处理分支没有任何测试覆盖：tests/test_autodiscover.py 与 tests/test_component.py 中的 STATICFILES_DIRS 用例全是 str/Path，没有任何 (prefix, dir) 元组用例，无法验证元组路径是否被正确解析、也无法验证非 2 长度元组走 warning 分支。这也是本次取错索引未被发现的原因。",
+   "suggestion": "在 tests/test_autodiscover.py 增加使用 STATICFILES_DIRS=[(\"prefix\", <真实目录>)] 的用例，断言 get_dirs() 返回第二个元素解析出的目录。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 45,
+   "message": "warning 文案与实际检查不一致：除 str/bytes/os.PathLike 外，长度为 2 的 tuple/list 已被前置分支消费，但文案里仍写 “or tuple/list of length 2”；且非 2 长度元组被静默跳过只记 warning，用户可能仍困惑于为何目录不生效。属可读性/提示问题。",
+   "suggestion": "调整文案以反映实际被接受的类型，或对长度不为 2 的 tuple/list 也给出更明确的提示。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.034668,
+ "input_tokens": 64807,
+ "cache_hit_tokens": 40832,
+ "output_tokens": 2469,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 19.2
+}

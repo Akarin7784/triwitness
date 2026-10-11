@@ -1,0 +1,48 @@
+{
+ "item": "d06-defect",
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2J5M9TQNX1G00E6Q74EFQ",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 81,
+   "message": "新增的 (\"DOUBLE\", r\"\\bdouble\\b\") 是冗余项：TOKENS 是 OrderedDict，第 27 行已有同名键 DOUBLE，同键赋值只更新值、保留原插入位置（该文件里 BITWISE_NOT 在第 10/80 行、INCREMENT/DECREMENT 在第 54-55/66-67 行也是同样的重复键折叠情况）。因此合并到列表后 TOKENS 中仍只有一个 DOUBLE，且位于第 27 行处，第 81 行不改变任何行为，属于死代码。若意图是『新增 DOUBLE 支持』，实际并未生效；若不慎删掉第 27 行的 DOUBLE，这个末尾写法反而会失效——因为 _compile_patterns 用 '|' 拼接并按 lastgroup 取第一个匹配（第 123-126、141 行），放在 IDENTIFIER/NUMBER 之后会让 \\bdouble\\b 先被 IDENTIFIER 吃掉而永远匹配不到。",
+   "suggestion": "删除第 81 行的重复 DOUBLE 条目；若确需保留一行 DOUBLE，请确保它出现在 IDENTIFIER 之前（如第 27 行处）并只保留一处。"
+  },
+  {
+   "severity": "minor",
+   "file": "crosstl/translator/lexer.py",
+   "line": 24,
+   "message": "UNSIGNED_INT 词单元只加在 lexer，消费方未同步：crosstl/translator/parser.py 中 grep 不到 'UNSIGNED_INT'/'unsigned'，第 98-110、243-249、410-419、726-731、842-846 行的类型 token 白名单里也没有该类型。此前 'unsigned' 会按 IDENTIFIER 匹配并被 parser 当成类型或标识符处理；改成 UNSIGNED_INT 后，parse() 会走到第 115-119 行的 else 分支只发 SyntaxWarning 并静默吞掉该 token，属于既有行为变化。同时 tests/test_translator/ 下没有任何 unsigned/UNSIGNED_INT 用例（grep 无匹配），新 token 无测试覆盖。",
+   "suggestion": "在 crosstl/translator/parser.py 的类型 token 列表中接入 UNSIGNED_INT（或在对应后续任务中跟进），并在 tests/test_translator/test_lexer.py 增加对 'unsigned' 的断言（例如断言存在 (\"UNSIGNED_INT\", \"unsigned\") 的 token），以锁定该行为。"
+  }
+ ],
+ "error": null,
+ "calls": 11,
+ "cost_cny": 0.040809,
+ "input_tokens": 143048,
+ "cache_hit_tokens": 124672,
+ "output_tokens": 4985,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 39.5
+}

@@ -1,0 +1,34 @@
+{
+ "item": "d19-clean",
+ "task": "swe-cyclopts-633",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2SXW8TGJ2EFEKCYEGSFE8",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "cyclopts/parameter.py",
+   "line": 279,
+   "message": "The sort key `is_nonetype(x) or x is None` is effectively `is_nonetype(x)`: `get_args()` on a union normalizes `None` to `NoneType`, so `x is None` never fires. Harmless but slightly misleading; could be simplified to `is_nonetype(x)` (or use a `key=lambda x: is_nonetype(x)` with default `False` for non-type members). No behavior impact.",
+   "suggestion": "Use `key=lambda x: is_nonetype(x)` and drop the redundant `x is None` check."
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.021453,
+ "input_tokens": 126830,
+ "cache_hit_tokens": 115968,
+ "output_tokens": 2068,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 27.4
+}

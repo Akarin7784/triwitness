@@ -1,0 +1,41 @@
+{
+ "item": "d14-defect",
+ "task": "swe-marimo-8401",
+ "kind": "defect",
+ "truth": {
+  "file": "marimo/_ast/cell_id.py",
+  "line": 67,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2PVNZ9BEH4FYNVC63XKT2",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 67,
+   "message": "边界守卫写错，Issue 描述的行为没有被真正修复。补丁目标是让“裸 UUID（36 字符，VSCode）返回 False、UUID+后缀（37+ 字符，嵌入式）返回 True”。但 `if len(cell_id_str) < 36: return False` 对长度恰好 36 的裸 UUID 不生效：随后 `uuid_to_test = cell_id_str[:36]` 就是整个字符串，`UUID(..., version=4)` 解析成功，`str(uuid_obj) == uuid_to_test` 为 True，函数返回 **True**。即 `is_external_cell_id(\"c9bf9e57-1685-4c89-bafb-ff5af830be8a\")` 仍返回 True，这正是 Issue 中 VSCode 单元格被误判为 external 的格式。后果路径：`marimo/_save/save.py:163` `self._external = is_external_cell_id(maybe_cell_id)` 置为 True → 第 164-167 行跳过 `graph`/`glbls`/真实 `cell_id` → `base_block` 保持 None → 调用时 `save.py:272-276` 走 `graph_from_scope(self.scope)`，scope 中没有 `app`，触发 `marimo/_save/toplevel.py:22` 的 “The scope does not contain a valid 'app' instance.” 警告，缓存仍然失效/行为错误。\n\n另一佐证：同一改动在 docstring 第 61-62 行新增的 doctest `>>> is_external_cell_id(\"c9bf9e57-1685-4c89-bafb-ff5af830be8a\")` 期望 `False`，与实现矛盾，该 doctest 会失败；pyproject.toml:522 的 pytest addopts 未启用 --doctest-modules，所以现有测试跑绿并不代表逻辑正确。",
+   "suggestion": "把长度判定改为排他 null 后缀：`if len(cell_id_str) <= 36: return False`（等价 `< 37`），确保只有“UUID 前缀 + 非空后缀”才进入 UUID 校验；如工程上认可，也可显式断言 `len(cell_id_str) > 36`。同时补一个直接单测（例如 tests/_ast/test_cell_id.py）覆盖三种格式：\"Hbol\"→False、裸 36 字符 UUID→False、UUID+4 字符→True，避免仅靠不参与 CI 的 doctest。"
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.066378,
+ "input_tokens": 447311,
+ "cache_hit_tokens": 409728,
+ "output_tokens": 5150,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 64.3
+}

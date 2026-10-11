@@ -1,0 +1,41 @@
+{
+ "item": "d14-defect",
+ "task": "swe-marimo-8401",
+ "kind": "defect",
+ "truth": {
+  "file": "marimo/_ast/cell_id.py",
+  "line": 67,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0WEAH7RGQRQ7PJD2K98ND",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "marimo/_ast/cell_id.py",
+   "line": 67,
+   "message": "边界判断 off-by-one：`if len(cell_id_str) < 36: return False` 无法覆盖长度为 36 的 bare UUID，而 bare UUID 正是 Issue 里 VSCode 的场景（补丁自己的 docstring 第 54 行也写明 `\"<uuid>\" -> VSCode cell (36 chars)`，且第 61-62 行新增 doctest 断言它应返回 False）。对 36 字符串走完剩余逻辑：`uuid_to_test = cell_id_str[:36]` 就是整串 UUID，`UUID(uuid_to_test, version=4)` 对该串（version nibble 已是 4、variant 已符合 RFC 4122）解析成功且 `str(uuid_obj) == uuid_to_test` 成立，因此仍然 `return True`。调用链上 `marimo/_save/save.py:163` 会因此把 VSCode 单元格误判为 external（`_external = True` → graph/glbls/base_block 为空），随后 `_prepare_call_execution` 走 `graph_from_scope(self.scope)`，在 `marimo/_save/toplevel.py:19-28` 打出 \"The scope does not contain a valid 'app' instance…\" 警告并得到空图/空 cell_id，即 Issue 描述的 `mo.cache` 失败完全未被修复；同时第 61-62 行新增的 doctest 与实现矛盾（doctest 未接入 pytest addopts，所以 CI 不会替你发现）。修复建议：改为 `if len(cell_id_str) <= 36: return False`（即只有 `UUID4 前缀 + 非空后缀`（长度 > 36）才算 embedded），并补一条针对 `str(uuid4())` 的回归测试，例如断言 `is_external_cell_id(CellId_t(str(uuid4()))) is False`、`is_external_cell_id(CellId_t(str(uuid4()) + \"Hbol\")) is True`。",
+   "suggestion": "把 `if len(cell_id_str) < 36:` 改为 `if len(cell_id_str) <= 36:`，使 36 字符的 bare UUID 返回 False；并新增针对 bare UUID / UUID+后缀的显式单元测试（doctest 不会在 CI 中运行）。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.119547,
+ "input_tokens": 531524,
+ "cache_hit_tokens": 480768,
+ "output_tokens": 14794,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 115.8
+}

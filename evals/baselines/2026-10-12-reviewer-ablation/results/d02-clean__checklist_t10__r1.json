@@ -1,0 +1,34 @@
+{
+ "item": "d02-clean",
+ "task": "duration-minutes",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1ANPNRSD2XHX55K3GQDT8",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "nit",
+   "file": "tests/test_duration.py",
+   "line": 6,
+   "message": "修复正确但缺少覆盖 Issue 中出错组合的回归测试：现有测试只有 \"45s\" 与非法输入，恰好都是修复前就通过的路径（\"45s\" 不涉及 m）。若将来再次把 \"m\" 写错，测试不会失败。",
+   "suggestion": "补一条断言 parse_duration(\"1h30m15s\") == 5415（或至少 \"2m\" == 120），把 Issue 的复现场景固化下来。"
+  }
+ ],
+ "error": null,
+ "calls": 3,
+ "cost_cny": 0.002535,
+ "input_tokens": 7318,
+ "cache_hit_tokens": 6656,
+ "output_tokens": 435,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 4.2
+}

@@ -1,0 +1,34 @@
+{
+ "item": "d01-clean",
+ "task": "csv-blank-line",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1JV1CJ1NRBMA8AAZD7T30",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "tests/test_basic.py",
+   "line": 5,
+   "message": "修复本身正确，但没有为「跳过空行」这一新分支补回归测试：`tests/test_basic.py` 只有 `parse_rows(\"a,1\\nb,2\")` 一个用例，空行是本次 Issue 的触发条件（如 `parse_rows(\"a,1\\n\\nb,2\") == [(\"a\",1),(\"b\",2)]`、`parse_rows(\"\\n\") == []`），当前无任何测试覆盖，未来改动删掉该 `continue` 不会被 CI 发现。属于测试覆盖缺口，不阻断合并。",
+   "suggestion": "在 tests/test_basic.py 增加断言：`assert parse_rows(\"a,1\\n\\nb,2\") == [(\"a\", 1), (\"b\", 2)]` 与 `assert parse_rows(\"\\n   \\n\") == []`。"
+  }
+ ],
+ "error": null,
+ "calls": 6,
+ "cost_cny": 0.017536,
+ "input_tokens": 22145,
+ "cache_hit_tokens": 20352,
+ "output_tokens": 3834,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 21.0
+}

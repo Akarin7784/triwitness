@@ -1,0 +1,55 @@
+{
+ "item": "d16-defect",
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P130D3933SVZG2TJD3SDNB",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "loguru/_handler.py",
+   "line": 253,
+   "message": "`key = original.args[1] if original.args else \"?\"` 越界：格式字符串缺键时，`format_map()`（本文件 161/165/175/180/184/192 行）抛出的是 `KeyError(key)`，`args` 只有一个元素（Issue 复现输出正是 `KeyError: 'nonexistent'`，说明 args[0] 才是缺失键）。因此 `original.args[1]` 恒抛 `IndexError: tuple index out of range`。该异常是在 207 行的 `except KeyError` 块内产生，不会被同级的 `except Exception`（211 行）捕获，也不会被任何调用方捕获（`_logger.py:2163-2164` 直接调用 `handler.emit(...)`，无 try），于是会一路抛到用户代码：`catch=True` 时不会打印拦截器诊断反而崩溃（违反验收标准 4），`catch=False` 时抛的是 IndexError 而不是带指引的 KeyError（违反标准 5），标准 1–3 的增强诊断也永远不会出现。仓库现有回归用例 `tests/test_configure.py::test_reset_previous_extra`（135-142 行）与 `::test_reset_previous_patcher`（145-152 行）用 `catch=False` + 缺失 `extra` 键并断言 `pytest.raises(KeyError)`，打上本补丁后会因 IndexError 失败，属明确回归。",
+   "suggestion": "改为取第一个参数并做类型兜底，例如：`key = original.args[0] if original.args else \"?\"`（或用 `str(original)`），并补一条直接断言 `str(exc.value)` 含缺失键与 `logger.bind` 指引的测试。"
+  },
+  {
+   "severity": "major",
+   "file": "loguru/_handler.py",
+   "line": 207,
+   "message": "新增的 `except KeyError as e:` 覆盖了 128-206 行的整个 try 体，不只是格式化步骤：用户 filter（133 行 `self._filter(record)`）、动态 format 可调用对象（137 行 `self._formatter(record)`）以及 sink（206 行 `self._sink.write(str_record)`）抛出的 KeyError 都会被当成“格式字符串引用了未知键”。例如 `logger.add(lambda m: registry[m])` 这类 sink 内部 KeyError，`catch=True` 时 stderr 会打印 “The format string references an unknown key '...' / Available record keys are: ...”，是错误且误导性的诊断；`catch=False` 时抛出的也不再是 sink 的原始 KeyError（原异常只挂在 `__cause__` 上），改变了既有行为（原先 211 行的通用分支会原样抛出/原样打印）。",
+   "suggestion": "只在格式化调用处翻译异常：把 161/165/175/180/184/192 行的 `format_map(...)` 单独包一层 `try/except KeyError`（或在 try 体中用标记区分），对非格式化来源的 KeyError 仍走原通用分支、`catch=False` 时原样 `raise`。"
+  },
+  {
+   "severity": "minor",
+   "file": "loguru/_handler.py",
+   "line": 254,
+   "message": "`\" , \".join(sorted(record.keys()))` 在 record 含非字符串键时会在错误处理路径内抛 `TypeError: '<' not supported between instances of 'str' and 'int'`（`record` 是普通 dict，patcher 可以写入任意键，参见 tests/test_patch.py 的 patcher 用法）。该异常发生在 except 块内同样会逸出并令日志调用崩溃，属于诊断路径上的自伤边界情况。",
+   "suggestion": "对键做字符串化后再排序，例如 `\", \".join(sorted(map(str, record.keys())))`。"
+  }
+ ],
+ "error": null,
+ "calls": 11,
+ "cost_cny": 0.169594,
+ "input_tokens": 346391,
+ "cache_hit_tokens": 313728,
+ "output_tokens": 32664,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 189.3
+}

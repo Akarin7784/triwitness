@@ -1,0 +1,34 @@
+{
+ "item": "d07-clean",
+ "task": "swe-pynmea2-124",
+ "kind": "clean",
+ "truth": null,
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1MMEAPE9AJPD4G1S66JKD",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "pynmea2/types/proprietary/ash.py",
+   "line": 37,
+   "message": "修复本身缺少回归测试覆盖：test/test_ash.py 只有 3 位小数用例（'$PASHR,130533.620,...'）与回落用例（'$PASHR,XYZ,123'），本次新支持的 2 位小数时间戳（Issue 中的 '$PASHR,122144.75,240.68,T,,,,,,,2*04'）没有任何断言。该正则决定类型分派，若日后被改回或收窄会静默回落到通用 ASH（属性访问才报 AttributeError），不易被发现。",
+   "suggestion": "在 test/test_ash.py 增加用例，例如解析 '$PASHR,122144.75,240.68,T,,,,,,,2*04'，断言 type(msg) == pynmea2.ash.ASHRATT、msg.timestamp == datetime.time(12, 21, 44, 750000)、msg.true_heading == 240.68、msg.is_true_heading == 'T' 且 msg.render() == data。"
+  }
+ ],
+ "error": null,
+ "calls": 14,
+ "cost_cny": 0.165896,
+ "input_tokens": 276327,
+ "cache_hit_tokens": 258048,
+ "output_tokens": 35614,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 177.2
+}

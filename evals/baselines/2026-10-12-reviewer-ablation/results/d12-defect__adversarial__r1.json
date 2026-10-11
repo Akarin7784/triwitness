@@ -1,0 +1,55 @@
+{
+ "item": "d12-defect",
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0RK3C5F9BNBXNX0H1D3K2",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "校验条件方向写反。`if isinstance(v, dict) and \"@id\" in v:` 对**含** `@id` 的字典抛 `ValueError(f\"no @id in {v}\")`，而对不含 `@id` 的字典直接放行，与 Issue 要求完全相反：\n(1) Issue 的复现路径没有被修复——`crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC-O\", ...}` 不含 @id 仍能写入，随后 `crate.root_dataset[\"license\"]` 依旧在 __getitem__（entity.py:92-94）抛 `ValueError: no @id in ...`，即“能写不能读”的问题原样存在。\n(2) 新增了错误行为/回归：所有合法的、以 `{\"@id\": ...}` 引用实体的赋值现在都会报错。仓库内明确会被打到的调用点：rocrate/rocrate.py:493 `self.metadata[\"conformsTo\"] = [{\"@id\": _} for _ in sorted(profiles)]`（`add_workflow(..., main=True)` 必走，Metadata→File→Entity，同一 __setitem__）；rocrate/model/computerlanguage.py:82-158 中 cwl/galaxy/knime/nextflow/snakemake 把 `{\"identifier\": {\"@id\": ...}, \"url\": {\"@id\": ...}}` 通过 properties 传给 ComputerLanguage.__init__，而 Entity.__init__（entity.py:38-43）会用 `self[name] = value` 走 __setitem__，因此 `ROCrate.add_workflow(...)` 默认 `lang=\"cwl\"` 经 get_lang→cwl() 直接抛异常；rocrate/model/softwareapplication.py:60-65 的 planemo()、rocrate/model/testservice.py:57-81 的 jenkins()/travis()/github() 同理；test/test_test_metadata.py:102/109/123 里 `test_service.url = {\"@id\": ...}` 也会失败。\n修复：改为 `if isinstance(v, dict) and \"@id\" not in v: raise ValueError(f\"no @id in {v}\")`。",
+   "suggestion": "把第 106 行的条件改为 `if isinstance(v, dict) and \"@id\" not in v:`，并本地跑一遍 test_model.py / test_test_metadata.py / test_write.py 确认既拦住了无 @id 的字典，又没有拦截 `{\"@id\": ...}` 与 Entity 值。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 167,
+   "message": "同一“写入路径”的另一入口 `append_to` 没有做任何校验：`current_value.extend([{\"@id\": _.id} if isinstance(_, Entity) else _ for _ in value])` 会原样写入 `{\"@type\": ..., \"name\": ...}` 这类无 @id 的字典，读回时仍会在 __getitem__（entity.py:92-94）抛 `ValueError: no @id in ...`，即 Issue 想消除的“写出的 crate 自己读不回来”依然可通过 `entity.append_to(key, {...})` 触发。",
+   "suggestion": "在 extend 之前对 value（规整成 list 后）逐项做与 __setitem__ 相同的校验（注意条件为 `\"@id\" not in v`），例如 `for v in value: if isinstance(v, dict) and \"@id\" not in v: raise ValueError(f\"no @id in {v}\")`。"
+  },
+  {
+   "severity": "minor",
+   "file": "test/test_model.py",
+   "line": null,
+   "message": "补丁没有为新增校验添加任何测试（diff 仅 3 行源码，无测试改动），这正是条件写反却未被测试发现的原因：现有用例里没有任何“无 @id 的字典应当抛 ValueError”的断言。",
+   "suggestion": "补充测试：`with pytest.raises(ValueError): crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC0\"}`，以及正例 `entity[\"p\"] = {\"@id\": \"#x\"}`、`entity[\"p\"] = [{\"@id\": \"#x\"}]` 不抛异常，防止再次写反。"
+  }
+ ],
+ "error": null,
+ "calls": 12,
+ "cost_cny": 0.070169,
+ "input_tokens": 217030,
+ "cache_hit_tokens": 188928,
+ "output_tokens": 9572,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 56.6
+}

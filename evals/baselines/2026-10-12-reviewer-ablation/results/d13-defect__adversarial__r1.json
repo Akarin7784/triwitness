@@ -1,0 +1,62 @@
+{
+ "item": "d13-defect",
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0V781TNEWRJTB0HWF702B",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "索引越界：`self.text[self.at + 1]` 没有边界检查，合法输入 `slpp.decode('-5')` 会抛 IndexError。依据：next_chr()（113-119 行）是 `self.ch = self.text[self.at]; self.at += 1`，decode() 第 49 行先调一次 next_chr()，所以此时 ch='-'(index 0)、self.at==1、self.len==2，访问 self.text[2] 越界 → `IndexError: string index out of range`。同类输入：`decode('-')`（旧实现打印 mfnumber_minus 后返回 0）、`decode('--')`（旧实现经正则替换成空文本返回 None）、`decode('{1,-}')`。修复建议：先判断边界，例如 `if self.ch == '-' and self.at < self.len and self.text[self.at] == '-':`。",
+   "suggestion": null
+  },
+  {
+   "severity": "blocker",
+   "file": "slpp.py",
+   "line": 104,
+   "message": "偏移一位（off-by-one），导致真正的注释完全不被跳过，相对被删除的正则实现是回归。依据：由 next_chr() 的不变式可知 `self.ch == self.text[self.at - 1]`，紧跟 ch 的字符是 `self.text[self.at]`，而不是 `self.text[self.at + 1]`。实测逻辑推演：`slpp.decode('-- c\\n3')` → ch='-'(idx0)、at=1，检查 text[2]=' '，判定不是注释 → value() 走 number() → mfnumber_minus 打印错误并返回 0；改动前正则会删掉注释、返回 3。`slpp.decode('{ -- c\\na = 1 }')` 同样会解析成垃圾键值（每个 '-' 都进 number() 报错返回 0）。修复建议：改为检测 `self.text[self.at] == '-'`（配合上面的边界检查），或直接用 `self.text.startswith('--', self.at - 1)`。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "slpp.py",
+   "line": 108,
+   "message": "white() 与 skip_comments() 互相递归：white() 末尾调用 skip_comments()（101 行），skip_comments() 遇到换行又回调 self.white()（108 行），每连续一行注释就多压 2 个栈帧。修正上面的 off-by-one 后，连续约 500 行注释（如大段 `--` 文件头/被注释掉的块）就会触发 RecursionError；旧的 decode 正则实现对这些输入完全正常，属于能力回归。修复建议：skip_comments 内部用循环跳过整行（`while self.ch and self.ch != '\\n': self.next_chr()`），不再回调 white()/自身。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "tests.py",
+   "line": null,
+   "message": "补丁只改了 slpp.py，没有为 Issue 添加回归测试，现有 tests.py 里也没有任何 `--` 注释/含 `--` 字符串用例，因此 `\"--3\"` 的修复和上述两个缺陷都不会被测试发现。建议补：`self.assertEqual(slpp.decode('\"--3\"'), '--3')`、`self.assertEqual(slpp.decode(\"-5\"), -5)`、`self.assertEqual(slpp.decode('-- c\\n3'), 3)`、`self.assertEqual(slpp.decode('{ -- c\\na = 1 }'), {'a': 1})`。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.090486,
+ "input_tokens": 89642,
+ "cache_hit_tokens": 83200,
+ "output_tokens": 20595,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 124.2
+}

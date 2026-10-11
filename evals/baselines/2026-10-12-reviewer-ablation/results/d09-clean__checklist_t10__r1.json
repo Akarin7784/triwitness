@@ -1,0 +1,41 @@
+{
+ "item": "d09-clean",
+ "task": "swe-cyclopts-701",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1D1M1AD2HMB0JBB2VG4QG",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "minor",
+   "file": "cyclopts/command_spec.py",
+   "line": 143,
+   "message": "App 分支（import_path 指向已有 App）会在原地修改被导入模块级 App 实例的 help/version 命令 show 属性并缓存为 _resolved。这与 core.py:1343 直接注册子 App 的行为一致，因此不是回归；但若同一 App 对象被多个父 App 注册，隐藏状态会互相共享。属既有语义，仅作提示。",
+   "suggestion": null
+  },
+  {
+   "severity": "minor",
+   "file": "cyclopts/command_spec.py",
+   "line": 141,
+   "message": "该修复覆盖的边界情况（help_flags/version_flags 为空列表时 chain 为空、App 分支的 flag 命令已在 __attrs_post_init__ 注册）经阅读代码确认为安全。建议在测试中补一条针对 lazy 加载下 --version 被隐藏且仍可用的断言，以防只有 --help 被覆盖。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 18,
+ "cost_cny": 0.055904,
+ "input_tokens": 259307,
+ "cache_hit_tokens": 219774,
+ "output_tokens": 2994,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 36.1
+}

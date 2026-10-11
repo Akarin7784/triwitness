@@ -1,0 +1,48 @@
+{
+ "item": "d19-defect",
+ "task": "swe-cyclopts-633",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/parameter.py",
+  "line": 279,
+  "category": "wrong_condition",
+  "severity": "major",
+  "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2T5ZSQ1KA1CD55JXHNJ3Q",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "cyclopts/parameter.py",
+   "line": 274,
+   "message": "修复正确但没有任何测试覆盖。git show 显示本次改动只触及 cyclopts/parameter.py，tests 无改动；而 tests/test_parameter.py 已有大量 get_negatives 用例（如 test_parameter_get_negatives_custom_single / _bool_default），却缺少 union-with-None 的场景，因此这个已修复的行为没有回归保护。",
+   "suggestion": "在 tests/test_parameter.py 增加用例，例如：p = Parameter(negative=\"--negative\", name=(\"--foo\",)) with type `bool | None`（与 `None | bool`、`Optional[bool]`）断言 p.get_negatives(bool | None) == (\"--negative\",)；并补一个默认 negative 下 `bool | None` == (\"--no-foo\",) 的用例，锁住去重不误伤。"
+  },
+  {
+   "severity": "nit",
+   "file": "cyclopts/parameter.py",
+   "line": 279,
+   "message": "`sorted(...)` 对修复无实际作用：出现重复时 bool 与 NoneType 的两个分支返回的是完全相同的字符串元组（都走 296-302 的 early-return），只要去重就够，顺序不影响结果；且在 union 有多个非 None 成员时它们的排序键相同，排序是稳定 no-op。`is_nonetype(x) or x is None` 中的 `or x is None` 也冗余（get_args 对 `bool | None` 返回的是 NoneType 而非字面 None）。",
+   "suggestion": "可简化为只保留去重逻辑（去掉 sorted），或在注释里说明排序意图；若保留则接受其仅为防御性。"
+  }
+ ],
+ "error": null,
+ "calls": 17,
+ "cost_cny": 0.051457,
+ "input_tokens": 204952,
+ "cache_hit_tokens": 184832,
+ "output_tokens": 6910,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 51.6
+}

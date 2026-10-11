@@ -1,0 +1,48 @@
+{
+ "item": "d01-defect",
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0B9F9MTHYP5FA1H03XH1W",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "approve",
+ "findings": [
+  {
+   "severity": "major",
+   "file": "csvkit_lite/parse.py",
+   "line": 4,
+   "message": "守卫只判断 `not line`，只能拦截真正的空串；仅含空白字符的“空行”（如 \"   \"、\"\\t\"）仍会走到 `parts = line.split(\",\")` 并因 `parts[1]` 抛 IndexError（`\"   \".split(\",\") == [\"   \"]`）。CSV/文本文件里由编辑器或手工排版产生的空行经常是空格或制表符，属于 Issue 所说的 blank line 的常见形态，当前实现对这类输入仍复现原始报错。",
+   "suggestion": "把判断改成 `if not line.strip(): continue`（或 `if not line.strip():` 后再 split），并补一条对应测试，例如断言 parse_rows(\"a,1\\n   \\n\\tb,2\") == [(\"a\", 1), (\"b\", 2)]。"
+  },
+  {
+   "severity": "minor",
+   "file": "tests/test_basic.py",
+   "line": 4,
+   "message": "补丁没有新增覆盖空行的回归测试，现有测试 tests/test_basic.py 只覆盖 \"a,1\\nb,2\"，无法防止该修复被后续改动悄悄回退（注意：单纯的尾随换行 \"a,1\\n\" 由于 splitlines() 会丢弃末尾换行，本来就不会触发原 bug，因此测试必须用 \"a,1\\n\\nb,2\" 或 \"a,1\\n\\n\" 这类含真空行的输入）。",
+   "suggestion": "在 tests/test_basic.py 增加：assert parse_rows(\"a,1\\n\\nb,2\") == [(\"a\", 1), (\"b\", 2)]，以及（若采纳上一条）空白字符行\n的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 4,
+ "cost_cny": 0.014335,
+ "input_tokens": 11304,
+ "cache_hit_tokens": 10368,
+ "output_tokens": 3298,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 17.8
+}

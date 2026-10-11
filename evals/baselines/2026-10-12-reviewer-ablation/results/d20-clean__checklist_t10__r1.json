@@ -1,0 +1,48 @@
+{
+ "item": "d20-clean",
+ "task": "swe-llm-sandbox-101",
+ "kind": "clean",
+ "truth": null,
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1JQFVZKAKA020J3P4BZ74",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "llm_sandbox/session.py",
+   "line": 524,
+   "message": "该改动会直接让仓库中两个既有测试失败，属于回归。tests/test_session.py::test_run_with_plotting_disabled（第 227 行断言 timeout=30）与 test_run_with_plotting_enabled_supported_language（第 261 行断言 timeout=30）都会调用 artifact_session.run(code) 且不传 timeout，二者把 create_session 打桩为 spec-less MagicMock（mock_session = MagicMock()）。此时 self._session.config.get_execution_timeout() 返回的是 MagicMock 而不是 None，于是 effective_timeout 变成 MagicMock，int(effective_timeout) 取 MagicMock 的默认 __int__（=1），实际传给 run_with_artifacts 的是 timeout=1，断言 timeout=30 失败。本补丁只改了 llm_sandbox/session.py，未同步更新这些测试，即“改坏了既有测试”。建议：要么在解析前先做类型/None 判定（例如 config_timeout = self._session.config.get_execution_timeout() if hasattr(self._session.config,...) 之类不现实），要么同步更新这两个测试为新的期望值，并补上“配置 execution_timeout>30 时生效”的回归测试；更稳妥的实现是不在这里重复解析，直接把 timeout 原样透传即可（见下方第 533 行建议）。",
+   "suggestion": "同步修正 tests/test_session.py 中两处 timeout 断言（或让其 mock 的 config.get_execution_timeout() 返回确定值），并为 default_timeout/execution_timeout>30 生效这一 Issue 场景新增断言测试。"
+  },
+  {
+   "severity": "major",
+   "file": "llm_sandbox/session.py",
+   "line": 533,
+   "message": "timeout=int(effective_timeout) 会把浮点超时截断，且截断为 0 时会被下游当成“未设置”而静默回落到配置超时。run_with_artifacts 只是把 timeout 继续透传给 session_base.run，而后者第 390 行写的是 actual_timeout = timeout or self.config.get_execution_timeout()——0/0.0 为假值。因此 ArtifactSandboxSession.run(code, timeout=0.5) 会先变成 int(0.5)==0，再变成 config 的超时（通常 60s），而 SandboxSession.run(code, timeout=0.5) 会正确使用 0.5s（0.5 为真值直接透传）。Issue 期望“与 SandboxSession 行为一致”，此处反而引入了不一致，且属于对原有传参行为的回归（原代码 timeout=0.5 会原样传递）。此处的 int() 转换并无必要：run_with_artifacts 与 session_base.run 的 timeout 参数都接受 float。",
+   "suggestion": "去掉 int() 转换，直接 timeout=effective_timeout；如确需整型，也应至少保证 0 < effective_timeout < 1 不被降级为 0。"
+  },
+  {
+   "severity": "minor",
+   "file": "llm_sandbox/session.py",
+   "line": 524,
+   "message": "当配置的 default_timeout 与 execution_timeout 都被显式设为 None 时，这里硬编码回落到 60，等价于强制 60 秒超时；而 SandboxSession 在同配置下 actual_timeout = None or None = None，即不设超时、可无限运行。这与 Issue 要求的“与 SandboxSession 行为一致”不符，也使用户无法通过 ArtifactSandboxSession 表达“不限时”。",
+   "suggestion": "把 None 也原样透传给 run_with_artifacts / session_base.run，让下游的 get_execution_timeout() 统一决定；若确实想要一个兜底值，请在文档中明确该差异并保持与 SandboxSession 一致。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.050965,
+ "input_tokens": 213731,
+ "cache_hit_tokens": 191104,
+ "output_tokens": 6129,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 34.8
+}

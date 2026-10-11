@@ -1,0 +1,62 @@
+{
+ "item": "d12-defect",
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1EQRYFBRG4VA0C3TRJ9V4",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "检查条件与 Issue 要求完全相反。代码为 `if isinstance(v, dict) and \"@id\" in v: raise ValueError(f\"no @id in {v}\")`，即当字典**存在** `@id` 时抛错、当字典**缺少** `@id` 时放行。Issue 明确要求的是「当值为字典时确保 `@id` 存在」，因此正确条件应为 `\"@id\" not in v`。当前实现下，Issue 里的复现用例（`crate.root_dataset[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC-O\", \"url\": ...}`）依然能成功写入、之后 `crate.root_dataset[\"license\"]` 依然抛 `ValueError: no @id in {...}`，问题未被修复。",
+   "suggestion": "把条件改为 `if isinstance(v, dict) and \"@id\" not in v:`，并在错误信息中体现缺失 `@id`（如 `f\"no @id in {v}\"`）。"
+  },
+  {
+   "severity": "blocker",
+   "file": "rocrate/model/entity.py",
+   "line": 106,
+   "message": "该行同时引入了回归：合法的、真正带 `@id` 的字典赋值现在会抛 `ValueError`。已有代码路径依赖此行为，例如 rocrate/rocrate.py:493 `self.metadata[\"conformsTo\"] = [{\"@id\": _} for _ in sorted(profiles)]`（由 `add_workflow(..., main=True)` 触发，见 rocrate.py:489-493），以及 `crate.add_jsonld({...})` 经 `properties=` → `Entity.__init__`（entity.py:38-43）→ `self[name] = value` 传下来的嵌套 `{\"@id\": ...}` 值。这些都会在现有测试中被执行（如 test/test_model.py:167 的 `add_workflow(main=True)`、test/test_cli.py、test/test_read.py），导致 `ValueError` 使已有测试失败/写 crate 失败。",
+   "suggestion": "修正条件为 `\"@id\" not in v`，并补充针对嵌套字典（有/无 `@id`、标量与列表两种形式）的单元测试，确保 `{\"@id\": ...}` 赋值仍然通过。"
+  },
+  {
+   "severity": "major",
+   "file": "rocrate/model/entity.py",
+   "line": 104,
+   "message": "新增行为没有配套测试。diff 未新增/修改任何测试，Issue 的复现用例（赋值应报错）以及合法 `{\"@id\": ...}` 不被误伤这两点都没有覆盖；现有的 `pytest` 套件由于条件反写反而会暴露失败，说明改动未被验证。",
+   "suggestion": "补充测试：1) `rd[\"license\"] = {\"@type\": \"CreativeWork\", \"name\": \"CC-O\"}`（无 `@id`）应抛 `ValueError`；2) 含 `@id` 的字典（含 list 形式）应正常写入并可读回；3) `add_workflow(main=True)` / `add_jsonld` 路径仍正常。"
+  },
+  {
+   "severity": "minor",
+   "file": "rocrate/model/entity.py",
+   "line": 93,
+   "message": "Issue 还建议读取时更宽容（无 `@id` 或 `@id` 不在 crate 中时直接返回属性值）。本补丁只处理了写入侧（且写反），读取侧 `__getitem__` 仍对字典无 `@id` 抛 `ValueError`。若 crate 是从磁盘读入的、本身含这类数据，仍会出现「能写不能读」的同类问题。",
+   "suggestion": "若有意只做写入侧强制，可忽略；否则考虑让 `__getitem__` 在 `@id` 缺失时返回原始字典（`deref_values.append(entry)`）而非抛错，并在 `dereference` 未命中时保留原值。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.031586,
+ "input_tokens": 161400,
+ "cache_hit_tokens": 146304,
+ "output_tokens": 3391,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 22.0
+}

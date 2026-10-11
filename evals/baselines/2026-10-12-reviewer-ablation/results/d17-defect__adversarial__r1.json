@@ -1,0 +1,55 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P15CH4EHSKFMG09WN1KE51",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 145,
+   "message": "`branch_exists` 用 `return response.status_code != 404` 判定，再加上 171-173 行没有尝试上限的 `while branch_exists(...)`：任何非 404 响应（401 token 失效、403 权限不足/API 限流、5xx）都会被当作\"分支已存在\"，循环会不断生成 `-try2`、`-try3`… 而无终止地请求 GitHub API。GitHub 限流时恰恰长期返回 403，此时 resolver 会彻底挂死并持续打 API（原实现只是让 push 失败报错，是行为上的倒退/DoS）。同样的判定也让现有测试挂死：tests/test_send_pull_request.py:216/283/331 把 `requests.get` mock 成裸 `MagicMock(json=...)`，其自动生成的 `status_code` 永远不等于 404，因此 `test_send_pull_request*` 会在该循环里无限空转（CI 用 `.github/workflows/ci.yml:23` 的 `poetry run pytest tests/test*.py -v` 会卡死），连 RuntimeError 断言都走不到。建议只把 404 视为不存在、其余状态码用 raise_for_status 抛出，并给尝试次数设上限，例如：`if response.status_code == 404: return False; response.raise_for_status(); return True`，循环改为 `for attempt in range(2, MAX_TRIES + 1)` 并在用尽后抛异常。",
+   "suggestion": null
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_send_pull_request.py",
+   "line": 237,
+   "message": "补丁改变了可观测行为但没有同步更新测试（`git show 1194a23 --stat` 只涉及 openhands_resolver/send_pull_request.py，测试文件未动）：新增的分支探测会给 `requests.get` 多出一次调用，因此 tests/test_send_pull_request.py:237 的 `assert mock_get.call_count == 1` 必然失败（即使把 `branch_exists` 修成遇到非 404 抛错/404 返回 False，成功路径下也会是 2 次 GET）；同时三个 `test_send_pull_request*` 的 mock 没有设置 `status_code`，无法驱动新逻辑，`-try2` 分支命名这一核心新行为也完全没有测试覆盖。结论：仓库自带测试跑不出绿，不能合并。建议把 mock 改为按 URL 区分（分支查询返回 404/200，仓库信息返回 default_branch），把 call_count 断言改成 2，并新增一条\"基础分支已存在时创建/推送 `openhands-fix-issue-42-try2`\"的用例。",
+   "suggestion": null
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "分支存在性检查用的 `base_url`（164 行）固定指向 `github_issue.owner/repo`，但 194-202 行的实际推送目标是 `push_owner = fork_owner if fork_owner else github_issue.owner`。`--fork-owner` 是 README.md:91-94 明确支持的用法：此时碰撞分支在 fork 里，探测却查上游仓库，几乎总是返回 404，于是仍沿用 `openhands-fix-issue-N`，第二次尝试往上一次已经存在的 fork 分支 push 时会被拒绝（non-fast-forward），Issue 描述的问题在 fork 场景下没有真正修复。建议把查询 URL 构建为 `https://api.github.com/repos/{push_owner}/{push_repo}`（即与推送目标、以及 calc 顺序上把 push_owner/push_repo 的计算提前），或同时检查两个仓库。",
+   "suggestion": null
+  }
+ ],
+ "error": null,
+ "calls": 7,
+ "cost_cny": 0.090052,
+ "input_tokens": 115691,
+ "cache_hit_tokens": 99840,
+ "output_tokens": 18051,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 108.5
+}

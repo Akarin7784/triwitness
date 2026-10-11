@@ -1,0 +1,48 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P0M1JABEHBGKAVNBCD579T",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 41,
+   "message": "元组解包取了下标 [0]，但 Django 中 STATICFILES_DIRS 的二元组是 (URL 前缀, 文件系统路径)：`django.contrib.staticfiles.finders.FileSystemFinder.__init__` 执行 `prefix, root = root`，系统检查 staticfiles.E002/E003 也把第一个元素称为 \"prefix\"、第二个称为 \"path\"（Django 文档示例正是 `STATICFILES_DIRS = [(\"downloads\", \"/opt/webfiles/stats\")]`，即 URL /static/downloads/... 映射到 /opt/webfiles/stats）。Issue 的 Expected 也明确要求「consider the second item」。因此对 `(\"downloads\", \"/opt/webfiles/stats\")`，本行会把 `component_dir` 变成字符串 \"downloads\"：TypeError 确实被绕过了，但真正的组件目录 /opt/webfiles/stats 永远不会被加入 searched_dirs（第 59 行 `Path(component_dir).is_dir()`、第 62 行 `path_is_relative_to(...)`、第 66 行 `Path(settings.BASE_DIR) / component_dir`、第 86 行同理都是相对路径 / 前缀拼出来的路径），即报告的问题没有被真正修复。更糟的是它可能静默加入无关目录：若 CWD 或 BASE_DIR 下恰好存在名为 \"downloads\" 且位于某个 app 路径内的目录，第 62-68 行会把该目录当作组件目录加入。修复：改为 `component_dir = component_dir[1]`（与 component.py 的 `_get_dir_path_from_component_path` 需要一个真实文件系统目录的用法一致）。",
+   "suggestion": "把第 41 行改为 `component_dir = component_dir[1]`，即取二元组的第二个元素（文件系统路径），忽略第一个元素（URL 前缀）。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_autodiscover.py",
+   "line": 45,
+   "message": "补丁只改了 src/django_components/template_loader.py（git show c78bdc8 --stat 显示 1 file changed），没有新增任何覆盖元组形式 STATICFILES_DIRS 的测试；现有测试（tests/test_autodiscover.py 的 TestLoaderSettingsModule/TestBaseDir，以及 test_component.py 第 231、794 行的 override_settings）都只用 Path/字符串形式的 STATICFILES_DIRS，所以这个新分支完全没有被验证——这正是上面下标取反却测试全绿的原因。建议在 tests/test_autodiscover.py 中补一个回归测试，例如把 settings.STATICFILES_DIRS 设为 [(\"prefix\", str(Path(__file__).parent.resolve() / \"components\"))]（用 override_settings 或在 tearDown 中恢复），断言 Loader(Engine.get_default()).get_dirs() 包含 <tests>/components 而不是 \"prefix\"。",
+   "suggestion": "新增测试：设置 STATICFILES_DIRS = [(\"some-prefix\", <真实组件目录>)]，调用 Loader.get_dirs() 并断言返回的目录是二元组的第二个元素（文件系统路径），同时可加一个非法条目（如 3 元组）被跳过且不抛异常、产生 warning 的用例。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.109032,
+ "input_tokens": 200712,
+ "cache_hit_tokens": 170624,
+ "output_tokens": 18883,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 109.5
+}

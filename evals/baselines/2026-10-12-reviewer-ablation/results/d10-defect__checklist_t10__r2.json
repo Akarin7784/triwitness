@@ -1,0 +1,55 @@
+{
+ "item": "d10-defect",
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P2N2MCKB38Y82ACCK41BHA",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "取错元素，问题没修好。Django 的 STATICFILES_DIRS 元组形式是 (prefix, path)，第一个元素只是 URL 前缀，真正要扫描的目录是第二个元素（见 django/contrib/staticfiles/finders.py: `prefix, root = dirs`；官方文档示例 (\"downloads\", \"/opt/webfiles/stats\")）。Issue 也明确写“should consider the second item”。本补丁写的是 `component_dir = component_dir[0]`，对 Issue 的例子得到的是字符串 \"downloads\"，`Path(\"downloads\")` 合法因此连 warning 都不会触发，随后的第 59/66/86 行逻辑只会去检查相对路径 \"downloads\" 或 BASE_DIR/\"downloads\"、settings 模块旁的 \"downloads\"，都不可能命中 /opt/webfiles/stats。结果是：定位不到组件目录，用户配置的静态目录被完全忽略，Issue 描述的行为未被修复（仅 TypeError 被吞掉）。",
+   "suggestion": "改为取第二个元素：`if isinstance(component_dir, (tuple, list)) and len(component_dir) == 2: component_dir = component_dir[1]`，并补一个针对元组形式的测试（例如 STATICFILES_DIRS=[(\"downloads\", <真实存在的 components 目录>)]，断言 loader.get_dirs() 包含该目录）。"
+  },
+  {
+   "severity": "major",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "该修复未覆盖同一元组配置的其他路径。component.py 的 _get_dir_path_from_component_path(line 143-169) 和 management/commands/upgradecomponent.py 都直接消费 STATICFILES_DIRS/搜索目录：若组件文件位于元组指向的真实目录下，_get_dir_path_from_component_path 用 os.path.abspath(candidate_dir) 对元组做处理会同样抛 TypeError，或（若上游传入的目录已被改成 prefix）匹配失败并抛 RuntimeError。仅修 template_loader 会留下同类未覆盖路径。",
+   "suggestion": "把“把 STATICFILES_DIRS 条目规范化成路径”抽成一个公共 helper（如 normalize_static_dirs(settings.STATICFILES_DIRS) -> List[str]），在 template_loader、component.py 的候选目录解析、upgradecomponent 处统一使用，并补充相应测试。"
+  },
+  {
+   "severity": "minor",
+   "file": "src/django_components/template_loader.py",
+   "line": 40,
+   "message": "长度不为 2 的 tuple/list（如 Django 之外的 3 元组、或本意是“两个独立目录”的 list）会因 `Path(component_dir)` 抛 TypeError 而整条被静默跳过（仅 warning）。这在语义上可接受，但缺少测试覆盖，且 warning 文案把 tuple/list of length 2 作为唯一合法形式，未提示正确的 (prefix, path) 顺序，容易误导用户。",
+   "suggestion": "在 warning 中给出正确形式示例 `(\"prefix\", \"/path/to/dir\")`，并加一个非法输入（如 3 元组）不抛异常、仅告警的测试。"
+  }
+ ],
+ "error": null,
+ "calls": 13,
+ "cost_cny": 0.031237,
+ "input_tokens": 142885,
+ "cache_hit_tokens": 126976,
+ "output_tokens": 3197,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 28.9
+}

@@ -1,0 +1,55 @@
+{
+ "item": "d05-defect",
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ },
+ "arm": "checklist_t10",
+ "rep": 1,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P1BM4D8RYYQKBEE5XNSW38",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "补丁未修复 Issue 描述的行为。`_NON_WORD.sub(\"-\", text.lower()).lstrip(\"-\")` 对 Issue 的主复现 `slugify(\"  Hello,  World!  \")` 计算为：lower → `\"  hello,  world!  \"`；`[^a-z0-9]+` 单次替换把尾部 `\"!  \"` 也替成 `-` → `\"-hello-world-\"`；`.lstrip(\"-\")` 只去掉开头一位 → `\"hello-world-\"`。Issue 明确要求“Slugs should never start or end with `-`”且期望 `\"hello-world\"`，因此结尾的 `-` 仍然存在（如 `slugify(\"Hello!\") == \"hello-\"`、`slugify(\"hello!!!\") == \"hello-\"` 同样带尾横线）。",
+   "suggestion": "改用 `.strip(\"-\")`（或同时 `lstrip`+`rstrip`）：`return _NON_WORD.sub(\"-\", text.lower()).strip(\"-\")`。"
+  },
+  {
+   "severity": "major",
+   "file": "tests/test_slug.py",
+   "line": 5,
+   "message": "测试未覆盖 Issue 描述的行为。唯一用例 `slugify(\"Hello World\") == \"hello-world\"` 既无首尾分隔符，改动前后都通过，因此无法发现开头的 lstrip/rstrip 缺陷（补丁能通过现有测试，但 Issue 仍复现，属于针对测试特判/测试未覆盖）。同时 Issue 的第二点（`\"a -- b\"` → `\"a-b\"`，连续分隔符合并）也没有测试覆盖。",
+   "suggestion": "新增断言覆盖首尾与连续分隔符：`slugify(\"  Hello,  World!  \") == \"hello-world\"`、`slugify(\"a -- b\") == \"a-b\"`、`slugify(\"---\") == \"\"`、`slugify(\"!!!hi\") == \"hi\"`。"
+  },
+  {
+   "severity": "minor",
+   "file": "textkit/slug.py",
+   "line": 7,
+   "message": "边界情况确认：`.strip(\"-\")` 方案本身正确，但当前 `lstrip` 版本对纯分隔符输入（`\"!!!\"`、`\"---\"`、空串）返回 `\"\"` 无问题；`\"--a--\"` → `\"a-\"`（尾横线残留）仍是错误。非 ASCII 输入（如 `\"héllo\"`）会得到 `\"h-llo\"`，属既有行为、非本次回归。",
+   "suggestion": "随 blocker 一并改为 `.strip(\"-\")`，并考虑是否需要保留/文档化非 ASCII 的处理策略。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.011812,
+ "input_tokens": 24832,
+ "cache_hit_tokens": 23037,
+ "output_tokens": 2389,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 15.9
+}

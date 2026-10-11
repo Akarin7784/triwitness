@@ -1,0 +1,55 @@
+{
+ "item": "d17-defect",
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ },
+ "arm": "adversarial",
+ "rep": 2,
+ "model": "deepseek/deepseek-flash",
+ "task_id": "t_01M4P29031BCB8X6953RNYZC27",
+ "max_turns": 20,
+ "path": "tool_call",
+ "served_model": "deepseek-flash",
+ "verdict": "request_changes",
+ "findings": [
+  {
+   "severity": "blocker",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "死循环风险：branch_exists 在 145 行返回 `response.status_code != 404`，即任何非 404 的响应都被当成「分支已存在」。真实运行中 GitHub 对失效/过期 token 返回 401、对速率限制返回 403/429、服务端故障返回 5xx，这些都会让 171-173 行的 while 永不退出，并且每次迭代都再发一次 HTTP 请求（无最大次数上限、无超时），进程会一直挂住而不是报错。这不是理论问题：仓库自带测试就是这种输入——tests/test_send_pull_request.py:216/283/331 用 `mock_get.return_value = MagicMock(json=lambda: {\"default_branch\": \"main\"})` 模拟 requests.get，此时 `response.status_code` 是一个 MagicMock，按 mock 的默认实现身份比较 `!= 404` 为真，于是 test_send_pull_request（3 个参数化用例）、test_send_pull_request_git_push_failure、test_send_pull_request_permission_error 全部无限循环，CI 的 `poetry run pytest tests/test*.py -v`（.github/workflows/ci.yml:23）会一直跑到超时。",
+   "suggestion": "只在 200 时判定存在、404 时判定不存在，其余状态码显式报错；并给循环加保护。例如：\n```python\ndef branch_exists(base_url, branch_name, headers):\n    response = requests.get(f\"{base_url}/branches/{branch_name}\", headers=headers, timeout=30)\n    if response.status_code == 200:\n        return True\n    if response.status_code == 404:\n        return False\n    response.raise_for_status()   # 401/403/5xx 直接失败，避免无限循环\n```\n同时给 while 循环加一个上限（如 `while attempt < 100`）以防远端长期不稳定。"
+  },
+  {
+   "severity": "blocker",
+   "file": "tests/test_send_pull_request.py",
+   "line": 237,
+   "message": "已有测试未随实现更新，补丁未真正通过回归验证。新增的 `branch_exists` 会在 send_pull_request 里额外调用一次 requests.get，而 tests/test_send_pull_request.py:237 仍断言 `mock_get.call_count == 1`，:243-254 仍断言分支名为 `openhands-fix-issue-42` 且 mock 的 status_code 未设置（会走成「分支存在」分支）。因此这三个测试要么挂死（见 blocker 1），要么在多分支冲突场景下断言失败——无论哪种都说明本补丁当前状态是 CI 红的，且新行为（冲突时选 `-try2`）没有任何测试覆盖。",
+   "suggestion": "更新测试：给分支查询的 mock 明确返回 `status_code = 404`（或使用 side_effect 区分 `/branches/...` 与仓库根路径），修正 `mock_get.call_count`，并新增用例覆盖「base 分支已存在(200) → `-try2` 不存在(404)」时最终选择 `openhands-fix-issue-42-try2`。"
+  },
+  {
+   "severity": "major",
+   "file": "openhands_resolver/send_pull_request.py",
+   "line": 171,
+   "message": "fork 流程下探测的不是真正要推送的仓库，Issue 在该流程下未被修复。base_url 由 `github_issue.owner/repo` 构造（164 行），而实际推送目标是 fork（194-202 行 `push_owner = fork_owner if fork_owner else github_issue.owner`）。README.md:94 明确推荐 `--fork-owner` 用法：上一次失败的运行会把 `openhands-fix-issue-N` 推到 fork 上，但这里查的是上游仓库，会得到 404 → 仍沿用原分支名 → `git push` 到 fork 时因非快进被拒绝，抛 \"Failed to push changes to the remote repository\"（204-206 行），正是本 Issue 想避免的场景。",
+   "suggestion": "把 push_owner 的计算提前，用推送目标仓库构造探测 URL（fork_owner 存在时用 `https://api.github.com/repos/{fork_owner}/{github_issue.repo}/branches/{name}`），或同时检查上游与 fork 两个位置。"
+  }
+ ],
+ "error": null,
+ "calls": 8,
+ "cost_cny": 0.063619,
+ "input_tokens": 110656,
+ "cache_hit_tokens": 96128,
+ "output_tokens": 11792,
+ "models": [
+  "deepseek-flash"
+ ],
+ "verdict_on_last_call": false,
+ "elapsed_s": 68.4
+}
