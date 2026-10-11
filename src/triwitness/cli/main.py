@@ -653,6 +653,33 @@ def pr_open(
     _perm_call(go)
 
 
+diag_app = typer.Typer(add_completion=False, no_args_is_help=True, help="诊断包（日志 + 运行目录，脱敏，只在本机）")
+app.add_typer(diag_app, name="diag")
+
+
+@diag_app.command("export")
+def diag_export(
+    run: Annotated[list[str] | None, typer.Option("--run", help="运行 id，可重复；默认最近 3 个")] = None,
+    recent: Annotated[int, typer.Option(min=0, max=20, help="不指定 --run 时收最近几个运行")] = 3,
+    out: Annotated[Path | None, typer.Option(help="zip 路径（默认 $TW_HOME/diagnostics/）")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = True,
+) -> None:
+    """把 system / 用量 / 日志 / 运行目录打成 zip（密钥脱敏，家目录换成 ~），不联网、不上传。"""
+    from triwitness.config import tw_home
+    from triwitness.core.errors import ConfigError
+    from triwitness.diag.export import export_diagnostics
+
+    del as_json
+
+    def go() -> dict[str, object]:
+        try:
+            return export_diagnostics(tw_home(), run_ids=run or None, recent=recent, out=out).as_dict()
+        except (ValueError, FileNotFoundError) as e:
+            raise ConfigError(str(e)) from None
+
+    _perm_call(go)
+
+
 perm_app = typer.Typer(add_completion=False, no_args_is_help=True, help="权限规则（桌面端规则编辑器）")
 app.add_typer(perm_app, name="permissions")
 _LayerOpt = Annotated[str, typer.Option(help="user（~/.triwitness/permissions.yaml）/ local（仓库本地）")]
