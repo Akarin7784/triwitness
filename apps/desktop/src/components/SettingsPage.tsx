@@ -35,6 +35,7 @@ import {
 } from '../data/budget'
 import { hitRate, useLedger, type LedgerState } from '../lib/ledger'
 import { RELEASES_URL, openUrl } from '../lib/open'
+import { APP_VERSION } from '../lib/version'
 import { coreMode, setCoreMode } from '../bridge/liveStore'
 import type { CoreMode } from '../bridge/protocol'
 import { MAX_COST_CAP, type Backend } from '../bridge/choices'
@@ -59,7 +60,6 @@ import defaultRulesYaml from '../../../../configs/permissions.default.yaml?raw'
 import { t as tr } from '../lib/i18n'
 
 const WEEK = [tr('周日'), tr('周一'), tr('周二'), tr('周三'), tr('周四'), tr('周五'), tr('周六')]
-const VERSION = '0.2.1'
 
 export type SettingsSection =
   | 'general'
@@ -893,7 +893,7 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
       <Title>{tr('关于')}</Title>
       <Group>
         <Row label={tr('三证 TriWitness')}>
-          <span className="font-mono text-[12px] text-sepia">v{VERSION}</span>
+          <span className="font-mono text-[12px] text-sepia">v{APP_VERSION}</span>
         </Row>
         <Row label={tr('快捷键')}>
           <button type="button" onClick={onShortcuts} className="chip hover:text-amber-ink">

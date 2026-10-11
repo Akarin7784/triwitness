@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Cpu, Wallet } from 'lucide-react'
 import { BUDGET_TOTAL, gateStatus } from '../data/budget'
 import { useLedger } from '../lib/ledger'
+import { APP_VERSION } from '../lib/version'
 import { Tip } from './Tip'
 import { t as tr } from '../lib/i18n'
 
@@ -39,7 +40,7 @@ export function StatusBar() {
             {left}
           </span>
         </Tip>
-        <span className="sb-item text-sepia-muted">v0.2</span>
+        <span className="sb-item text-sepia-muted">v{APP_VERSION}</span>
       </div>
     </footer>
   )
