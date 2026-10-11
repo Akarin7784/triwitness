@@ -472,4 +472,12 @@ export const EN: Record<string, string> = {
   '沙箱后端与权限模式相互独立：模式决定“问不问”，沙箱决定“在哪儿跑”。': 'The sandbox is independent of the permission mode: the mode decides whether to ask, the sandbox decides where things run.',
   '审核模型已批准': 'Approved by reviewer',
   '审核模型已拒绝': 'Denied by reviewer',
+  // v0.3 真实账本
+  '已花 —': 'Spent —',
+  '{0} 次调用 · 缓存命中 {1} · 剩余 ¥{2}': '{0} calls · cache hit {1} · ¥{2} left',
+  '正在读取本机账本…': 'Reading the local ledger…',
+  '未连接核心：连接后这里显示本机真实账本（~/.triwitness/ledger.sqlite）。演示模式不花钱，也不记账。': 'Core not connected. Once it is, this shows the real local ledger (~/.triwitness/ledger.sqlite). Demo mode costs nothing and is not recorded.',
+  '读取账本失败：{0}': 'Could not read the ledger: {0}',
+  '还没有真实调用。演示模式不花钱，也不记账。': 'No real calls yet. Demo mode costs nothing and is not recorded.',
+  '未连接核心，余额未知': 'Core not connected, balance unknown',
 }

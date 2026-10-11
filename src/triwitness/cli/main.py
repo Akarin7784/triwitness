@@ -481,14 +481,21 @@ app.add_typer(budget_app, name="budget")
 def budget_show(
     ctx: typer.Context,
     md: Annotated[bool, typer.Option("--md", help="输出 Markdown（每周预算检查用）")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（桌面端预算页用）")] = False,
 ) -> None:
     """已花 / 信封 / 剩余、燃烧速度与耗尽日期、缓存命中率。只读本地账本，不联网。"""
     if ctx.invoked_subcommand is not None:
         return
-    from triwitness.cost.dashboard import budget_view, render_budget_markdown
+    from triwitness.cost.dashboard import budget_json, budget_view, render_budget_markdown
     from triwitness.cost.ledger import GlobalLedger
 
-    text = render_budget_markdown(budget_view(GlobalLedger()))
+    led = GlobalLedger()
+    if as_json:
+        import json
+
+        typer.echo(json.dumps(budget_json(budget_view(led), led), ensure_ascii=False))
+        return
+    text = render_budget_markdown(budget_view(led))
     typer.echo(text if md else text.replace("**", ""))
 
 

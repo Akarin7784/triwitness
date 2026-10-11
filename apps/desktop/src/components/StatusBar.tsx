@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Cpu, Wallet } from 'lucide-react'
-import { BUDGET_TOTAL, gateStatus, ledger, rowCost } from '../data/budget'
+import { BUDGET_TOTAL, gateStatus } from '../data/budget'
+import { useLedger } from '../lib/ledger'
 import { Tip } from './Tip'
 import { t as tr } from '../lib/i18n'
 
@@ -11,7 +12,9 @@ export function StatusBar() {
     return () => window.clearInterval(t)
   }, [])
   const gate = gateStatus(now)
-  const left = useMemo(() => BUDGET_TOTAL - ledger.reduce((s, r) => s + rowCost(r), 0), [])
+  const led = useLedger()
+  const left = led.status === 'ok' ? `¥${led.data.remaining.toFixed(2)}` : '¥—'
+  const total = led.status === 'ok' ? led.data.total_cny : BUDGET_TOTAL
 
   return (
     <footer className="flex h-7 shrink-0 items-center justify-between border-t border-border-soft bg-parchment-deep/70 px-3 text-[10.5px] text-sepia">
@@ -30,9 +33,10 @@ export function StatusBar() {
         </Tip>
       </div>
       <div className="flex items-center gap-1">
-        <Tip label={tr('余额 / ¥{0}', BUDGET_TOTAL)} side="top-end">
+        <Tip label={led.status === 'ok' ? tr('余额 / ¥{0}', total) : tr('未连接核心，余额未知')} side="top-end">
           <span className="sb-item tabular-nums">
-            <Wallet size={11} strokeWidth={1.7} />¥{left.toFixed(2)}
+            <Wallet size={11} strokeWidth={1.7} />
+            {left}
           </span>
         </Tip>
         <span className="sb-item text-sepia-muted">v0.2</span>

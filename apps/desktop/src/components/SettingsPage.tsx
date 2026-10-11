@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -32,9 +32,8 @@ import {
   PRICE,
   beijingNow,
   gateStatus,
-  ledger,
-  rowCost,
 } from '../data/budget'
+import { hitRate, useLedger, type LedgerState } from '../lib/ledger'
 import { coreMode, setCoreMode } from '../bridge/liveStore'
 import type { CoreMode } from '../bridge/protocol'
 import { MAX_COST_CAP, type Backend } from '../bridge/choices'
@@ -547,7 +546,8 @@ function Budget() {
   const now = useNow()
   const bj = beijingNow(now)
   const gate = gateStatus(now)
-  const spent = useMemo(() => ledger.reduce((s, r) => s + rowCost(r), 0), [])
+  const led = useLedger()
+  const data = led.status === 'ok' ? led.data : null
   const hhmm = `${String(bj.hh).padStart(2, '0')}:${String(bj.mm).padStart(2, '0')}`
   return (
     <>
@@ -567,8 +567,10 @@ function Budget() {
           <span className="w-14 text-right font-serif text-[16px] tabular-nums text-ink">¥{p.maxCost.toFixed(2)}</span>
         </Row>
         <Row label={tr('总预算')}>
-          <span className="font-serif text-[16px] tabular-nums text-ink">¥{BUDGET_TOTAL}</span>
-          <span className="text-[11.5px] text-sepia-muted">{tr('已花 ¥{0}', spent.toFixed(2))}</span>
+          <span className="font-serif text-[16px] tabular-nums text-ink">¥{data?.total_cny ?? BUDGET_TOTAL}</span>
+          <span className="text-[11.5px] text-sepia-muted" data-testid="budget-spent">
+            {data ? tr('已花 ¥{0}', data.spent.toFixed(2)) : tr('已花 —')}
+          </span>
         </Row>
       </Group>
 
@@ -604,41 +606,72 @@ function Budget() {
         </Row>
       </Group>
 
-      <div className="paper-card overflow-hidden rounded-2xl">
-        <div className="flex items-center gap-2 px-5 py-3">
-          <p className="font-serif text-[14px] text-ink-soft">{tr('账本')}</p>
-          <Tip label={tr('空闲价 · 命中 {0} / 未命中 {1} / 输出 {2} 元每百万 token', PRICE.idle.hit, PRICE.idle.miss, PRICE.idle.out)} side="right">
-            <Info size={12} strokeWidth={1.6} className="text-sepia-muted" />
-          </Tip>
-        </div>
+      <LedgerCard led={led} maxCost={p.maxCost} />
+    </>
+  )
+}
+
+function LedgerCard({ led, maxCost }: { led: LedgerState; maxCost: number }) {
+  const data = led.status === 'ok' ? led.data : null
+  const pct = (x: number | null) => (x == null ? '—' : `${(x * 100).toFixed(0)}%`)
+  return (
+    <div className="paper-card overflow-hidden rounded-2xl" data-testid="ledger-card">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3">
+        <p className="font-serif text-[14px] text-ink-soft">{tr('账本')}</p>
+        <Tip label={tr('空闲价 · 命中 {0} / 未命中 {1} / 输出 {2} 元每百万 token', PRICE.idle.hit, PRICE.idle.miss, PRICE.idle.out)} side="right">
+          <Info size={12} strokeWidth={1.6} className="text-sepia-muted" />
+        </Tip>
+        {data && (
+          <span className="ml-auto text-[11px] tabular-nums text-sepia-muted" data-testid="ledger-summary">
+            {tr('{0} 次调用 · 缓存命中 {1} · 剩余 ¥{2}', String(data.calls), pct(data.cache_hit_rate), data.remaining.toFixed(2))}
+          </span>
+        )}
+      </div>
+      {!data ? (
+        <p className="border-t border-border-soft px-5 py-6 text-[12px] text-sepia-muted" data-testid="ledger-empty">
+          {led.status === 'loading'
+            ? tr('正在读取本机账本…')
+            : led.status === 'offline'
+              ? tr('未连接核心：连接后这里显示本机真实账本（~/.triwitness/ledger.sqlite）。演示模式不花钱，也不记账。')
+              : tr('读取账本失败：{0}', led.status === 'error' ? led.error : '')}
+        </p>
+      ) : data.recent.length === 0 ? (
+        <p className="border-t border-border-soft px-5 py-6 text-[12px] text-sepia-muted" data-testid="ledger-empty">
+          {tr('还没有真实调用。演示模式不花钱，也不记账。')}
+        </p>
+      ) : (
         <table className="w-full text-left text-[12px]">
           <thead className="border-y border-border-soft bg-parchment/60 text-[10.5px] tracking-wide text-sepia-muted">
             <tr>
               <th className="px-5 py-2 font-normal">{tr('时间')}</th>
               <th className="px-2 py-2 font-normal">{tr('任务')}</th>
-              <th className="px-2 py-2 font-normal">{tr('模式')}</th>
+              <th className="px-2 py-2 font-normal">{tr('模型')}</th>
               <th className="px-2 py-2 text-right font-normal">{tr('命中率')}</th>
               <th className="px-5 py-2 text-right font-normal">{tr('花费')}</th>
             </tr>
           </thead>
           <tbody className="selectable text-ink-soft">
-            {ledger.map((r) => {
-              const total = r.hitM + r.missM
-              const c = rowCost(r)
-              return (
-                <tr key={r.id} className="border-b border-border-soft/70 last:border-0">
-                  <td className="px-5 py-2.5 font-mono text-[11px] text-sepia">{r.when}</td>
-                  <td className="px-2 py-2.5">{r.task}</td>
-                  <td className="px-2 py-2.5 text-sepia">{tr(r.mode)}</td>
-                  <td className="px-2 py-2.5 text-right tabular-nums">{((r.hitM / total) * 100).toFixed(0)}%</td>
-                  <td className={clsx('px-5 py-2.5 text-right tabular-nums', c > p.maxCost && 'text-rose-ink')}>¥{c.toFixed(2)}</td>
-                </tr>
-              )
-            })}
+            {data.recent.map((r, i) => (
+              <tr key={`${r.ts}-${i}`} className="border-b border-border-soft/70 last:border-0">
+                <td className="px-5 py-2.5 font-mono text-[11px] text-sepia">{r.ts}</td>
+                <td className="px-2 py-2.5">
+                  {r.task_id ?? '—'}
+                  <span className="ml-1.5 text-[10.5px] text-sepia-muted">{r.category}</span>
+                </td>
+                <td className="px-2 py-2.5 text-sepia">
+                  {r.model}
+                  {r.peak && <span className="ml-1.5 text-[10.5px] text-rose-ink">{tr('高峰')}</span>}
+                </td>
+                <td className="px-2 py-2.5 text-right tabular-nums">{pct(hitRate(r))}</td>
+                <td className={clsx('px-5 py-2.5 text-right tabular-nums', r.cost_cny > maxCost && 'text-rose-ink')}>
+                  ¥{r.cost_cny.toFixed(r.cost_cny < 0.01 ? 4 : 2)}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
-      </div>
-    </>
+      )}
+    </div>
   )
 }
 

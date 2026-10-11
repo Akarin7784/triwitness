@@ -90,6 +90,33 @@ def budget_view(ledger: GlobalLedger, *, now: datetime | None = None) -> BudgetV
     )
 
 
+def budget_json(v: BudgetView, ledger: GlobalLedger, *, recent: int = 30) -> dict[str, Any]:
+    """桌面端预算页的数据（`tw budget --json`）：总览 + 信封 + 按周 / 模型 + 最近调用。时间一律北京时间。"""
+    rows = []
+    for r in ledger.recent(recent):
+        ts = datetime.fromisoformat(str(r["ts"]))
+        rows.append({**r, "ts": to_shanghai(ts).strftime("%m-%d %H:%M"), "peak": bool(r["peak"])})
+    return {
+        "now": to_shanghai(v.now).isoformat(timespec="seconds"),
+        "total_cny": v.total_cny,
+        "spent": round(v.spent, 6),
+        "remaining": v.remaining,
+        "calls": v.calls,
+        "peak_calls": v.peak_calls,
+        "cache_hit_rate": v.cache_hit_rate,
+        "warn": v.warn,
+        "kill_switch": v.kill_switch,
+        "burn_per_day": v.burn_per_day,
+        "exhaustion": None if v.exhaustion is None else f"{to_shanghai(v.exhaustion):%Y-%m-%d}",
+        "envelopes": [
+            {"category": e.category, "spent": e.spent, "cap": e.cap, "remaining": e.remaining} for e in v.envelopes
+        ],
+        "by_week": v.by_week,
+        "by_model": v.by_model,
+        "recent": rows,
+    }
+
+
 def _y(x: float | None) -> str:
     return "—" if x is None else f"¥{x:.4f}"
 
