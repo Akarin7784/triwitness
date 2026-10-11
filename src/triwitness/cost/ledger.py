@@ -97,7 +97,8 @@ class GlobalLedger:
         cols = ("ts", "category", "task_id", "model", "peak", "input_tokens", "cache_hit_tokens",
                 "cache_miss_tokens", "output_tokens", "cost_cny")  # fmt: skip
         with self._db() as db:
-            rows = db.execute(f"SELECT {', '.join(cols)} FROM calls ORDER BY ts DESC, id DESC LIMIT ?", (limit,)).fetchall()
+            sql = f"SELECT {', '.join(cols)} FROM calls ORDER BY ts DESC, id DESC LIMIT ?"
+            rows = db.execute(sql, (limit,)).fetchall()
         return [dict(zip(cols, r, strict=True)) for r in rows]
 
     def summary(self) -> LedgerSummary:
