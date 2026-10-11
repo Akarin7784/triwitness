@@ -50,8 +50,10 @@ def doctor(as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（�
 
 @app.command("run")
 def run_cmd(
-    repo: Annotated[Path, typer.Option(help="本地 git 仓库路径（--demo：不存在或为空时写入演示仓库）")],
-    issue: Annotated[str, typer.Option(help="问题描述（Issue 正文）；--demo 可省略")] = "",
+    repo: Annotated[
+        Path | None, typer.Option(help="本地 git 仓库路径；--jsonl 对话轮可省略（只聊天，要动手时请用户选仓库）")
+    ] = None,
+    issue: Annotated[str, typer.Option(help="问题描述（Issue 正文）；--jsonl 时是这一轮的用户消息")] = "",
     title: Annotated[str | None, typer.Option(help="标题（默认取描述第一行）")] = None,
     backend: Annotated[str, typer.Option(help="auto / docker / none")] = "auto",
     test_cmd: Annotated[str | None, typer.Option(help="run_tests 使用的测试命令")] = None,
@@ -63,7 +65,12 @@ def run_cmd(
     jsonl: Annotated[
         bool, typer.Option("--jsonl", help="桌面端桥接：stdout 逐行输出 tw-bridge/1，stdin 收审批 / 取消")
     ] = False,
-    demo: Annotated[bool, typer.Option("--demo", help="演示适配器：脚本化模型 + 演示仓库，¥0、不联网")] = False,
+    demo: Annotated[
+        bool, typer.Option("--demo", hidden=True, help="（仅开发 / 测试）脚本化模型 + 演示仓库；正式版不含")
+    ] = False,
+    parent_run: Annotated[
+        str | None, typer.Option(help="--jsonl 多轮对话：上一轮的 run_id（沿 turn.json 链取历史）")
+    ] = None,
     model: Annotated[str, typer.Option(help="Executor 模型（只允许 deepseek-flash）")] = "deepseek-flash",
     thinking: Annotated[
         str | None, typer.Option(help="思考强度 off / low / medium / high（默认按 configs/models.yaml）")
@@ -100,7 +107,15 @@ def run_cmd(
         raise typer.BadParameter("只能是 auto / docker / none")
     if verify not in ("off", "deterministic", "model"):
         raise typer.BadParameter("--verify 只能是 off / deterministic / model")
-    repo = repo.expanduser()  # 桌面端可能传 ~/...（Windows 下 shell 不展开）
+    if repo is not None:
+        repo = repo.expanduser()  # 桌面端可能传 ~/...（Windows 下 shell 不展开）
+    elif not jsonl:
+        raise typer.BadParameter("--repo 不能为空")
+    if parent_run is not None:
+        from triwitness.harness.chat import valid_run_id
+
+        if not jsonl or not valid_run_id(parent_run):
+            raise typer.BadParameter("--parent-run 只能在 --jsonl 下使用，且必须是 run_id")
     from triwitness.llm.router import executor_override
 
     try:
@@ -111,11 +126,14 @@ def run_cmd(
     files, guidance = _run_inputs(attach, guidance_file)
     reviewer = None
     if demo:
-        from triwitness.bridge import demo as demo_mod
+        try:
+            from triwitness.bridge import demo as demo_mod
+        except ImportError:  # 正式版（PyInstaller）不打包演示适配器
+            raise typer.BadParameter("正式版不含演示模式") from None
 
         if live:
             raise typer.BadParameter("--demo 与 --live 不能同时用")
-        repo = demo_mod.ensure_repo(repo)
+        repo = demo_mod.ensure_repo(repo or tw_home() / "demo" / "verses")
         issue = issue.strip() or demo_mod.ISSUE
         backend, test_cmd = "none", test_cmd or demo_mod.test_command()
         delay = float(os.environ.get("TW_DEMO_DELAY_S", "0.9"))
@@ -131,6 +149,8 @@ def run_cmd(
 
         if not issue.strip():
             raise typer.BadParameter("--issue 不能为空")
+        if repo is None and not jsonl:
+            raise typer.BadParameter("--repo 不能为空")
         if live:
             os.environ["TW_LLM_MODE"] = "record"
         elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
@@ -147,11 +167,26 @@ def run_cmd(
 
         home = tw_home()
 
-        def start(approver, on_event):  # type: ignore[no-untyped-def]
-            return run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
+        def work(text, approver, on_event, recorder=None):  # type: ignore[no-untyped-def]
+            return run_local(repo, text, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
                              home=home, budget=budget, session=session, attachments=files,
-                             guidance=guidance, reviewer=reviewer)  # fmt: skip
+                             guidance=guidance, reviewer=reviewer, recorder=recorder)  # fmt: skip
+
+        def start(approver, on_event):  # type: ignore[no-untyped-def]
+            if demo:  # 开发 / 测试用的脚本化任务：不走对话轮
+                return work(issue, approver, on_event)
+            from triwitness.core.ids import new_run_id, new_task_id
+            from triwitness.harness.chat import run_turn
+            from triwitness.telemetry.trajectory import TrajectoryRecorder
+
+            run_id = new_run_id()
+            run_dir = home / "runs" / run_id
+            rec = TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
+            rec.subscribe(on_event)
+            return run_turn(issue, router=router, rec=rec, run_dir=run_dir, home=home, repo=repo,
+                            parent=parent_run, budget=budget,
+                            work=lambda text, r: work(text, approver, on_event, r))  # fmt: skip
 
         async def main() -> int:
             bridge = Bridge(stdout_writer(), mode=mode, home=home)

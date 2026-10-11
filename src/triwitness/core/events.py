@@ -40,6 +40,8 @@ EventKind = Literal[
     "environment_prepared",
     "model_delta",
     "reasoning_delta",
+    "user_message",
+    "turn_finished",
 ]
 RoleHint = Literal["planner", "executor", "verifier", "reviewer", "system"]
 PermissionDecision = Literal["allow", "ask", "deny"]
@@ -249,6 +251,23 @@ class ReasoningDeltaPayload(DeltaPayload):
     pass
 
 
+class UserMessagePayload(Payload):
+    """对话轮的用户消息（0.3.1）：每轮第一条事件；`parent_run` 指向上一轮（多轮历史）。"""
+
+    text: str = Field(max_length=PREVIEW_MAX)
+    repo: str | None = None
+    parent_run: str | None = None
+
+
+class TurnFinishedPayload(Payload):
+    """一轮对话结束：`kind=chat` 是直接回复（无工具、无产物）；`kind=task` 表示本轮转成了仓库任务。"""
+
+    kind: Literal["chat", "task"]
+    status: str
+    reply: str | None = Field(default=None, max_length=PREVIEW_MAX)
+    cost_cny: float = Field(default=0.0, ge=0)
+
+
 PAYLOADS: dict[str, type[Payload]] = {
     "task_started": TaskStartedPayload,
     "state_change": StateChangePayload,
@@ -269,6 +288,8 @@ PAYLOADS: dict[str, type[Payload]] = {
     "environment_prepared": EnvironmentPreparedPayload,
     "model_delta": ModelDeltaPayload,
     "reasoning_delta": ReasoningDeltaPayload,
+    "user_message": UserMessagePayload,
+    "turn_finished": TurnFinishedPayload,
 }
 
 

@@ -25,6 +25,8 @@ export type TwEvents1 =
   | EnvironmentPreparedEvent
   | ModelDeltaEvent
   | ReasoningDeltaEvent
+  | UserMessageEvent
+  | TurnFinishedEvent
 export type Kind = 'task_started'
 export type ConfigHash = string
 export type Display = string | null
@@ -394,6 +396,35 @@ export type TaskId19 = string
 export type TraceId18 = string | null
 export type Ts18 = string
 export type V18 = 1
+export type Kind20 = 'user_message'
+export type Display19 = string | null
+export type ParentRun = string | null
+export type Repo1 = string | null
+export type RoleHint19 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type Text2 = string
+export type Role20 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId19 = string
+export type Seq19 = number
+export type SpanId19 = string | null
+export type TaskId20 = string
+export type TraceId19 = string | null
+export type Ts19 = string
+export type V19 = 1
+export type Kind21 = 'turn_finished'
+export type CostCny2 = number
+export type Display20 = string | null
+export type Kind22 = 'chat' | 'task'
+export type Reply = string | null
+export type RoleHint20 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type Status2 = string
+export type Role21 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type RunId20 = string
+export type Seq20 = number
+export type SpanId20 = string | null
+export type TaskId21 = string
+export type TraceId20 = string | null
+export type Ts20 = string
+export type V20 = 1
 
 export interface TaskStartedEvent {
   kind: Kind
@@ -891,5 +922,52 @@ export interface ReasoningDeltaPayload {
   index: Index1
   role_hint?: RoleHint18
   text: Text1
+  [k: string]: unknown
+}
+export interface UserMessageEvent {
+  kind: Kind20
+  payload: UserMessagePayload
+  role?: Role20
+  run_id: RunId19
+  seq: Seq19
+  span_id?: SpanId19
+  task_id: TaskId20
+  trace_id?: TraceId19
+  ts: Ts19
+  v?: V19
+}
+/**
+ * 对话轮的用户消息（0.3.1）：每轮第一条事件；`parent_run` 指向上一轮（多轮历史）。
+ */
+export interface UserMessagePayload {
+  display?: Display19
+  parent_run?: ParentRun
+  repo?: Repo1
+  role_hint?: RoleHint19
+  text: Text2
+  [k: string]: unknown
+}
+export interface TurnFinishedEvent {
+  kind: Kind21
+  payload: TurnFinishedPayload
+  role?: Role21
+  run_id: RunId20
+  seq: Seq20
+  span_id?: SpanId20
+  task_id: TaskId21
+  trace_id?: TraceId20
+  ts: Ts20
+  v?: V20
+}
+/**
+ * 一轮对话结束：`kind=chat` 是直接回复（无工具、无产物）；`kind=task` 表示本轮转成了仓库任务。
+ */
+export interface TurnFinishedPayload {
+  cost_cny?: CostCny2
+  display?: Display20
+  kind: Kind22
+  reply?: Reply
+  role_hint?: RoleHint20
+  status: Status2
   [k: string]: unknown
 }

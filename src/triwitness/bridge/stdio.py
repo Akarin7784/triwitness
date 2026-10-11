@@ -3,8 +3,9 @@
 stdout（核心 → 桌面），每行一个 JSON：
 - tw-events/1 事件原样输出（带 `"v": 1`）；
 - 控制消息带 `"bridge"` 字段：
-  `hello`（protocol、mode）→ `run`（run_id、run_dir，首个事件时）→ … → `result`（status、verdict、risk_level、
-  clean_env、branch、run_dir、cost_cny、summary、pr_md）或 `error`（message）；对命令回 `ack`。
+  `hello`（protocol、mode）→ `run`（run_id、run_dir，首个事件时）→ … → `result` 或 `error`（message、code）；
+  对命令回 `ack`。`result.kind`：`chat`（直接回复：reply、cost_cny、run_dir，没有补丁 / 证据）或 `task`
+  （status、verdict、risk_level、clean_env、branch、run_dir、cost_cny、summary、pr_md，以及对话轮的 reply）。
 stdin（桌面 → 核心），每行一个 JSON 命令：
 - `{"cmd": "approve", "request_id": "...", "decision": "allow"|"deny", "scope": "once"|"session"|"always"}`
 - `{"cmd": "cancel"}`
@@ -21,7 +22,9 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
+from triwitness.core.errors import BudgetExceeded, PeakHourBlocked
 from triwitness.harness.approvals import ApprovalBroker, Approver
+from triwitness.harness.chat import TurnOutcome
 from triwitness.harness.local_run import LocalRunOutcome
 from triwitness.telemetry.trajectory import TrajectoryEvent
 
@@ -29,7 +32,8 @@ PROTOCOL = "tw-bridge/1"
 PR_MD_MAX = 20_000
 
 Write = Callable[[str], None]
-Start = Callable[[Approver, Callable[[TrajectoryEvent], None]], Awaitable[LocalRunOutcome]]
+Outcome = LocalRunOutcome | TurnOutcome
+Start = Callable[[Approver, Callable[[TrajectoryEvent], None]], Awaitable[Outcome]]
 
 
 def _line(obj: dict[str, Any]) -> str:
@@ -50,6 +54,25 @@ def result_message(out: LocalRunOutcome) -> dict[str, Any]:
     }  # fmt: skip
 
 
+def turn_message(out: Outcome) -> dict[str, Any]:
+    """对话轮结果：`kind=chat` 只有回复（没有补丁 / 证据 / 结果卡）；`kind=task` 带上任务结果字段。"""
+    if isinstance(out, LocalRunOutcome):
+        return {**result_message(out), "kind": "task"}
+    if out.task is not None:
+        return {**result_message(out.task), "kind": "task", "reply": out.reply, "cost_cny": round(out.cost_cny, 6)}
+    return {"bridge": "result", "kind": "chat", "status": "replied", "reply": out.reply, "run_dir": str(out.run_dir),
+            "run_id": out.run_id, "cost_cny": round(out.cost_cny, 6)}  # fmt: skip
+
+
+def error_message(e: BaseException) -> dict[str, Any]:
+    """桌面端按 code 给出可操作的提示（高峰 → 去设置里允许；预算 → 去设置里调整）。"""
+    if isinstance(e, PeakHourBlocked):
+        return {"bridge": "error", "code": "peak_blocked", "message": f"{e}（桌面端：设置 → 预算 → 允许高峰时段调用）"}
+    if isinstance(e, BudgetExceeded):
+        return {"bridge": "error", "code": "budget", "message": str(e)}
+    return {"bridge": "error", "message": f"{type(e).__name__}: {e}"}
+
+
 class Bridge:
     """一次任务的桥：把事件写出去，把 stdin 命令转成审批决定 / 取消。可注入 IO，便于测试。"""
 
@@ -58,7 +81,7 @@ class Bridge:
         self.mode = mode
         self.home = home
         self.broker = ApprovalBroker()
-        self.task: asyncio.Task[LocalRunOutcome] | None = None
+        self.task: asyncio.Task[Outcome] | None = None
         self._announced = False
 
     def send(self, obj: dict[str, Any]) -> None:
@@ -110,11 +133,11 @@ class Bridge:
         try:
             out = await self.task
         except Exception as e:  # 核心报错：告诉桌面端，退出码 2
-            self.send({"bridge": "error", "message": f"{type(e).__name__}: {e}"})
+            self.send(error_message(e))
             return 2
         finally:
             reader.cancel()
-        self.send(result_message(out))
+        self.send(turn_message(out))
         return 0
 
 
@@ -145,4 +168,4 @@ def stdout_writer() -> Write:
     return write
 
 
-__all__ = ["PROTOCOL", "Bridge", "result_message", "stdin_queue", "stdout_writer"]
+__all__ = ["PROTOCOL", "Bridge", "error_message", "result_message", "stdin_queue", "stdout_writer", "turn_message"]

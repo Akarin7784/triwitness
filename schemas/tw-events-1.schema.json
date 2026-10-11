@@ -3613,6 +3613,172 @@
       "title": "ToolCallPayload",
       "type": "object"
     },
+    "TurnFinishedEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "turn_finished",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/TurnFinishedPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "TurnFinishedEvent",
+      "type": "object"
+    },
+    "TurnFinishedPayload": {
+      "additionalProperties": true,
+      "description": "一轮对话结束：`kind=chat` 是直接回复（无工具、无产物）；`kind=task` 表示本轮转成了仓库任务。",
+      "properties": {
+        "cost_cny": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Cost Cny",
+          "type": "number"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "kind": {
+          "enum": [
+            "chat",
+            "task"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "reply": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reply"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "status"
+      ],
+      "title": "TurnFinishedPayload",
+      "type": "object"
+    },
     "Usage": {
       "additionalProperties": false,
       "properties": {
@@ -3655,6 +3821,169 @@
         }
       },
       "title": "Usage",
+      "type": "object"
+    },
+    "UserMessageEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "user_message",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/UserMessagePayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "UserMessageEvent",
+      "type": "object"
+    },
+    "UserMessagePayload": {
+      "additionalProperties": true,
+      "description": "对话轮的用户消息（0.3.1）：每轮第一条事件；`parent_run` 指向上一轮（多轮历史）。",
+      "properties": {
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "parent_run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Run"
+        },
+        "repo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Repo"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "text": {
+          "maxLength": 2000,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "UserMessagePayload",
       "type": "object"
     },
     "VerificationEvent": {
@@ -3899,6 +4228,8 @@
       "task_finished": "#/$defs/TaskFinishedEvent",
       "task_started": "#/$defs/TaskStartedEvent",
       "tool_call": "#/$defs/ToolCallEvent",
+      "turn_finished": "#/$defs/TurnFinishedEvent",
+      "user_message": "#/$defs/UserMessageEvent",
       "verification": "#/$defs/VerificationEvent"
     },
     "propertyName": "kind"
@@ -3960,6 +4291,12 @@
     },
     {
       "$ref": "#/$defs/ReasoningDeltaEvent"
+    },
+    {
+      "$ref": "#/$defs/UserMessageEvent"
+    },
+    {
+      "$ref": "#/$defs/TurnFinishedEvent"
     }
   ],
   "title": "tw-events/1"

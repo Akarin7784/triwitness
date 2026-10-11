@@ -6,11 +6,14 @@ Router（W1-13）在此之上加角色路由、回退与 eval 模式约束。
 
 from __future__ import annotations
 
+import os
+import re
+import sys
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from triwitness.core.errors import PeakHourBlocked
+from triwitness.core.errors import ConfigError, PeakHourBlocked
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.cost.ledger import GlobalLedger
 from triwitness.llm.adapter import ModelAdapter, ModelPolicy
@@ -29,6 +32,23 @@ def _estimate_input_tokens(payload: dict[str, object]) -> int:
     import json
 
     return len(json.dumps(payload, ensure_ascii=False)) // 3 + 1  # 偏保守：约 3 字符 / token
+
+
+BASE_URL_OVERRIDE_ENV = "TW_LLM_BASE_URL_OVERRIDE"
+
+
+def base_url() -> str:
+    """仅测试用：TW_LLM_BASE_URL_OVERRIDE 指向本机的 OpenAI 兼容模拟服务（CI / 打包冒烟 / 界面 e2e，¥0）。
+
+    只接受 http://127.0.0.1 / localhost，避免被拿来把密钥发到别处；用到时在 stderr 告警。
+    """
+    url = os.environ.get(BASE_URL_OVERRIDE_ENV, "").strip().rstrip("/")
+    if not url:
+        return BASE_URL
+    if not re.match(r"^http://(127\.0\.0\.1|localhost)(:\d+)?(/.*)?$", url):
+        raise ConfigError(f"{BASE_URL_OVERRIDE_ENV} 只允许本机地址（测试用）：{url}")
+    print(f"[tw] 警告：{BASE_URL_OVERRIDE_ENV}={url}（测试用模拟服务，不是 DeepSeek）", file=sys.stderr)
+    return url
 
 
 class LLMClient:
@@ -55,7 +75,7 @@ class LLMClient:
         store = ReplayStore.default("deepseek")
         rr = RecordReplayTransport(store, None)
         if rr.may_hit_network:
-            rr.inner = HttpTransport(BASE_URL, "DEEPSEEK_API_KEY")
+            rr.inner = HttpTransport(base_url(), "DEEPSEEK_API_KEY")
             ledger = ledger or GlobalLedger()
         return cls(DeepSeekAdapter(), rr, ledger=ledger, allow_peak=allow_peak)
 

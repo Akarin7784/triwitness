@@ -71,16 +71,18 @@ async def run_local(
     attachments: list[Path] | None = None,
     guidance: str | None = None,
     reviewer: Reviewer | None = None,
+    recorder: TrajectoryRecorder | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
     choice = await select_backend(backend, backends or _backends(home))
-    run_id = new_run_id()
+    # 对话轮（harness/chat.py）转成任务时传入已建好的 recorder：同一个 run、同一条轨迹
+    run_id = recorder.run_id if recorder is not None else new_run_id()
     spec = SandboxSpec(repo=repo, run_id=run_id, network="none")
     sb = await choice.backend.create(spec)
     run_dir = home / "runs" / run_id
-    rec = TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
-    if on_event is not None:  # 桌面端桥接（tw run --jsonl）：事件写盘后同步推出去
+    rec = recorder or TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
+    if on_event is not None and recorder is None:  # 桌面端桥接（tw run --jsonl）：事件写盘后同步推出去
         rec.subscribe(on_event)
     branch: str | None = None
     result: TaskResult | None = None
