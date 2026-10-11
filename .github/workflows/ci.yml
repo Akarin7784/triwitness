@@ -25,6 +25,8 @@ jobs:
           enable-cache: true
       - name: Install
         run: uv sync --locked
+      - name: Secret scan (tracked files; presigned URLs / keys / tokens)
+        run: uv run python scripts/secret_scan.py
       - name: Ruff
         run: uv run ruff check . && uv run ruff format --check .
       - name: Pyright

@@ -104,3 +104,71 @@ def test_docker_backend_blocks_code_hosts_only_with_network() -> None:
     assert on["network_mode"] == "bridge" and on["extra_hosts"]["github.com"] == "0.0.0.0"
     assert "extra_hosts" not in container_kwargs(SandboxSpec(network="none", block_code_hosts=True))
     assert "extra_hosts" not in container_kwargs(SandboxSpec(network="host"))
+
+
+# —— 预签名链接与密钥（2026-10-12 secret scanning 告警 #1）——
+# 测试里的假密钥都在运行时拼出来，避免源码本身触发仓库扫描 / GitHub secret scanning。
+_AWS_ID = "AS" + "IA" + "QVFQEXAMPLE0" + "ABCD"
+_AMZ = "X-Amz-"
+
+
+def test_redact_presigned_urls_keep_host_and_path() -> None:
+    s3 = (
+        "https://bucket.s3.us-east-1.amazonaws.com/a/junit.xml?"
+        f"{_AMZ}Algorithm=AWS4-HMAC-SHA256&{_AMZ}Credential={_AWS_ID}%2F20250101%2Fus-east-1%2Fs3&{_AMZ}Signature=bf17"
+    )
+    gcs = "https://storage.googleapis.com/b/o.txt?" + "X-Goog" + "-Signature=abcd&X-Goog-Expires=60"
+    sas = "https://acct.blob.core.windows.net/c/f.zip?sv=2021&se=2026-01-01&sp=r&" + "sig=AbCd%2Bef"
+    tok = "https://example.com/dl/file?" + "token=abc123&x=1"
+    plain = "https://example.com/search?q=angle&page=2"
+    text = f"see [junit]({s3}) and {gcs}, {sas} or {tok}; docs {plain}"
+    out, removed = sanitize_instruction(text)
+    assert removed.count("signed_url") == 4
+    assert _AWS_ID not in out and "Signature" not in out and "sig=" not in out and "token=" not in out
+    assert "https://bucket.s3.us-east-1.amazonaws.com/a/junit.xml?[已移除签名链接])" in out  # markdown 括号保留
+    assert plain in out  # 普通查询串不动
+
+
+def test_redact_bare_secrets_records_kind_not_value() -> None:
+    from triwitness.eval.task_hardening import SECRET_MARK, redact_secrets
+
+    ghp = "gh" + "p_" + "a1B2" * 9
+    pat = "github" + "_pat_" + "11ABCDEFG0" + "x" * 30
+    xox = "xo" + "xb-" + "1234567890-abcdef"
+    sk = "s" + "k-" + "Z" * 32
+    pem_body = "\n".join(["MIIEvQIBADANBgkqhkiG9w0BAQEFAASC"] * 3)
+    pem = "-----BEGIN " + f"PRIVATE KEY-----\n{pem_body}\n-----END " + "PRIVATE KEY-----"
+    text = f"id {_AWS_ID} gh {ghp} pat {pat} slack {xox} key {sk}\n{pem}\nok"
+    out, removed = redact_secrets(text)
+    assert sorted(removed) == sorted(
+        ["aws_access_key_id", "github_token", "github_token", "slack_token", "openai_style_key", "private_key"]
+    )
+    for v in (_AWS_ID, ghp, pat, xox, sk, "MIIEvQ"):
+        assert v not in out and v not in removed
+    assert out.count(SECRET_MARK) == 6 and out.endswith("\nok")
+    # 只提到格式、没有密钥正文的文档不算；普通单词里的 sk- 也不算
+    doc = 'feed {"private_key": "...-----BEGIN ' + 'PRIVATE KEY-----... in PEM"} and sk-construction'
+    assert redact_secrets(doc) == (doc, [])
+
+
+def test_audit_flags_secret_in_instruction(tmp_path: Path) -> None:
+    d = tmp_path / "ext" / anon_task_id("x__z-2")
+    d.mkdir(parents=True)
+    (d / "instruction.md").write_text(f"see https://s3.amazonaws.com/b/k?{_AMZ}Credential={_AWS_ID}\n")
+    codes = {f.code: f for f in audit_task(d)}
+    assert codes["instruction_secret"].level == "error"
+    assert _AWS_ID not in codes["instruction_secret"].message
+    assert "instruction_links" not in codes  # 签名链接不重复算成上游链接
+
+
+def test_committed_task_instructions_have_no_secrets() -> None:
+    from triwitness.eval.task_hardening import redact_secrets
+
+    hits = [
+        (p.relative_to(ROOT).as_posix(), r)
+        for p in sorted((ROOT / "evals" / "tasks").glob("*/*/instruction.md"))
+        if not p.parent.parent.name.startswith("_")
+        for r in [redact_secrets(p.read_text(encoding="utf-8"))[1]]
+        if r
+    ]
+    assert hits == []

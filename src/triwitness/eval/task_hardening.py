@@ -5,7 +5,10 @@
 公开基准里最大的偏差来源是“抄答案”：从 git 历史 / 上游托管站 / 任务元数据里找到修复。这里放任务工厂和沙箱共用的规则：
 - `CODE_HOSTS`：沙箱出网时屏蔽的代码托管域名（保留 PyPI 等依赖镜像）；
 - `anon_task_id()`：实例 ID 匿名化（原 ID 带仓库名 + PR 号，等于答案定位符）；
-- `sanitize_instruction()`：去掉 Issue 正文里指向提交 / PR / 对比的链接和完整 SHA；
+- `sanitize_instruction()`：去掉 Issue 正文里指向提交 / PR / 对比的链接和完整 SHA，并调用 `redact_secrets()`；
+- `redact_secrets()`：去掉预签名链接的查询串（S3 / GCS / Azure SAS / CloudFront / token=）和常见密钥格式
+  （AWS 访问密钥 ID、GitHub / Slack / OpenAI 风格令牌、私钥块）——上游公开 Issue 里常带第三方临时凭据，
+  入库后会触发 GitHub secret scanning（2026-10-12 告警 #1：CircleCI 产物的 S3 预签名链接）；
 - `audit_task()`：静态检查一个任务目录（新任务应全部通过；旧任务只报告，不改动隐藏测试）。
 
 镜像本身已经是“无历史”的：源码来自 base_commit 的归档包，没有 .git（比“单提交仓库”更严格）；
@@ -34,6 +37,64 @@ _LINK = re.compile(
     r"(?:-/)?(?:commit|commits|pull|pulls|merge_requests|compare|tree|blob)/[^\s)\]>\"']+"
 )
 _ANON = re.compile(r"^t-[0-9a-f]{10}$")
+
+SIGNED_URL_MARK = "[已移除签名链接]"
+SECRET_MARK = "[已移除密钥]"
+_URL = re.compile(r"https?://[^\s)\]>\"'<`]+")
+# 查询参数名（小写）：出现任意一个就把整段查询串去掉
+_SIGNED_PARAMS = frozenset({
+    "sig", "signature", "token", "access_token", "id_token", "auth", "auth_token", "api_key", "apikey", "key-pair-id",
+    "client_secret", "secret", "password", "googleaccessid", "awsaccesskeyid", "security-token", "x-oss-signature",
+})  # fmt: skip
+_SIGNED_PREFIXES = ("x-amz-", "x-goog-")
+# (名称, 模式)；名称写进 removed，不把密钥原文带出去
+SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    # 要有密钥正文（≥ 2 段 base64）才算；文档里只提到 “-----BEGIN PRIVATE KEY-----...” 的不算。\n 兼容 JSON 转义
+    ("private_key", re.compile(
+        r"-----BEGIN ((?:[A-Z0-9]+ )*)PRIVATE KEY(?: BLOCK)?-----(?:\s|\\n)*(?:[A-Za-z0-9+/=]{16,}(?:\s|\\n)*){2,}"
+        r"(?:-----END \1PRIVATE KEY(?: BLOCK)?-----)?")),
+    ("aws_access_key_id", re.compile(r"(?<![A-Z0-9])(?:AKIA|ASIA|ABIA|ACCA|AGPA|AIDA|AIPA|ANPA|ANVA|AROA|APKA|ASCA)"
+                                     r"[A-Z0-9]{16}(?![A-Z0-9])")),
+    ("github_token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})\b")),
+    ("slack_token", re.compile(r"\bxox[abposre]-[A-Za-z0-9-]{10,}")),
+    ("openai_style_key", re.compile(r"\bsk-(?:proj-|ant-|live-|test-)?[A-Za-z0-9_-]{20,}")),
+    ("google_api_key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
+)  # fmt: skip
+
+
+def _signed_query(url: str) -> bool:
+    if "?" not in url:
+        return False
+    query = url.split("?", 1)[1].split("#", 1)[0]
+    names = {kv.split("=", 1)[0].lower() for kv in query.split("&") if kv}
+    return bool(names & _SIGNED_PARAMS) or any(n.startswith(_SIGNED_PREFIXES) for n in names)
+
+
+def redact_secrets(text: str) -> tuple[str, list[str]]:
+    """去掉预签名链接的查询串与常见密钥；返回（新文本, 去掉的种类列表，如 "signed_url" / "aws_access_key_id"）。
+
+    链接保留协议、主机和路径（读者还能看出是哪里的产物），查询串换成 `?[已移除签名链接]`；
+    密钥原文换成 `[已移除密钥]`。removed 只记种类，不记原文。"""
+    removed: list[str] = []
+
+    def url(m: re.Match[str]) -> str:
+        u = m[0]
+        if not _signed_query(u):
+            return u
+        removed.append("signed_url")
+        return u.split("?", 1)[0] + "?" + SIGNED_URL_MARK
+
+    out = _URL.sub(url, text)
+    for name, pat in SECRET_PATTERNS:
+
+        def sub(m: re.Match[str], name: str = name) -> str:
+            removed.append(name)
+            return SECRET_MARK
+
+        out = pat.sub(sub, out)
+    return out, removed
+
+
 HOOKS_OFF = "RUN git config --system core.hooksPath /dev/null"
 
 
@@ -43,8 +104,9 @@ def anon_task_id(instance_id: str, *, salt: str = "triwitness") -> str:
 
 
 def sanitize_instruction(text: str) -> tuple[str, list[str]]:
-    """去掉提交 / PR / 对比 / 分支文件链接与 40 位 SHA；返回（新文本, 被去掉的片段）。"""
-    removed: list[str] = []
+    """去掉预签名链接 / 密钥（见 redact_secrets）、提交 / PR / 对比 / 分支文件链接与 40 位 SHA；
+    返回（新文本, 被去掉的片段；密钥类只记种类）。"""
+    text, removed = redact_secrets(text)
 
     def drop(m: re.Match[str]) -> str:
         removed.append(m[0])
@@ -83,7 +145,12 @@ def audit_task(d: Path, *, base_commit: str | None = None) -> list[AuditFinding]
     instr = d / "instruction.md"
     if instr.is_file():
         text = instr.read_text(encoding="utf-8")
+        _, secrets = redact_secrets(text)
+        if secrets:
+            out.append(AuditFinding("error", "instruction_secret",
+                                    f"Issue 正文含疑似凭据：{', '.join(sorted(set(secrets)))}"))  # fmt: skip
         _, removed = sanitize_instruction(text)
+        removed = removed[len(secrets) :]
         if removed:
             out.append(AuditFinding("warn", "instruction_links", f"Issue 正文含 {len(removed)} 个提交 / PR 链接或 SHA"))
         if sha and sha[:12] in text:
@@ -104,4 +171,5 @@ def audit_task(d: Path, *, base_commit: str | None = None) -> list[AuditFinding]
     return out
 
 
-__all__ = ["CODE_HOSTS", "GIT_ENV", "HOOKS_OFF", "AuditFinding", "anon_task_id", "audit_task", "sanitize_instruction"]
+__all__ = ["CODE_HOSTS", "GIT_ENV", "HOOKS_OFF", "SECRET_MARK", "SECRET_PATTERNS", "SIGNED_URL_MARK", "AuditFinding",
+           "anon_task_id", "audit_task", "redact_secrets", "sanitize_instruction"]  # fmt: skip

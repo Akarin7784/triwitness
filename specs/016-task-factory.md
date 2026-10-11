@@ -58,6 +58,7 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 - `mine --exclude-existing --fetch-filtered N`：跳过所有已尝试过的实例（`evals/factory/**/build_log*.json` 与 task.toml 元数据），
   filtered 子集额外取 N 页；每仓库总数（含已有任务）≤ 2。
 - 构建一律加固（匿名 ID、清洗 Issue 正文、禁用 hooks、删 `.git`），与 dev / test 不重叠。
+  Issue 正文清洗包括去掉预签名链接的查询串和常见密钥（`redact_secrets`，见 `eval/task_hardening.py`）；仓库级 `scripts/secret_scan.py` 在 CI 里兜底。
 - `split-ext --log evals/factory/ext/build_log.json --name ext --size 50`：把通过校验的任务搬到 `evals/tasks/ext/`，
   created_at 最新的 50 个写冻结套件 `evals/suites/ext.yaml`，其余写 `ext-reserve.yaml`（同样冻结、备用）；
   digest 同 5.3；失败任务留在被 git 忽略的 `_staging_ext/`。
@@ -94,6 +95,7 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 
 ## 10. 变更记录
 
+- 2026-10-12（凌晨）：Issue 清洗加预签名链接 / 密钥去除（secret scanning 告警 #1，ext `t-d465a62f2f`），ext digest 更新；CI 加仓库级密钥扫描。
 - 2026-10-12：ext 50 + ext-reserve 59 冻结（5.4）。
 - 2026-10-11：W5-12 扩充套件 ext（5.4）与磁盘占用率守卫（65%）。
 - 2026-10-10：初稿（W2-05），实现 W2-20～23 已完成（a71aa56 … 2227e22），见 docs/design/task-factory.md。

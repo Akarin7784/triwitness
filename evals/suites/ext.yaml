@@ -3,7 +3,7 @@ name: ext
 description: 扩展集（W5-12 / DF-08）：任务工厂加固版（匿名 ID、清洗 Issue、禁用 hooks），SWE-rebench leaderboard 2025-01～2026-03 + filtered；与 dev / test 不重叠、同仓库合计 ≤ 2；W5 只构建与校验，全量跑分在 Eva 本机；取 created_at 最新的一批（dev 15 + test 35
   + ext ≈ 100）
 frozen: true
-digest: 59c5885d06be9a49
+digest: c56b07a7feb1fbc7
 tasks:
 - id: t-05acf61f73
   source: nebius/SWE-rebench-leaderboard:2025_01
