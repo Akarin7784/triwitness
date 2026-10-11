@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -21,16 +22,19 @@ def run_demo(tw: str, tmp: Path, extra: list[str]) -> dict:  # type: ignore[type
            "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}  # fmt: skip
     env.pop("TW_HOME", None)
     repo = tmp / f"verses{len(extra)}"
+    errf = (tmp / f"stderr{len(extra)}.log").open("w+", encoding="utf-8")
     p = subprocess.Popen(
         [tw, "run", "--repo", str(repo), "--demo", "--jsonl", *extra],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=errf,  # 写文件而不是管道：不读的 stderr 管道写满会把子进程卡死
         env=env,
         text=True,
         encoding="utf-8",
     )
     assert p.stdin and p.stdout
+    watchdog = threading.Timer(240, p.kill)  # 卡住就杀掉，让 CI 失败而不是挂到超时
+    watchdog.start()
     seen = []
     for raw in p.stdout:
         obj = json.loads(raw)
@@ -40,11 +44,19 @@ def run_demo(tw: str, tmp: Path, extra: list[str]) -> dict:  # type: ignore[type
             msg = {"cmd": "approve", "request_id": rid, "decision": "allow", "scope": "once"}
             p.stdin.write(json.dumps(msg) + "\n")
             p.stdin.flush()
+        if obj.get("kind") in ("approval_requested", "state_changed", "verdict") or obj.get("bridge"):
+            brief = json.dumps(obj.get("payload", {}), ensure_ascii=False)[:120]
+            print("  ·", obj.get("bridge") or obj.get("kind"), brief, flush=True)
         if obj.get("bridge") in ("result", "error"):
             break
     p.stdin.close()
     code = p.wait(timeout=120)
-    err = p.stderr.read() if p.stderr else ""
+    watchdog.cancel()
+    errf.seek(0)
+    err = errf.read()[-4000:]
+    errf.close()
+    if not seen or seen[-1].get("bridge") != "result":
+        print(err, file=sys.stderr)
     assert code == 0, err
     res = seen[-1]
     assert res.get("bridge") == "result" and res.get("status") == "done" and res.get("verdict") == "pass", (res, err)
