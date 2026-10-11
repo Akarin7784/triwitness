@@ -4,7 +4,7 @@
 import puppeteer from 'puppeteer-core'
 import { mkdirSync } from 'node:fs'
 const base = process.env.URL ?? 'http://localhost:1420'
-const out = new URL('../../../docs/images/v0.3.1/', import.meta.url).pathname
+const out = new URL(`../../../docs/images/${process.env.SHOTS ?? 'v0.3.1'}/`, import.meta.url).pathname
 mkdirSync(out, { recursive: true })
 const REPO = process.env.REPO ?? ''
 const TASK = process.env.TASK ?? 'line_count 把空行也算进去了：「床前明月光\\n\\n疑是地上霜\\n」应为 2 行，实际返回 4。帮我修一下。'
@@ -107,6 +107,8 @@ if (REPO && ONLY !== 'chat') {
   await wait(2000)
   const card = await page.$eval('[data-testid="result-card"]', (el) => el.textContent ?? '').catch(() => '')
   check(`结论：${card.replace(/\s+/g, ' ').slice(0, 100)}`, card.length > 0)
+  const cost = await page.$eval('[data-testid="result-cost"]', (el) => `${el.textContent} | ${el.getAttribute('title')}`).catch(() => '')
+  console.log(`COST ${cost}`)
   await page.evaluate(() => document.querySelector('[data-testid="result-card"]')?.scrollIntoView({ block: 'end' }))
   await calm()
   await wait(500)
