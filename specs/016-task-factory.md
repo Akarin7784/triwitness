@@ -42,7 +42,7 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 1. 阶段一：按数据集安装命令装依赖，`pip freeze` 得到钉死版本。
 2. 阶段二：用钉死版本生成最终 Dockerfile 并构建（tag = 内容哈希）。
 3. 校验：null Agent → reward 0，oracle（参考解）→ reward 1，各 3 次；仓库已不存在的 P2P 用例（`not found`）自动剔除后重验。
-4. 守卫：剩余磁盘 < `MIN_FREE_GB`（15G）不开始新构建，记 `error`，可 `--retry error` 续跑；每个任务完成后删自己的镜像并清 1 小时前的悬空层；批次结束 `docker image prune -f`。
+4. 守卫：剩余磁盘 < `MIN_FREE_GB`（15G）或已用 ≥ `MAX_USED_PCT`（65%，box 规则 < 70% 留余量）不开始新构建，记 `error`，可 `--retry error` 续跑；每个任务完成后删自己的镜像并清 1 小时前的悬空层；批次结束 `docker image prune -f`。
 
 ### 5.3 切分（`split`）
 
@@ -51,6 +51,16 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 - dev-smoke = dev 中固定 5 个，每周冒烟防模型漂移。
 - 难度为启发式（改动行数 / 文件数），人工抽检延后。
 - `check_suite` 发现任务内容 digest 变化即报错；可重复运行 `split`（已搬运的任务复用）。
+
+### 5.4 扩充套件 `ext`（W5-12，2026-10-11）
+
+- 目的：把冻结套件里的有效任务从 50（dev 15 + test 35）扩到 ~100，**不改动已冻结的 dev / test**（跨周可比性）。
+- `mine --exclude-existing --fetch-filtered N`：跳过所有已尝试过的实例（`evals/factory/**/build_log*.json` 与 task.toml 元数据），
+  filtered 子集额外取 N 页；每仓库总数（含已有任务）≤ 2。
+- 构建一律加固（匿名 ID、清洗 Issue 正文、禁用 hooks、删 `.git`），与 dev / test 不重叠。
+- `split-ext --log evals/factory/ext/build_log.json --name ext`：把通过校验的任务搬到 `evals/tasks/ext/`，写冻结套件
+  `evals/suites/ext.yaml`（digest 同 5.3）；失败任务留在被 git 忽略的 `_staging_ext/`。
+- 污染提示：filtered 子集里有 2016 年起的老实例，ext 只作补充样本（扩大 n、降低 MDE），报告里与 test 分开列。
 
 ## 6. 验收标准
 
@@ -76,4 +86,5 @@ W1 只有 10 个任务，统计上无法区分两个配置。W2 需要 30–50 �
 
 ## 10. 变更记录
 
+- 2026-10-11：W5-12 扩充套件 ext（5.4）与磁盘占用率守卫（65%）。
 - 2026-10-10：初稿（W2-05），实现 W2-20～23 已完成（a71aa56 … 2227e22），见 docs/design/task-factory.md。

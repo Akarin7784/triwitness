@@ -39,6 +39,13 @@
 - **W5-08 消融统计库 `eval/ablation.py`**：OFAT 配置生成（与基线相同的水平自动跳过）、McNemar 精确检验、Holm 校正、bootstrap / 配对 bootstrap 区间、Wilson 区间、可检出差异（MDE）、对比表；只有 Holm p < 0.05 且区间不含 0 才写“更好 / 更差”。评审者消融的 `score` 增加与 adversarial 的配对比较。
 - **W5-09/10/11 第一轮 OFAT 消融（脚本已备好，待 Eva 本机跑）**：`evals/ablations/w5-round1.yaml`（dev 15 题；基线 = flash 非思考；因素：上下文 3 档、工具 2 档、思考 low / high、repro-first、Planner）+ `scripts/ofat_ablation.py plan|run|report|bundle` + 新配置 `configs/harness/planner-only.yaml`。Windows 一键脚本 `scripts/windows/run-ofat-ablation.ps1`（`evals/runner/Dockerfile` 镜像，挂载宿主 docker.sock 起任务沙箱，并发 3）；预估 1 次 ≈ ¥11、3 次 ≈ ¥33。账本类别 `ofat-ablation`；box 上只做了 1 题冒烟（¥0.0083）。
 - **W5 评测防作弊加固（landscape §4.2）**：`eval/task_hardening.py`；任务工厂新建任务默认匿名 ID（`t-<10 位哈希>`，原实例 ID 只留在 task.toml 元数据）、清洗 Issue 正文里的提交 / PR / 对比链接和 40 位 SHA、镜像禁用 git hooks（源码本来就来自无 `.git` 的归档包，比单提交仓库更严）；评测沙箱 `GIT_ALLOW_PROTOCOL=file`，开网时把 GitHub / GitLab / Gitee / HF 等代码托管域名解析到 0.0.0.0。`task_factory.py audit` 只读审计：现有 109 个任务 0 error（warn：未匿名 109、未禁用 hooks 104、Issue 含链接 18；不改已有任务和隐藏测试）。
+- **W5 第二批（Eva 未答复 3 个问题，按可撤回的默认做，23:21）**：
+  - L0 开 PR 仍需确认（不变）。
+  - **CI 修复返工后先重跑验证器（不重跑评审者）再推送**：发布流程 `CI_WATCH → EXECUTING → VERIFYING → PACKAGING → 推送`；验证不通过就不推送，任务以“CI 修复未通过验证，未推送”结束（spec 012 §5）。
+  - 不新建任何 GitHub 仓库；真实仓库上的 CI 修复验收等 Eva 提供 / 批准仓库后再做。
+- **W5-12 扩充任务集 ext（构建中）**：`task_factory.py mine --exclude-existing --fetch-filtered N` 跳过所有已尝试过的实例，从 SWE-rebench 2025-01…2026-03 与 filtered 子集挖出 185 个新候选（每仓库总数 ≤ 2）；全部加固构建（匿名 ID、hooks 关闭、删 `.git`）；新增磁盘占用率守卫（≥ 65% 不开新构建）；`split-ext` 写冻结套件 `evals/suites/ext.yaml`，dev / test 不动（spec 016 §5.4）。
+- **W5-13 Harbor 集成**：我们的任务目录与 Harbor 格式兼容（oracle 1 / nop 0）；新增 `triwitness.integrations.harbor_agent:TriWitnessAgent` + `HarborSandbox`，`harbor run -a ...` 让 TriWitness（deepseek-flash）解 Harbor 任务，box 实测 1 题解决、¥0.0126。Terminal-Bench 2.0 的 10 题子集脚本 `scripts/harbor_external.py` + Windows 一键 `scripts/windows/run-harbor-tb2.ps1`（WSL2）待 Eva 本机跑（box 的 Docker 自定义网络无 DNS，TB2 verifier 联网失败）。见 `docs/design/harbor-integration.md`。
+- CI：Windows 作业解析 `scripts/windows/*.ps1`（PowerShell 5.1 语法 + BOM / CRLF 检查）。
 - 默认权限模式仍是 `auto_review`（未改，等 Eva 决定）。
   - **跨厂商评审（W4-08，只用假模型测）**：`vendor_policy: cross_vendor` 时 Reviewer 路由排除 Executor 的厂商；开工前预检，凑不出异厂商直接失败（不花钱）。
 - **Agent 循环（借鉴 Claude Code 核心循环）**：同一轮里连续的只读工具（read_file / list_files / grep / repo_map / git）并发执行，结果顺序不变；中途结束 / 中断时给没执行的工具调用补“未执行”结果，续写请求始终合法；API 重试默认 10 次指数退避（1 s 起、32 s 封顶、带抖动），`TW_LLM_PERSISTENT_RETRY=1` 时 429 / 503 一直重试（单次 ≤ 60 s、总计 ≤ 6 h）。

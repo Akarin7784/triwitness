@@ -18,6 +18,7 @@ import json
 import logging
 import posixpath
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
@@ -77,6 +78,12 @@ _VERDICT = {"pass": "通过", "fail": "未通过", "inconclusive": "证据不足
 PLAN_FILE = "plan.json"
 
 log = logging.getLogger(__name__)
+
+
+# _publish 的返回：（状态, 终态, 标签, 最后的 outcome, PR, 最后一次 CI 结果, 最新验证结果）
+PublishOutcome = tuple[FinishStatus, TaskState, str, LoopOutcome, PrRef | None, CiResult | None,
+                       PipelineResult | None]  # fmt: skip
+Reverify = Callable[[LoopOutcome, int], Awaitable[PipelineResult | None]]
 
 
 @dataclass
@@ -366,8 +373,21 @@ class InProcessOrchestrator:
         if status == "done":
             self.go(S.PACKAGING, "整理结果")
             if self.publisher is not None and self.mode != "eval" and diff.strip():
-                pub = await self._publish(loop, ctx, prompt, outcome, verification, plan, label)
-                status, final, label, outcome, pr_ref, ci = pub
+                vcount = rounds
+
+                async def reverify(o: LoopOutcome, ci_round: int) -> PipelineResult | None:
+                    """CI 返工后、再次推送前重跑确定性验证（不重跑 Reviewer；spec 012 §5，Eva 未答时的默认）。"""
+                    nonlocal vcount
+                    if self.verify is None or o.finish is None:
+                        return None
+                    vcount += 1
+                    self.go(S.VERIFYING, f"验证 CI 修复（第 {ci_round} 轮）")
+                    return await self._verify(o.finish, await self._diff(base_ref), test_command, base_ref, prepared,
+                                              plan, vcount)  # fmt: skip
+
+                pub = await self._publish(loop, ctx, prompt, outcome, verification, plan, label, reverify)
+                status, final, label, outcome, pr_ref, ci, verification = pub
+                rounds = vcount
                 diff = await self._diff(base_ref)
         self.go(final, label)
         cost = self.ledger.report()
@@ -452,8 +472,11 @@ class InProcessOrchestrator:
     async def _publish(
         self, loop: AgentLoop, ctx: ToolContext, prompt: str, outcome: LoopOutcome,
         verification: PipelineResult | None, plan: Plan | None, label: str,
-    ) -> tuple[FinishStatus, TaskState, str, LoopOutcome, PrRef | None, CiResult | None]:  # fmt: skip
-        """PACKAGING 之后：按风险决定开不开 PR →（确认）→ PR_OPENED → CI_WATCH ⇄ EXECUTING。返回新的收尾状态。"""
+        reverify: Reverify | None = None,
+    ) -> PublishOutcome:  # fmt: skip
+        """PACKAGING 之后：按风险决定开不开 PR →（确认）→ PR_OPENED → CI_WATCH ⇄ EXECUTING（→ VERIFYING）→ 推送。
+
+        返回新的收尾状态；CI 返工轮重跑过验证时，最后一个元素是新的验证结果。"""
         assert self.publisher is not None
         gh = self.cfg.github
         risk = verification.evidence.risk_level if verification is not None else (
@@ -463,7 +486,7 @@ class InProcessOrchestrator:
         shown = level if risk else f"{level}（无验证结论，按 {level}）"
         done: tuple[FinishStatus, TaskState] = ("done", S.DONE)
         if action == "none":
-            return (*done, f"{label} · 风险 {shown}，不开 PR（分支保留）", outcome, None, None)
+            return (*done, f"{label} · 风险 {shown}，不开 PR（分支保留）", outcome, None, None, verification)
         draft = action == "draft"
         kind = "Draft PR" if draft else "PR"
         title = self._pr_title(outcome)
@@ -473,20 +496,21 @@ class InProcessOrchestrator:
             d = await self._approve_pr(level, kind, title, body)
             if d != "approve":
                 why = "被拒绝" if d == "reject" else "需要确认，可稍后在桌面端或 `tw pr open` 开"
-                return (*done, f"{label} · 未开 PR（{why}）", outcome, None, None)
+                return (*done, f"{label} · 未开 PR（{why}）", outcome, None, None, verification)
         try:
             ref = await self.publisher.open(title=title, body=body, draft=draft)
         except Exception as e:  # 推送 / 开 PR 失败不影响任务结论：改动在分支里
             msg = str(e)[:300]
             self.rec.emit(ErrorPayload(type="PublishFailed", message=msg, display=clip(f"开 PR 失败：{msg}")))
-            return (*done, clip(f"{label} · 开 PR 失败"), outcome, None, None)
+            return (*done, clip(f"{label} · 开 PR 失败"), outcome, None, None, verification)
         reused = "（沿用已有）" if ref.reused else ""
         self.go(S.PR_OPENED, clip(f"已开 {kind} #{ref.number}{reused} · {ref.url}"))
+        tag = f"{label} · {kind} #{ref.number}"
         art = {"url": ref.url, "number": ref.number, "repo": ref.repo, "head": ref.head, "sha": ref.sha,
                "draft": ref.draft, "reused": ref.reused, "risk": level}  # fmt: skip
         self.rec.artifact("pr.json", art)
         if not gh.ci.watch:
-            return (*done, f"{label} · {kind} #{ref.number}", outcome, ref, None)
+            return (*done, f"{tag}", outcome, ref, None, verification)
         sha, rounds = ref.sha, 0
         res: CiResult | None = None
         while True:
@@ -497,19 +521,34 @@ class InProcessOrchestrator:
                 msg = str(e)[:300]
                 shown_err = clip(f"取不到 CI 状态：{msg}")
                 self.rec.emit(ErrorPayload(type="CiWatchFailed", message=msg, display=shown_err))
-                return (*done, f"{label} · {kind} #{ref.number} · 取不到 CI 状态", outcome, ref, res)
+                return (*done, f"{tag} · 取不到 CI 状态", outcome, ref, res, verification)
             self.rec.artifact(f"ci-{rounds + 1}.json", res.to_json())
             if res.state != "failure":
-                return (*done, clip(f"{label} · {kind} #{ref.number} · {res.display()}"), outcome, ref, res)
+                return (
+                    *done,
+                    clip(f"{tag} · {res.display()}"),
+                    outcome,
+                    ref,
+                    res,
+                    verification,
+                )
             if rounds >= gh.ci.max_fix_rounds:
-                return (*done, clip(f"{label} · {kind} #{ref.number} · CI 仍失败（已返工 {rounds} 轮）"),
-                        outcome, ref, res)  # fmt: skip
+                return (*done, clip(f"{tag} · CI 仍失败（已返工 {rounds} 轮）"),
+                        outcome, ref, res, verification)  # fmt: skip
             rounds += 1
             self.go(S.EXECUTING, clip(f"根据 CI 失败返工（第 {rounds} 轮） · {res.display()}"))
             outcome = await loop.run(prompt, ctx, continue_with=ci_feedback(res))
             st, fin, lab = classify(outcome)
             if st != "done":
-                return (st, fin, f"{lab}（CI 返工时）", outcome, ref, res)
+                return (st, fin, f"{lab}（CI 返工时）", outcome, ref, res, verification)
+            if reverify is not None:  # 再次推送前先过确定性验证；不通过就不推送，改动留在本地分支
+                v = await reverify(outcome, rounds)
+                if v is not None:
+                    verification = v
+                    if v.evidence.verdict == "fail":
+                        self.go(S.PACKAGING, f"CI 修复（第 {rounds} 轮）未通过验证，不推送")
+                        return (*done, clip(f"{tag} · CI 修复未通过验证，未推送"),
+                                outcome, ref, res, verification)  # fmt: skip
             self.go(S.PACKAGING, f"整理 CI 修复（第 {rounds} 轮）")
             try:
                 sha = await self.publisher.push(rounds)
@@ -517,7 +556,14 @@ class InProcessOrchestrator:
                 msg = str(e)[:300]
                 shown_err = clip(f"推送 CI 修复失败：{msg}")
                 self.rec.emit(ErrorPayload(type="PublishFailed", message=msg, display=shown_err))
-                return (*done, clip(f"{label} · {kind} #{ref.number} · 推送 CI 修复失败"), outcome, ref, res)
+                return (
+                    *done,
+                    clip(f"{tag} · 推送 CI 修复失败"),
+                    outcome,
+                    ref,
+                    res,
+                    verification,
+                )
             self.go(S.PR_OPENED, f"已推送 CI 修复（第 {rounds} 轮）")
 
     def _pr_title(self, outcome: LoopOutcome) -> str:

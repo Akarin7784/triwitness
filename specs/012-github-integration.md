@@ -69,7 +69,7 @@ v0.3.2 已经能“审批后开 PR”：`tw pr plan`（不联网，生成审批�
 - 返工：失败日志用 `<untrusted source="ci:...">` 包装（不可信数据），追加说明“修复代码让 CI 通过；不要修改 CI 配置、不要跳过或删除测试”，
   同一个 AgentLoop 续上（前缀不变，缓存可命中）。返工后提交并推送（`push:<n>`），再回 `CI_WATCH`。
 - 上限 `github.ci.max_fix_rounds`（默认 2，0–5）；超过仍失败 → DONE，标签写“CI 仍失败（已返工 N 轮）”，PR 保留给人看。
-- 简化：返工轮不重跑确定性验证与 Reviewer（CI 本身就是验证）；§10 Q2 待定。
+- 返工后、再次推送前**重跑确定性验证（不重跑 Reviewer）**：`CI_WATCH → EXECUTING → VERIFYING → PACKAGING → PR_OPENED`；验证 fail 就不推送（改动留在本地分支，标签写“CI 修复未通过验证，未推送”），证据包按新结果记 `evidence-<n>.json`。没有启用验证时直接推送。（2026-10-11 23:21：Eva 未答 Q2，按可逆默认实现。）
 - 改 CI 配置文件仍受 spec 010 `hitl.ci_changes` 约束（默认需要人确认）。
 
 ## 6. 幂等与审计
@@ -100,13 +100,13 @@ App 决定后再做，接口已留：
 ## 9. 测试
 
 - `tests/unit/github/test_ci.py`：check run 解析、状态汇总、日志精简、超时 / 无 CI 宽限、gh 与令牌两条路径（假 runner / MockTransport）。
-- `tests/unit/orchestrator/test_publish.py`：L3 不开、auto + CI 成功、无审批通道、Draft + 拒绝、CI 失败 → 返工 → 推送（返工请求里有
+- `tests/unit/orchestrator/test_publish.py`：L3 不开、CI 返工后重验通过才推送 / 重验失败不推送、auto + CI 成功、无审批通道、Draft + 拒绝、CI 失败 → 返工 → 推送（返工请求里有
   untrusted 包装的日志）、返工上限 0、评测模式不发布；真实 `GitHubPublisher` + 本地裸仓库 + MockTransport：推送、开 PR 只开一次、`push(1)`。
 - 待做（需要 Eva 授权一个测试仓库）：真实仓库上制造一次 CI 失败并被自动修复（W5-06 验收）。
 
 ## 10. 待 Eva 决定
 
-1. **L0 默认动作**：现在是 `confirm`（开 PR 对外可见）；要不要改成 `auto`？
-2. **CI 返工后是否重跑验证 / Reviewer**：现在不重跑（省钱、CI 即验证）；如果 CI 覆盖弱，可能放过回归。
+1. **L0 默认动作**：现在是 `confirm`（开 PR 对外可见）；要不要改成 `auto`？（23:21 未答，维持 confirm）
+2. **CI 返工后是否重跑验证 / Reviewer**：默认重跑确定性验证、不重跑 Reviewer（23:21 未答，按可逆默认）；要不要也重跑 Reviewer？
 3. **GitHub App**：是否注册（单仓库安装、最小权限）；不注册则 §8 全部保持暂缓，W5-14 Demo 改为“`tw run --open-pr` 开出带证据包的 PR”。
-4. **测试仓库**：W5-06 验收需要一个可推送的测试仓库（建议私有、只给细粒度 PAT）。
+4. **测试仓库**：W5-06 验收需要一个可推送的测试仓库（建议私有、只给细粒度 PAT）。**不会自行新建仓库**，等 Eva 提供或批准后再做真实验收。

@@ -9,6 +9,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -26,6 +27,7 @@ from triwitness.sandbox.base import SandboxSpec
 from triwitness.sandbox.local import LocalSandboxBackend
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
+from triwitness.verify.pipeline import VerifyOptions
 from triwitness.verify.testing import make_repo
 
 PY = f'"{Path(sys.executable).as_posix()}" -m pytest -q -p no:cacheprovider'
@@ -83,7 +85,7 @@ def cfg(**policy: str) -> HarnessConfig:
 
 
 async def go(env: tuple, script: list[Message], pub: Any, config: HarnessConfig, *, approver: Any = None,
-             mode: str = "background") -> tuple[TaskResult, TrajectoryRecorder]:  # type: ignore[type-arg]  # fmt: skip
+             mode: str = "background", verify: Any = None) -> tuple[TaskResult, TrajectoryRecorder]:  # type: ignore[type-arg]  # fmt: skip
     backend, repo = env
     sb = await backend.create(SandboxSpec(repo=repo, run_id="exec1"))
     rec = TrajectoryRecorder("t_p", "r_p", run_dir=repo.parent / "run")
@@ -93,7 +95,7 @@ async def go(env: tuple, script: list[Message], pub: Any, config: HarnessConfig,
         res = await run_task(recorder=rec, router=router, registry=ToolRegistry(default_tools()),
                              sandbox=sb, issue_title="add 是减法", task_prompt="add(1, 2) 应该是 3", repo="o/r",
                              budget=Budget(), config_hash="c", test_command=PY, tw_dir=str(sb.tw_dir),  # type: ignore[attr-defined]
-                             config=config, mode=mode, approver=approver, publisher=pub)  # type: ignore[arg-type]  # fmt: skip
+                             config=config, mode=mode, approver=approver, publisher=pub, verify=verify)  # type: ignore[arg-type]  # fmt: skip
     finally:
         await sb.finish("discard")  # type: ignore[attr-defined]
     return res, rec
@@ -178,6 +180,45 @@ async def test_ci_failure_triggers_fix_round_then_push(env: tuple) -> None:  # t
     text = "\n".join(m.content or "" for m in fix_req.messages)
     assert '<untrusted source="ci-log:test">' in text and "assert add(2, 0) == 2" in text
     assert "noqa" in res.diff
+
+
+def fake_verify(monkeypatch: pytest.MonkeyPatch, verdicts: list[str]) -> list[str]:
+    """把确定性验证换成按顺序给结论的假实现（真实流水线另有测试）；返回每次验证时的 diff 片段。"""
+    from triwitness.orchestrator.inprocess import InProcessOrchestrator
+
+    seen: list[str] = []
+
+    async def _verify(self: Any, finish: Any, patch: str, *a: Any) -> Any:
+        seen.append(patch)
+        v = verdicts.pop(0)
+        ev = SimpleNamespace(verdict=v, risk_level="L1")
+        return SimpleNamespace(evidence=ev, pr_body="## 证据包", feedback=lambda: "验证失败", reasons=[])
+
+    monkeypatch.setattr(InProcessOrchestrator, "_verify", _verify)
+    return seen
+
+
+async def test_ci_fix_reverified_before_push(env: tuple, monkeypatch: pytest.MonkeyPatch) -> None:  # type: ignore[type-arg]
+    """Eva 未答 W5 Q2 时的默认：CI 返工后先重跑验证（不重跑 Reviewer），通过才推送。"""
+    seen = fake_verify(monkeypatch, ["pass", "pass"])
+    pub = FakePublisher(["failure", "success"])
+    script = [*BASE, say(DOC), finish("补上修复")]
+    res, rec = await go(env, script, pub, cfg(L1="auto"), verify=VerifyOptions(backend=env[0]))
+    assert states(rec)[-9:] == ["packaging", "pr_opened", "ci_watch", "executing", "verifying", "packaging",
+                                "pr_opened", "ci_watch", "done"]  # fmt: skip
+    assert pub.pushed == [1] and res.verify_rounds == 2 and "noqa" in seen[-1]
+    assert pub.opened[0][1] == "## 证据包"
+
+
+async def test_ci_fix_failing_verification_is_not_pushed(env: tuple, monkeypatch: pytest.MonkeyPatch) -> None:  # type: ignore[type-arg]
+    fake_verify(monkeypatch, ["pass", "fail"])
+    pub = FakePublisher(["failure", "success"])
+    script = [*BASE, say(DOC), finish("补上修复")]
+    res, rec = await go(env, script, pub, cfg(L1="auto"), verify=VerifyOptions(backend=env[0]))
+    assert res.status == "done" and not pub.pushed and pub.watched == ["sha0"]
+    assert states(rec)[-4:] == ["executing", "verifying", "packaging", "done"]
+    assert "未通过验证，未推送" in kinds(rec, "state_change")[-1]["display"]
+    assert res.verification is not None and res.verification.evidence.verdict == "fail"
 
 
 async def test_ci_still_failing_after_max_rounds(env: tuple) -> None:  # type: ignore[type-arg]

@@ -1,0 +1,1885 @@
+{
+ "total_rows": 2860,
+ "stats": {
+  "需要系统包 / conda": 1325,
+  "改动文件数 / 非 .py": 501,
+  "入选": 185,
+  "已尝试 / 已收录": 177,
+  "Python 3.6": 114,
+  "依赖过重 / 非 pip 安装": 105,
+  "Python 3.7": 95,
+  "同仓库已有 2 个候选": 76,
+  "P2P 数量": 65,
+  "Python 3.8": 43,
+  "许可证 NOASSERTION": 29,
+  "补丁 > 80 行": 29,
+  "Issue 长度": 20,
+  "安装命令复杂": 20,
+  "非 pytest": 19,
+  "Python 3.5": 16,
+  "F2P 数量": 14,
+  "测试补丁改了非测试文件": 11,
+  "许可证 NONE": 6,
+  "许可证 LGPL-2.1": 2,
+  "测试 id 非 pytest 节点": 1,
+  "许可证 GPL-3.0": 1,
+  "许可证 AGPL-3.0": 1,
+  "许可证 MPL-2.0": 1,
+  "Python 3.13.1": 1,
+  "许可证 PostgreSQL License": 1,
+  "Python 3.4": 1,
+  "Python 2.7": 1
+ },
+ "candidates": [
+  {
+   "instance_id": "getmoto__moto-9727",
+   "source": "nebius/SWE-rebench-leaderboard:2026_02",
+   "repo": "getmoto/moto",
+   "license": "Apache-2.0",
+   "created_at": "2026-02-09",
+   "patch_lines": 24,
+   "f2p": 1,
+   "p2p": 30
+  },
+  {
+   "instance_id": "pab1it0__prometheus-mcp-server-76",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "pab1it0/prometheus-mcp-server",
+   "license": "MIT",
+   "created_at": "2025-09-21",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 25
+  },
+  {
+   "instance_id": "pasqal-io__Pulser-936",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "pasqal-io/Pulser",
+   "license": "Apache-2.0",
+   "created_at": "2025-09-18",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 22
+  },
+  {
+   "instance_id": "reframe-hpc__reframe-3553",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "reframe-hpc/reframe",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-09-17",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 111
+  },
+  {
+   "instance_id": "a2aproject__a2a-python-472",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "a2aproject/a2a-python",
+   "license": "Apache-2.0",
+   "created_at": "2025-09-13",
+   "patch_lines": 56,
+   "f2p": 4,
+   "p2p": 77
+  },
+  {
+   "instance_id": "prometheus__client_python-1134",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "prometheus/client_python",
+   "license": "Apache-2.0",
+   "created_at": "2025-09-11",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 28
+  },
+  {
+   "instance_id": "canopen-python__canopen-613",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "canopen-python/canopen",
+   "license": "MIT",
+   "created_at": "2025-09-04",
+   "patch_lines": 53,
+   "f2p": 2,
+   "p2p": 6
+  },
+  {
+   "instance_id": "aws-powertools__powertools-lambda-python-7315",
+   "source": "nebius/SWE-rebench-leaderboard:2025_09",
+   "repo": "aws-powertools/powertools-lambda-python",
+   "license": "MIT-0",
+   "created_at": "2025-09-04",
+   "patch_lines": 49,
+   "f2p": 2,
+   "p2p": 57
+  },
+  {
+   "instance_id": "macbre__sql-metadata-583",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "macbre/sql-metadata",
+   "license": "MIT",
+   "created_at": "2025-08-25",
+   "patch_lines": 1,
+   "f2p": 1,
+   "p2p": 23
+  },
+  {
+   "instance_id": "iterative__dvc-10844",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "iterative/dvc",
+   "license": "Apache-2.0",
+   "created_at": "2025-08-15",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 31
+  },
+  {
+   "instance_id": "openatx__adbutils-188",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "openatx/adbutils",
+   "license": "MIT",
+   "created_at": "2025-08-14",
+   "patch_lines": 2,
+   "f2p": 2,
+   "p2p": 4
+  },
+  {
+   "instance_id": "mpmath__mpmath-992",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "mpmath/mpmath",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-08-14",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 59
+  },
+  {
+   "instance_id": "google__adk-python-2478",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "google/adk-python",
+   "license": "Apache-2.0",
+   "created_at": "2025-08-12",
+   "patch_lines": 23,
+   "f2p": 2,
+   "p2p": 8
+  },
+  {
+   "instance_id": "yukinarit__pyserde-657",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "yukinarit/pyserde",
+   "license": "MIT",
+   "created_at": "2025-08-10",
+   "patch_lines": 13,
+   "f2p": 5,
+   "p2p": 7
+  },
+  {
+   "instance_id": "vprusso__toqito-1298",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "vprusso/toqito",
+   "license": "MIT",
+   "created_at": "2025-08-09",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 26
+  },
+  {
+   "instance_id": "gidgethub__gidgethub-225",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "gidgethub/gidgethub",
+   "license": "Apache-2.0",
+   "created_at": "2025-08-08",
+   "patch_lines": 5,
+   "f2p": 1,
+   "p2p": 56
+  },
+  {
+   "instance_id": "microsoft__fabric-cicd-465",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "microsoft/fabric-cicd",
+   "license": "MIT",
+   "created_at": "2025-08-06",
+   "patch_lines": 75,
+   "f2p": 3,
+   "p2p": 23
+  },
+  {
+   "instance_id": "neurostuff__NiMARE-939",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "neurostuff/NiMARE",
+   "license": "MIT",
+   "created_at": "2025-08-05",
+   "patch_lines": 8,
+   "f2p": 1,
+   "p2p": 27
+  },
+  {
+   "instance_id": "reagento__dishka-512",
+   "source": "nebius/SWE-rebench-leaderboard:2025_08",
+   "repo": "reagento/dishka",
+   "license": "Apache-2.0",
+   "created_at": "2025-08-02",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 14
+  },
+  {
+   "instance_id": "boxed__mutmut-403",
+   "source": "nebius/SWE-rebench-leaderboard:2025_07",
+   "repo": "boxed/mutmut",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-07-03",
+   "patch_lines": 8,
+   "f2p": 2,
+   "p2p": 132
+  },
+  {
+   "instance_id": "microsoft__fabric-cicd-394",
+   "source": "nebius/SWE-rebench-leaderboard:2025_07",
+   "repo": "microsoft/fabric-cicd",
+   "license": "MIT",
+   "created_at": "2025-07-03",
+   "patch_lines": 16,
+   "f2p": 5,
+   "p2p": 14
+  },
+  {
+   "instance_id": "lincc-frameworks__nested-pandas-302",
+   "source": "nebius/SWE-rebench-leaderboard:2025_07",
+   "repo": "lincc-frameworks/nested-pandas",
+   "license": "MIT",
+   "created_at": "2025-07-02",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 54
+  },
+  {
+   "instance_id": "matthewwithanm__python-markdownify-230",
+   "source": "nebius/SWE-rebench-leaderboard:2025_06",
+   "repo": "matthewwithanm/python-markdownify",
+   "license": "MIT",
+   "created_at": "2025-06-29",
+   "patch_lines": 23,
+   "f2p": 1,
+   "p2p": 49
+  },
+  {
+   "instance_id": "marcosschroh__dataclasses-avroschema-870",
+   "source": "nebius/SWE-rebench-leaderboard:2025_06",
+   "repo": "marcosschroh/dataclasses-avroschema",
+   "license": "MIT",
+   "created_at": "2025-06-26",
+   "patch_lines": 25,
+   "f2p": 1,
+   "p2p": 13
+  },
+  {
+   "instance_id": "bodo-ai__PyDough-368",
+   "source": "nebius/SWE-rebench-leaderboard:2025_06",
+   "repo": "bodo-ai/PyDough",
+   "license": "Apache-2.0",
+   "created_at": "2025-06-15",
+   "patch_lines": 23,
+   "f2p": 1,
+   "p2p": 127
+  },
+  {
+   "instance_id": "feder-observatory__stellarphot-526",
+   "source": "nebius/SWE-rebench-leaderboard:2025_06",
+   "repo": "feder-observatory/stellarphot",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-06-12",
+   "patch_lines": 5,
+   "f2p": 2,
+   "p2p": 47
+  },
+  {
+   "instance_id": "yt-dlp__yt-dlp-13403",
+   "source": "nebius/SWE-rebench-leaderboard:2025_06",
+   "repo": "yt-dlp/yt-dlp",
+   "license": "Unlicense",
+   "created_at": "2025-06-05",
+   "patch_lines": 28,
+   "f2p": 2,
+   "p2p": 70
+  },
+  {
+   "instance_id": "trinodb__trino-python-client-564",
+   "source": "nebius/SWE-rebench-leaderboard:2025_06",
+   "repo": "trinodb/trino-python-client",
+   "license": "Apache-2.0",
+   "created_at": "2025-06-04",
+   "patch_lines": 15,
+   "f2p": 3,
+   "p2p": 13
+  },
+  {
+   "instance_id": "pgmpy__pgmpy-2111",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "pgmpy/pgmpy",
+   "license": "MIT",
+   "created_at": "2025-05-25",
+   "patch_lines": 7,
+   "f2p": 1,
+   "p2p": 3
+  },
+  {
+   "instance_id": "pgmpy__pgmpy-2098",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "pgmpy/pgmpy",
+   "license": "MIT",
+   "created_at": "2025-05-23",
+   "patch_lines": 2,
+   "f2p": 2,
+   "p2p": 12
+  },
+  {
+   "instance_id": "stfc__PSyclone-2999",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "stfc/PSyclone",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-05-20",
+   "patch_lines": 13,
+   "f2p": 1,
+   "p2p": 81
+  },
+  {
+   "instance_id": "pasqal-io__Pulser-865",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "pasqal-io/Pulser",
+   "license": "Apache-2.0",
+   "created_at": "2025-05-16",
+   "patch_lines": 59,
+   "f2p": 3,
+   "p2p": 21
+  },
+  {
+   "instance_id": "dstl__Stone-Soup-1167",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "dstl/Stone-Soup",
+   "license": "MIT",
+   "created_at": "2025-05-15",
+   "patch_lines": 3,
+   "f2p": 4,
+   "p2p": 42
+  },
+  {
+   "instance_id": "lincc-frameworks__nested-pandas-261",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "lincc-frameworks/nested-pandas",
+   "license": "MIT",
+   "created_at": "2025-05-09",
+   "patch_lines": 34,
+   "f2p": 1,
+   "p2p": 51
+  },
+  {
+   "instance_id": "MahjongRepository__mahjong-62",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "MahjongRepository/mahjong",
+   "license": "MIT",
+   "created_at": "2025-05-09",
+   "patch_lines": 39,
+   "f2p": 1,
+   "p2p": 4
+  },
+  {
+   "instance_id": "Aunsiels__pyformlang-35",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "Aunsiels/pyformlang",
+   "license": "MIT",
+   "created_at": "2025-05-09",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 46
+  },
+  {
+   "instance_id": "modin-project__modin-7560",
+   "source": "nebius/SWE-rebench-leaderboard:2025_05",
+   "repo": "modin-project/modin",
+   "license": "Apache-2.0",
+   "created_at": "2025-05-05",
+   "patch_lines": 32,
+   "f2p": 1,
+   "p2p": 72
+  },
+  {
+   "instance_id": "fox-it__dissect.cstruct-120",
+   "source": "nebius/SWE-rebench-leaderboard:2025_04",
+   "repo": "fox-it/dissect.cstruct",
+   "license": "Apache-2.0",
+   "created_at": "2025-04-28",
+   "patch_lines": 22,
+   "f2p": 3,
+   "p2p": 64
+  },
+  {
+   "instance_id": "scipp__plopp-428",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "scipp/plopp",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-03-26",
+   "patch_lines": 10,
+   "f2p": 4,
+   "p2p": 118
+  },
+  {
+   "instance_id": "Davidyz__VectorCode-27",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "Davidyz/VectorCode",
+   "license": "MIT",
+   "created_at": "2025-03-21",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "iris-hep__func_adl-184",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "iris-hep/func_adl",
+   "license": "MIT",
+   "created_at": "2025-03-21",
+   "patch_lines": 6,
+   "f2p": 4,
+   "p2p": 35
+  },
+  {
+   "instance_id": "sdv-dev__SDMetrics-749",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "sdv-dev/SDMetrics",
+   "license": "MIT",
+   "created_at": "2025-03-18",
+   "patch_lines": 2,
+   "f2p": 2,
+   "p2p": 15
+  },
+  {
+   "instance_id": "ej2__python-quickbooks-381",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "ej2/python-quickbooks",
+   "license": "MIT",
+   "created_at": "2025-03-16",
+   "patch_lines": 44,
+   "f2p": 5,
+   "p2p": 19
+  },
+  {
+   "instance_id": "dpkp__kafka-python-2548",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "dpkp/kafka-python",
+   "license": "Apache-2.0",
+   "created_at": "2025-03-16",
+   "patch_lines": 43,
+   "f2p": 2,
+   "p2p": 28
+  },
+  {
+   "instance_id": "scipp__plopp-422",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "scipp/plopp",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-03-10",
+   "patch_lines": 25,
+   "f2p": 2,
+   "p2p": 124
+  },
+  {
+   "instance_id": "tefra__xsdata-1126",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "tefra/xsdata",
+   "license": "MIT",
+   "created_at": "2025-03-08",
+   "patch_lines": 41,
+   "f2p": 1,
+   "p2p": 27
+  },
+  {
+   "instance_id": "streamlink__streamlink-6455",
+   "source": "nebius/SWE-rebench-leaderboard:2025_03",
+   "repo": "streamlink/streamlink",
+   "license": "BSD-2-Clause",
+   "created_at": "2025-03-01",
+   "patch_lines": 19,
+   "f2p": 2,
+   "p2p": 27
+  },
+  {
+   "instance_id": "scikit-rf__scikit-rf-1256",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "scikit-rf/scikit-rf",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-02-22",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 132
+  },
+  {
+   "instance_id": "modelcontextprotocol__python-sdk-222",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "modelcontextprotocol/python-sdk",
+   "license": "MIT",
+   "created_at": "2025-02-20",
+   "patch_lines": 33,
+   "f2p": 9,
+   "p2p": 46
+  },
+  {
+   "instance_id": "allenai__rslearn-142",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "allenai/rslearn",
+   "license": "Apache-2.0",
+   "created_at": "2025-02-19",
+   "patch_lines": 54,
+   "f2p": 1,
+   "p2p": 3
+  },
+  {
+   "instance_id": "streamlink__streamlink-6439",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "streamlink/streamlink",
+   "license": "BSD-2-Clause",
+   "created_at": "2025-02-18",
+   "patch_lines": 4,
+   "f2p": 3,
+   "p2p": 16
+  },
+  {
+   "instance_id": "stefmolin__data-morph-265",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "stefmolin/data-morph",
+   "license": "MIT",
+   "created_at": "2025-02-12",
+   "patch_lines": 57,
+   "f2p": 9,
+   "p2p": 50
+  },
+  {
+   "instance_id": "asottile__dead-204",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "asottile/dead",
+   "license": "MIT",
+   "created_at": "2025-02-08",
+   "patch_lines": 16,
+   "f2p": 1,
+   "p2p": 31
+  },
+  {
+   "instance_id": "modin-project__modin-7434",
+   "source": "nebius/SWE-rebench-leaderboard:2025_02",
+   "repo": "modin-project/modin",
+   "license": "Apache-2.0",
+   "created_at": "2025-02-06",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 4
+  },
+  {
+   "instance_id": "valohai__valohai-cli-321",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "valohai/valohai-cli",
+   "license": "MIT",
+   "created_at": "2025-01-30",
+   "patch_lines": 2,
+   "f2p": 2,
+   "p2p": 68
+  },
+  {
+   "instance_id": "ipython__ipython-14695",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "ipython/ipython",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-01-29",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 107
+  },
+  {
+   "instance_id": "ipython__ipython-14693",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "ipython/ipython",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-01-29",
+   "patch_lines": 49,
+   "f2p": 1,
+   "p2p": 106
+  },
+  {
+   "instance_id": "brightway-lca__brightway2-data-235",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "brightway-lca/brightway2-data",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-01-28",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 27
+  },
+  {
+   "instance_id": "googlefonts__glyphsLib-1060",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "googlefonts/glyphsLib",
+   "license": "Apache-2.0",
+   "created_at": "2025-01-23",
+   "patch_lines": 14,
+   "f2p": 2,
+   "p2p": 186
+  },
+  {
+   "instance_id": "huggingface__smolagents-285",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "huggingface/smolagents",
+   "license": "Apache-2.0",
+   "created_at": "2025-01-21",
+   "patch_lines": 67,
+   "f2p": 1,
+   "p2p": 64
+  },
+  {
+   "instance_id": "rayokota__jsonata-python-14",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "rayokota/jsonata-python",
+   "license": "Apache-2.0",
+   "created_at": "2025-01-18",
+   "patch_lines": 5,
+   "f2p": 1,
+   "p2p": 10
+  },
+  {
+   "instance_id": "probabl-ai__skore-1154",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "probabl-ai/skore",
+   "license": "MIT",
+   "created_at": "2025-01-18",
+   "patch_lines": 8,
+   "f2p": 3,
+   "p2p": 9
+  },
+  {
+   "instance_id": "getsentry__sentry-python-3942",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "getsentry/sentry-python",
+   "license": "MIT",
+   "created_at": "2025-01-17",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 196
+  },
+  {
+   "instance_id": "duo-labs__py_webauthn-241",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "duo-labs/py_webauthn",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-01-16",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 10
+  },
+  {
+   "instance_id": "instructlab__sdg-484",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "instructlab/sdg",
+   "license": "Apache-2.0",
+   "created_at": "2025-01-16",
+   "patch_lines": 47,
+   "f2p": 1,
+   "p2p": 7
+  },
+  {
+   "instance_id": "probabl-ai__skore-1136",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "probabl-ai/skore",
+   "license": "MIT",
+   "created_at": "2025-01-16",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 17
+  },
+  {
+   "instance_id": "owkin__PyDESeq2-356",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "owkin/PyDESeq2",
+   "license": "MIT",
+   "created_at": "2025-01-10",
+   "patch_lines": 28,
+   "f2p": 1,
+   "p2p": 37
+  },
+  {
+   "instance_id": "brightway-lca__brightway2-io-294",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "brightway-lca/brightway2-io",
+   "license": "BSD-3-Clause",
+   "created_at": "2025-01-08",
+   "patch_lines": 10,
+   "f2p": 1,
+   "p2p": 7
+  },
+  {
+   "instance_id": "zarr-developers__zarr-python-2655",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "zarr-developers/zarr-python",
+   "license": "MIT",
+   "created_at": "2025-01-06",
+   "patch_lines": 8,
+   "f2p": 1,
+   "p2p": 226
+  },
+  {
+   "instance_id": "fjosw__pyerrors-253",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "fjosw/pyerrors",
+   "license": "MIT",
+   "created_at": "2025-01-06",
+   "patch_lines": 19,
+   "f2p": 2,
+   "p2p": 24
+  },
+  {
+   "instance_id": "googleapis__python-pubsub-1318",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "googleapis/python-pubsub",
+   "license": "Apache-2.0",
+   "created_at": "2025-01-06",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 32
+  },
+  {
+   "instance_id": "zarr-developers__zarr-python-2629",
+   "source": "nebius/SWE-rebench-leaderboard:2025_01",
+   "repo": "zarr-developers/zarr-python",
+   "license": "MIT",
+   "created_at": "2025-01-03",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 70
+  },
+  {
+   "instance_id": "aspuru-guzik-group__selfies-125",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "aspuru-guzik-group/selfies",
+   "license": "Apache-2.0",
+   "created_at": "2024-12-27",
+   "patch_lines": 38,
+   "f2p": 1,
+   "p2p": 24
+  },
+  {
+   "instance_id": "TeamGraphix__graphix-225",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "TeamGraphix/graphix",
+   "license": "Apache-2.0",
+   "created_at": "2024-10-14",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 311
+  },
+  {
+   "instance_id": "capitalone__datacompy-335",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "capitalone/datacompy",
+   "license": "Apache-2.0",
+   "created_at": "2024-09-29",
+   "patch_lines": 24,
+   "f2p": 3,
+   "p2p": 80
+  },
+  {
+   "instance_id": "adamtheturtle__doccmd-78",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "adamtheturtle/doccmd",
+   "license": "MIT",
+   "created_at": "2024-09-20",
+   "patch_lines": 10,
+   "f2p": 2,
+   "p2p": 20
+  },
+  {
+   "instance_id": "IAMconsortium__nomenclature-391",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "IAMconsortium/nomenclature",
+   "license": "Apache-2.0",
+   "created_at": "2024-09-17",
+   "patch_lines": 15,
+   "f2p": 3,
+   "p2p": 34
+  },
+  {
+   "instance_id": "IAMconsortium__nomenclature-390",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "IAMconsortium/nomenclature",
+   "license": "Apache-2.0",
+   "created_at": "2024-09-17",
+   "patch_lines": 13,
+   "f2p": 2,
+   "p2p": 14
+  },
+  {
+   "instance_id": "BoboTiG__ebook-reader-dict-2101",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "BoboTiG/ebook-reader-dict",
+   "license": "MIT",
+   "created_at": "2024-08-31",
+   "patch_lines": 7,
+   "f2p": 1,
+   "p2p": 46
+  },
+  {
+   "instance_id": "amjith__fuzzyfinder-19",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "amjith/fuzzyfinder",
+   "license": "BSD-3-Clause",
+   "created_at": "2024-08-28",
+   "patch_lines": 22,
+   "f2p": 1,
+   "p2p": 10
+  },
+  {
+   "instance_id": "altcha-org__altcha-lib-py-2",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "altcha-org/altcha-lib-py",
+   "license": "MIT",
+   "created_at": "2024-08-13",
+   "patch_lines": 5,
+   "f2p": 3,
+   "p2p": 9
+  },
+  {
+   "instance_id": "bvanelli__actualpy-55",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "bvanelli/actualpy",
+   "license": "MIT",
+   "created_at": "2024-08-13",
+   "patch_lines": 22,
+   "f2p": 1,
+   "p2p": 8
+  },
+  {
+   "instance_id": "Toloka__crowd-kit-109",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Toloka/crowd-kit",
+   "license": "Apache-2.0",
+   "created_at": "2024-07-29",
+   "patch_lines": 37,
+   "f2p": 2,
+   "p2p": 16
+  },
+  {
+   "instance_id": "batfish__pybatfish-918",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "batfish/pybatfish",
+   "license": "Apache-2.0",
+   "created_at": "2024-07-20",
+   "patch_lines": 16,
+   "f2p": 1,
+   "p2p": 8
+  },
+  {
+   "instance_id": "christiansandberg__canopen-506",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "christiansandberg/canopen",
+   "license": "MIT",
+   "created_at": "2024-07-09",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 11
+  },
+  {
+   "instance_id": "casbin__pycasbin-346",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "casbin/pycasbin",
+   "license": "Apache-2.0",
+   "created_at": "2024-06-11",
+   "patch_lines": 11,
+   "f2p": 2,
+   "p2p": 18
+  },
+  {
+   "instance_id": "BoboTiG__ebook-reader-dict-2054",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "BoboTiG/ebook-reader-dict",
+   "license": "MIT",
+   "created_at": "2024-06-07",
+   "patch_lines": 60,
+   "f2p": 2,
+   "p2p": 7
+  },
+  {
+   "instance_id": "biolink__biolink-model-toolkit-172",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "biolink/biolink-model-toolkit",
+   "license": "BSD-3-Clause",
+   "created_at": "2024-05-28",
+   "patch_lines": 26,
+   "f2p": 1,
+   "p2p": 81
+  },
+  {
+   "instance_id": "asottile__pyupgrade-939",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/pyupgrade",
+   "license": "MIT",
+   "created_at": "2024-03-24",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "conan-io__conan-15924",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "conan-io/conan",
+   "license": "MIT",
+   "created_at": "2024-03-22",
+   "patch_lines": 8,
+   "f2p": 1,
+   "p2p": 11
+  },
+  {
+   "instance_id": "burnash__gspread-1415",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "burnash/gspread",
+   "license": "MIT",
+   "created_at": "2024-02-16",
+   "patch_lines": 68,
+   "f2p": 1,
+   "p2p": 11
+  },
+  {
+   "instance_id": "dask__distributed-8447",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "dask/distributed",
+   "license": "BSD-3-Clause",
+   "created_at": "2024-01-10",
+   "patch_lines": 27,
+   "f2p": 1,
+   "p2p": 15
+  },
+  {
+   "instance_id": "aio-libs__aiocache-795",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "aio-libs/aiocache",
+   "license": "BSD-3-Clause",
+   "created_at": "2023-12-22",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 44
+  },
+  {
+   "instance_id": "codalab__codalab-worksheets-4578",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "codalab/codalab-worksheets",
+   "license": "Apache-2.0",
+   "created_at": "2023-11-15",
+   "patch_lines": 20,
+   "f2p": 1,
+   "p2p": 15
+  },
+  {
+   "instance_id": "byllyfish__precis_i18n-32",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "byllyfish/precis_i18n",
+   "license": "MIT",
+   "created_at": "2023-10-31",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 59
+  },
+  {
+   "instance_id": "burnash__gspread-1336",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "burnash/gspread",
+   "license": "MIT",
+   "created_at": "2023-10-28",
+   "patch_lines": 10,
+   "f2p": 1,
+   "p2p": 65
+  },
+  {
+   "instance_id": "asottile__pyupgrade-890",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/pyupgrade",
+   "license": "MIT",
+   "created_at": "2023-09-19",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 18
+  },
+  {
+   "instance_id": "cwacek__python-jsonschema-objects-261",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "cwacek/python-jsonschema-objects",
+   "license": "MIT",
+   "created_at": "2023-09-05",
+   "patch_lines": 11,
+   "f2p": 1,
+   "p2p": 46
+  },
+  {
+   "instance_id": "allo-media__text2num-96",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "allo-media/text2num",
+   "license": "MIT",
+   "created_at": "2023-08-14",
+   "patch_lines": 14,
+   "f2p": 2,
+   "p2p": 45
+  },
+  {
+   "instance_id": "awdeorio__mailmerge-155",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "awdeorio/mailmerge",
+   "license": "MIT",
+   "created_at": "2023-07-29",
+   "patch_lines": 8,
+   "f2p": 2,
+   "p2p": 15
+  },
+  {
+   "instance_id": "altair-viz__altair-3128",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "altair-viz/altair",
+   "license": "BSD-3-Clause",
+   "created_at": "2023-07-28",
+   "patch_lines": 30,
+   "f2p": 1,
+   "p2p": 24
+  },
+  {
+   "instance_id": "auth0__auth0-python-499",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "auth0/auth0-python",
+   "license": "MIT",
+   "created_at": "2023-06-22",
+   "patch_lines": 55,
+   "f2p": 1,
+   "p2p": 9
+  },
+  {
+   "instance_id": "EvoluxBR__greenswitch-83",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "EvoluxBR/greenswitch",
+   "license": "MIT",
+   "created_at": "2023-05-15",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "benmoran56__esper-81",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "benmoran56/esper",
+   "license": "MIT",
+   "created_at": "2023-04-20",
+   "patch_lines": 9,
+   "f2p": 3,
+   "p2p": 31
+  },
+  {
+   "instance_id": "PMEAL__porespy-809",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PMEAL/porespy",
+   "license": "MIT",
+   "created_at": "2023-03-15",
+   "patch_lines": 2,
+   "f2p": 2,
+   "p2p": 18
+  },
+  {
+   "instance_id": "datalad__datalad-next-257",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "datalad/datalad-next",
+   "license": "MIT",
+   "created_at": "2023-02-23",
+   "patch_lines": 16,
+   "f2p": 1,
+   "p2p": 4
+  },
+  {
+   "instance_id": "12rambau__sepal_ui-747",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "12rambau/sepal_ui",
+   "license": "MIT",
+   "created_at": "2023-02-08",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 8
+  },
+  {
+   "instance_id": "boolangery__py-lua-parser-32",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "boolangery/py-lua-parser",
+   "license": "MIT",
+   "created_at": "2023-02-07",
+   "patch_lines": 1,
+   "f2p": 3,
+   "p2p": 43
+  },
+  {
+   "instance_id": "astanin__python-tabulate-243",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "astanin/python-tabulate",
+   "license": "MIT",
+   "created_at": "2023-01-27",
+   "patch_lines": 35,
+   "f2p": 2,
+   "p2p": 191
+  },
+  {
+   "instance_id": "Parquery__swagger-to-141",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Parquery/swagger-to",
+   "license": "MIT",
+   "created_at": "2023-01-26",
+   "patch_lines": 12,
+   "f2p": 1,
+   "p2p": 21
+  },
+  {
+   "instance_id": "RemDelaporteMathurin__h-transport-materials-118",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "RemDelaporteMathurin/h-transport-materials",
+   "license": "MIT",
+   "created_at": "2023-01-06",
+   "patch_lines": 20,
+   "f2p": 1,
+   "p2p": 26
+  },
+  {
+   "instance_id": "CS-SI__eodag-588",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "CS-SI/eodag",
+   "license": "Apache-2.0",
+   "created_at": "2022-12-20",
+   "patch_lines": 25,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "Sceptre__sceptre-1277",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Sceptre/sceptre",
+   "license": "Apache-2.0",
+   "created_at": "2022-12-14",
+   "patch_lines": 25,
+   "f2p": 1,
+   "p2p": 8
+  },
+  {
+   "instance_id": "cytomining__pycytominer-246",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "cytomining/pycytominer",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-12-07",
+   "patch_lines": 29,
+   "f2p": 3,
+   "p2p": 14
+  },
+  {
+   "instance_id": "12rambau__sepal_ui-646",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "12rambau/sepal_ui",
+   "license": "MIT",
+   "created_at": "2022-11-29",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "PyCQA__pyflakes-754",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PyCQA/pyflakes",
+   "license": "MIT",
+   "created_at": "2022-11-27",
+   "patch_lines": 34,
+   "f2p": 1,
+   "p2p": 41
+  },
+  {
+   "instance_id": "awelzel__flake8-gl-codeclimate-15",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "awelzel/flake8-gl-codeclimate",
+   "license": "MIT",
+   "created_at": "2022-11-19",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 7
+  },
+  {
+   "instance_id": "PyCQA__isort-1995",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PyCQA/isort",
+   "license": "MIT",
+   "created_at": "2022-11-11",
+   "patch_lines": 6,
+   "f2p": 2,
+   "p2p": 46
+  },
+  {
+   "instance_id": "cytomining__pycytominer-238",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "cytomining/pycytominer",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-11-03",
+   "patch_lines": 11,
+   "f2p": 2,
+   "p2p": 11
+  },
+  {
+   "instance_id": "PyCQA__flake8-1726",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PyCQA/flake8",
+   "license": "MIT",
+   "created_at": "2022-10-30",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 22
+  },
+  {
+   "instance_id": "Wortmeister-HQ__zahlwort2num-6",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Wortmeister-HQ/zahlwort2num",
+   "license": "MIT",
+   "created_at": "2022-10-28",
+   "patch_lines": 1,
+   "f2p": 2,
+   "p2p": 6
+  },
+  {
+   "instance_id": "barrust__pyspellchecker-132",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "barrust/pyspellchecker",
+   "license": "MIT",
+   "created_at": "2022-08-29",
+   "patch_lines": 7,
+   "f2p": 2,
+   "p2p": 45
+  },
+  {
+   "instance_id": "andialbrecht__sqlparse-676",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "andialbrecht/sqlparse",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-08-16",
+   "patch_lines": 11,
+   "f2p": 1,
+   "p2p": 47
+  },
+  {
+   "instance_id": "SmileyChris__django-countries-394",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "SmileyChris/django-countries",
+   "license": "MIT",
+   "created_at": "2022-08-15",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 91
+  },
+  {
+   "instance_id": "NeurodataWithoutBorders__pynwb-1538",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "NeurodataWithoutBorders/pynwb",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-08-11",
+   "patch_lines": 34,
+   "f2p": 2,
+   "p2p": 92
+  },
+  {
+   "instance_id": "commitizen-tools__commitizen-539",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "commitizen-tools/commitizen",
+   "license": "MIT",
+   "created_at": "2022-07-26",
+   "patch_lines": 22,
+   "f2p": 1,
+   "p2p": 43
+  },
+  {
+   "instance_id": "Sceptre__sceptre-1249",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Sceptre/sceptre",
+   "license": "Apache-2.0",
+   "created_at": "2022-07-22",
+   "patch_lines": 13,
+   "f2p": 2,
+   "p2p": 40
+  },
+  {
+   "instance_id": "PyCQA__flake8-bugbear-261",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PyCQA/flake8-bugbear",
+   "license": "MIT",
+   "created_at": "2022-06-12",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 35
+  },
+  {
+   "instance_id": "dapr__python-sdk-402",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "dapr/python-sdk",
+   "license": "Apache-2.0",
+   "created_at": "2022-05-03",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 17
+  },
+  {
+   "instance_id": "Textualize__textual-441",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Textualize/textual",
+   "license": "MIT",
+   "created_at": "2022-04-28",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 15
+  },
+  {
+   "instance_id": "David-Wobrock__sqlvalidator-43",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "David-Wobrock/sqlvalidator",
+   "license": "MIT",
+   "created_at": "2022-04-15",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 163
+  },
+  {
+   "instance_id": "David-Wobrock__sqlvalidator-40",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "David-Wobrock/sqlvalidator",
+   "license": "MIT",
+   "created_at": "2022-04-15",
+   "patch_lines": 34,
+   "f2p": 4,
+   "p2p": 234
+  },
+  {
+   "instance_id": "Bachmann1234__diff_cover-277",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Bachmann1234/diff_cover",
+   "license": "Apache-2.0",
+   "created_at": "2022-04-14",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 80
+  },
+  {
+   "instance_id": "bids-standard__pybids-836",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "bids-standard/pybids",
+   "license": "MIT",
+   "created_at": "2022-04-11",
+   "patch_lines": 23,
+   "f2p": 1,
+   "p2p": 25
+  },
+  {
+   "instance_id": "asottile__setup-cfg-fmt-132",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/setup-cfg-fmt",
+   "license": "MIT",
+   "created_at": "2022-04-02",
+   "patch_lines": 16,
+   "f2p": 1,
+   "p2p": 52
+  },
+  {
+   "instance_id": "Dorthu__openapi3-83",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Dorthu/openapi3",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-03-18",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 13
+  },
+  {
+   "instance_id": "aspuru-guzik-group__selfies-78",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "aspuru-guzik-group/selfies",
+   "license": "Apache-2.0",
+   "created_at": "2022-02-19",
+   "patch_lines": 8,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "StingraySoftware__stingray-634",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "StingraySoftware/stingray",
+   "license": "MIT",
+   "created_at": "2022-02-17",
+   "patch_lines": 28,
+   "f2p": 1,
+   "p2p": 24
+  },
+  {
+   "instance_id": "NREL__floris-312",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "NREL/floris",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-02-11",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 10
+  },
+  {
+   "instance_id": "click-contrib__sphinx-click-94",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "click-contrib/sphinx-click",
+   "license": "MIT",
+   "created_at": "2022-02-01",
+   "patch_lines": 27,
+   "f2p": 1,
+   "p2p": 15
+  },
+  {
+   "instance_id": "beartype__beartype-88",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "beartype/beartype",
+   "license": "MIT",
+   "created_at": "2022-01-27",
+   "patch_lines": 69,
+   "f2p": 1,
+   "p2p": 3
+  },
+  {
+   "instance_id": "dask__distributed-5699",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "dask/distributed",
+   "license": "BSD-3-Clause",
+   "created_at": "2022-01-25",
+   "patch_lines": 28,
+   "f2p": 5,
+   "p2p": 18
+  },
+  {
+   "instance_id": "Materials-Consortia__optimade-python-tools-1001",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Materials-Consortia/optimade-python-tools",
+   "license": "MIT",
+   "created_at": "2021-11-21",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 34
+  },
+  {
+   "instance_id": "asottile__add-trailing-comma-154",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/add-trailing-comma",
+   "license": "MIT",
+   "created_at": "2021-11-20",
+   "patch_lines": 34,
+   "f2p": 1,
+   "p2p": 13
+  },
+  {
+   "instance_id": "NREL__hescore-hpxml-170",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "NREL/hescore-hpxml",
+   "license": "BSD-2-Clause",
+   "created_at": "2021-11-18",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 162
+  },
+  {
+   "instance_id": "arrow-py__arrow-1035",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "arrow-py/arrow",
+   "license": "Apache-2.0",
+   "created_at": "2021-09-05",
+   "patch_lines": 3,
+   "f2p": 1,
+   "p2p": 48
+  },
+  {
+   "instance_id": "cdent__gabbi-302",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "cdent/gabbi",
+   "license": "Apache-2.0",
+   "created_at": "2021-09-02",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 32
+  },
+  {
+   "instance_id": "astanin__python-tabulate-139",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "astanin/python-tabulate",
+   "license": "MIT",
+   "created_at": "2021-08-19",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 107
+  },
+  {
+   "instance_id": "awdeorio__mailmerge-135",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "awdeorio/mailmerge",
+   "license": "MIT",
+   "created_at": "2021-07-19",
+   "patch_lines": 7,
+   "f2p": 1,
+   "p2p": 26
+  },
+  {
+   "instance_id": "andialbrecht__sqlparse-633",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "andialbrecht/sqlparse",
+   "license": "BSD-3-Clause",
+   "created_at": "2021-07-19",
+   "patch_lines": 27,
+   "f2p": 1,
+   "p2p": 48
+  },
+  {
+   "instance_id": "Bachmann1234__diff_cover-210",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Bachmann1234/diff_cover",
+   "license": "Apache-2.0",
+   "created_at": "2021-06-29",
+   "patch_lines": 14,
+   "f2p": 1,
+   "p2p": 5
+  },
+  {
+   "instance_id": "arrow-py__arrow-986",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "arrow-py/arrow",
+   "license": "Apache-2.0",
+   "created_at": "2021-06-06",
+   "patch_lines": 9,
+   "f2p": 2,
+   "p2p": 208
+  },
+  {
+   "instance_id": "Materials-Consortia__optimade-python-tools-813",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Materials-Consortia/optimade-python-tools",
+   "license": "MIT",
+   "created_at": "2021-05-24",
+   "patch_lines": 78,
+   "f2p": 6,
+   "p2p": 24
+  },
+  {
+   "instance_id": "Qiskit__qiskit-bot-11",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Qiskit/qiskit-bot",
+   "license": "Apache-2.0",
+   "created_at": "2021-05-17",
+   "patch_lines": 6,
+   "f2p": 2,
+   "p2p": 30
+  },
+  {
+   "instance_id": "beetbox__mediafile-46",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "beetbox/mediafile",
+   "license": "MIT",
+   "created_at": "2021-05-13",
+   "patch_lines": 25,
+   "f2p": 1,
+   "p2p": 384
+  },
+  {
+   "instance_id": "canonical__operator-507",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "canonical/operator",
+   "license": "Apache-2.0",
+   "created_at": "2021-04-14",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 95
+  },
+  {
+   "instance_id": "PMEAL__porespy-465",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PMEAL/porespy",
+   "license": "MIT",
+   "created_at": "2021-04-07",
+   "patch_lines": 8,
+   "f2p": 1,
+   "p2p": 56
+  },
+  {
+   "instance_id": "barrust__pyspellchecker-101",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "barrust/pyspellchecker",
+   "license": "MIT",
+   "created_at": "2021-03-23",
+   "patch_lines": 4,
+   "f2p": 4,
+   "p2p": 40
+  },
+  {
+   "instance_id": "AzureAD__microsoft-authentication-library-for-python-315",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "AzureAD/microsoft-authentication-library-for-python",
+   "license": "MIT",
+   "created_at": "2021-03-02",
+   "patch_lines": 19,
+   "f2p": 6,
+   "p2p": 38
+  },
+  {
+   "instance_id": "Dorthu__openapi3-30",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Dorthu/openapi3",
+   "license": "BSD-3-Clause",
+   "created_at": "2021-01-21",
+   "patch_lines": 4,
+   "f2p": 1,
+   "p2p": 5
+  },
+  {
+   "instance_id": "ably__ably-python-161",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "ably/ably-python",
+   "license": "Apache-2.0",
+   "created_at": "2021-01-19",
+   "patch_lines": 8,
+   "f2p": 1,
+   "p2p": 8
+  },
+  {
+   "instance_id": "asottile__astpretty-41",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/astpretty",
+   "license": "MIT",
+   "created_at": "2020-12-28",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 20
+  },
+  {
+   "instance_id": "0b01001001__spectree-64",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "0b01001001/spectree",
+   "license": "Apache-2.0",
+   "created_at": "2020-10-12",
+   "patch_lines": 5,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "alexgolec__tda-api-105",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "alexgolec/tda-api",
+   "license": "MIT",
+   "created_at": "2020-09-11",
+   "patch_lines": 27,
+   "f2p": 5,
+   "p2p": 10
+  },
+  {
+   "instance_id": "alanmcruickshank__sqlfluff-336",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "alanmcruickshank/sqlfluff",
+   "license": "MIT",
+   "created_at": "2020-05-16",
+   "patch_lines": 4,
+   "f2p": 2,
+   "p2p": 40
+  },
+  {
+   "instance_id": "asottile__dead-37",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/dead",
+   "license": "MIT",
+   "created_at": "2020-03-10",
+   "patch_lines": 1,
+   "f2p": 1,
+   "p2p": 25
+  },
+  {
+   "instance_id": "Shopify__shopify_python_api-354",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Shopify/shopify_python_api",
+   "license": "MIT",
+   "created_at": "2020-01-27",
+   "patch_lines": 61,
+   "f2p": 1,
+   "p2p": 6
+  },
+  {
+   "instance_id": "chrahunt__hlp-15",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "chrahunt/hlp",
+   "license": "MIT",
+   "created_at": "2019-09-29",
+   "patch_lines": 15,
+   "f2p": 1,
+   "p2p": 11
+  },
+  {
+   "instance_id": "aarande__nexradaws-9",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "aarande/nexradaws",
+   "license": "MIT",
+   "created_at": "2019-08-26",
+   "patch_lines": 11,
+   "f2p": 4,
+   "p2p": 16
+  },
+  {
+   "instance_id": "asottile__add-trailing-comma-85",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "asottile/add-trailing-comma",
+   "license": "MIT",
+   "created_at": "2019-07-05",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 73
+  },
+  {
+   "instance_id": "caronc__apprise-119",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "caronc/apprise",
+   "license": "BSD-2-Clause",
+   "created_at": "2019-06-05",
+   "patch_lines": 28,
+   "f2p": 2,
+   "p2p": 4
+  },
+  {
+   "instance_id": "LordGolias__sqf-47",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "LordGolias/sqf",
+   "license": "BSD-3-Clause",
+   "created_at": "2018-09-02",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 201
+  },
+  {
+   "instance_id": "HXLStandard__libhxl-python-174",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "HXLStandard/libhxl-python",
+   "license": "Unlicense",
+   "created_at": "2018-05-30",
+   "patch_lines": 29,
+   "f2p": 1,
+   "p2p": 40
+  },
+  {
+   "instance_id": "ARMmbed__greentea-263",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "ARMmbed/greentea",
+   "license": "Apache-2.0",
+   "created_at": "2018-02-15",
+   "patch_lines": 31,
+   "f2p": 1,
+   "p2p": 55
+  },
+  {
+   "instance_id": "construct__construct-399",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "construct/construct",
+   "license": "MIT",
+   "created_at": "2017-09-12",
+   "patch_lines": 17,
+   "f2p": 1,
+   "p2p": 132
+  },
+  {
+   "instance_id": "aio-libs__aiosmtpd-106",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "aio-libs/aiosmtpd",
+   "license": "Apache-2.0",
+   "created_at": "2017-06-02",
+   "patch_lines": 9,
+   "f2p": 6,
+   "p2p": 85
+  },
+  {
+   "instance_id": "craffel__mir_eval-249",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "craffel/mir_eval",
+   "license": "MIT",
+   "created_at": "2017-04-14",
+   "patch_lines": 33,
+   "f2p": 2,
+   "p2p": 13
+  },
+  {
+   "instance_id": "ARMmbed__yotta-804",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "ARMmbed/yotta",
+   "license": "Apache-2.0",
+   "created_at": "2017-04-06",
+   "patch_lines": 2,
+   "f2p": 2,
+   "p2p": 10
+  },
+  {
+   "instance_id": "cherrypy__cherrypy-1578",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "cherrypy/cherrypy",
+   "license": "BSD-3-Clause",
+   "created_at": "2017-03-11",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 19
+  },
+  {
+   "instance_id": "Shopify__shopify_python_api-177",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "Shopify/shopify_python_api",
+   "license": "MIT",
+   "created_at": "2017-02-21",
+   "patch_lines": 2,
+   "f2p": 1,
+   "p2p": 5
+  },
+  {
+   "instance_id": "bear__python-twitter-439",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "bear/python-twitter",
+   "license": "Apache-2.0",
+   "created_at": "2017-02-14",
+   "patch_lines": 24,
+   "f2p": 1,
+   "p2p": 94
+  },
+  {
+   "instance_id": "PyCQA__mccabe-47",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "PyCQA/mccabe",
+   "license": "MIT",
+   "created_at": "2017-01-22",
+   "patch_lines": 9,
+   "f2p": 1,
+   "p2p": 12
+  },
+  {
+   "instance_id": "CybOXProject__mixbox-35",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "CybOXProject/mixbox",
+   "license": "BSD-3-Clause",
+   "created_at": "2017-01-06",
+   "patch_lines": 6,
+   "f2p": 1,
+   "p2p": 7
+  },
+  {
+   "instance_id": "bear__python-twitter-416",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "bear/python-twitter",
+   "license": "Apache-2.0",
+   "created_at": "2016-11-28",
+   "patch_lines": 15,
+   "f2p": 2,
+   "p2p": 5
+  },
+  {
+   "instance_id": "acorg__slurm-pipeline-8",
+   "source": "nebius/SWE-rebench:filtered",
+   "repo": "acorg/slurm-pipeline",
+   "license": "MIT",
+   "created_at": "2016-11-25",
+   "patch_lines": 34,
+   "f2p": 2,
+   "p2p": 39
+  }
+ ]
+}

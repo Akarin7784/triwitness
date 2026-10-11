@@ -129,7 +129,27 @@ def reject_reason(row: dict) -> str | None:
     return None
 
 
-def mine(out: Path, months: list[str], filtered_pages: int) -> None:
+def existing_tasks() -> tuple[set[str], Counter[str]]:
+    """已经尝试过的实例（所有构建日志）与已收录任务的仓库计数（W5 扩展集：同仓库总数仍 ≤ 2，且不重复尝试）。"""
+    import tomllib
+
+    tried: set[str] = set()
+    for p in (ROOT / "evals" / "factory").rglob("build_log*.json"):
+        tried |= set(json.loads(p.read_text()))
+    repos: Counter[str] = Counter()
+    for t in (ROOT / "evals" / "tasks").glob("*/*/task.toml"):
+        if t.parent.parent.name.startswith("_"):
+            continue
+        md = tomllib.loads(t.read_text(encoding="utf-8")).get("metadata") or {}
+        iid = str(md.get("instance_id") or "")
+        tried.add(iid)
+        if "__" in iid:
+            repos[iid.rsplit("-", 1)[0].replace("__", "/")] += 1
+    return tried, repos
+
+
+def mine(out: Path, months: list[str], filtered_pages: int, *, fetch_filtered: int = 0,
+         exclude_existing: bool = False) -> None:  # fmt: skip
     lic_cache_path = CACHE / "licenses.json"
     lic_cache: dict[str, str] = json.loads(lic_cache_path.read_text()) if lic_cache_path.exists() else {}
     sizes = splits(LEADERBOARD)
@@ -137,14 +157,23 @@ def mine(out: Path, months: list[str], filtered_pages: int) -> None:
     for m in months:
         rows += [(f"{LEADERBOARD}:{m}", r) for r in fetch_split(LEADERBOARD, m, sizes[m])]
     old = CACHE / "swe-rebench-rows.json"  # W1 导入时缓存的 filtered 拆分（较旧，用于 dev）
-    if old.exists():
+    if fetch_filtered:  # W5：直接按页拉 filtered 拆分（W1 的缓存不在时）
+        rows += [(f"{FILTERED}:filtered", r) for r in fetch_split(FILTERED, "filtered", fetch_filtered * 100)]
+    elif old.exists():
         rows += [
             (f"{FILTERED}:filtered", r) for r in list(json.loads(old.read_text()).values())[: filtered_pages * 100]
         ]
     stats: Counter[str] = Counter()
     seen_repo: Counter[str] = Counter()
+    tried: set[str] = set()
+    if exclude_existing:
+        tried, seen_repo = existing_tasks()
     cands = []
     for src, r in sorted(rows, key=lambda x: str(x[1]["created_at"]), reverse=True):
+        if r["instance_id"] in tried:
+            stats["已尝试 / 已收录"] += 1
+            continue
+        tried.add(r["instance_id"])  # 同一实例可能同时出现在 leaderboard 与 filtered
         why = reject_reason(r)
         spdx = ""
         if why is None:
@@ -198,15 +227,28 @@ FREEZE_LINE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.\-]*(\[[\w,\-]+\])?==[\w.\-+!]
 MIN_FREE_GB = 15  # 磁盘守卫：低于此值不再开始新构建（2026-10-10 vfs 驱动把 126G 共享盘写满两次）
 
 
+MAX_USED_PCT = 65  # W5：Eva 要求磁盘 < 70%；留 5% 给正在进行的构建
+
+
 def free_gb() -> float:
     return shutil.disk_usage("/var/lib/docker" if Path("/var/lib/docker").exists() else "/").free / 2**30
 
 
+def used_pct() -> float:
+    u = shutil.disk_usage("/var/lib/docker" if Path("/var/lib/docker").exists() else "/")
+    return 100 * u.used / u.total
+
+
+def disk_ok() -> bool:
+    return free_gb() >= MIN_FREE_GB and used_pct() < MAX_USED_PCT
+
+
 def build_one(cand: dict, row: dict, staging: str) -> dict:
     t0 = time.monotonic()
-    if free_gb() < MIN_FREE_GB:
+    if not disk_ok():
         rec = {k: cand[k] for k in ("instance_id", "source", "created_at")}
-        return rec | {"status": "error", "log": f"disk guard: free {free_gb():.1f}G < {MIN_FREE_GB}G", "seconds": 0}
+        log = f"disk guard: free {free_gb():.1f}G, used {used_pct():.0f}% (min {MIN_FREE_GB}G, max {MAX_USED_PCT}%)"
+        return rec | {"status": "error", "log": log, "seconds": 0}
     rec = _build_one(cand, row, staging)
     # 磁盘：每个任务做完就删镜像（tag 是内容哈希，评测时按需重建；rmi 连带删掉未被共享的父层）。
     # 不能无条件 prune：旧构建器的中间层是悬空镜像，并发 prune 会删掉别的构建正在用的层
@@ -292,10 +334,10 @@ def build(cands_path: Path, ids: list[str], workers: int, log_path: Path, stagin
     with ThreadPoolExecutor(workers) as ex:
         futs = {ex.submit(build_one, cands[i], rows[i], staging): i for i in todo}
         for f in as_completed(futs):
-            if free_gb() < MIN_FREE_GB:  # 已排队的不再开始（正在构建的跑完）；状态记为 error，下次 --retry error 续上
+            if not disk_ok():  # 已排队的不再开始（正在构建的跑完）；状态记为 error，下次 --retry error 续上
                 for other in futs:
                     other.cancel()
-                print(f"磁盘守卫：剩余 {free_gb():.1f}G < {MIN_FREE_GB}G，停止排队中的构建", flush=True)
+                print(f"磁盘守卫：剩余 {free_gb():.1f}G、已用 {used_pct():.0f}%，停止排队中的构建", flush=True)
             if f.cancelled():
                 continue
             r = f.result()
@@ -385,6 +427,51 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
     print(f"备用（通过校验但未入选）：{len(reserve)} 个")
 
 
+EXT_DESC = (
+    "扩展集（W5-12 / DF-08）：任务工厂加固版（匿名 ID、清洗 Issue、禁用 hooks），"
+    "SWE-rebench leaderboard 2025-01～2026-03 + filtered；与 dev / test 不重叠、同仓库合计 ≤ 2；"
+    "W5 只构建与校验，全量跑分在 Eva 本机"
+)
+
+
+def split_ext(log_path: Path, name: str = "ext") -> None:
+    """把扩展构建里通过三次去抖校验的任务搬到 evals/tasks/<name>/，写冻结套件 evals/suites/<name>.yaml。"""
+    import tomllib
+
+    from triwitness.eval.suites import Suite, SuiteTask, digest, dump_suite
+
+    rows = all_rows()
+    ok = [r for r in json.loads(log_path.read_text()).values() if r["status"] == "ok"]
+    dst_root = ROOT / "evals" / "tasks" / name
+    dst_root.mkdir(parents=True, exist_ok=True)
+    for r in ok:
+        src = Path(r["dir"])
+        dst = dst_root / src.name
+        if src.exists() and src != dst:
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.move(str(src), dst)
+        if r["instance_id"] in rows:
+            _set_meta(dst / "task.toml", "difficulty", difficulty(rows[r["instance_id"]]))
+        r["dir"] = str(dst)
+    log = json.loads(log_path.read_text())
+    log.update({r["instance_id"]: r for r in ok})
+    log_path.write_text(json.dumps(log, ensure_ascii=False, indent=1) + "\n")
+    dirs = sorted((p.parent for p in dst_root.glob("*/task.toml")), key=lambda p: p.name)
+    if not dirs:
+        raise SystemExit("扩展集没有通过校验的任务")
+
+    def entry(d: Path) -> SuiteTask:
+        meta = tomllib.loads((d / "task.toml").read_text(encoding="utf-8"))["metadata"]
+        src = meta.get("dataset", meta["source"])
+        month = next((r["source"].split(":")[1] for r in ok if Path(r["dir"]) == d and ":" in r["source"]), None)
+        return SuiteTask(id=d.name, source=f"{src}:{month}" if month else src, created_at=meta["created_at"],
+                         difficulty=meta["difficulty"], license=to_spdx(meta["license"]))  # fmt: skip
+
+    s = Suite(name=name, description=EXT_DESC, digest=digest(dirs), tasks=[entry(d) for d in dirs])
+    print(f"{dump_suite(s, ROOT / 'evals' / 'suites').relative_to(ROOT)}：{len(s.tasks)} 个，digest {s.digest}")
+
+
 def audit(roots: list[Path], out: Path | None, strict: bool) -> int:
     """防作弊审计（W5-12）：逐个任务检查 ID 匿名、git 历史 / hooks、Issue 里的上游提交链接等。只读。"""
     from collections import Counter
@@ -414,6 +501,8 @@ def main() -> None:
     m.add_argument("--out", type=Path, default=ROOT / "evals" / "factory" / "candidates.json")
     m.add_argument("--months", nargs="+", default=["2025_10", "2025_11", "2025_12", "2026_01", "2026_02", "2026_03"])
     m.add_argument("--filtered-pages", type=int, default=8)
+    m.add_argument("--fetch-filtered", type=int, default=0, help="直接拉 filtered 拆分的前 N 页（每页 100 行）")
+    m.add_argument("--exclude-existing", action="store_true", help="跳过已尝试 / 已收录的实例，同仓库计数含已有任务")
     b = sub.add_parser("build", help="两阶段构建 + validate + 去抖（需要 docker）")
     b.add_argument("ids", nargs="*")
     b.add_argument("--candidates", type=Path, default=ROOT / "evals" / "factory" / "candidates.json")
@@ -428,6 +517,9 @@ def main() -> None:
     au.add_argument("--root", type=Path, nargs="+", default=[ROOT / "evals" / "tasks"])
     au.add_argument("--out", type=Path, default=None)
     au.add_argument("--strict", action="store_true", help="有 warn 也返回 1")
+    se = sub.add_parser("split-ext", help="W5 扩展集：通过校验的加固任务 → evals/tasks/ext + evals/suites/ext.yaml")
+    se.add_argument("--log", type=Path, default=ROOT / "evals" / "factory" / "ext" / "build_log.json")
+    se.add_argument("--name", default="ext")
     sp = sub.add_parser("split", help="冻结 dev / test / dev-smoke 切分，写 evals/suites/*.yaml")
     sp.add_argument("--log", type=Path, default=ROOT / "evals" / "factory" / "build_log.json")
     sp.add_argument("--staging", default="_staging")
@@ -436,8 +528,10 @@ def main() -> None:
     a = ap.parse_args()
     if a.cmd == "split":
         split(a.log, a.staging, a.test, a.dev_new)
+    elif a.cmd == "split-ext":
+        split_ext(a.log, a.name)
     elif a.cmd == "mine":
-        mine(a.out, a.months, a.filtered_pages)
+        mine(a.out, a.months, a.filtered_pages, fetch_filtered=a.fetch_filtered, exclude_existing=a.exclude_existing)
     elif a.cmd == "audit":
         sys.exit(audit(a.root, a.out, a.strict))
     elif a.cmd == "build":
