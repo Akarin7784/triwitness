@@ -11,6 +11,13 @@
 - **正式版移除演示模式**：PyInstaller 排除 `bridge.demo` / `harness.testing` / `verify.testing` / `llm.fake` 并在构建时用 `pyi-archive_viewer` 校验；`tw.exe run --demo` → “正式版不含演示模式”。Rust 发行构建只有 live（调试构建才放行 demo / replay）、仓库可空、`--parent-run` 只放行合法 run_id、没密钥返回 `missing_api_key`。前端 fixture / mock / 压测来源只在 `import.meta.env.DEV`，正式版默认打开新会话；去掉“运行方式”设置和全部「演示」文案；`npm run check:bundle` 扫正式版前端包（CI desktop job + package-windows）。
 - **密钥引导**：凭据库没有密钥时首次打开弹“连接 DeepSeek”（链接 platform.deepseek.com/api_keys），没密钥就发送也弹，保存后自动把那条消息发出去。
 - **测试**：本机 OpenAI 兼容模拟服务 `packaging/mock_llm.py` + `TW_LLM_BASE_URL_OVERRIDE`（只允许 127.0.0.1 / localhost，用到时 stderr 告警）。`smoke_core.py` 改为：拒绝 `--demo`、「你好」直接回复（无 task_started / tool_call / patch）、「我刚才说了什么」复述、未选仓库请选、verses 小任务（询问模式 + 自动批准）done / pass、所有请求带鉴权且是 SSE、账本有记录——Linux 打包核心本机全过。Python 单测 +15（`tests/unit/harness/test_chat.py`），vitest +6（`chatTurn.test.ts`），e2e `tools/shoot-v031.mjs`（正式版前端包 + `vite preview` 开发桥 + 打包核心 + 模拟服务，13 项全过）。截图 `docs/images/v0.3.1/`。
+- **真实 key 验收（2026-10-11 18:33–18:40 UTC+8，deepseek-flash，全部经账本，高峰调用 0 次）**：正式版前端包（`vite preview` + 开发桥）+ Linux 打包核心 + 真实适配器。
+  - 「你好」+ 多轮跟进：¥0.0010（重拍时命中本地 llm-cache，¥0）。
+  - verses 询问模式首跑：¥0.0212，结论“复验未过”——暴露 `submit_repro` 把 `python: command not found` 当成复现（已修，见 CHANGELOG）。
+  - 修复后询问模式：¥0.0129 / ¥0.0161（两次），复验通过、风险 L2（无沙箱，干净环境未验证）。
+  - 自动审核模式：¥0.0145 / ¥0.0105（两次），复验通过；审核模型自动批准 5 次，工作区外路径 1 次升级给人。
+  - 合计 ¥0.0762。结论卡上的金额（¥0.017–0.023）含命中本地缓存的调用的名义价，高于账本实付。
+  - 截图（真实输出）：`hello.jpg`、`followup.jpg`、`task-ask.jpg`、`task-ask-approval.jpg`、`task-auto_review.jpg`、`task-auto_review-approval.jpg`。
 - **还没做**：用真实 DeepSeek 密钥从 App 发起的运行（box 上没有项目密钥）。
 
 ## 0.3.0-preview · 公开预览（84244a0 … d8f800e）

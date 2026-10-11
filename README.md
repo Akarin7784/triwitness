@@ -5,7 +5,7 @@
 > v0.3.1 是**预览版**：需要你自己的 DeepSeek API 密钥（从 0.3.1 起没有演示模式，一律用真实模型）。可以像聊天一样问它问题，要它修仓库里的问题时它才动手。它**不会推送代码，也不会在 GitHub 上创建 PR**，只在本地生成分支和 PR 说明，要不要推送、开 PR 由你决定。完整限制见 [已知限制](docs/release/known-limitations.md)。
 
 <p align="center">
-  <img src="docs/images/v0.3.1/task-ask.jpg" width="820" alt="任务完成后的结论卡：复验通过、风险等级、PR 说明摘要、复制 PR 说明"><br>
+  <img src="docs/images/v0.3.1/task-auto_review.jpg" width="820" alt="真实 deepseek-flash 输出 · 任务完成后的结论卡：复验通过、风险等级、PR 说明摘要、复制 PR 说明"><br>
   <sub>结论卡：复验结论 · 风险等级 · PR 说明 · 本地分支</sub>
 </p>
 

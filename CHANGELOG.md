@@ -16,6 +16,12 @@
 - 高峰时段被拒时给出可操作的提示（桥接 `error.code = peak_blocked`，去 设置 → 预算 允许高峰调用）。
 - 测试用本机 OpenAI 兼容模拟服务（`packaging/mock_llm.py`）+ 仅限 127.0.0.1 的 `TW_LLM_BASE_URL_OVERRIDE`：CI 和打包冒烟用它跑真实适配器 → SSE 流式 → 对话轮 → Executor 全链路（「你好」直接回复、多轮复述、未选仓库、一个小任务），¥0、不需要密钥。
 
+### 修复
+- `submit_repro`：复现命令自身跑不起来（exit 126/127「command not found」、没装 pytest、pytest 用法错误 / 没收集到测试）不再算“复现成立”，而是拒绝并提示先确认解释器和测试框架（`error_code=repro_cmd_broken`）。真实 key 首跑发现：机器上没有 `python` 时，`python -m pytest` 的 127 被当成复现失败，修复后复验两边都“失败”，结论变成“复验未过”。
+
+### 验收（真实 key，首次）
+- 在开发机上用真实 DeepSeek 密钥（deepseek-flash，经账本）从正式版前端包 + 开发桥 + 打包核心跑通：「你好」直接回复、多轮跟进复述、verses 小任务（询问模式、自动审核模式）均“复验通过”。自动审核模式下 5 次命令由审核模型自动批准（每次约 ¥0.0004），1 次访问工作区外路径升级给人批准。截图 `docs/images/v0.3.1/`（均为真实模型输出）。合计实际花费见 `apps/desktop/STATUS.md`。
+
 ### 移除
 - 前端的演示 / 回放 / 压测来源和“运行方式”设置（开发构建仍可用）。
 
