@@ -13,6 +13,7 @@
 ### 变更
 - **核心架构面向 1M 上下文**（Eva 2026-10-11 20:26）：默认 harness 改为 `long-context-1m.yaml`（继承 repro-first），Executor 工作预算按模型窗口推导 ≈ 950K（窗口 1,048,576 − 输出预留 64K − 3%）；清理线 50% → 清到 25%，压缩线 75%，保留最近 16 条工具结果，原样尾部 ≤ 120K，摘要输入 120K / 输出 10K。`configs/models.yaml` 新增模型窗口 / 最大输出与每个角色显式的 `max_tokens`。`baseline.yaml` / `repro-first.yaml` 冻结（W2 的 harness_hash 不变）。
 - **防失控上限随窗口放大**：单任务累计输入 ≈ 60M、未命中 ≈ 2.85M（原 6M / 400K），由工作预算推导，仍不含金额。
+- **长上下文实测**：`scripts/probe_long_context.py` 只用 deepseek-flash，测针召回和首字延迟。2026-10-11 的结果放在 `evals/baselines/2026-10-11-long-context-probe/`：约 900K 时召回全对，冷请求首字约 19 s，热请求约 5 s。本机账本新增类别 `long_context_probe`。
 
 ### 新增
 - **上下文保护**：请求前估算超过窗口硬上限时先强制清理 / 压缩，仍超就体面结束（`context_overflow`）；厂商报上下文超限时压缩后重试一次；连续 2 次压完仍超压缩线就停下（`context_thrash`），不再无限压缩；压缩后重读最近修改的 5 个文件。

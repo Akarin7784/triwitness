@@ -16,6 +16,7 @@ usage_categories:           # 账本里的统计类别（不再有额度）
   - reviewer
   - dogfood
   - chat
+  - long_context_probe   # 1M 窗口长上下文召回 / 首字延迟实测（scripts/probe_long_context.py）
   - ablation
   - memory_ab
   - redteam
