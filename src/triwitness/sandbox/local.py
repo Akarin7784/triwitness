@@ -96,11 +96,9 @@ def find_shell(
     cands: list[tuple[str, str]] = []
     if setting:
         cands.append((setting, "设置项"))
-    gx = (git_exec_path or _git_exec_path)()
-    if gx:
-        # <git>/mingw64/libexec/git-core → <git>
-        root = Path(gx.replace("\\", "/")).parents[2]
-        cands.append((str(root / "bin" / "bash.exe"), "git --exec-path"))
+    root = _git_root_from_exe(which("git"))
+    if root:
+        cands.append((str(root / "bin" / "bash.exe"), "PATH 上的 git"))
     for var in ("ProgramFiles", "ProgramW6432", "LOCALAPPDATA"):
         base = env.get(var) or env.get(var.upper())
         if base:
@@ -109,6 +107,13 @@ def find_shell(
     for p, why in cands:
         if not _is_wsl_bash(p) and exists(p):
             return ShellChoice("bash", p, f"Git Bash（{why}）")
+    # 最后才起子进程问 git（v0.3：打包核心在 Windows 上卡死就卡在这里，见 _git_exec_path）
+    gx = (git_exec_path or _git_exec_path)()
+    if gx:
+        # <git>/mingw64/libexec/git-core → <git>
+        p = str(Path(gx.replace("\\", "/")).parents[2] / "bin" / "bash.exe")
+        if not _is_wsl_bash(p) and exists(p):
+            return ShellChoice("bash", p, "Git Bash（git --exec-path）")
     for name in ("pwsh", "powershell"):
         p = which(name)
         if p:
@@ -116,12 +121,64 @@ def find_shell(
     raise SandboxError("找不到 Git Bash 或 PowerShell")
 
 
-def _git_exec_path() -> str | None:
-    try:
-        r = subprocess.run(["git", "--exec-path"], capture_output=True, text=True, timeout=5, check=False)
-    except (OSError, subprocess.SubprocessError):
+def _git_root_from_exe(exe: str | None) -> Path | None:
+    """PATH 上的 git.exe → Git for Windows 安装根目录（`<root>/cmd/git.exe`、`<root>/bin/git.exe`、
+    `<root>/mingw64/bin/git.exe`），不起子进程。"""
+    if not exe:
         return None
-    return r.stdout.strip() or None
+    p = Path(exe.replace("\\", "/"))
+    parts = [x.lower() for x in p.parts]
+    if len(parts) >= 3 and parts[-2] == "bin" and parts[-3] in ("mingw64", "mingw32", "clangarm64"):
+        return p.parents[2]
+    if len(parts) >= 2 and parts[-2] in ("cmd", "bin"):
+        return p.parents[1]
+    return None
+
+
+def _git_exec_path() -> str | None:
+    """`git --exec-path`，输出写临时文件而不是管道、stdin 为空。
+
+    v0.3 打包核心在 Windows 上卡死的根因：PowerShell / 桌面端环境里 PATH 上的 git 是 `Git\\cmd\\git.exe`
+    启动器，它再起真正的 git；`subprocess.run(capture_output=True, timeout=…)` 超时后只杀掉启动器，
+    孙进程还握着 stdout 管道，Windows 上 communicate() 等读线程就永远等下去。改成文件输出就不会被管道拖住。
+    """
+    return run_quiet(["git", "--exec-path"], timeout=10)
+
+
+def run_quiet(argv: list[str], *, timeout: float, cwd: str | Path | None = None) -> str | None:
+    """跑一个短命令拿 stdout：stdin 为空、输出走临时文件（不用管道）、Windows 不弹窗、超时杀整棵进程树。
+
+    返回去掉首尾空白的 stdout；起不来、超时或退出码非 0 返回 None。
+    """
+    import tempfile
+
+    flags = 0x08000000 if sys.platform == "win32" else 0  # CREATE_NO_WINDOW
+    with tempfile.TemporaryFile() as out:
+        try:
+            proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.DEVNULL, stdout=out,
+                                    stderr=subprocess.DEVNULL, creationflags=flags)  # fmt: skip
+        except OSError:
+            return None
+        try:
+            code = proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _kill_tree(proc)
+            return None
+        if code != 0:
+            return None
+        out.seek(0)
+        return out.read().decode("utf-8", "replace").strip() or None
+
+
+def _kill_tree(proc: subprocess.Popen[bytes]) -> None:
+    if sys.platform == "win32":
+        argv = ["taskkill", "/T", "/F", "/PID", str(proc.pid)]
+        quiet = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+        subprocess.run(argv, check=False, creationflags=0x08000000, **quiet)  # type: ignore[call-overload]
+    else:
+        proc.kill()
+    with contextlib.suppress(subprocess.TimeoutExpired):
+        proc.wait(timeout=5)
 
 
 # ---------------------------------------------------------------- 会话

@@ -70,7 +70,7 @@ def ensure_repo(path: Path) -> Path:
     git = ["git", "-c", "user.email=demo@triwitness.local", "-c", "user.name=TriWitness Demo",
            "-c", "core.autocrlf=false"]  # fmt: skip
     for args in (["init", "-q"], ["add", "."], ["commit", "-qm", "演示仓库"]):
-        subprocess.run([*git, *args], cwd=path, check=True, capture_output=True)
+        subprocess.run([*git, *args], cwd=path, check=True, capture_output=True, stdin=subprocess.DEVNULL, timeout=60)
     return path
 
 

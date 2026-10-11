@@ -68,3 +68,43 @@ def test_posix() -> None:
 
 
 # 真实 Windows 上的 Job Object / Git Bash / PowerShell 用例见 tests/unit/windows/test_windows_real.py（W2-33）
+
+
+def _no_subprocess() -> str | None:
+    raise AssertionError("有 PATH 上的 git 时不应该再起子进程问 git --exec-path")
+
+
+@pytest.mark.parametrize(
+    "git_exe",
+    [f"{GIT}/cmd/git.exe", rf"{GIT}\bin\git.exe", f"{GIT}/mingw64/bin/git.exe", "D:/PortableGit/cmd/git.exe"],
+)
+def test_git_on_path_found_without_subprocess(git_exe: str) -> None:
+    """v0.3：桌面端 / PowerShell 环境里 PATH 上是 Git\\cmd\\git.exe 启动器；直接推出 bin\\bash.exe，不起 git。"""
+    root = git_exe.replace("\\", "/").rsplit("/", 3 if "/mingw64/" in git_exe else 2)[0]
+    c = find_shell(windows=True, exists=fs(f"{root}/bin/bash.exe"), which=which(git=git_exe),
+                   git_exec_path=_no_subprocess, environ={})  # fmt: skip
+    assert c.kind == "bash" and c.exe.replace("\\", "/") == f"{root}/bin/bash.exe"
+
+
+def test_program_files_checked_before_git_exec_path() -> None:
+    c = find_shell(windows=True, exists=fs(f"{GIT}/bin/bash.exe"), which=which(), git_exec_path=_no_subprocess,
+                   environ=ENV)  # fmt: skip
+    assert c.exe.replace("\\", "/") == f"{GIT}/bin/bash.exe"
+
+
+def test_run_quiet_uses_files_not_pipes(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    import sys
+    import time
+
+    from triwitness.sandbox.local import run_quiet
+
+    py = sys.executable
+    assert run_quiet([py, "-c", "print(' hi ')"], timeout=30) == "hi"
+    assert run_quiet([py, "-c", "import sys; sys.exit(3)"], timeout=30) is None
+    assert run_quiet(["definitely-not-a-command-xyz"], timeout=5) is None
+    # 孙进程握着输出也不会把调用方卡住：超时就返回
+    t0 = time.monotonic()
+    child = "import time; time.sleep(30)"
+    code = f"import subprocess,sys,time; subprocess.Popen([sys.executable,'-c','{child}']); time.sleep(30)"
+    assert run_quiet([py, "-c", code], timeout=1) is None
+    assert time.monotonic() - t0 < 15

@@ -179,6 +179,7 @@ def git_tracked(repo: Path, path: Path) -> bool:
         r = subprocess.run(
             ["git", "-C", str(repo), "ls-files", "--error-unmatch", str(path.relative_to(repo))],
             capture_output=True,
+            stdin=subprocess.DEVNULL,
             timeout=5,
             check=False,
         )
