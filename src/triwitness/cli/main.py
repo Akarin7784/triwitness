@@ -709,11 +709,26 @@ def pr_open(
         raise typer.Exit(2)
 
     def go() -> dict[str, object]:
-        plan = plan_pr(tw_home(), run, repo, remote=remote, base=base, title=title)
-        res = open_pr(plan, draft=draft)
-        record_pr(tw_home(), plan, res)
-        return {"url": res.url, "number": res.number, "created": res.created, "repo": plan.full_name,
-                "head": plan.head, "base": plan.base, "title": plan.title}  # fmt: skip
+        from triwitness.store.idempotency import SideEffectLog, side_effect_key
+
+        home = tw_home()
+        plan = plan_pr(home, run, repo, remote=remote, base=base, title=title)
+
+        def do() -> dict[str, object]:
+            res = open_pr(plan, draft=draft)
+            record_pr(home, plan, res)
+            return {"url": res.url, "number": res.number, "created": res.created}
+
+        def find() -> dict[str, object] | None:  # 上次推送 / 开 PR 做到一半：先看本地记录（open_pr 自己也会先查远端）
+            return {"url": plan.existing_url, "number": None, "created": False} if plan.existing_url else None
+
+        # 幂等键（spec 011 §4）：同一个运行只开一次 PR；重试 / 连点不会重复推送、重复开
+        with SideEffectLog(home / "tw.db") as log_:
+            out = log_.run(side_effect_key(run, "open_pr"), do, find=find)  # type: ignore[arg-type]
+        r = out.result
+        return {"url": r.get("url"), "number": r.get("number"), "created": bool(r.get("created")) and not out.reused,
+                "reused": out.reused, "repo": plan.full_name, "head": plan.head, "base": plan.base,
+                "title": plan.title}  # fmt: skip
 
     _perm_call(go)
 

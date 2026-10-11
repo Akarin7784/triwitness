@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import fnmatch
 import json
+import logging
 import posixpath
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -42,7 +43,8 @@ from triwitness.harness.approvals import Approver
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import AgentLoop, LoopOutcome, RouterLike, build_system_prompt
 from triwitness.harness.prepare import PrepareOptions, PrepareResult, prepare_env
-from triwitness.harness.resume import ResumeState, apply_resume, resume_note, save_progress
+from triwitness.harness.replay import Replay, replay_history, replay_note
+from triwitness.harness.resume import ResumeState, apply_resume, bump_checkpoint, resume_note, save_progress
 from triwitness.llm.pricing import pricing_version
 from triwitness.prompts import load_prompt
 from triwitness.roles.planner import PlannerResult, criteria_texts, render_plan, run_planner
@@ -70,6 +72,8 @@ _STATUS: dict[str, tuple[FinishStatus, TaskState, str]] = {
 }
 _VERDICT = {"pass": "通过", "fail": "未通过", "inconclusive": "证据不足"}
 PLAN_FILE = "plan.json"
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -201,10 +205,16 @@ class InProcessOrchestrator:
         repro_first = "submit_repro" in registry.names
         prompt = self.task_prompt
         repro_first_done: dict[str, Any] | None = None
+        replay: Replay | None = None
+        replay_msg: str | None = None
         if resume is not None:  # 断点续跑：start 快照是原始代码（diff / 复验基线），再写回上次的进度
             applied, held = await apply_resume(sandbox, resume, repro_first=repro_first)
             await self._checkpoint("resumed")
-            if resume.stage != "await_plan_approval":  # 停在计划确认的任务还没开始干活：不需要续跑说明
+            replay = self._replay(resume)
+            if replay is not None:  # spec 011 §3：重放事件日志重建历史，续跑说明作为追加的一条消息
+                replay_msg = replay_note(replay, from_run=resume.from_run, applied=applied, held=held,
+                                         skipped=resume.skipped, repro=resume.repro_check)  # fmt: skip
+            elif resume.stage != "await_plan_approval":  # 停在计划确认的任务还没开始干活：不需要续跑说明
                 prompt = f"{self.task_prompt}\n\n{resume_note(resume, applied, held)}"
             if resume.repro_check is not None and repro_first:
                 repro_first_done = dict(resume.repro_check)
@@ -269,12 +279,18 @@ class InProcessOrchestrator:
         if self.progress_dir is not None:
             pdir = self.progress_dir
 
-            async def after_step(steps: int) -> None:
-                await save_progress(pdir, sandbox, issue=self.task_prompt, state=ctx.state, tw_dir=self.tw_dir,
-                                    steps=steps + (resume.steps if resume else 0))  # fmt: skip
+            async def after_step(steps: int, touched: bool = True) -> None:
+                total = steps + (resume.steps if resume else 0)
+                # 每步结束是一个检查点（spec 011 §3.1）：改了工作区就存文件快照，否则只把检查点序号往后挪
+                if touched or not bump_checkpoint(pdir, event_seq=rec.next_seq, steps=total):
+                    await save_progress(pdir, sandbox, issue=self.task_prompt, state=ctx.state, tw_dir=self.tw_dir,
+                                        steps=total, event_seq=rec.next_seq)  # fmt: skip
 
             ctx.state["after_step"] = after_step
-        outcome = await loop.run(prompt, ctx)
+        if replay is not None:
+            outcome = await loop.run(prompt, ctx, restore=replay.messages, continue_with=replay_msg)
+        else:
+            outcome = await loop.run(prompt, ctx)
         check = ctx.state.get("repro_check")
         repro_status = check.get("status") if check else ("missing" if repro_first else None)
         status, final, label = classify(outcome)
@@ -335,7 +351,8 @@ class InProcessOrchestrator:
         await self._checkpoint("final")
         if self.progress_dir is not None and status != "done":  # 停下 / 失败：留一份最新进度给“继续”
             await save_progress(self.progress_dir, sandbox, issue=self.task_prompt, state=ctx.state, tw_dir=self.tw_dir,
-                                steps=outcome.steps + (resume.steps if resume else 0))  # fmt: skip
+                                steps=outcome.steps + (resume.steps if resume else 0),
+                                event_seq=rec.next_seq)  # fmt: skip
         diff = await self._diff(base_ref)
         if status == "done":
             self.go(S.PACKAGING, "整理结果")
@@ -511,6 +528,23 @@ class InProcessOrchestrator:
                                               comment=clip(answer, 2000),
                                               display=clip(f"已回答 · {answer}")))  # fmt: skip
         return f"用户的回答：{answer}"
+
+    # ---------------------------------------------------------------- 事件日志重放（W4-09）
+    def _replay(self, resume: ResumeState) -> Replay | None:
+        """有检查点序号、配置开着、上次确实跑过 Executor 才重放；否则退回旧的续跑说明（返回 None）。"""
+        if (resume.stage != "work" or resume.event_seq is None or resume.from_dir is None
+                or not self.cfg.orchestration.replay_on_resume):  # fmt: skip
+            return None
+        try:
+            rp = replay_history(resume.from_dir, upto_seq=resume.event_seq)
+        except (OSError, ValueError) as e:  # 日志坏了：不影响续跑，退回旧方式
+            log.warning("重放事件日志失败（%s）：%s", resume.from_dir, e)
+            return None
+        if rp is not None:
+            self.rec.artifact("replay.json", {"from_run": resume.from_run, "upto_seq": rp.upto_seq,
+                                              "replayed_model_calls": rp.model_calls, "messages": len(rp.messages),
+                                              "after_checkpoint": rp.after_checkpoint})  # fmt: skip
+        return rp
 
     # ---------------------------------------------------------------- 厂商约束（W4-08）
     def _vendor_violation(self) -> str | None:

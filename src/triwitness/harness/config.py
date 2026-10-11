@@ -128,6 +128,8 @@ class OrchestrationConfig(BaseModel):
     reviewer: ReviewerConfig = Field(default_factory=ReviewerConfig)
     plan_approval: PlanApprovalConfig = Field(default_factory=PlanApprovalConfig)
     hitl: HitlConfig = Field(default_factory=HitlConfig)
+    # 断点续跑时从事件日志重放 Executor 的历史（spec 011 §3，W4-09）；false = 旧方式（新开历史 + 续跑说明）
+    replay_on_resume: bool = True
 
 
 # W2-26：Executor 流程默认先复现（submit_repro + finish 校验）。`baseline.yaml` 仍是 W2-25 基线与消融的父配置，

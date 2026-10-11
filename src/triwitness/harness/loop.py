@@ -19,6 +19,7 @@ from triwitness.harness.approvals import NeedsHuman
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.context import ContextManager
 from triwitness.harness.deltas import DeltaWriter
+from triwitness.harness.replay import journal_write
 from triwitness.llm.stream import streaming
 from triwitness.llm.types import LLMRequest, LLMResponse, Message
 from triwitness.telemetry.trajectory import TrajectoryRecorder
@@ -199,7 +200,17 @@ class AgentLoop:
 
     async def _timed_dispatch(self, call: Any, ctx: ToolContext) -> tuple[Any, Any, int]:
         t0 = self.emitter.monotonic()
+        tool = self.registry.get(call.name)
+        effects = getattr(tool, "side_effects", "none") if tool is not None else "none"
+        run_dir = getattr(self.emitter, "run_dir", None)
+        if effects != "none":  # 预写日志（spec 011 §3.3）：进程被杀时能知道哪个有副作用的工具正在执行
+            args = call.arguments if isinstance(call.arguments, str) else json.dumps(call.arguments, ensure_ascii=False)
+            summary = redact_text(_short(args, 160))
+            journal_write(run_dir, {"phase": "start", "call_id": call.id, "tool": call.name, "side_effects": effects,
+                                    "seq": self.emitter.next_seq, "role": self.role, "summary": summary})  # fmt: skip
         result, outcome = await self.registry.dispatch(call, ctx)
+        if effects != "none":
+            journal_write(run_dir, {"phase": "end", "call_id": call.id, "ok": bool(result.ok)})
         return result, outcome, max(0, round((self.emitter.monotonic() - t0) * 1000))
 
     def seal_dangling(self, reason: str = "任务在此中断") -> int:
@@ -218,19 +229,31 @@ class AgentLoop:
         self.messages[insert_at:insert_at] = filler
         return len(filler)
 
-    async def run(self, task_prompt: str, ctx: ToolContext, *, continue_with: str | None = None) -> LoopOutcome:
-        """continue_with：沿用上一次 run 的消息历史，只追加一条 user 反馈（评审返工；只追加 → 缓存命中）。"""
+    async def run(self, task_prompt: str, ctx: ToolContext, *, continue_with: str | None = None,
+                  restore: list[Message] | None = None) -> LoopOutcome:  # fmt: skip
+        """continue_with：沿用上一次 run 的消息历史，只追加一条 user 反馈（评审返工；只追加 → 缓存命中）。
+        restore：断点续跑时从事件日志重放出来的历史（spec 011 §3）；配合 continue_with 追加续跑说明。"""
         try:
-            return await self._run(task_prompt, ctx, continue_with=continue_with)
+            return await self._run(task_prompt, ctx, continue_with=continue_with, restore=restore)
         finally:
             self.seal_dangling()
 
-    async def _run(self, task_prompt: str, ctx: ToolContext, *, continue_with: str | None) -> LoopOutcome:
+    async def _run(self, task_prompt: str, ctx: ToolContext, *, continue_with: str | None,
+                   restore: list[Message] | None = None) -> LoopOutcome:  # fmt: skip
         cfg = self.config
         rec = self.emitter
         tools = self.registry.schemas()
         tool_names = [t["function"]["name"] for t in tools]
-        if continue_with is not None and self.context is not None and len(self.messages) > 1:
+        if restore:
+            cm = ContextManager(cfg, tools_chars=len(json.dumps(tools, ensure_ascii=False)), role=self.role,
+                                hard_limit=self.hard_limit,
+                                summarize=lambda r: self._summarize(r, ctx.task_id))  # fmt: skip
+            self.context = cm
+            self.messages = list(restore)
+            self.seal_dangling("进程在此中断")
+            if continue_with is not None:
+                self.messages.append(Message(role="user", content=continue_with))
+        elif continue_with is not None and self.context is not None and len(self.messages) > 1:
             cm = self.context
             self.seal_dangling("上一轮已结束")
             self.messages.append(Message(role="user", content=continue_with))
@@ -430,8 +453,8 @@ class AgentLoop:
                                                                              detail=signal.detail)))  # fmt: skip
             self.messages.extend(pending)
             after_step: Any = ctx.state.get("after_step")
-            if touched and after_step is not None:
-                await after_step(steps)
+            if after_step is not None:  # 每步结束 = 一个检查点（spec 011 §3.1）；有工作区改动时才存文件快照
+                await after_step(steps, touched)
             if self.guard.should_wrap_up and not wrapped:
                 wrapped = True
                 self.messages.append(Message(role="user", content=cfg.reminder("wrap_up")))

@@ -48,11 +48,15 @@ class ResumeState:
     skipped: list[str] = field(default_factory=list)  # 太大没存的文件
     # work = 干活途中停下；await_plan_approval = 停在计划确认（spec 010 §11 Q6）：续跑沿用原计划、重新请求确认
     stage: str = "work"
+    # 事件日志检查点（spec 011 §3）：截到这个事件序号重放 Executor 的历史；None = 旧格式，只能靠续跑说明
+    event_seq: int | None = None
+    from_dir: Path | None = None  # 被续跑的运行目录（读它的 trajectory.jsonl / artifacts）
 
 
 async def save_progress(run_dir: Path, sandbox: Any, *, issue: str, state: dict[str, Any], tw_dir: str,
-                        steps: int, stage: str = "work") -> int:  # fmt: skip
-    """把当前进度写进 run_dir/resume/。返回存下的文件数；失败不影响任务本身。"""
+                        steps: int, stage: str = "work", event_seq: int | None = None) -> int:  # fmt: skip
+    """把当前进度写进 run_dir/resume/。返回存下的文件数；失败不影响任务本身。
+    event_seq：此刻轨迹的下一个事件序号——工作区快照与“历史截到这里”同时成立（检查点）。"""
     try:
         paths = changed_paths(await sandbox.diff("base"))
     except (SandboxError, NotImplementedError):
@@ -83,12 +87,26 @@ async def save_progress(run_dir: Path, sandbox: Any, *, issue: str, state: dict[
     check = state.get("repro_check")
     doc = {"format": FORMAT, "issue": issue, "files": entries, "skipped": skipped, "steps": steps,
            "repro_check": _jsonable(check), "notes": redact_text(notes) if notes else None,
-           "stage": stage, "updated_at": datetime.now(UTC).isoformat()}  # fmt: skip
+           "stage": stage, "event_seq": event_seq, "updated_at": datetime.now(UTC).isoformat()}  # fmt: skip
     (tmp / "resume.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     if root.exists():
         _rmtree(root)
     os.replace(tmp, root)
     return len(entries)
+
+
+def bump_checkpoint(run_dir: Path, *, event_seq: int, steps: int) -> bool:
+    """这一步没有改工作区：快照仍然有效，只把检查点往后挪（不重写文件）。没有快照时返回 False。"""
+    f = run_dir / "resume" / "resume.json"
+    try:
+        doc = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    doc.update(event_seq=event_seq, steps=steps, updated_at=datetime.now(UTC).isoformat())
+    tmp = f.with_suffix(".tmp")
+    tmp.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(tmp, f)
+    return True
 
 
 def _jsonable(obj: Any) -> Any:
@@ -158,7 +176,9 @@ def load_resume(home: Path, run_id: str) -> ResumeState:
         files[path] = None if e.get("deleted") else (root / "files" / str(e["blob"])).read_bytes()
     return ResumeState(from_run=run_id, issue=str(doc.get("issue") or ""), files=files,
                        repro_check=doc.get("repro_check"), notes=doc.get("notes"), steps=int(doc.get("steps") or 0),
-                       skipped=list(doc.get("skipped") or []), stage=str(doc.get("stage") or "work"))  # fmt: skip
+                       skipped=list(doc.get("skipped") or []), stage=str(doc.get("stage") or "work"),
+                       event_seq=doc["event_seq"] if isinstance(doc.get("event_seq"), int) else None,
+                       from_dir=run_dir)  # fmt: skip
 
 
 async def apply_resume(sandbox: Any, state: ResumeState, *, repro_first: bool) -> tuple[list[str], list[str]]:
@@ -203,5 +223,5 @@ def resume_note(state: ResumeState, applied: list[str], held: list[str]) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["RESUMABLE", "ResumeState", "apply_resume", "load_resume", "resumable", "resume_note", "run_status",
-           "save_progress"]  # fmt: skip
+__all__ = ["RESUMABLE", "ResumeState", "apply_resume", "bump_checkpoint", "load_resume", "resumable", "resume_note",
+           "run_status", "save_progress"]  # fmt: skip
