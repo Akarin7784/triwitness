@@ -2,6 +2,24 @@
 
 > 不按日历排期，做完一项记一项。
 
+## 0.2.1 · 性能 + Eva 0.2.0 真机反馈（a2de105 / 5ad5617 / 9638d53）
+
+- 性能（a2de105）：事件按帧批量提交 + 增量折叠、长回合虚拟化、content-visibility、增量 Markdown、懒加载分包、字体子集。500 轮推流 16.2 → 59.5 fps，long task 26.4 s → 0.16 s，主 JS 971 → 177 KB。详见 `docs/research/native-vs-web-ui.md` §6
+- 真机反馈（5ad5617）：
+  - BUG1 提示框不再盖住已打开的菜单
+  - BUG2 仓库选择器：原生文件夹对话框 + 最近仓库 + 手动输入；仓库签不换行
+  - BUG3 已有空会话时“新会话”直接聚焦它
+  - BUG4 “搜索”打开 Ctrl+K 面板，“会话”打开会话页（排序 / 搜索 / 批量删除）
+  - BUG5 全局不换行规则；shoot-review 增加 100/125/150% × 中英文换行检查
+  - SUGG1 权限四种模式（只读 / 询问 / 模型自动审批 / 完全访问），沙箱独立；旧值自动迁移
+  - SUGG2 侧栏行高固定
+  - SUGG3 纸书配色（浅色 + 夜读深色，对比度全部 ≥ AA）
+  - before / after 截图：`docs/feedback-2026-10-11/`
+
+**安装包 0.2.1**：`release/TriWitness_0.2.1_x64-setup.exe`（10,440,991 字节 ≈ 9.96 MiB，NSIS，未签名；0.2.0 是 12.74 MiB，变小主要因为字体子集）
+- sha256 `94f13100a012a52c28cd66dc485e40fd4daa1737bc69c3b0c3b3ad5809964cd3`
+- 构建方式同 `docs/WINDOWS_BUILD.md` 方式 B（cargo-xwin，`--bundles nsis`）
+
 ## UI-21 · Claude 交互对齐（已完成：三轮 + 界面审查）
 
 原则（Eva）：操作方式与 Claude Desktop 一一对应，不缺也不多；差异只放在审美和复验功能上。没做的功能也放真入口，点了提示“即将推出”。逐项状态见 `docs/claude-parity.md`。
