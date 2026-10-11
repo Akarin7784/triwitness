@@ -10,6 +10,8 @@
 - 如实表述交付：结论卡写明“已生成本地分支和 PR 说明；没有推送，也没有在 GitHub 上创建 PR”，按钮是“复制 PR 说明 / 打开运行目录”（tauri-plugin-opener `revealItemInDir`）；状态名改为“待确认交付 / 分支已就绪”。
 - 关于 → 检查更新：打开 https://github.com/Akarin7784/triwitness/releases 。
 - 版本号集中在 `src/lib/version.ts`；README 截图 `docs/images/v0.3/`（`tools/shoot-v03.mjs`，9 项检查全过，¥0）。
+- **安装包（CI 构建，5ec99cd）**：`TriWitness_0.3.0-preview_x64-setup.exe`，27,583,653 字节 ≈ 26.3 MiB（内置核心 onedir 37.1 MiB 未压缩、762 个文件；0.2.1 无核心版 9.96 MiB），sha256 `feb134e48351775f3032e295c8a9446410327a1205944ddfb5541f6c80ab2de1`。artifact：https://github.com/Akarin7784/triwitness/actions/runs/38128418471/artifacts/11698880903 （保留到 2026-10-25）。CI 上静默安装后，安装目录里的核心在 Git Bash 和 PowerShell 两种环境下都跑通了演示往返。
+- 修复（5ec99cd）：打包核心在 PowerShell / 桌面端环境下卡在“找 Git Bash”——`git --exec-path` 经 `Git\cmd\git.exe` 启动器超时后，孙进程握着 stdout 管道，`subprocess.run` 在 Windows 上等读线程永远不返回。改为先从 PATH 上的 git 路径 / Program Files 推出 bash.exe，最后才起 git，且用文件输出 + stdin 为空 + 杀进程树（`run_quiet`）。
 - 发布：`release.yml`（推 `v*` 标签 → 构建 → CHANGELOG 取说明 → 草稿 Release 附安装包和 sha256，不自动发布）。**尚未打标签。**
 
 ## 0.2.1 · 性能 + Eva 0.2.0 真机反馈（a2de105 / 5ad5617 / 9638d53）
