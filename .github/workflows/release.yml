@@ -1,0 +1,46 @@
+# 发布（v0.3 起）：推 v* 标签 → 构建带内置核心的 Windows 安装包 → 从 CHANGELOG 取说明 → 创建**草稿** Release。
+# 只建草稿，不自动发布：Eva 在 GitHub 上看过说明和安装包后手动点 “Publish release”。
+# 版本号约定：标签 = v + apps/desktop/package.json 的 version（例如 v0.3.0-preview），不一致直接失败。
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    uses: ./.github/workflows/package-windows.yml
+
+  draft-release:
+    name: draft GitHub Release
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tag matches desktop version
+        run: |
+          v=$(node -p "require('./apps/desktop/package.json').version")
+          test "${GITHUB_REF_NAME}" = "v${v}" || { echo "tag ${GITHUB_REF_NAME} != v${v}"; exit 1; }
+      - uses: actions/download-artifact@v8
+        with:
+          name: TriWitness-windows-installer
+          path: dist
+      - name: Verify sha256
+        working-directory: dist
+        run: sha256sum -c ./*.sha256
+      - name: Release notes from CHANGELOG.md
+        run: python3 packaging/release_notes.py "${GITHUB_REF_NAME}" > notes.md && cat notes.md
+      - name: Create draft release (installer + sha256)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pre=""
+          case "${GITHUB_REF_NAME}" in *-*) pre="--prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --draft $pre \
+            --title "TriWitness ${GITHUB_REF_NAME#v}" \
+            --notes-file notes.md \
+            --verify-tag
