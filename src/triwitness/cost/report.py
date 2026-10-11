@@ -21,7 +21,7 @@ def cost_report_from_events(
     events: Iterable[TrajectoryEvent],
     *,
     task_id: str,
-    budget_cny: float,
+    budget_cny: float | None = None,
     pricing_version: str,
     sandbox_cost_cny: float = 0.0,
 ) -> CostReport:
@@ -46,7 +46,7 @@ def cost_report_from_events(
 class CostLedger:
     """订阅轨迹事件、实时累加 model_call（spec 005 §5.3）。`TrajectoryRecorder.subscribe(ledger.observe)`。"""
 
-    def __init__(self, *, task_id: str, budget_cny: float, pricing_version: str) -> None:
+    def __init__(self, *, task_id: str, pricing_version: str, budget_cny: float | None = None) -> None:
         self.task_id = task_id
         self.budget_cny = budget_cny
         self.pricing_version = pricing_version
@@ -57,10 +57,6 @@ class CostLedger:
         if ev.kind == "model_call":
             self.events.append(ev)
             self.total_cny += float(ev.payload["cost_cny"])
-
-    @property
-    def remaining_cny(self) -> float:
-        return self.budget_cny - self.total_cny
 
     def report(self, *, sandbox_cost_cny: float = 0.0) -> CostReport:
         return cost_report_from_events(
@@ -102,5 +98,5 @@ def render_cost_markdown(rep: CostReport) -> str:
         rows.append(f"| 沙箱 | — | — | — | — | {fmt_cny(rep.sandbox_cost_cny)} |")
     version = rep.pricing_version.removeprefix("deepseek-")
     total = f"**合计 {fmt_cny(rep.total_cny)}**｜缓存命中率 {rep.cache_hit_rate:.0%}"
-    rows.append(f"{total}｜预算 {fmt_cny(rep.budget_cny)}｜价格表版本 {version}")
+    rows.append(f"{total}｜价格表版本 {version}")
     return "\n".join(rows) + "\n"

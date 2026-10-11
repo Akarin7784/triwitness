@@ -186,7 +186,7 @@ async def test_run_task_honest_failure() -> None:
 
 
 async def test_run_task_budget_exceeded() -> None:
-    res, rec = await _run([say(call("read_file", path="a.py"))] * 3, budget=Budget(max_cost_cny=0.01), cost=0.02)
+    res, rec = await _run([say(call("read_file", path="a.py"))] * 3, budget=Budget(max_turns=1), cost=0.02)
     assert res.status == "budget_exceeded"
     assert "error" in rec.kinds() and rec.events[-2].payload["to"] == "budget_exceeded"
     _assert_contract(rec)
@@ -205,7 +205,7 @@ def test_cost_report_matches_fixture(name: str) -> None:
     root = Path(__file__).resolve().parents[3]
     evs = Trajectory.read_events(root / "evals" / "fixtures" / "events" / f"{name}.jsonl")
     fin = evs[-1].payload["cost_report"]
-    cr = cost_report_from_events(evs, task_id=evs[0].task_id, budget_cny=fin["budget_cny"],
+    cr = cost_report_from_events(evs, task_id=evs[0].task_id, budget_cny=fin.get("budget_cny"),
                                  pricing_version=fin["pricing_version"])  # fmt: skip
     assert abs(cr.total_cny - fin["total_cny"]) < 1e-4
     assert abs(cr.cache_hit_rate - fin["cache_hit_rate"]) < 1e-4

@@ -22,7 +22,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
-from triwitness.core.errors import BudgetExceeded, PeakHourBlocked
+from triwitness.core.errors import BudgetExceeded
 from triwitness.harness.approvals import ApprovalBroker, Approver
 from triwitness.harness.chat import TurnOutcome
 from triwitness.harness.local_run import LocalRunOutcome
@@ -67,9 +67,7 @@ def turn_message(out: Outcome) -> dict[str, Any]:
 
 
 def error_message(e: BaseException) -> dict[str, Any]:
-    """桌面端按 code 给出可操作的提示（高峰 → 去设置里允许；预算 → 去设置里调整）。"""
-    if isinstance(e, PeakHourBlocked):
-        return {"bridge": "error", "code": "peak_blocked", "message": f"{e}（桌面端：设置 → 预算 → 允许高峰时段调用）"}
+    """桌面端按 code 给出提示（budget = 触及非金钱安全上限：轮数 / 时间 / token 兜底）。"""
     if isinstance(e, BudgetExceeded):
         return {"bridge": "error", "code": "budget", "message": str(e)}
     return {"bridge": "error", "message": f"{type(e).__name__}: {e}"}

@@ -4,7 +4,6 @@ import pytest
 from typer.testing import CliRunner
 
 from triwitness.cli.main import app
-from triwitness.core.errors import PeakHourBlocked
 from triwitness.llm.gate import PeakGate, estimate_run
 
 BJ = timezone(timedelta(hours=8))
@@ -13,9 +12,11 @@ WED_20 = datetime(2026, 10, 14, 20, 0, tzinfo=BJ)
 HOLIDAY_WEEKDAY = datetime(2026, 10, 6, 10, 0, tzinfo=BJ)
 
 
-def test_start_refused_in_peak() -> None:
-    with pytest.raises(PeakHourBlocked, match="--allow-peak"):
-        PeakGate(now=lambda: WED_10).check_start("eval")
+def test_start_in_peak_is_flagged_not_refused() -> None:
+    """0.3.2：高峰时段不拒绝启动，只做标注。"""
+    g = PeakGate(now=lambda: WED_10)
+    g.check_start("eval")
+    assert g.report_flag and "高峰" in g.report_flag
 
 
 @pytest.mark.parametrize("t", [WED_20, HOLIDAY_WEEKDAY])
@@ -31,15 +32,13 @@ def test_allow_peak_is_flagged_for_report() -> None:
     assert g.report_flag and "高峰" in g.report_flag and g.may_dispatch()
 
 
-def test_stop_dispatching_when_run_crosses_into_peak() -> None:
+def test_crossing_into_peak_keeps_dispatching_and_flags() -> None:
     clock = [datetime(2026, 10, 14, 8, 50, tzinfo=BJ)]
     g = PeakGate(now=lambda: clock[0])
     g.check_start()
-    assert g.may_dispatch()
+    assert g.may_dispatch() and g.report_flag is None
     clock[0] = datetime(2026, 10, 14, 9, 1, tzinfo=BJ)
-    assert not g.may_dispatch()
-    clock[0] = datetime(2026, 10, 14, 12, 0, tzinfo=BJ)
-    assert g.may_dispatch()
+    assert g.may_dispatch() and g.report_flag
 
 
 def test_estimate_peak_is_double() -> None:

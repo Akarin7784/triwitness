@@ -58,7 +58,7 @@ def run_cmd(
     backend: Annotated[str, typer.Option(help="auto / docker / none")] = "auto",
     test_cmd: Annotated[str | None, typer.Option(help="run_tests 使用的测试命令")] = None,
     live: Annotated[bool, typer.Option("--live", help="真实调用模型（录制到回放缓存）；默认只回放")] = False,
-    allow_peak: Annotated[bool, typer.Option("--allow-peak", help="允许高峰时段（2× 价）")] = False,
+    allow_peak: Annotated[bool, typer.Option("--allow-peak", hidden=True, help="（已移除，忽略）")] = False,
     verify: Annotated[str, typer.Option(help="off / deterministic（默认，不调模型）/ model（加 Verifier 模型）")] = (
         "deterministic"
     ),
@@ -78,7 +78,7 @@ def run_cmd(
     thinking: Annotated[
         str | None, typer.Option(help="思考强度 off / low / medium / high（默认按 configs/models.yaml）")
     ] = None,
-    max_cost: Annotated[float | None, typer.Option(help="本任务 ¥ 上限（只能调低，不超过默认 ¥1.00）")] = None,
+    max_cost: Annotated[float | None, typer.Option(hidden=True, help="（0.3.2 起已移除 ¥ 上限，忽略）")] = None,
     permission_mode: Annotated[
         str | None,
         typer.Option(help="本次任务的权限模式 plan / ask / auto_review / full_access（旧值自动迁移）"),
@@ -257,17 +257,12 @@ def _run_inputs(attach: list[Path] | None, guidance_file: Path | None) -> "tuple
 def _run_overrides(
     max_cost: float | None, permission_mode: str | None, confirm: str | None, *, interactive: bool
 ) -> "tuple[Budget | None, SessionOverrides | None]":
-    """桌面端设置 → 本次任务：¥ 上限只能调低；权限模式走 session 层，勇士模式需要确认短语且只在交互运行中。"""
+    """桌面端设置 → 本次任务：权限模式走 session 层，勇士模式需要确认短语且只在交互运行中。"""
     from triwitness.core.errors import ConfigError
-    from triwitness.core.models import Budget
     from triwitness.permissions.config import MODES, SessionOverrides, UnrestrictedActivation, normalize_mode
 
-    budget = None
-    if max_cost is not None:
-        cap = Budget.for_run().max_cost_cny
-        if not (0 < max_cost <= cap):
-            raise typer.BadParameter(f"--max-cost 须在 0 到 {cap:.2f} 之间")
-        budget = Budget.for_run().model_copy(update={"max_cost_cny": max_cost})
+    budget = None  # 0.3.2：不再有单任务 ¥ 上限（--max-cost 只为兼容旧桌面端，忽略）
+    del max_cost
     session = None
     if permission_mode is not None:
         try:
@@ -369,8 +364,8 @@ def eval_run(
     task: Annotated[list[str] | None, typer.Option(help="只跑这些任务（id 或通配，如 swe-*），可多次")] = None,
     out: Annotated[Path | None, typer.Option(help="结果目录；指定已有目录即续跑")] = None,
     live: Annotated[bool, typer.Option("--live", help="真实调用模型（录制到回放缓存）；默认只回放、不联网")] = False,
-    allow_peak: Annotated[bool, typer.Option("--allow-peak", help="允许高峰时段（2× 价，报告标注）")] = False,
-    max_total_cny: Annotated[float, typer.Option(help="预估总额上限，超过不开始")] = 50.0,
+    allow_peak: Annotated[bool, typer.Option("--allow-peak", hidden=True, help="（已移除，忽略）")] = False,
+    max_total_cny: Annotated[float, typer.Option(hidden=True, help="（0.3.2 起不再按金额拒绝，忽略）")] = 50.0,
 ) -> None:
     """跑评测：任务 × 配置 × 尝试 → Grader 判分 → report.md。默认离线（回放 / 假 Agent）。"""
     import asyncio
@@ -452,8 +447,8 @@ def eval_reverify(
     out: Annotated[Path | None, typer.Option(help="输出目录（默认 <results>-reverify）；同目录再跑即续跑")] = None,
     mode: Annotated[list[str] | None, typer.Option(help="none / deterministic / model，可多次；默认三档")] = None,
     config: Annotated[list[str] | None, typer.Option(help="只验证这些原配置，可多次")] = None,
-    live: bool = typer.Option(False, "--live", help="model 档真实调用 Verifier（过高峰闸门与预估上限）"),
-    allow_peak: bool = typer.Option(False, "--allow-peak", help="允许高峰时段"),
+    live: bool = typer.Option(False, "--live", help="model 档真实调用 Verifier（受预估上限约束）"),
+    allow_peak: bool = typer.Option(False, "--allow-peak", hidden=True, help="（0.3.2 起已移除高峰闸门，忽略）"),
     max_total_cny: float = typer.Option(
         3.0, help="model 档：保守预估超过此值则不开始；运行中累计花费逼近此值就停止派发（硬上限）"
     ),
@@ -528,29 +523,30 @@ def eval_report(run_dir: Annotated[Path, typer.Argument(help="evals/results/<时
     typer.echo(render_markdown(write_report(run_dir)))
 
 
-budget_app = typer.Typer(add_completion=False, help="预算看板（本地账本）")
-app.add_typer(budget_app, name="budget")
+budget_app = typer.Typer(add_completion=False, help="用量看板（本地账本，只统计不限制）")
+app.add_typer(budget_app, name="usage")
+app.add_typer(budget_app, name="budget", hidden=True)  # 0.3.2 前的名字，旧桌面端 / 脚本仍可用
 
 
 @budget_app.callback(invoke_without_command=True)
 def budget_show(
     ctx: typer.Context,
-    md: Annotated[bool, typer.Option("--md", help="输出 Markdown（每周预算检查用）")] = False,
-    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（桌面端预算页用）")] = False,
+    md: Annotated[bool, typer.Option("--md", help="输出 Markdown")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（桌面端用量页用）")] = False,
 ) -> None:
-    """已花 / 信封 / 剩余、燃烧速度与耗尽日期、缓存命中率。只读本地账本，不联网。"""
+    """已花（按类别 / 周 / 模型）、调用数、缓存命中率。只读本地账本，不联网，不做任何限制。"""
     if ctx.invoked_subcommand is not None:
         return
-    from triwitness.cost.dashboard import budget_json, budget_view, render_budget_markdown
+    from triwitness.cost.dashboard import render_usage_markdown, usage_json, usage_view
     from triwitness.cost.ledger import GlobalLedger
 
     led = GlobalLedger()
     if as_json:
         import json
 
-        typer.echo(json.dumps(budget_json(budget_view(led), led), ensure_ascii=False))
+        typer.echo(json.dumps(usage_json(usage_view(led), led), ensure_ascii=False))
         return
-    text = render_budget_markdown(budget_view(led))
+    text = render_usage_markdown(usage_view(led))
     typer.echo(text if md else text.replace("**", ""))
 
 

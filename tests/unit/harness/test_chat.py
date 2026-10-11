@@ -12,7 +12,7 @@ import pytest
 
 from triwitness.bridge import demo
 from triwitness.bridge.stdio import Bridge, error_message
-from triwitness.core.errors import ConfigError, PeakHourBlocked
+from triwitness.core.errors import BudgetExceeded, ConfigError
 from triwitness.core.ids import new_run_id, new_task_id
 from triwitness.harness.chat import NO_REPO_REPLY, TOOLS, load_history, run_turn, valid_run_id, write_turn
 from triwitness.harness.local_run import run_local
@@ -146,9 +146,9 @@ def test_base_url_override_is_local_only(monkeypatch: pytest.MonkeyPatch, capsys
         base_url()
 
 
-def test_peak_error_is_actionable() -> None:
-    msg = error_message(PeakHourBlocked("现在是 DeepSeek 高峰时段"))
-    assert msg["code"] == "peak_blocked" and "允许高峰" in msg["message"]
+def test_budget_error_is_safety_limit() -> None:
+    msg = error_message(BudgetExceeded("单任务安全上限 max_turns 已用尽", limit="max_turns", used=100, cap=100))
+    assert msg["code"] == "budget" and "max_turns" in msg["message"]
 
 
 class Collect:

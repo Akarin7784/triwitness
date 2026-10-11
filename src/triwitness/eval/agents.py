@@ -57,7 +57,7 @@ class EvalAgent(Protocol):
 
 
 def _zero_cost(task_id: str) -> CostReport:
-    return CostLedger(task_id=task_id, budget_cny=1.0, pricing_version=pricing_version()).report()
+    return CostLedger(task_id=task_id, pricing_version=pricing_version()).report()
 
 
 def _start(rec: TrajectoryRecorder, task: EvalTask, agent: str) -> None:
@@ -140,7 +140,7 @@ class LLMAgent:
         self.config_hash = config_hash
 
     async def solve(self, task: EvalTask, sandbox: Sandbox, rec: TrajectoryRecorder) -> AgentRun:
-        budget = self.budget.model_copy(update={"max_cost_cny": min(self.budget.max_cost_cny, task.tw.max_cost_cny)})
+        budget = self.budget  # 0.3.2：任务 [tw] max_cost_cny 不再执行
         harness = self.harness or HarnessConfig.default()
         res = await run_task(
             recorder=rec,

@@ -44,11 +44,13 @@ class TaskState(StrEnum):
 
 
 class Budget(_Model):
-    """单任务预算。默认值为 eval 档；`tw run` / dogfooding 用 `Budget.for_run()`。"""
+    """单任务安全上限（防失控循环，不是花钱预算）。默认值为 eval 档；`tw run` / dogfooding 用 `Budget.for_run()`。
 
-    max_cost_cny: float = Field(default=0.8, gt=0)
-    # W2-26：W2-25 里 3M 总输入（含缓存命中）总是先于 ¥ 上限触发（触发时才花 ¥0.2–0.4，未命中仅 ~10 万）。
-    # 总量放到 6M 作兜底，另按未命中（真正计价的输入）设上限；¥ 上限才是真正的闸门。
+    0.3.2（Eva 19:14）：去掉 ¥ 上限——`max_cost_cny` 只为兼容旧配置保留，读入后忽略。
+    """
+
+    max_cost_cny: float | None = Field(default=None, gt=0)  # 已废弃，忽略
+    # W2-26：总输入（含缓存命中）6M 作兜底，另按未命中（真正计价的输入）设上限，挡住失控循环。
     max_input_tokens: int = Field(default=6_000_000, gt=0)  # 含缓存命中，兜底
     max_uncached_input_tokens: int = Field(default=400_000, gt=0)  # 缓存未命中
     max_output_tokens: int = Field(default=100_000, gt=0)
@@ -62,7 +64,7 @@ class Budget(_Model):
 
     @classmethod
     def for_run(cls) -> Budget:
-        return cls(max_cost_cny=1.0, max_wall_seconds=2700)
+        return cls(max_wall_seconds=2700)
 
 
 # ---------------------------------------------------------------- 任务与计划
@@ -190,7 +192,7 @@ class CostReport(_Model):
     lines: list[CostLine]
     sandbox_cost_cny: float = Field(default=0.0, ge=0)
     total_cny: float = Field(ge=0)
-    budget_cny: float = Field(gt=0)
+    budget_cny: float | None = Field(default=None, gt=0)  # 0.3.2 起不再有 ¥ 预算，旧事件里仍可能有
     cache_hit_rate: float = Field(ge=0, le=1)
     pricing_version: str
     estimated: bool = False  # True = 用户量缺失时的估算
@@ -201,7 +203,7 @@ class CostReport(_Model):
         task_id: str,
         lines: list[CostLine],
         *,
-        budget_cny: float,
+        budget_cny: float | None = None,
         pricing_version: str,
         sandbox_cost_cny: float = 0.0,
         estimated: bool = False,

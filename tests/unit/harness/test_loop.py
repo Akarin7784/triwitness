@@ -65,7 +65,7 @@ async def test_ac1_read_edit_test_finish() -> None:
 def test_ac6_budget_defaults() -> None:
     b = Budget()
     assert (b.max_cost_cny, b.max_input_tokens, b.max_output_tokens, b.max_turns, b.max_wall_seconds, b.warn_ratio) == (
-        0.8,
+        None,  # 0.3.2：不再有 ¥ 上限
         6_000_000,
         100_000,
         100,
@@ -77,11 +77,11 @@ def test_ac6_budget_defaults() -> None:
 
 async def test_ac6_budget_exhausted_after_first_call() -> None:
     loop, ctx, _, router = make(
-        [say(call("read_file", path="calc.py"))] * 5, budget=Budget(max_cost_cny=0.01), cost_cny=0.02
+        [say(call("read_file", path="calc.py"))] * 5, budget=Budget(max_cost_cny=0.01, max_turns=1), cost_cny=0.02
     )
     out = await loop.run("x", ctx)
     assert out.status == "budget_exhausted" and len(router.requests) == 1
-    assert "max_cost_cny" in (out.reason or "")
+    assert "max_turns" in (out.reason or "") and "max_cost_cny" not in (out.reason or "")
 
 
 async def test_max_turns() -> None:
@@ -177,7 +177,7 @@ async def test_wrap_up_reminder() -> None:
             say(call("read_file", path="calc.py", start_line=1)),
             say(call("finish", **{**FINISH, "tests_passed": False})),
         ],
-        budget=Budget(max_cost_cny=0.02, warn_ratio=0.25),
+        budget=Budget(max_turns=4, warn_ratio=0.25),
         cost_cny=0.006,
     )
     out = await loop.run("x", ctx)

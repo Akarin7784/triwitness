@@ -20,7 +20,6 @@ def test_ledger_tracks_fixture_events() -> None:
     rep = led.report()
     total = sum(e.payload["cost_cny"] for e in evs if e.kind == "model_call")
     assert abs(rep.total_cny - total) < 1e-4 and abs(led.total_cny - total) < 1e-9
-    assert abs(led.remaining_cny - (0.8 - total)) < 1e-9
     assert [ln.role for ln in rep.lines] == ["planner", "executor", "verifier", "reviewer"]
     hit = sum(ln.usage.cache_hit_tokens for ln in rep.lines) / sum(ln.usage.input_tokens for ln in rep.lines)
     assert abs(rep.cache_hit_rate - hit) < 1e-6
@@ -36,7 +35,7 @@ SNAPSHOT = """### 💰 成本（本地估算，非厂商账单）
 | executor | deepseek-flash | 23（高峰 2） | 1.6M（82%） | 41K | ¥1.05 |
 | reviewer | deepseek-flash | 1 | 24K（60%） | 1.0K | ¥0.014 |
 | 沙箱 | — | — | — | — | ¥0.010 |
-**合计 ¥1.07**｜缓存命中率 82%｜预算 ¥2.00｜价格表版本 2026-10-10
+**合计 ¥1.07**｜缓存命中率 82%｜价格表版本 2026-10-10
 """
 
 

@@ -72,7 +72,7 @@ class TwExt(BaseModel):
     test_cmd: str = "pytest -q"
     fail_to_pass: list[str] = Field(default_factory=list)
     pass_to_pass: list[str] = Field(default_factory=list)
-    max_cost_cny: float = Field(default=0.8, gt=0)
+    max_cost_cny: float | None = Field(default=None, gt=0)  # 0.3.2 起不再执行，只为兼容旧 task.toml
     protected: list[str] = Field(default_factory=list)  # Grader 额外保护的路径 glob（默认已含测试基础设施）
 
 

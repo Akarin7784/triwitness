@@ -68,7 +68,7 @@ def usage(inp: int, hit_rate: float, out: int, reasoning: int | None = None) -> 
 
 
 class Run:
-    def __init__(self, name: str, start: datetime, budget_cny: float) -> None:
+    def __init__(self, name: str, start: datetime, budget_cny: float | None = None) -> None:
         base_ms = int(start.timestamp() * 1000)
         self.task_id = "t_" + new_ulid(base_ms, name.encode().ljust(10, b"\0")[:10])
         self.run_id = "r_" + new_ulid(base_ms + 1, name.encode().rjust(10, b"\1")[:10])
@@ -165,7 +165,7 @@ def started(r: Run) -> None:
 
 
 def success() -> list[TrajectoryEvent]:
-    r = Run("success", datetime(2026, 10, 9, 19, 58, tzinfo=UTC), 0.8)  # 北京时间 10-10 03:58（空闲）
+    r = Run("success", datetime(2026, 10, 9, 19, 58, tzinfo=UTC))  # 北京时间 10-10 03:58（空闲）
     started(r)
     r.go(S.PREPARING, "准备沙箱")
     r.go(S.PLANNING, "规划")
@@ -259,7 +259,7 @@ def success() -> list[TrajectoryEvent]:
 
 
 def failure() -> list[TrajectoryEvent]:
-    r = Run("failure", datetime(2026, 10, 10, 13, 5, tzinfo=UTC), 0.8)  # 北京时间 10-10 21:05（空闲）
+    r = Run("failure", datetime(2026, 10, 10, 13, 5, tzinfo=UTC))  # 北京时间 10-10 21:05（空闲）
     started(r)
     r.go(S.PLANNING, "规划")
     r.call("planner", usage(18_000, 0.0, 800, 500), "根因假设：时钟偏差导致 token 提前过期")
@@ -322,7 +322,7 @@ def failure() -> list[TrajectoryEvent]:
 
 
 def budget_exceeded() -> list[TrajectoryEvent]:
-    r = Run("budget", datetime(2026, 10, 10, 14, 30, tzinfo=UTC), 0.05)  # 冒烟任务：单任务上限 ¥0.05
+    r = Run("budget", datetime(2026, 10, 10, 14, 30, tzinfo=UTC))  # 触及非金钱安全上限（未命中输入 token）
     started(r)
     r.go(S.EXECUTING, "修复")
     r.call("executor", usage(20_000, 0.0, 1_500, 900), "读代码（缓存未命中）")
@@ -337,23 +337,23 @@ def budget_exceeded() -> list[TrajectoryEvent]:
         None,
         ErrorPayload(
             type="BudgetExceeded",
-            message="max_cost_cny 已超出",
-            display="超出单任务预算 ¥0.05",
+            message="单任务安全上限 max_uncached_input_tokens 已用尽",
+            display="触及安全上限：未命中输入 token",
             role_hint="system",
         ),
     )
-    r.go(S.BUDGET_EXCEEDED, "预算耗尽")
+    r.go(S.BUDGET_EXCEEDED, "触及安全上限")
     cr = r.cost_report()
     r.emit(
         None,
         TaskFinishedPayload(
             status="budget_exceeded",
             cost_report=cr,
-            display=f"预算耗尽 · ¥{cr.total_cny:.3f} / ¥0.05",
+            display=f"触及安全上限 · ¥{cr.total_cny:.3f}",
             role_hint="system",
         ),
     )
-    assert cr.total_cny > cr.budget_cny
+    assert cr.budget_cny is None
     return r.events
 
 

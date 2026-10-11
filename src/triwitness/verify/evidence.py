@@ -266,7 +266,7 @@ def _cost(ev: Evidence) -> list[str]:
     if c.sandbox_cost_cny:
         out.append(f"| 沙箱 | | | | ¥{c.sandbox_cost_cny:.2f} |")
     est = "，估算" if c.estimated else ""
-    out.append(f"| **合计** | | | | **¥{c.total_cny:.2f}**（预算 ¥{c.budget_cny:g}{est}） |")
+    out.append(f"| **合计** | | | | **¥{c.total_cny:.2f}**{'（估算）' if est else ''} |")
     return out
 
 

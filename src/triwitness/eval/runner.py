@@ -4,10 +4,9 @@
 结果目录 evals/results/<北京时间戳>/<config>/<task>/<attempt>/{result.json, patch.diff, trajectory.jsonl,
 verifier.log}（ADR-0001 #6）。result.json 原子写入，存在即跳过（断点续跑；Ctrl-C 后重跑不重复执行）。
 
-费用护栏（只对 llm Agent 且 live 时生效；假 Agent 与回放模式不花钱）：
-- 启动前：高峰闸门（PeakGate.check_start）、预估总额 > max_total_cny 不开始、全局账本 / 类别信封预检；
-- 运行中：跨入高峰不再派发新 attempt（已在跑的允许完成），未跑的留给下次续跑；
-- 每个任务：Budget.max_cost_cny = min(配置, 任务 [tw] max_cost_cny)，由 TaskBudgetGuard 执行。
+费用（只对 llm Agent 且 live 时发生；假 Agent 与回放模式不花钱）：
+- 启动前给出预估并写进 run.json；0.3.2（Eva 19:14）起不再按金额 / 高峰拒绝启动或停止派发，高峰只做标注；
+- 每个任务：TaskBudgetGuard 只执行非金钱安全上限（轮数 / 墙钟 / token 兜底）。
 """
 
 from __future__ import annotations
@@ -57,7 +56,7 @@ class RunConfig(BaseModel):
     attempts: int = Field(default=1, ge=1)
     budget_profile: str = "eval"
     harness: str | None = None
-    category: str = "baseline"  # 全局账本类别信封（configs/budget.yaml envelopes_cny）
+    category: str = "baseline"  # 账本统计类别
     # W3-13 / W3-14 结论：默认 deterministic（¥0）；model 档只在“确定性 pass 但证据薄”时调用模型，判 1 次
     verifier: VerifierMode = "deterministic"
     verifier_model_policy: ModelPolicy = "thin_pass"
@@ -245,15 +244,6 @@ class EvalRunner:
         if not paid or not self.live:
             return est
         self.gate.check_start("评测")
-        if est > self.max_total_cny:
-            raise EstimateTooHigh(
-                f"预估 ¥{est:.2f}（{len(paid)} 个 attempt）超过上限 ¥{self.max_total_cny:g}，不开始；"
-                "调高 --max-total-cny 或用 --limit 减少任务"
-            )
-        if self.ledger is not None:
-            for cat in sorted({j.config.category for j in paid}):
-                n = sum(1 for j in paid if j.config.category == cat)
-                self.ledger.precheck(est * n / len(paid), cat)
         return est
 
     # ------------------------------------------------------------ 运行
@@ -287,7 +277,7 @@ class EvalRunner:
                 return
             async with sem:
                 if self.live and job.config.agent == "llm" and not self.gate.may_dispatch():
-                    summary.deferred_peak += 1  # 跨入高峰：不派发，留给续跑
+                    summary.deferred_peak += 1  # 现已不会发生（may_dispatch 恒真），字段保留兼容
                     return
                 try:
                     res = await self.run_attempt(job, d)

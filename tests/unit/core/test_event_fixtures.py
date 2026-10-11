@@ -57,12 +57,12 @@ def test_success_covers_ui_kinds() -> None:
     assert need <= kinds
 
 
-def test_budget_fixture_ends_over_budget() -> None:
+def test_budget_fixture_ends_on_safety_limit() -> None:
     evs = _events(ROOT / "evals/fixtures/events/budget_exceeded.jsonl")
     assert evs[-2].kind in {"state_change", "error"}
     last = evs[-1].typed_payload()
     assert last.status == "budget_exceeded"  # type: ignore[attr-defined]
-    assert last.cost_report.total_cny > last.cost_report.budget_cny  # type: ignore[attr-defined]
+    assert last.cost_report.budget_cny is None  # type: ignore[attr-defined]  # 0.3.2：不再有 ¥ 预算
 
 
 def test_payload_kind_mismatch_rejected() -> None:

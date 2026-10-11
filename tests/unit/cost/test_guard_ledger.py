@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from triwitness.core.errors import BudgetExceeded, PeakHourBlocked
+from triwitness.core.errors import BudgetExceeded
 from triwitness.core.models import Budget, Usage
 from triwitness.cost.guard import TaskBudgetGuard
-from triwitness.cost.ledger import GlobalLedger, KillSwitchEngaged
+from triwitness.cost.ledger import GlobalLedger
 from triwitness.llm import cases
 
 from ..llm.helpers import FIXTURES, WED_PEAK, CannedTransport, client_with, replay_client
@@ -21,13 +21,19 @@ def _raw(name: str = "text_nonthinking") -> dict:
 # ---------------------------------------------------------------- 单任务守卫
 
 
-def test_guard_cost_cap_and_warn() -> None:
-    g = TaskBudgetGuard(Budget(max_cost_cny=0.01))
-    g.record(U, 0.0085)
-    assert g.should_wrap_up
+def test_guard_has_no_money_cap_but_warns_on_turns() -> None:
+    """0.3.2：没有 ¥ 上限（旧配置的 max_cost_cny 读入后忽略）；收尾提醒按非金钱上限的 warn_ratio。"""
+    g = TaskBudgetGuard(Budget(max_cost_cny=0.01, max_turns=10))
+    for _ in range(7):
+        g.record(U, 5.0)
+    g.precheck(100.0)  # 花多少都不拦
+    assert g.cost_cny == pytest.approx(35.0) and not g.should_wrap_up
+    g.record(U, 0)
+    assert g.should_wrap_up  # 8 / 10 轮 = warn_ratio
     with pytest.raises(BudgetExceeded) as e:
-        g.precheck(0.002)
-    assert e.value.limit == "max_cost_cny"
+        g.record(U, 0)
+        g.record(U, 0)
+    assert e.value.limit == "max_turns"
 
 
 def test_guard_turns_tokens_wall() -> None:
@@ -49,29 +55,19 @@ def test_guard_turns_tokens_wall() -> None:
 # ---------------------------------------------------------------- 全局账本
 
 
-def _ledger(tmp_path: Path, **kw) -> GlobalLedger:
-    return GlobalLedger(tmp_path / "l.sqlite", stop_file=tmp_path / "STOP", **kw)
+def _ledger(tmp_path: Path) -> GlobalLedger:
+    return GlobalLedger(tmp_path / "l.sqlite")
 
 
-def test_ledger_defaults_from_budget_yaml(tmp_path: Path) -> None:
+def test_ledger_is_usage_log_only(tmp_path: Path) -> None:
+    """0.3.2：账本只记录，没有总额 / 信封 / 预检。"""
     lg = _ledger(tmp_path)
-    assert lg.total_cny == 100 and lg.envelopes["dev"] == 6
-
-
-def test_ledger_total_envelope_and_record(tmp_path: Path) -> None:
-    lg = _ledger(tmp_path, total_cny=1.0, envelopes={"dev": 0.5})
+    assert not hasattr(lg, "precheck") and not hasattr(lg, "envelopes") and not hasattr(lg, "total_cny")
     lg.record(category="dev", model="deepseek-flash", usage=U, cost_cny=0.45, peak=False, pricing_version="v")
-    with pytest.raises(BudgetExceeded) as e:
-        lg.precheck(0.1, "dev")
-    assert e.value.limit == "envelope:dev"
-    lg.precheck(0.1, "smoke")
-    lg.record(category="smoke", model="deepseek-flash", usage=U, cost_cny=0.5, peak=True, pricing_version="v")
-    with pytest.raises(BudgetExceeded) as e:
-        lg.precheck(0.1, "smoke")
-    assert e.value.limit == "total_cny"
+    lg.record(category="smoke", model="deepseek-flash", usage=U, cost_cny=150.0, peak=True, pricing_version="v")
     s = lg.summary()
-    assert (s.calls, s.peak_calls, round(s.total_cny, 2)) == (2, 1, 0.95)
-    assert s.cache_hit_rate == pytest.approx(0.9) and lg.warn
+    assert (s.calls, s.peak_calls, round(s.total_cny, 2)) == (2, 1, 150.45)
+    assert s.cache_hit_rate == pytest.approx(0.9) and lg.spent("dev") == pytest.approx(0.45)
 
 
 def test_breakdown(tmp_path: Path) -> None:
@@ -87,32 +83,16 @@ def test_breakdown(tmp_path: Path) -> None:
     assert lg.breakdown("peak") == {"off_peak": 0.1, "peak": 0.2}
 
 
-def test_kill_switch_file_and_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    lg = _ledger(tmp_path)
-    (tmp_path / "STOP").touch()
-    with pytest.raises(KillSwitchEngaged):
-        lg.precheck(0.0, "dev")
-    (tmp_path / "STOP").unlink()
-    monkeypatch.setenv("TW_KILL_SWITCH", "1")
-    with pytest.raises(KillSwitchEngaged):
-        lg.precheck(0.0, "dev")
-
-
 # ---------------------------------------------------------------- 组合：LLMClient 护栏链
 
 
-async def test_peak_gate_blocks_live_before_network(tmp_path: Path) -> None:
-    inner = CannedTransport(_raw())
-    c, _ = client_with(inner, "record", tmp_path, now=WED_PEAK, ledger=_ledger(tmp_path))
-    with pytest.raises(PeakHourBlocked):
-        await c.complete(cases.text_nonthinking(), cases.MODEL)
-    assert inner.calls == 0
-
-
-async def test_peak_gate_can_be_overridden(tmp_path: Path) -> None:
+async def test_peak_hours_no_longer_block_and_are_flagged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """0.3.2：高峰时段不拦（STOP / TW_KILL_SWITCH 也不拦），照常计价并在账本里标注高峰。"""
+    monkeypatch.setenv("TW_KILL_SWITCH", "1")
+    (tmp_path / "STOP").touch()
     inner = CannedTransport(_raw())
     lg = _ledger(tmp_path)
-    c, _ = client_with(inner, "live", tmp_path, now=WED_PEAK, ledger=lg, allow_peak=True)
+    c, _ = client_with(inner, "record", tmp_path, now=WED_PEAK, ledger=lg)
     r = await c.complete(cases.text_nonthinking(), cases.MODEL)
     assert r.peak is True and lg.summary().peak_calls == 1
 
@@ -134,18 +114,11 @@ async def test_live_call_recorded_in_ledger_with_cost(tmp_path: Path) -> None:
     assert s.cache_hit_tokens == r.usage.cache_hit_tokens
 
 
-async def test_budget_precheck_refuses_before_network(tmp_path: Path) -> None:
-    inner = CannedTransport(_raw())
-    c, _ = client_with(inner, "live", tmp_path, ledger=_ledger(tmp_path, total_cny=0.00001))
-    with pytest.raises(BudgetExceeded):
-        await c.complete(cases.text_nonthinking(), cases.MODEL)
-    assert inner.calls == 0
-
-
-async def test_task_guard_counts_replayed_cost_and_stops() -> None:
+async def test_task_guard_counts_cost_for_display_and_stops_on_turns() -> None:
     c = replay_client()
-    g = TaskBudgetGuard(Budget(max_cost_cny=0.004))
+    g = TaskBudgetGuard(Budget(max_turns=2))
     await c.complete(cases.cache_prefix(cases.CACHE_Q1), cases.MODEL, guard=g)  # ≈ ¥0.0035
-    assert g.cost_cny == pytest.approx(0.003527, rel=1e-3) and g.should_wrap_up
-    with pytest.raises(BudgetExceeded):
-        g.record(U, 0.001)
+    assert g.cost_cny == pytest.approx(0.003527, rel=1e-3) and not g.should_wrap_up
+    with pytest.raises(BudgetExceeded) as e:
+        await c.complete(cases.cache_prefix(cases.CACHE_Q1), cases.MODEL, guard=g)
+    assert e.value.limit == "max_turns"

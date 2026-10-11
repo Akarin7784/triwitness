@@ -854,9 +854,17 @@
       "additionalProperties": false,
       "properties": {
         "budget_cny": {
-          "exclusiveMinimum": 0,
-          "title": "Budget Cny",
-          "type": "number"
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Budget Cny"
         },
         "cache_hit_rate": {
           "maximum": 1,
@@ -900,7 +908,6 @@
         "task_id",
         "lines",
         "total_cny",
-        "budget_cny",
         "cache_hit_rate",
         "pricing_version"
       ],

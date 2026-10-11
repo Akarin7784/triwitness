@@ -1,8 +1,7 @@
-"""批量 / 评测层的空闲闸门（W1-14 剩余部分）。调用级闸门在 LLMClient.check_peak_gate。
+"""高峰时段标注与估算（W1-14）。
 
-- 启动：高峰时段拒绝启动 eval / 批量 / 录制 / dogfooding（allow_peak 需显式确认，并在报告标注）。
-- 运行中：跨入高峰后不再派发新任务；已在跑的任务允许完成（任务内的调用由 run 级别的 allow_in_flight 放行）。
-- 估算：同时给出空闲价与高峰价，供 `tw eval estimate` 展示。
+0.3.2（Eva 19:14）起不再拦截：高峰时段照常启动 / 派发，只在报告里标注“含高峰价（2×）调用”。
+估算同时给出空闲价与高峰价，供 `tw eval estimate` 展示。
 """
 
 from __future__ import annotations
@@ -11,8 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from triwitness.core.errors import PeakHourBlocked
-from triwitness.llm.pricing import is_peak, next_off_peak, rates, to_shanghai
+from triwitness.llm.pricing import is_peak, rates
 
 
 @dataclass
@@ -22,22 +20,20 @@ class PeakGate:
     started_in_peak: bool = False
 
     def check_start(self, what: str = "批量任务") -> None:
-        at = self.now()
-        if is_peak(at):
-            if not self.allow_peak:
-                raise PeakHourBlocked(
-                    f"{what}在 DeepSeek 高峰时段（北京时间 {to_shanghai(at):%m-%d %H:%M}）拒绝启动；"
-                    f"下一个空闲时刻约 {next_off_peak(at):%m-%d %H:%M}。确需运行请加 --allow-peak（报告会标注）"
-                )
+        """不再拒绝；高峰时段启动只做标注。`allow_peak` 只为兼容旧调用方保留。"""
+        del what
+        if is_peak(self.now()):
             self.started_in_peak = True
 
     def may_dispatch(self) -> bool:
-        """派发下一个任务前调用：跨入高峰（且未显式允许）就停止派发。"""
-        return self.allow_peak or not is_peak(self.now())
+        """不再因高峰停止派发；跨入高峰同样只做标注。"""
+        if is_peak(self.now()):
+            self.started_in_peak = True
+        return True
 
     @property
     def report_flag(self) -> str | None:
-        return "allow_peak：本次运行包含高峰时段调用（2× 价）" if self.started_in_peak else None
+        return "本次运行包含高峰时段调用（2× 价）" if self.started_in_peak else None
 
 
 @dataclass(frozen=True)

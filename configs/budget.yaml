@@ -1,21 +1,20 @@
-# ADR-0002 / 规划 PROJECT_PLAN §9.5；W1-12 实现全局账本与熔断时读取
-total_cny: 100
-warn_ratio: 0.8
-per_eval_invocation_default_cny: 10
-per_task:                   # W2-26：总输入 3M→6M（兜底），新增未命中上限 400K；¥ 才是真闸门
-  eval: {max_cost_cny: 0.8, max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 1800, warn_ratio: 0.8}
-  run:  {max_cost_cny: 1.0, max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 2700, warn_ratio: 0.8}
-envelopes_cny:              # 类别信封
-  dev: 6
-  smoke: 7
-  w1_calibration: 3
-  baseline: 31             # Eva 2026-10-10 批 W2-25 本轮 ¥30（原 ¥10，见 PROJECT_PLAN §9.9）
-  verifier: 3
-  reviewer: 5
-  dogfood: 4
-  ablation: 17
-  memory_ab: 6
-  redteam: 5
-  final: 18
-  reserve: 16
-off_peak_only: true         # live / 批量默认只在空闲时段
+# 单任务安全上限（ADR-0002，0.3.2 修订）：防失控循环的非金钱上限，与 core/models.Budget 默认值一致。
+# 0.3.2（Eva 2026-10-11 19:14）起去掉预算控制：没有 ¥100 总额 / 类别信封 / 单任务 ¥ 上限 / 高峰闸门 / STOP 熔断。
+# 花费仍逐次记入本地账本（~/.triwitness/ledger.sqlite，`tw usage` 查看），只统计不拦截。
+warn_ratio: 0.8             # 任一上限用到 80% 提醒模型收尾
+per_task:
+  eval: {max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 1800}
+  run:  {max_input_tokens: 6000000, max_uncached_input_tokens: 400000, max_output_tokens: 100000, max_turns: 100, max_wall_seconds: 2700}
+usage_categories:           # 账本里的统计类别（不再有额度）
+  - dev
+  - smoke
+  - w1_calibration
+  - baseline
+  - verifier
+  - reviewer
+  - dogfood
+  - chat
+  - ablation
+  - memory_ab
+  - redteam
+  - final

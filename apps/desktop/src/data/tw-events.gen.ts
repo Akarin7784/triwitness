@@ -300,7 +300,7 @@ export type TraceId13 = string | null
 export type Ts13 = string
 export type V13 = 1
 export type Kind14 = 'task_finished'
-export type BudgetCny = number
+export type BudgetCny = number | null
 export type CacheHitRate = number
 export type Estimated = boolean
 export type Calls = number
@@ -803,7 +803,7 @@ export interface TaskFinishedPayload {
   [k: string]: unknown
 }
 export interface CostReport {
-  budget_cny: BudgetCny
+  budget_cny?: BudgetCny
   cache_hit_rate: CacheHitRate
   estimated?: Estimated
   lines: Lines

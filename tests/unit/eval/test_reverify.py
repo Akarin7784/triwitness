@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from triwitness.core.errors import ConfigError, PeakHourBlocked
+from triwitness.core.errors import ConfigError
 from triwitness.eval.report import build_report, render_markdown
 from triwitness.eval.reverify import load_saved, reverify
 from triwitness.eval.runner import EstimateTooHigh, EvalRunner, RunConfig
@@ -14,7 +14,7 @@ from triwitness.eval.task import EvalTask, discover, load_task
 from triwitness.llm.gate import PeakGate
 
 from .test_eval_verifier import DEV, VerifyingGrader, scripted, verdict_router
-from .test_runner import OFF_PEAK, PEAK
+from .test_runner import OFF_PEAK
 
 
 @pytest.fixture(scope="module")
@@ -96,9 +96,6 @@ async def test_guards(saved: Path, tmp_path: Path, tasks: list[EvalTask]) -> Non
         await reverify(saved, saved, tasks=by_id(tasks), grader=VerifyingGrader(), modes=("deterministic",))
     with pytest.raises(ConfigError):  # model 档没有 router
         await reverify(saved, tmp_path / "a", tasks=by_id(tasks), grader=VerifyingGrader(), modes=("model",))
-    with pytest.raises(PeakHourBlocked):
-        await reverify(saved, tmp_path / "b", tasks=by_id(tasks), grader=VerifyingGrader(), modes=("model",),
-                       router_factory=verdict_router, live=True, gate=PeakGate(now=lambda: PEAK))  # fmt: skip
     with pytest.raises(EstimateTooHigh):
         await reverify(saved, tmp_path / "c", tasks=by_id(tasks), grader=VerifyingGrader(), modes=("model",),
                        router_factory=verdict_router, live=True, gate=PeakGate(now=lambda: OFF_PEAK),

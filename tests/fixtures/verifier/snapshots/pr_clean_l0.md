@@ -26,6 +26,6 @@ ruff ✅ · pyright ✅ · 未修改已有测试 ✅ · 无新增 skip ✅ · �
 |---|---|---|---|---|
 | Executor | deepseek-flash | 1.2M（88%） | 41K | ¥0.66 |
 | Verifier | deepseek-flash | 48K（71%） | 3K | ¥0.20 |
-| **合计** | | | | **¥0.86**（预算 ¥5） |
+| **合计** | | | | **¥0.86** |
 
 配置哈希：`h:7f3a01` · TriWitness v0.1.0

@@ -1,4 +1,4 @@
-"""`tw budget` 看板（W1-26）：信封、燃烧速度、耗尽日期、Markdown；余额对账用假 HTTP（不联网）。"""
+"""`tw usage` 用量看板（W1-26，0.3.2 改为只统计）：按类别 / 周 / 模型、Markdown、JSON；余额对账用假 HTTP（不联网）。"""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ import pytest
 from triwitness.core.models import Usage
 from triwitness.cost.dashboard import (
     BALANCE_URL,
-    budget_json,
-    budget_view,
     fetch_balance,
     parse_balance,
-    render_budget_markdown,
+    render_usage_markdown,
+    usage_json,
+    usage_view,
 )
 from triwitness.cost.ledger import GlobalLedger
 
@@ -23,8 +23,7 @@ T0 = datetime(2026, 10, 10, 13, 0, tzinfo=UTC)
 
 
 def ledger(tmp_path: Path) -> GlobalLedger:
-    return GlobalLedger(tmp_path / "l.sqlite", total_cny=100, envelopes={"dev": 6, "baseline": 10},
-                        stop_file=tmp_path / "STOP")  # fmt: skip
+    return GlobalLedger(tmp_path / "l.sqlite")
 
 
 def rec(led: GlobalLedger, cat: str, cost: float, at: datetime, *, peak: bool = False) -> None:
@@ -37,41 +36,43 @@ def test_view_and_markdown(tmp_path: Path) -> None:
     led = ledger(tmp_path)
     rec(led, "dev", 0.5, T0)
     rec(led, "baseline", 1.5, T0 + timedelta(days=1), peak=True)
-    v = budget_view(led, now=T0 + timedelta(days=4))
-    assert v.spent == pytest.approx(2.0) and v.remaining == pytest.approx(98.0)
+    v = usage_view(led, now=T0 + timedelta(days=4))
+    assert v.spent == pytest.approx(2.0)
     assert v.calls == 2 and v.peak_calls == 1 and v.cache_hit_rate == pytest.approx(0.9)
-    assert v.burn_per_day == pytest.approx(0.5)
-    assert v.exhaustion is not None and (v.exhaustion - v.now).days == 196
-    rows = {e.category: e for e in v.envelopes}
-    assert rows["dev"].remaining == pytest.approx(5.5) and rows["baseline"].spent == pytest.approx(1.5)
-    md = render_budget_markdown(v)
-    assert "已花 **¥2.0000**" in md and "| dev | ¥0.5000 | ¥6.0000 | ¥5.5000 |" in md
-    assert "2026-W41" in md and "deepseek-flash" in md and "高峰 1" in md and "状态 正常" in md
+    assert v.by_category == {"baseline": pytest.approx(1.5), "dev": pytest.approx(0.5)}
+    assert not hasattr(v, "remaining") and not hasattr(v, "envelopes")  # 0.3.2：只统计不限制
+    md = render_usage_markdown(v)
+    assert "已花 **¥2.0000**" in md and "| dev | ¥0.5000 |" in md
+    assert "2026-W41" in md and "deepseek-flash" in md and "高峰价 1" in md
+    assert "剩余" not in md and "熔断" not in md and "信封" not in md
 
 
-def test_budget_json_for_desktop(tmp_path: Path) -> None:
-    """桌面端预算页：真实账本 → JSON（北京时间、最近调用新→旧、空账本也能出）。"""
+def test_usage_json_for_desktop(tmp_path: Path) -> None:
+    """桌面端用量页：真实账本 → JSON（北京时间、最近调用新→旧、空账本也能出）。"""
     import json
 
     led = ledger(tmp_path)
-    assert budget_json(budget_view(led, now=T0), led)["recent"] == []
+    empty = usage_json(usage_view(led, now=T0), led)
+    assert empty["recent"] == [] and empty["spent"] == 0 and empty["cache_hit_rate"] is None
     rec(led, "dev", 0.5, T0)
     rec(led, "baseline", 1.5, T0 + timedelta(days=1), peak=True)
-    d = budget_json(budget_view(led, now=T0 + timedelta(days=4)), led)
+    d = usage_json(usage_view(led, now=T0 + timedelta(days=4)), led)
     json.dumps(d)  # 可序列化
     assert d["spent"] == pytest.approx(2.0) and d["calls"] == 2 and d["peak_calls"] == 1
     assert [r["category"] for r in d["recent"]] == ["baseline", "dev"]
     assert d["recent"][0]["ts"] == "10-11 21:00" and d["recent"][0]["peak"] is True
     assert d["recent"][1]["cache_hit_tokens"] == 900 and d["now"].endswith("+08:00")
-    assert {e["category"] for e in d["envelopes"]} >= {"dev", "baseline"}
+    assert d["by_category"] == {"baseline": pytest.approx(1.5), "dev": pytest.approx(0.5)}
+    assert d["first_call"] == "2026-10-10" and "envelopes" not in d and "remaining" not in d
 
 
-def test_empty_ledger_and_kill_switch(tmp_path: Path) -> None:
-    led = ledger(tmp_path)
+def test_stop_file_and_kill_switch_no_longer_block(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """0.3.2：STOP 文件 / TW_KILL_SWITCH 不再有任何作用，账本照常记录。"""
+    monkeypatch.setenv("TW_KILL_SWITCH", "1")
     (tmp_path / "STOP").touch()
-    v = budget_view(led, now=T0)
-    assert v.spent == 0 and v.burn_per_day is None and v.exhaustion is None and v.cache_hit_rate is None
-    assert "熔断开启" in render_budget_markdown(v)
+    led = ledger(tmp_path)
+    rec(led, "dev", 0.25, T0)
+    assert led.spent() == pytest.approx(0.25)
 
 
 async def test_balance_sync_with_fake_http(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,4 +1,4 @@
-"""W2-26：输入 token 上限改为“总量 6M 兜底 + 未命中 400K”，¥ 上限才是真闸门。"""
+"""W2-26：输入 token 上限“总量 6M 兜底 + 未命中 400K”；0.3.2 起没有 ¥ 上限，轮数 / token 是防失控兜底。"""
 
 from __future__ import annotations
 
@@ -35,13 +35,13 @@ def test_uncached_cap_trips_on_cache_misses() -> None:
     assert e.value.limit == "max_uncached_input_tokens"
 
 
-def test_cost_cap_is_the_real_guard() -> None:
-    """高命中长任务：¥ 先于任何 token 上限触发。"""
+def test_no_money_cap_turns_backstop_runaway() -> None:
+    """0.3.2：高命中长任务不再因 ¥ 停下，失控循环由轮数上限兜住。"""
     g = TaskBudgetGuard(Budget())
     with pytest.raises(BudgetExceeded) as e:
         for _ in range(100):
             g.record(_u(48_500, 1_500), 0.009)
-    assert e.value.limit == "max_cost_cny"
+    assert e.value.limit == "max_turns" and g.cost_cny == pytest.approx(0.9)
     assert g.usage.input_tokens < 6_000_000 and g.usage.cache_miss_tokens < 400_000
 
 
@@ -55,6 +55,7 @@ def test_total_input_cap_still_backstops() -> None:
 def test_budget_yaml_matches_model_defaults() -> None:
     cfg = yaml.safe_load((ROOT / "configs" / "budget.yaml").read_text(encoding="utf-8"))
     ev, b = cfg["per_task"]["eval"], Budget.for_eval()
-    for k in ("max_cost_cny", "max_input_tokens", "max_uncached_input_tokens", "max_output_tokens", "max_turns"):
+    assert "max_cost_cny" not in ev and "envelopes_cny" not in cfg and "total_cny" not in cfg
+    for k in ("max_input_tokens", "max_uncached_input_tokens", "max_output_tokens", "max_turns"):
         assert ev[k] == getattr(b, k), k
     assert cfg["per_task"]["run"]["max_uncached_input_tokens"] == Budget.for_run().max_uncached_input_tokens

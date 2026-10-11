@@ -1,6 +1,7 @@
 """LLMClient：一次模型调用的完整护栏链（W1-07/08/11/12/14 的最小组合）。
 
-顺序：白名单 → 回放缓存（命中则 ¥0 返回）→ 空闲闸门 → 全局账本 + 单任务预算预检 → 真调 → 计价 → 记账。
+顺序：白名单 → 回放缓存（命中则 ¥0 返回）→ 单任务安全上限预检 → 真调 → 计价 → 记账（用量日志）。
+0.3.2 起不再有高峰闸门与 ¥ 预算拦截（Eva 19:14）；高峰价调用照常计价并在账本里标注。
 Router（W1-13）在此之上加角色路由、回退与 eval 模式约束。
 """
 
@@ -13,13 +14,13 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from triwitness.core.errors import ConfigError, PeakHourBlocked
+from triwitness.core.errors import ConfigError
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.cost.ledger import GlobalLedger
 from triwitness.llm.adapter import ModelAdapter, ModelPolicy
 from triwitness.llm.deepseek import BASE_URL, DeepSeekAdapter
 from triwitness.llm.http import HttpTransport
-from triwitness.llm.pricing import estimate_cost, is_peak, next_off_peak, price_call
+from triwitness.llm.pricing import price_call
 from triwitness.llm.replay import RecordReplayTransport, ReplayStore
 from triwitness.llm.stream import current_sink, replay_deltas
 from triwitness.llm.types import LLMRequest, LLMResponse
@@ -79,14 +80,6 @@ class LLMClient:
             ledger = ledger or GlobalLedger()
         return cls(DeepSeekAdapter(), rr, ledger=ledger, allow_peak=allow_peak)
 
-    def check_peak_gate(self, at: datetime) -> None:
-        if is_peak(at) and not self.allow_peak:
-            raise PeakHourBlocked(
-                "现在是 DeepSeek 高峰时段（2× 价），默认拒绝真实调用；"
-                f"下一个空闲时刻约 {next_off_peak(at):%m-%d %H:%M}（北京时间）。"
-                "确需调用请显式 --allow-peak"
-            )
-
     async def complete(
         self,
         req: LLMRequest,
@@ -101,23 +94,10 @@ class LLMClient:
         at = self.now()
         cached = self.transport.lookup(payload)
         live = cached is None
-        if live:
-            if self.transport.mode == "replay":
-                await self.transport.post(CHAT_PATH, payload)  # 必然抛 ReplayMiss，绝不联网
-            self.check_peak_gate(at)
-            est = estimate_cost(
-                self.adapter.vendor,
-                name,
-                input_tokens=_estimate_input_tokens(payload),
-                max_output_tokens=req.max_output_tokens or DEFAULT_MAX_OUTPUT_ESTIMATE,
-                at=at,
-            )
-            if self.ledger is not None:
-                self.ledger.precheck(est, category)
-            if guard is not None:
-                guard.precheck(est)
-        elif guard is not None:
-            guard.precheck(0.0)
+        if live and self.transport.mode == "replay":
+            await self.transport.post(CHAT_PATH, payload)  # 必然抛 ReplayMiss，绝不联网
+        if guard is not None:
+            guard.precheck()
         sink = current_sink()
         t0 = time.monotonic()
         raw = cached if cached is not None else await self.transport.post(CHAT_PATH, payload, sink=sink)

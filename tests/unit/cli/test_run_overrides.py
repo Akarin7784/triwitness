@@ -14,12 +14,11 @@ def test_no_overrides() -> None:
     assert _run_overrides(None, None, None, interactive=True) == (None, None)
 
 
-def test_max_cost_lower_only() -> None:
-    budget, _ = _run_overrides(0.3, None, None, interactive=False)
-    assert budget is not None and budget.max_cost_cny == 0.3 and budget.max_wall_seconds == 2700
-    for bad in (0, -1, 1.5):
-        with pytest.raises(typer.BadParameter):
-            _run_overrides(bad, None, None, interactive=False)
+def test_max_cost_is_ignored() -> None:
+    """0.3.2：不再有单任务 ¥ 上限；旧桌面端传的 --max-cost 被忽略（不报错、不生效）。"""
+    for v in (0.3, 0, -1, 9.0):
+        budget, _ = _run_overrides(v, None, None, interactive=False)
+        assert budget is None
 
 
 def test_permission_mode_session_layer() -> None:
@@ -42,6 +41,6 @@ def test_unrestricted_needs_interactive_and_phrase() -> None:
     assert s is not None and s.unrestricted is not None and not s.unrestricted.valid()  # load_policy 再拒
 
 
-def test_cli_rejects_bad_cap(tmp_path) -> None:  # type: ignore[no-untyped-def]
-    r = CliRunner().invoke(app, ["run", "--repo", str(tmp_path), "--demo", "--max-cost", "9"])
-    assert r.exit_code != 0
+def test_cli_hides_removed_budget_flags() -> None:
+    r = CliRunner().invoke(app, ["run", "--help"])
+    assert r.exit_code == 0 and "--max-cost" not in r.output and "--allow-peak" not in r.output

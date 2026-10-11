@@ -14,13 +14,12 @@ from typing import Any
 
 import pytest
 
-from triwitness.core.errors import BudgetExceeded, ConfigError, PeakHourBlocked
+from triwitness.core.errors import ConfigError
 from triwitness.core.models import Usage
-from triwitness.cost.ledger import GlobalLedger
 from triwitness.eval.agents import LLMAgent, NullAgent, OracleAgent, TamperAgent
 from triwitness.eval.grade import GradeResult, filter_patch
 from triwitness.eval.report import build_report, render_markdown, write_report
-from triwitness.eval.runner import EstimateTooHigh, EvalRunner, RunConfig, historical_avg_cost
+from triwitness.eval.runner import EvalRunner, RunConfig, historical_avg_cost
 from triwitness.eval.task import EvalTask, discover, load_task
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.testing import FakeRouter, FakeSandbox, call, say
@@ -197,45 +196,14 @@ async def test_infra_error_leaves_attempt_for_resume(tmp_path: Path, tasks: list
 LLM = [RunConfig(name="baseline", agent="llm", category="baseline")]
 
 
-async def test_ac7_estimate_over_cap_does_not_start(tmp_path: Path, tasks: list[EvalTask]) -> None:
-    r, g = runner(tmp_path, live=True, max_total_cny=1.0, per_task_estimate_cny=0.3)
-    with pytest.raises(EstimateTooHigh, match="超过上限"):
-        await r.run(tasks, LLM, out_dir=tmp_path / "run")
-    assert g.sandboxes == 0 and not (tmp_path / "run").exists()
-
-
-async def test_peak_blocks_live_start(tmp_path: Path, tasks: list[EvalTask]) -> None:
-    r, g = runner(tmp_path, live=True, now=lambda: PEAK, per_task_estimate_cny=0.01)
+async def test_no_money_or_peak_refusal(tmp_path: Path, tasks: list[EvalTask]) -> None:
+    """0.3.2（Eva 19:14）：预估超过旧上限、高峰时段启动、跨入高峰——都照常运行，只在 run.json 标注高峰。"""
+    r, g = runner(tmp_path, live=True, max_total_cny=0.001, per_task_estimate_cny=0.3, now=lambda: PEAK)
     r.gate.now = lambda: PEAK
-    with pytest.raises(PeakHourBlocked):
-        await r.run(tasks, LLM, out_dir=tmp_path / "run")
-    assert g.sandboxes == 0
-
-
-async def test_peak_does_not_block_offline_or_fake(tmp_path: Path, tasks: list[EvalTask]) -> None:
-    r, _ = runner(tmp_path, now=lambda: PEAK)
-    r.gate.now = lambda: PEAK
-    s = await r.run(tasks[:1], [*LLM, RunConfig.fake("null")], out_dir=tmp_path / "run")
-    assert len(s.done) == 2 and s.estimate_cny == 0
-
-
-async def test_crossing_into_peak_stops_dispatch(tmp_path: Path, tasks: list[EvalTask]) -> None:
-    clock = iter([OFF_PEAK, OFF_PEAK] + [PEAK] * 100)
-    r, _ = runner(tmp_path, live=True, per_task_estimate_cny=0.01)
-    r.gate.now = lambda: next(clock)
     s = await r.run(tasks, LLM, out_dir=tmp_path / "run", concurrency=1)
-    assert len(s.done) == 1 and s.deferred_peak == len(tasks) - 1
-    assert len(build_report(tmp_path / "run").missing) == len(tasks) - 1
-
-
-async def test_ledger_envelope_precheck(tmp_path: Path, tasks: list[EvalTask]) -> None:
-    ledger = GlobalLedger(
-        tmp_path / "spend.sqlite", total_cny=100, envelopes={"baseline": 0.05}, stop_file=tmp_path / "STOP"
-    )
-    r, g = runner(tmp_path, live=True, ledger=ledger, per_task_estimate_cny=0.02)
-    with pytest.raises(BudgetExceeded, match="baseline"):
-        await r.run(tasks, LLM, out_dir=tmp_path / "run")
-    assert g.sandboxes == 0
+    assert len(s.done) == len(tasks) and s.deferred_peak == 0 and g.sandboxes > 0
+    meta = json.loads((tmp_path / "run" / "run.json").read_text(encoding="utf-8"))
+    assert meta["peak_flag"] and "高峰" in meta["peak_flag"]
 
 
 async def test_non_replay_mode_requires_live(tmp_path: Path, tasks: list[EvalTask],

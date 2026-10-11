@@ -44,7 +44,7 @@ EXECUTOR_PROMPT = load_prompt("executor").text  # 版本化提示：src/triwitne
 FinishStatus = Literal["done", "failed", "budget_exceeded", "stuck", "needs_human", "cancelled"]
 _STATUS: dict[str, tuple[FinishStatus, TaskState, str]] = {
     "finished": ("done", TaskState.DONE, "完成"),
-    "budget_exhausted": ("budget_exceeded", TaskState.BUDGET_EXCEEDED, "预算耗尽"),
+    "budget_exhausted": ("budget_exceeded", TaskState.BUDGET_EXCEEDED, "触及安全上限"),
     "stuck": ("stuck", TaskState.FAILED, "卡住"),
     "needs_human": ("needs_human", TaskState.NEEDS_HUMAN, "等待人工"),
     "error": ("failed", TaskState.FAILED, "失败"),
@@ -101,7 +101,7 @@ async def run_task(
 ) -> TaskResult:
     rec = recorder
     cfg = config or HarnessConfig.default()
-    ledger = CostLedger(task_id=rec.task_id, budget_cny=budget.max_cost_cny, pricing_version=pricing_version())
+    ledger = CostLedger(task_id=rec.task_id, pricing_version=pricing_version())
     for ev in list(rec.events):  # 对话轮已记下的调用（同一个 run）也算进本任务成本：结论卡 = 轮次合计 = 账本
         ledger.observe(ev)
     rec.subscribe(ledger.observe)

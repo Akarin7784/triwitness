@@ -1,7 +1,8 @@
-"""单任务预算守卫（ADR-0002；spec 003 §2.4 的五种上限）。
+"""单任务安全上限守卫（ADR-0002；spec 003 §2.4）。
 
-调用前 `precheck(estimate)`，调用后 `record(usage, cost)`；任一上限触发即抛 BudgetExceeded。
-回放模式下也按价格表记账（模拟预算行为），但不进全局账本。
+0.3.2（Eva 19:14）起不再有 ¥ 上限：只保留防失控的非金钱上限——轮数、墙钟时间、输入 / 未命中输入 / 输出 token 兜底。
+调用前 `precheck()`，调用后 `record(usage, cost)`；任一上限触发即抛 BudgetExceeded（limit 指明是哪一项）。
+花费仍累加在 `cost_cny` 里，只用于展示。
 """
 
 from __future__ import annotations
@@ -27,33 +28,36 @@ class TaskBudgetGuard:
     def __post_init__(self) -> None:
         self.started = self.clock()
 
-    def _check(self, *, extra_cost: float = 0.0) -> None:
+    def _usage(self) -> tuple[tuple[str, float, float], ...]:
         b = self.budget
-        checks = (
-            ("max_cost_cny", self.cost_cny + extra_cost, b.max_cost_cny),
+        return (
             ("max_input_tokens", self.usage.input_tokens, b.max_input_tokens),
             ("max_uncached_input_tokens", self.usage.cache_miss_tokens, b.max_uncached_input_tokens),
             ("max_output_tokens", self.usage.output_tokens, b.max_output_tokens),
             ("max_turns", self.turns, b.max_turns),
             ("max_wall_seconds", self.clock() - self.started, b.max_wall_seconds),
         )
-        for name, used, cap in checks:
-            if used >= cap if name != "max_cost_cny" else used > cap:
-                raise BudgetExceeded(f"单任务预算 {name} 已用尽：{used:.4g} / {cap:g}", limit=name, used=used, cap=cap)
+
+    def _check(self) -> None:
+        for name, used, cap in self._usage():
+            if used >= cap:
+                msg = f"单任务安全上限 {name} 已用尽：{used:.4g} / {cap:g}"
+                raise BudgetExceeded(msg, limit=name, used=used, cap=cap)
 
     def precheck(self, estimate_cny: float = 0.0) -> None:
-        """调用前：已花 + 预估 > 上限，或其他上限已触发 → 拒绝。"""
-        self._check(extra_cost=estimate_cny)
+        """调用前：任一安全上限已触发 → 拒绝。`estimate_cny` 只为兼容旧调用方，忽略。"""
+        del estimate_cny
+        self._check()
 
     def record(self, usage: Usage, cost_cny: float) -> None:
         self.turns += 1
         self.usage = self.usage + usage
         self.cost_cny += cost_cny
-        if not self.warned and self.cost_cny >= self.budget.warn_ratio * self.budget.max_cost_cny:
+        if not self.warned and any(used >= self.budget.warn_ratio * cap for _, used, cap in self._usage()):
             self.warned = True
         self._check()
 
     @property
     def should_wrap_up(self) -> bool:
-        """达到 warn_ratio：提醒模型收尾（AgentLoop 使用）。"""
+        """任一安全上限用到 warn_ratio：提醒模型收尾（AgentLoop 使用）。"""
         return self.warned
