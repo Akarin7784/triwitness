@@ -2,7 +2,7 @@
  * 开发桥（UI-10）：浏览器预览 / 截图 / e2e 用，等价于 Tauri 后端的 core_* 命令。
  * 只在 `npm run dev` 且 TW_DEV_BRIDGE=1 时启用（只绑本机）；正式构建不包含。
  *   GET  /__tw/health            → { bridge: 'tw-bridge/1' }
- *   POST /__tw/start {repo,issue,mode,...RunChoices} → { key }
+ *   POST /__tw/start {repo,issue,mode,parentRun,...RunChoices} → { key }
  *   GET  /__tw/stream?key=       → SSE：每行一条 message；结束发 event: exit
  *   POST /__tw/send {key,line} · /__tw/cancel {key} · /__tw/alive {key} · /__tw/read {runDir,afterSeq}
  *   POST /__tw/attach {name,dataB64} → {path,name,size} · /__tw/artifact {runDir,name} → {text|null}
@@ -68,11 +68,14 @@ interface Task {
   subs: Set<ServerResponse>
 }
 
-export function runArgs(repo: string, issue: string, mode: string): string[] {
-  const a = ['run', '--jsonl', '--repo', repo]
+/** 与 Rust run_args 一致；开发桥额外允许 demo（仅开发 / 测试，正式版核心不含） */
+export function runArgs(repo: string, issue: string, mode: string, parentRun = ''): string[] {
+  const a = ['run', '--jsonl']
+  if (repo.trim()) a.push('--repo', repo)
   if (issue.trim()) a.push('--issue', issue)
+  if (/^r_[0-9A-Za-z]{8,40}$/.test(parentRun)) a.push('--parent-run', parentRun)
   if (mode === 'demo') a.push('--demo')
-  if (mode === 'live') a.push('--live')
+  else if (mode !== 'replay') a.push('--live')
   return a
 }
 
@@ -136,7 +139,7 @@ export function coreBridge(repoRoot: string): Plugin {
             const b = await body(req)
             const [cmd, ...pre] = core()
             const key = `d${++n}`
-            const args = [...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'demo')), ...choiceArgs(b), ...inputArgs(b, key)]
+            const args = [...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'live'), String(b.parentRun ?? '')), ...choiceArgs(b), ...inputArgs(b, key)]
             const child = spawn(cmd, [...pre, ...args], {
               env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
               stdio: ['pipe', 'pipe', 'pipe'],

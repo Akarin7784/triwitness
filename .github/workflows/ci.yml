@@ -84,3 +84,5 @@ jobs:
         run: npm test
       - name: Build web assets (tsc -b && vite build)
         run: npm run build
+      - name: Release bundle has no demo / replay / stress sources
+        run: npm run check:bundle

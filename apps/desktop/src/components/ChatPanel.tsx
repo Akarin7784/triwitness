@@ -39,6 +39,8 @@ interface ChatPanelProps {
   allowEmpty?: boolean
   /** 对话流（UI-20）：有就按 Claude 式一轮渲染，替代消息气泡 */
   turn?: Turn | null
+  /** 多轮（0.3.1）：之前各轮（只读），显示在当前这一轮上面；result 只有转成任务的轮才有 */
+  history?: { key: string; turn: Turn; result: ResultMsg | null }[]
   draftKey?: string
   /** 重试 / 编辑后重发 / 赞踩 / 版本（UI-21） */
   turnActions?: TurnActions
@@ -88,6 +90,7 @@ export function ChatPanel({
   onStop,
   allowEmpty,
   turn,
+  history,
   draftKey,
   turnActions,
   titleMenu,
@@ -214,6 +217,12 @@ export function ChatPanel({
       <ChatScrollContext.Provider value={scrollRef}>
       <div ref={scrollRef} data-testid="chat-scroll" className="h-full overflow-y-auto scroll-soft px-8 py-5">
       <div ref={contentRef} className="chat-zoom mx-auto max-w-[760px] space-y-3">
+        {history?.map((h) => (
+          <div key={h.key} data-testid="past-turn" className="space-y-3">
+            <AssistantTurn turn={h.turn} />
+            {h.result && <ResultCard result={h.result} />}
+          </div>
+        ))}
         {turn ? (
           <AssistantTurn key={draftKey} turn={turn} actions={turnActions} attachments={sentAttachments} />
         ) : (

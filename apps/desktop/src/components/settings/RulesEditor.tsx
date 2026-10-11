@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react'
 import clsx from 'clsx'
 import { coreTool } from '../../lib/coreTool'
-import { coreMode, defaultDemoRepo, lastRepo } from '../../bridge/liveStore'
+import { lastRepo } from '../../bridge/liveStore'
 import { toast } from '../../lib/toast'
 import { FIELD } from '../../lib/ui'
 import { t as tr } from '../../lib/i18n'
@@ -24,7 +24,7 @@ const KINDS: { id: Kind; label: string; cls: string }[] = [
 const SPRING = { type: 'spring', stiffness: 460, damping: 36 } as const
 
 function repoArg(): string {
-  return lastRepo() || (coreMode() === 'demo' ? defaultDemoRepo() : '')
+  return lastRepo()
 }
 
 /** 用同一个解析器（核心 parse_rule）校验；空串不校验 */

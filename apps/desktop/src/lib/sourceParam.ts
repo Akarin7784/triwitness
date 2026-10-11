@@ -3,13 +3,16 @@ import { FIXTURE_NAMES, type FixtureName } from '../data/sources/fixture'
 /** ?source=fixture:success | fixture:failure | fixture:budget_exceeded | fixture:recorded | mock；默认 fixture:success */
 export type SourceKey = `fixture:${FixtureName}` | 'mock' | 'stress' | `local:${string}` | `live:${string}`
 
-export function parseSourceParam(search: string): SourceKey {
+export function parseSourceParam(search: string, dev: boolean = import.meta.env.DEV): SourceKey {
   const raw = new URLSearchParams(search).get('source') ?? ''
+  if (/^live:[\w-]+$/.test(raw)) return raw as SourceKey
+  // 正式版：没有演示 / 回放 / 压测来源，默认打开一个新会话
+  if (!dev) return `local:${Date.now()}`
   if (raw === 'mock') return 'mock'
   if (raw === 'stress') return 'stress'
-  if (/^live:[\w-]+$/.test(raw)) return raw as SourceKey
   const m = /^fixture:(.+)$/.exec(raw)
   if (m && (FIXTURE_NAMES as string[]).includes(m[1])) return `fixture:${m[1] as FixtureName}`
+  if (raw === 'new') return `local:${Date.now()}`
   return 'fixture:success'
 }
 

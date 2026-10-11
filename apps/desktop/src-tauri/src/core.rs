@@ -109,17 +109,39 @@ pub fn input_args(home: &std::path::Path, c: &Choices, guidance_file: Option<&st
     a
 }
 
-/// 组装 `tw run` 参数（纯函数，便于单测）
-pub fn run_args(repo: &str, issue: &str, mode: &str) -> Vec<String> {
-    let mut a = vec!["run".to_string(), "--jsonl".into(), "--repo".into(), repo.to_string()];
+/// 0.3.1 起正式版只有真实模式；调试构建（tauri dev）才允许 demo / replay（开发 / 测试用）
+pub fn effective_mode(mode: &str) -> &'static str {
+    match mode {
+        "demo" if cfg!(debug_assertions) => "demo",
+        "replay" if cfg!(debug_assertions) => "replay",
+        _ => "live",
+    }
+}
+
+/// 多轮对话的上一轮 run_id：只放行 `r_` + 字母数字
+pub fn valid_run_id(id: &str) -> bool {
+    id.len() >= 10 && id.len() <= 42 && id.starts_with("r_") && id[2..].chars().all(|c| c.is_ascii_alphanumeric())
+}
+
+/// 组装 `tw run` 参数（纯函数，便于单测）。仓库可空：对话轮只聊天，要动手时核心会请用户选仓库
+pub fn run_args(repo: &str, issue: &str, mode: &str, parent_run: Option<&str>) -> Vec<String> {
+    let mut a = vec!["run".to_string(), "--jsonl".into()];
+    if !repo.trim().is_empty() {
+        a.push("--repo".into());
+        a.push(repo.trim().to_string());
+    }
     if !issue.trim().is_empty() {
         a.push("--issue".into());
         a.push(issue.to_string());
     }
+    if let Some(p) = parent_run.filter(|p| valid_run_id(p)) {
+        a.push("--parent-run".into());
+        a.push(p.to_string());
+    }
     match mode {
         "demo" => a.push("--demo".into()),
-        "live" => a.push("--live".into()),
-        _ => {} // replay：默认只回放
+        "replay" => {} // 默认只回放
+        _ => a.push("--live".into()),
     }
     a
 }
@@ -180,16 +202,15 @@ pub fn core_start(
     state: State<'_, CoreState>,
     repo: String,
     issue: String,
-    mode: String,
+    mode: Option<String>,
+    parent_run: Option<String>,
     choices: Option<Choices>,
 ) -> Result<String, String> {
-    if repo.trim().is_empty() {
-        return Err("缺少仓库路径".into());
+    if issue.trim().is_empty() {
+        return Err("消息不能为空".into());
     }
-    if !matches!(mode.as_str(), "demo" | "replay" | "live") {
-        return Err(format!("未知运行方式：{mode}"));
-    }
-    let mut args = run_args(repo.trim(), &issue, &mode);
+    let mode = effective_mode(mode.as_deref().unwrap_or("live"));
+    let mut args = run_args(&repo, &issue, mode, parent_run.as_deref());
     let choices = choices.unwrap_or_default();
     args.extend(choice_args(&choices));
     let home = crate::files::tw_home();
@@ -206,6 +227,11 @@ pub fn core_start(
     args.extend(input_args(&home, &choices, guidance_file.as_deref()));
     // 真实模式：凭据库里有密钥就注入；没有则沿用环境变量 DEEPSEEK_API_KEY
     let api_key = if mode == "live" { crate::secrets::read_key() } else { None };
+    let env_key = std::env::var("DEEPSEEK_API_KEY").map(|k| !k.trim().is_empty()).unwrap_or(false);
+    if mode == "live" && api_key.is_none() && !env_key {
+        // 前端据此弹出“填写 API 密钥”对话框
+        return Err("missing_api_key：还没有填写 DeepSeek API 密钥".into());
+    }
     let tw_core = std::env::var("TW_CORE").ok();
     let mut last_err = String::from("找不到核心命令");
     let mut child = None;
@@ -332,9 +358,16 @@ mod tests {
 
     #[test]
     fn args_by_mode() {
-        assert_eq!(run_args("C:/r", "修", "demo"), ["run", "--jsonl", "--repo", "C:/r", "--issue", "修", "--demo"]);
-        assert_eq!(run_args("/r", "  ", "live"), ["run", "--jsonl", "--repo", "/r", "--live"]);
-        assert_eq!(run_args("/r", "x", "replay"), ["run", "--jsonl", "--repo", "/r", "--issue", "x"]);
+        assert_eq!(run_args("C:/r", "修", "demo", None), ["run", "--jsonl", "--repo", "C:/r", "--issue", "修", "--demo"]);
+        assert_eq!(run_args("/r", "  ", "live", None), ["run", "--jsonl", "--repo", "/r", "--live"]);
+        assert_eq!(run_args("/r", "x", "replay", None), ["run", "--jsonl", "--repo", "/r", "--issue", "x"]);
+        // 0.3.1：仓库可空（只聊天）；上一轮 run_id 只放行合法格式
+        assert_eq!(run_args("", "你好", "live", Some("r_01ABCDEFGH")),
+                   ["run", "--jsonl", "--issue", "你好", "--parent-run", "r_01ABCDEFGH", "--live"]);
+        assert_eq!(run_args(" ", "你好", "live", Some("../x")), ["run", "--jsonl", "--issue", "你好", "--live"]);
+        assert_eq!(effective_mode("live"), "live");
+        assert_eq!(effective_mode("whatever"), "live");
+        assert!(!valid_run_id("r_; rm -rf") && valid_run_id("r_01M4N6SQ7D25BFZW24M35BK811"));
     }
 
     #[test]

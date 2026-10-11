@@ -123,6 +123,10 @@ function fallbackText(e: TwEvent): string {
     case 'model_delta':
     case 'reasoning_delta':
       return e.payload.text
+    case 'user_message':
+      return e.payload.text
+    case 'turn_finished':
+      return e.payload.kind === 'chat' ? t('已回复') : (STATE_LABEL[e.payload.status as TaskState] ?? e.payload.status)
   }
 }
 
@@ -217,10 +221,31 @@ export function reduceRun(v: RunView, e: AnyEvent): RunView {
   if (role !== 'system') next.activeRole = role
 
   switch (e.kind) {
+    case 'user_message': {
+      // 0.3.1 对话轮：用户原话是标题；之后若转成任务，task_started 不再覆盖
+      const p = e.payload
+      next.title = v.title || p.text.split(/\r?\n/)[0].slice(0, 80)
+      next.repo = p.repo ?? v.repo
+      next.phase = 'active'
+      next.messages = [...v.messages, { id: `m-${e.seq}`, role: 'user', content: p.text, meta: p.repo ?? undefined, timestamp: bjClock(e.ts) }]
+      break
+    }
+    case 'turn_finished': {
+      const p = e.payload
+      next.approvalsPending = 0
+      if (p.kind === 'chat') {
+        next.phase = 'done'
+        next.label = t('已回复')
+        next.activeRole = null
+        next.messages = [...v.messages, { id: `m-${e.seq}`, role: 'assistant', content: p.reply ?? '', timestamp: bjClock(e.ts) }]
+      }
+      break
+    }
     case 'task_started': {
       const p = e.payload
-      next.title = p.issue_number ? `#${p.issue_number} ${p.issue_title}` : p.issue_title
       next.repo = p.repo
+      if (v.messages.some((m) => m.role === 'user')) break
+      next.title = p.issue_number ? `#${p.issue_number} ${p.issue_title}` : p.issue_title
       next.messages = [
         ...v.messages,
         { id: `m-${e.seq}`, role: 'user', content: p.issue_title, meta: p.repo, timestamp: bjClock(e.ts) },

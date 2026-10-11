@@ -11,6 +11,8 @@ export interface StartOptions extends RunChoices {
   repo: string
   issue: string
   mode: CoreMode
+  /** 多轮对话：上一轮的 run_id */
+  parentRun?: string
 }
 
 export interface SavedAttachment {
@@ -56,7 +58,7 @@ class TauriTransport implements CoreTransport {
     return invoke<string>('core_start', {
       repo: o.repo,
       issue: o.issue,
-      mode: o.mode,
+      parentRun: o.parentRun ?? null,
       choices: {
         model: o.model,
         thinking: o.thinking,

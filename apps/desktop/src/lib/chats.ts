@@ -1,6 +1,7 @@
 /**
  * 会话层（UI-21）：侧栏的重命名 / 星标 / 删除、重试与编辑后重发产生的版本、赞踩反馈。
- * 一个会话 = 一个根 key（fixture: / live: / local:）；重试 / 编辑各起一个新任务，作为该会话的新版本。
+ * 一个会话 = 一个根 key（fixture: / live: / local:）；多轮对话（0.3.1）：threads[根] = 各轮的 key（第一轮是根自己），
+ * 每一轮可以有自己的版本（重试 / 编辑只作用于最后一轮，各起一个新任务）。
  * localStorage 持久化，可订阅。
  */
 import { useSyncExternalStore } from 'react'
@@ -28,6 +29,8 @@ interface State {
   overlay: Record<string, ChatOverlay>
   versions: Record<string, Versions>
   feedback: Record<string, Feedback>
+  /** 多轮：根 → 各轮 key（list[0] 是根自己） */
+  threads: Record<string, string[]>
 }
 
 const KEY = 'tw.chats'
@@ -43,9 +46,9 @@ function storage(): Storage | null {
 function load(): State {
   try {
     const v = JSON.parse(storage()?.getItem(KEY) ?? '{}') as Partial<State>
-    return { overlay: v.overlay ?? {}, versions: v.versions ?? {}, feedback: v.feedback ?? {} }
+    return { overlay: v.overlay ?? {}, versions: v.versions ?? {}, feedback: v.feedback ?? {}, threads: v.threads ?? {} }
   } catch {
-    return { overlay: {}, versions: {}, feedback: {} }
+    return { overlay: {}, versions: {}, feedback: {}, threads: {} }
   }
 }
 
@@ -92,16 +95,49 @@ export function toggleStar(key: string) {
 
 /** 删除：标记隐藏（fixture 无法真删）；返回该会话所有版本 key，调用方据此清理真实任务 */
 export function deleteChat(key: string): string[] {
-  const all = state.versions[key]?.list ?? [key]
+  const turns = threadOf(key)
+  const all = turns.flatMap((k) => state.versions[k]?.list ?? [k])
   const versions = { ...state.versions }
-  delete versions[key]
-  commit({ ...state, versions, overlay: { ...state.overlay, [key]: { ...state.overlay[key], deleted: true } } })
+  for (const k of turns) delete versions[k]
+  const threads = { ...state.threads }
+  delete threads[key]
+  commit({ ...state, versions, threads, overlay: { ...state.overlay, [key]: { ...state.overlay[key], deleted: true } } })
   return all
+}
+
+/** 会话的各轮（第一轮是根自己） */
+export function threadOf(root: string, s: State = state): string[] {
+  return s.threads[root] ?? [root]
+}
+
+/** 追加一轮（跟进消息） */
+export function appendTurn(root: string, key: string) {
+  const list = threadOf(root)
+  if (list.includes(key)) return
+  commit({ ...state, threads: { ...state.threads, [root]: [...list, key] } })
+}
+
+/** 是某个会话的后续轮（或后续轮的版本）：侧栏不单独列出 */
+export function isThreadChild(key: string, s: State = state): boolean {
+  return Object.entries(s.threads).some(
+    ([root, list]) => root !== key && list.some((k) => k === key || (s.versions[k]?.list ?? []).includes(key)),
+  )
+}
+
+/** 会话当前显示的最后一轮（考虑版本） */
+export function currentTurn(root: string, s: State = state): string {
+  const list = threadOf(root, s)
+  return currentVersion(list[list.length - 1], s)
 }
 
 /** 某 key 所属会话的根（不是任何会话的版本就是它自己） */
 export function rootOf(key: string, s: State = state): string {
-  for (const [root, v] of Object.entries(s.versions)) if (v.list.includes(key)) return root
+  for (const [turn, v] of Object.entries(s.versions)) if (v.list.includes(key)) return threadRoot(turn, s)
+  return threadRoot(key, s)
+}
+
+function threadRoot(key: string, s: State): string {
+  for (const [root, list] of Object.entries(s.threads)) if (list.includes(key)) return root
   return key
 }
 

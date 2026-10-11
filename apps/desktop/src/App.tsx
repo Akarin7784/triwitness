@@ -22,9 +22,13 @@ import { getDraft, getPrefs, setPrefs, takeUnrestricted, usePrefs, type Prefs } 
 import { findEmptyChat } from './lib/emptyChat'
 import {
   addVersion,
+  appendTurn,
+  currentTurn,
   currentVersion,
   deleteChat,
+  isThreadChild,
   isVersionChild,
+  threadOf,
   renameChat,
   rootOf,
   selectVersion,
@@ -46,6 +50,8 @@ import type { Attachment } from './lib/attachments'
 import { getTransport } from './bridge/transport'
 import { UNRESTRICTED_PHRASE, type RunChoices } from './bridge/choices'
 import { Toaster } from './components/Toaster'
+import { ApiKeyDialog } from './components/ApiKeyDialog'
+import { secretStatus } from './lib/secrets'
 import { MotionConfig } from 'framer-motion'
 import { parseSourceParam, roundsParam, speedParam, writeSourceParam, type SourceKey } from './lib/sourceParam'
 import type { ChatMessage, StreamLine } from './types'
@@ -62,6 +68,7 @@ import {
   useCoreAvailable,
   useLiveSnapshot,
   useLiveTask,
+  usePastTasks,
   useTaskMetas,
 } from './bridge/liveStore'
 import { locale, t as tr } from './lib/i18n'
@@ -87,6 +94,8 @@ const PENDING = '#pending'
 function makeSource(key: string) {
   if (key.endsWith(PENDING)) return null
   if (key.startsWith('live:')) return liveTaskFor(key.slice('live:'.length))
+  // 演示 / 压测 / 录好的轨迹：只在开发构建里（正式版打包时整段被裁掉）
+  if (!import.meta.env.DEV) return null
   const speed = speedParam(window.location.search)
   if (key === 'mock') return createMockSource({ speed })
   if (key === 'stress') return createStressSource(roundsParam(window.location.search), { speed, repeat: roundsParam(window.location.search, 'repeat', 1) })
@@ -99,6 +108,7 @@ function makeSource(key: string) {
 
 function livePhase(m: TaskMeta): Phase {
   if (!m.status) return 'active'
+  if (m.status === 'replied') return 'done'
   if (m.status === 'done') return m.verdict && m.verdict !== 'pass' ? 'waiting' : 'done'
   if (m.status === 'cancelled') return 'cancelled'
   if (m.status === 'budget_exceeded') return 'budget'
@@ -106,6 +116,7 @@ function livePhase(m: TaskMeta): Phase {
 }
 
 const LIVE_LABEL: Record<string, string> = {
+  replied: tr('已回复'),
   done: tr('已完成'),
   failed: tr('未完成'),
   stuck: tr('卡住'),
@@ -160,8 +171,14 @@ export default function App() {
   useAppearance(prefs)
   /** source = 会话根 key；display = 当前显示的版本（重试 / 编辑产生的新任务） */
   const [source, setSource] = useState<SourceKey>(() => parseSourceParam(window.location.search))
-  const display = currentVersion(source, chats) as SourceKey
-  const [locals, setLocals] = useState<{ id: SourceKey; title: string }[]>([])
+  // 多轮（0.3.1）：会话的各轮 key；display = 最后一轮的当前版本，之前各轮按当前版本只读显示在上面
+  const turnKeys = threadOf(source, chats)
+  const lastTurnKey = turnKeys[turnKeys.length - 1]
+  const display = currentTurn(source, chats) as SourceKey
+  const pastKeys = turnKeys.slice(0, -1).map((k) => currentVersion(k, chats))
+  const [locals, setLocals] = useState<{ id: SourceKey; title: string }[]>(() =>
+    source.startsWith('local:') ? [{ id: source, title: tr('新会话') }] : [],
+  )
   const [localMessages, setLocalMessages] = useState<Record<string, ChatMessage[]>>({})
   // 右侧推流写到哪一行（按显示的版本分开记，切版本自动从头）
   const [reveal, setReveal] = useState<{ key: string; seq: number }>({ key: '', seq: -1 })
@@ -186,7 +203,10 @@ export default function App() {
   const liveId = display.startsWith('live:') ? display.slice('live:'.length) : null
   const liveTask = useLiveTask(liveId)
   const snap = useLiveSnapshot(liveTask)
-  const [repo, setRepo] = useState(() => (coreMode() === 'demo' ? '' : lastRepo()))
+  const [repo, setRepo] = useState(() => lastRepo())
+  const [keyDlg, setKeyDlg] = useState(false)
+  const [pendingSend, setPendingSend] = useState<{ text: string; atts: Attachment[] } | null>(null)
+  const pastTasks = usePastTasks(pastKeys.flatMap((k) => (k.startsWith('live:') ? [k.slice(5)] : [])))
   const [startErr, setStartErr] = useState<string | null>(null)
 
   const revealedSeq = reveal.key === display ? reveal.seq : -1
@@ -205,6 +225,9 @@ export default function App() {
 
   const select = (key: SourceKey) => {
     if (key !== source) setArtifact(null)
+    // 打开已有会话：仓库选择跟着这个会话走
+    const m = key.startsWith('live:') ? metas.find((x) => x.id === key.slice(5)) : undefined
+    if (m?.repo) setRepo(m.repo)
     setSource(key)
     writeSourceParam(key)
     setView('chat')
@@ -227,8 +250,8 @@ export default function App() {
         time: new Date(m.startedAt).toTimeString().slice(0, 5),
         at: m.startedAt,
       })),
-      ...(source === 'mock' ? [{ id: 'mock' as SourceKey, title: tr('演示') }] : []),
-      ...(source === 'stress' ? [{ id: 'stress' as SourceKey, title: tr('压测') }] : []),
+      ...(import.meta.env.DEV && source === 'mock' ? [{ id: 'mock' as SourceKey, title: 'mock' }] : []),
+      ...(import.meta.env.DEV && source === 'stress' ? [{ id: 'stress' as SourceKey, title: tr('压测') }] : []),
       ...catalog.map((c) => ({
         id: `fixture:${c.id}` as SourceKey,
         title: c.title,
@@ -239,10 +262,10 @@ export default function App() {
       })),
     ]
     return all
-      .filter((c) => !chats.overlay[c.id]?.deleted && !isVersionChild(c.id, chats))
+      .filter((c) => !chats.overlay[c.id]?.deleted && !isVersionChild(c.id, chats) && !isThreadChild(c.id, chats))
       .map((c) => {
-        // 会话显示当前版本的状态，标题与星标跟着根
-        const cur = currentVersion(c.id, chats)
+        // 会话显示最后一轮当前版本的状态，标题与星标跟着根
+        const cur = currentTurn(c.id, chats)
         const shown = cur === c.id ? c : (all.find((x) => x.id === cur) ?? c)
         const o = chats.overlay[c.id]
         return { ...shown, id: c.id, title: o?.title || c.title, starred: !!o?.starred, projectId: projects.chats[c.id] ?? null }
@@ -258,7 +281,14 @@ export default function App() {
   const messages = [...run.messages, ...(localMessages[display] ?? [])]
   const running = !!snap && !snap.exited && !snap.result
   const approvals = snap?.approvals ?? []
-  const result = snap?.result && !turn.streaming ? snap.result : null
+  // 直接回复（kind=chat）没有结果卡 / 产物：只是一条普通的助手消息
+  const result = snap?.result && !turn.streaming && snap.result.kind !== 'chat' ? snap.result : null
+  const history = pastKeys.map((k, i) => {
+    const id = k.startsWith('live:') ? k.slice(5) : null
+    const task = id ? pastTasks[pastKeys.slice(0, i).filter((x) => x.startsWith('live:')).length] : null
+    const res = (id ? metas.find((m) => m.id === id)?.result : null) ?? task?.snapshot.result ?? null
+    return { key: k, turn: task ? foldTurn(task.allEvents) : EMPTY_TURN, result: res && res.kind !== 'chat' ? res : null }
+  })
   const notice = isLocal
     ? startErr
     : (startErr ??
@@ -268,8 +298,27 @@ export default function App() {
           ? tr('进程已结束')
           : null))
 
+  // 首次使用（桌面端、凭据库里没有密钥）：弹出密钥引导；浏览器预览 / 开发桥（unsupported）不弹
+  useEffect(() => {
+    if (!coreOk) return
+    let alive = true
+    void secretStatus().then(
+      (s) => alive && s === 'unset' && setKeyDlg(true),
+      () => {},
+    )
+    return () => {
+      alive = false
+    }
+  }, [coreOk])
+
   /** 起一个真实任务；返回 live: key。个人资料 + 风格 + 项目说明进“用户设置”，项目知识文件随附件一起交给核心 */
-  const launch = async (issue: string, repoPath: string, files: { name: string; path: string }[], chat: string): Promise<SourceKey> => {
+  const launch = async (
+    issue: string,
+    repoPath: string,
+    files: { name: string; path: string }[],
+    chat: string,
+    parentRun?: string | null,
+  ): Promise<SourceKey> => {
     const mode = coreMode()
     const warrior = takeUnrestricted()
     const p = getPrefs()
@@ -280,6 +329,7 @@ export default function App() {
       repo: repoPath,
       issue,
       mode,
+      parentRun,
       ...runChoices(p, mode, warrior),
       attachments: paths.length ? paths.slice(0, 20) : undefined,
       guidance: guidance || undefined,
@@ -289,17 +339,52 @@ export default function App() {
     return `live:${id}` as SourceKey
   }
 
-  const onSend = (text: string, atts: Attachment[] = []) => {
-    if (isLocal && coreOk) {
-      setStartErr(null)
-      const files = atts.flatMap((a) => (a.path ? [{ name: a.name, path: a.path }] : []))
-      launch(text, repo, files, source)
-        .then((key) => {
-          moveChat(source, key)
-          setLocals((prev) => prev.filter((l) => l.id !== source))
+  /** 失败信息里带 missing_api_key（Rust core_start）→ 弹密钥对话框而不是报错 */
+  const onLaunchError = (e: unknown, retry: { text: string; atts: Attachment[] } | null) => {
+    const msg = String(e instanceof Error ? e.message : e)
+    if (msg.includes('missing_api_key')) {
+      setPendingSend(retry)
+      setKeyDlg(true)
+      return
+    }
+    setStartErr(msg)
+  }
+
+  /** 发出一轮：新会话起第一轮；已有会话带上一轮的 run_id 作为跟进（多轮历史） */
+  const doSend = (text: string, atts: Attachment[]) => {
+    setStartErr(null)
+    const files = atts.flatMap((a) => (a.path ? [{ name: a.name, path: a.path }] : []))
+    const root = source
+    const parentRun = isLocal ? null : (snap?.runId ?? meta?.runId ?? null)
+    launch(text, repo, files, root, parentRun)
+      .then((key) => {
+        if (root.startsWith('local:')) {
+          moveChat(root, key)
+          setLocals((prev) => prev.filter((l) => l.id !== root))
           select(key)
+        } else {
+          appendTurn(root, key)
+        }
+      })
+      .catch((e) => onLaunchError(e, { text, atts }))
+  }
+
+  const onSend = (text: string, atts: Attachment[] = []) => {
+    if (coreOk && (isLocal || liveId)) {
+      if (!isLocal && (running || turn.streaming)) return
+      // 还没有密钥（桌面端凭据库）：先弹引导，填好后自动把这条发出去
+      void secretStatus()
+        .catch(() => 'unsupported' as const)
+        .then((s) => {
+          if (s === 'unset') {
+            setPendingSend({ text, atts })
+            setKeyDlg(true)
+          } else doSend(text, atts)
         })
-        .catch((e) => setStartErr(String(e instanceof Error ? e.message : e)))
+      return
+    }
+    if (!import.meta.env.DEV) {
+      setStartErr(tr('未连接核心'))
       return
     }
     const stamp = clock()
@@ -316,22 +401,24 @@ export default function App() {
   /** 重试 / 编辑后重发：同一会话起新任务，作为新版本并切过去 */
   const newVersion = (kind: VersionKind, text?: string) => {
     const issue = (text ?? turn.user?.text ?? meta?.issue ?? '').trim()
-    const repoPath = meta?.repo ?? (coreMode() === 'demo' ? '' : repo || lastRepo())
+    const repoPath = meta?.repo || repo || lastRepo()
     const files = (meta?.attachmentPaths ?? []).map((path, i) => ({ path, name: meta?.attachments?.[i] ?? path }))
+    const turnKey = lastTurnKey
     setStartErr(null)
-    launch(issue, repoPath, files, source)
-      .then((key) => addVersion(source, key, kind))
-      .catch((e) => setStartErr(String(e instanceof Error ? e.message : e)))
+    // 重试 / 编辑只作用于最后一轮：沿用这一轮的上一轮（同一个 parent 分叉）
+    launch(issue, repoPath, files, source, meta?.parentRun ?? null)
+      .then((key) => addVersion(turnKey, key, kind))
+      .catch((e) => onLaunchError(e, null))
   }
 
-  const versions = chats.versions[source]
+  const versions = chats.versions[lastTurnKey]
   const turnActions = {
     enabled: !!coreOk && !running && !turn.streaming,
     onRetry: () => newVersion('retry'),
     onEdit: (text: string) => newVersion('edit', text),
     versions:
       versions && versions.list.length > 1
-        ? { index: versions.sel, total: versions.list.length, at: versionAnchor(versions), onSelect: (i: number) => selectVersion(source, i) }
+        ? { index: versions.sel, total: versions.list.length, at: versionAnchor(versions), onSelect: (i: number) => selectVersion(lastTurnKey, i) }
         : undefined,
     feedback: chats.feedback[display]?.rating,
     onFeedback: (rating: 'up' | 'down' | null, note?: string) => {
@@ -433,7 +520,7 @@ export default function App() {
   }, [])
 
   // ---- 作品：当前会话各版本的代码块 / patch.diff / pr.md ----
-  const versionKeys = versions?.list ?? [source]
+  const versionKeys = versions?.list ?? [lastTurnKey]
   const versionSources: VersionSource[] = versionKeys.map((k) => {
     const id = k.startsWith('live:') ? k.slice(5) : null
     const m = id ? metas.find((x) => x.id === id) : undefined
@@ -579,6 +666,18 @@ export default function App() {
           />
         ) : (
           <>
+            <ApiKeyDialog
+              open={keyDlg}
+              onClose={() => {
+                setKeyDlg(false)
+                setPendingSend(null)
+              }}
+              onSaved={() => {
+                const p = pendingSend
+                setPendingSend(null)
+                if (p) doSend(p.text, p.atts)
+              }}
+            />
             <ChatPanel
               title={title || tr('三证')}
               run={isLocal ? null : live}
@@ -590,12 +689,8 @@ export default function App() {
               onApprove={liveId ? (rid, d, sc) => approve(liveId, rid, d, sc) : undefined}
               result={result}
               notice={notice}
-              repo={
-                isLocal && coreOk
-                  ? { value: repo, onChange: setRepo, placeholder: coreMode() === 'demo' ? tr('演示仓库') : tr('仓库路径') }
-                  : undefined
-              }
-              allowEmpty={isLocal && !!coreOk && coreMode() === 'demo'}
+              repo={coreOk && (isLocal || liveId) ? { value: repo, onChange: setRepo, placeholder: tr('仓库路径') } : undefined}
+              history={isLocal ? undefined : history}
               running={running}
               onStop={liveId ? () => void cancelTask(liveId) : undefined}
               turnActions={isLocal ? undefined : turnActions}

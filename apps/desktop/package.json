@@ -14,7 +14,8 @@
     "tauri:build": "tauri build",
     "test": "vitest run",
     "gen:events": "node scripts/gen-event-types.mjs",
-    "check:events": "node scripts/gen-event-types.mjs --check"
+    "check:events": "node scripts/gen-event-types.mjs --check",
+    "check:bundle": "node scripts/check-release-bundle.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",

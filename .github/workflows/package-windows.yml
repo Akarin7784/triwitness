@@ -42,7 +42,7 @@ jobs:
         run: |
           uv sync --locked --no-dev --group package
           uv run --no-dev --group package python packaging/core/build_core.py
-      - name: Smoke-test bundled tw.exe (--version, budget --json, demo JSONL round-trip)
+      - name: Smoke-test bundled tw.exe (no --demo; chat + multi-turn + task via local mock LLM)
         timeout-minutes: 10
         run: uv run --no-dev python packaging/core/smoke_core.py apps/desktop/src-tauri/resources/core/tw.exe
 
@@ -59,6 +59,7 @@ jobs:
         run: |
           npm ci
           npx tauri build --bundles nsis --config src-tauri/tauri.core.conf.json
+          npm run check:bundle
 
       - name: Size + sha256
         id: info

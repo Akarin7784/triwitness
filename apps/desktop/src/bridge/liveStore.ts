@@ -42,13 +42,11 @@ function saveMetas(metas: TaskMeta[]) {
   storage()?.setItem(TASKS_KEY, JSON.stringify(metas.slice(0, MAX_TASKS)))
 }
 
+/** 0.3.1 起正式版只有真实模式；开发构建可用 localStorage `tw.core.mode` = demo / replay 切到脚本 / 回放（测试用） */
 export function coreMode(): CoreMode {
+  if (!import.meta.env.DEV) return 'live'
   const v = storage()?.getItem(MODE_KEY)
-  return v === 'replay' || v === 'live' ? v : 'demo'
-}
-
-export function setCoreMode(m: CoreMode) {
-  storage()?.setItem(MODE_KEY, m)
+  return v === 'replay' || v === 'demo' ? v : 'live'
 }
 
 export function lastRepo(): string {
@@ -85,10 +83,6 @@ export function forgetRecentRepo(path: string) {
   if (repoKey(lastRepo()) === repoKey(path)) storage()?.removeItem(REPO_KEY)
 }
 
-/** 演示模式下仓库可留空：核心在 ~/.triwitness/demo/verses 建一个示例仓库 */
-export function defaultDemoRepo(): string {
-  return '~/.triwitness/demo/verses'
-}
 
 /** 把 metas 变成可订阅的外部 store，供侧栏 / 结果卡同步 */
 let metas: TaskMeta[] = loadMetas()
@@ -142,20 +136,29 @@ function wire(t: LiveTask, transport: CoreTransport, key: string, id: string) {
 }
 
 export async function startTask(
-  opts: { repo: string; issue: string; mode: CoreMode; attachmentNames?: string[]; userAttachments?: string[] } & RunChoices,
+  opts: {
+    repo: string
+    issue: string
+    mode: CoreMode
+    attachmentNames?: string[]
+    userAttachments?: string[]
+    /** 多轮对话：上一轮的 run_id */
+    parentRun?: string | null
+  } & RunChoices,
 ): Promise<string> {
   const transport = await getTransport()
   if (!transport) throw new Error(tr('未连接核心'))
-  const repo = opts.repo.trim() || (opts.mode === 'demo' ? defaultDemoRepo() : '')
-  if (!repo) throw new Error(tr('先选仓库'))
-  const { attachmentNames, userAttachments, ...run } = opts
-  const key = await transport.start({ ...run, repo })
+  // 仓库可空：核心先按对话处理，要动手时会请用户选仓库
+  const repo = opts.repo.trim()
+  const { attachmentNames, userAttachments, parentRun, ...run } = opts
+  const key = await transport.start({ ...run, repo, parentRun: parentRun ?? undefined })
   const id = `${Date.now().toString(36)}-${key}`
   const t = new LiveTask(id)
   registry.set(id, t)
-  const title = opts.issue.trim().split(/\r?\n/)[0].slice(0, 60) || (opts.mode === 'demo' ? tr('演示任务') : tr('新任务'))
+  const title = opts.issue.trim().split(/\r?\n/)[0].slice(0, 60) || tr('新会话')
   setMetas([
     { id, title, repo, mode: opts.mode, key, startedAt: Date.now(), issue: opts.issue, model: opts.model, thinking: opts.thinking,
+      parentRun: parentRun ?? undefined,
       attachments: attachmentNames?.length ? attachmentNames : undefined,
       attachmentPaths: userAttachments?.length ? userAttachments : undefined },
     ...metas,
@@ -247,4 +250,20 @@ export function useLiveTask(id: string | null): LiveTask | null {
     }
   }, [id, refresh])
   return id ? (registry.get(id) ?? null) : null
+}
+
+/** 多轮对话里之前的各轮（0.3.1）：逐个续上（读盘回放），全部就绪后刷新一次；返回与 ids 对齐的任务 */
+export function usePastTasks(ids: string[]): (LiveTask | null)[] {
+  const [, bump] = useState(0)
+  const sig = ids.join('|')
+  useEffect(() => {
+    const todo = sig ? sig.split('|').filter((id) => !registry.has(id)) : []
+    if (!todo.length) return
+    let live = true
+    void Promise.all(todo.map((id) => resumeTask(id))).then(() => live && bump((n) => n + 1))
+    return () => {
+      live = false
+    }
+  }, [sig])
+  return ids.map((id) => registry.get(id) ?? null)
 }

@@ -42,6 +42,8 @@ export interface TaskMeta {
   /** 核心进程 key（Tauri core_* / 开发桥），续上实时流用 */
   key?: string
   startedAt: number
+  /** 多轮对话：上一轮的 run_id（重试 / 编辑本轮时沿用） */
+  parentRun?: string
   /** 原始任务文本与选择（重试 / 编辑后重发用；勇士模式确认短语从不保存） */
   issue?: string
   model?: string

@@ -146,7 +146,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
             estimate={estimateBlock}
             render={(b) => <BlockView block={b} streaming={b.type === 'text' && !b.done && b === last} />}
           />
-          {turn.final && (
+          {turn.final?.text && (
             <div className="fade-in mt-3 border-t border-border-soft pt-3">
               <Markdown text={turn.final.text} />
             </div>

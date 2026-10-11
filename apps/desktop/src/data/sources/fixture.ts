@@ -90,7 +90,7 @@ export class FixtureSource implements EventSource {
 }
 
 /** 仓库根 evals/fixtures/events 下的 golden fixture（单一来源，不复制） */
-export const FIXTURES = {
+const LOADERS = {
   success: () => import('../../../../../evals/fixtures/events/success.jsonl?raw').then((m) => m.default),
   failure: () => import('../../../../../evals/fixtures/events/failure.jsonl?raw').then((m) => m.default),
   budget_exceeded: () =>
@@ -99,5 +99,7 @@ export const FIXTURES = {
   recorded: () => import('../../../../../evals/fixtures/events/recorded.jsonl?raw').then((m) => m.default),
 } as const
 
-export type FixtureName = keyof typeof FIXTURES
+/** 录好的轨迹回放只在开发构建里有（0.3.1 起正式版不打包 fixture，侧栏也不列） */
+export const FIXTURES: typeof LOADERS = import.meta.env.DEV ? LOADERS : ({} as typeof LOADERS)
+export type FixtureName = keyof typeof LOADERS
 export const FIXTURE_NAMES = Object.keys(FIXTURES) as FixtureName[]

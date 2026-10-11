@@ -23,7 +23,15 @@ ROOT = Path(__file__).resolve().parents[2]
 SEP = ";" if sys.platform == "win32" else ":"
 
 # 开发 / 测试依赖和用不到的大模块：不进安装包
+# 0.3.1 起正式版不含演示 / 假模型 / 测试辅助：只在源码（开发 / 测试）里有
+DEV_ONLY = [
+    "triwitness.bridge.demo",
+    "triwitness.harness.testing",
+    "triwitness.verify.testing",
+    "triwitness.llm.fake",
+]
 EXCLUDES = [
+    *DEV_ONLY,
     "tkinter",
     "_tkinter",
     "pytest",
@@ -81,8 +89,29 @@ def main() -> None:
         shutil.rmtree(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(built, out)
+    check_no_dev_modules(out)
     size = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
     print(f"core → {out}  ({size / 1024 / 1024:.1f} MiB, {sum(1 for _ in out.rglob('*'))} files)")
+
+
+def check_no_dev_modules(out: Path) -> None:
+    """列出冻结包里的全部模块（pyi-archive_viewer -r -b），确认演示 / 假模型 / 测试辅助都没打进去。"""
+    import subprocess
+
+    exe = out / ("tw.exe" if sys.platform == "win32" else "tw")
+    listing = subprocess.run(
+        [sys.executable, "-m", "PyInstaller.utils.cliutils.archive_viewer", "-r", "-b", str(exe)],
+        capture_output=True, text=True, encoding="utf-8", check=True, timeout=300,
+    ).stdout  # fmt: skip
+    names = set(listing.split())
+    assert "triwitness.cli.main" in names, "模块清单里没有 triwitness.cli.main：列举方式失效"
+    leaked = [m for m in DEV_ONLY if m in names]
+    stems = [m.replace(".", "/") for m in DEV_ONLY]
+    files = [p for p in out.rglob("*.py*") if "triwitness" in p.parts
+             and any(p.relative_to(out).as_posix().endswith(s + p.suffix) for s in stems)]  # fmt: skip
+    if leaked or files:
+        raise SystemExit(f"正式版混入了开发 / 测试模块：{leaked} {files}")
+    print(f"dev-only 模块检查通过（{len(names)} 项，未含 {', '.join(DEV_ONLY)}）")
 
 
 if __name__ == "__main__":

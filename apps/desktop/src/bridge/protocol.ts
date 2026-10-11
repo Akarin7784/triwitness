@@ -6,6 +6,7 @@ import { parseEvent, type AnyEvent } from '../data/events'
 
 export const PROTOCOL = 'tw-bridge/1'
 
+/** 正式版只有 live；demo / replay 仅开发桥（import.meta.env.DEV）可选 */
 export type CoreMode = 'demo' | 'replay' | 'live'
 export type Verdict = 'pass' | 'fail' | 'inconclusive'
 export type RiskLevel = 'L0' | 'L1' | 'L2' | 'L3'
@@ -24,6 +25,10 @@ export interface RunMsg {
 }
 export interface ResultMsg {
   bridge: 'result'
+  /** 0.3.1 对话轮：chat = 直接回复（没有补丁 / 证据，下面的任务字段都缺省）；task = 本轮转成了仓库任务 */
+  kind?: 'chat' | 'task'
+  reply?: string | null
+  run_id?: string
   status: string
   run_dir: string
   branch: string | null
@@ -40,6 +45,8 @@ export interface ResultMsg {
 export interface ErrorMsg {
   bridge: 'error'
   message: string
+  /** peak_blocked：高峰时段被拒（去设置里允许）；budget：预算上限 */
+  code?: 'peak_blocked' | 'budget' | string
 }
 export interface AckMsg {
   bridge: 'ack'

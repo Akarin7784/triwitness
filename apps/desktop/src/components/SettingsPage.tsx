@@ -36,8 +36,6 @@ import {
 import { hitRate, useLedger, type LedgerState } from '../lib/ledger'
 import { RELEASES_URL, openUrl } from '../lib/open'
 import { APP_VERSION } from '../lib/version'
-import { coreMode, setCoreMode } from '../bridge/liveStore'
-import type { CoreMode } from '../bridge/protocol'
 import { MAX_COST_CAP, type Backend } from '../bridge/choices'
 import {
   FONT_SCALES,
@@ -439,9 +437,6 @@ function ModelSection() {
       </Group>
       <Group title={tr('连接')}>
         <ApiKeyRow />
-        <Row label={tr('运行方式')}>
-          <CoreModePicker />
-        </Row>
       </Group>
     </>
   )
@@ -633,12 +628,12 @@ function LedgerCard({ led, maxCost }: { led: LedgerState; maxCost: number }) {
           {led.status === 'loading'
             ? tr('正在读取本机账本…')
             : led.status === 'offline'
-              ? tr('未连接核心：连接后这里显示本机真实账本（~/.triwitness/ledger.sqlite）。演示模式不花钱，也不记账。')
+              ? tr('未连接核心：连接后这里显示本机真实账本（~/.triwitness/ledger.sqlite）。')
               : tr('读取账本失败：{0}', led.status === 'error' ? led.error : '')}
         </p>
       ) : data.recent.length === 0 ? (
         <p className="border-t border-border-soft px-5 py-6 text-[12px] text-sepia-muted" data-testid="ledger-empty">
-          {tr('还没有真实调用。演示模式不花钱，也不记账。')}
+          {tr('还没有真实调用。')}
         </p>
       ) : (
         <table className="w-full text-left text-[12px]">
@@ -739,9 +734,7 @@ function Permissions() {
           </button>
           {p.permissionMode === 'auto_review' && !armed && (
             <p data-testid="auto-review-note" data-allow-wrap className="mt-2 rounded-lg bg-parchment/60 px-3 py-2 text-[11.5px] leading-relaxed text-sepia">
-              {coreMode() === 'demo'
-                ? tr('演示模式用规则审核代替模型（¥0）。')
-                : tr('审核模型：DeepSeek Flash（不思考），每次约 ¥0.0003，计入账单并写审计日志。')}
+              {tr('审核模型：DeepSeek Flash（不思考），每次约 ¥0.0003，计入账单并写审计日志。')}
             </p>
           )}
         </div>
@@ -918,37 +911,6 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
       </Group>
       <LicensesDialog open={licenses} onClose={() => setLicenses(false)} />
     </>
-  )
-}
-
-const MODES: { id: CoreMode; label: string; tip: string }[] = [
-  { id: 'demo', label: tr('演示'), tip: tr('脚本模型 · 示例仓库 · ¥0') },
-  { id: 'replay', label: tr('回放'), tip: tr('用录好的模型回复 · ¥0') },
-  { id: 'live', label: tr('真实'), tip: tr('deepseek-flash · 计费 · 受高峰闸门约束') },
-]
-
-function CoreModePicker() {
-  const [mode, setMode] = useState<CoreMode>(coreMode)
-  return (
-    <div data-testid="core-mode" className="paper-card inline-flex rounded-full p-1">
-      {MODES.map((m) => (
-        <Tip key={m.id} label={m.tip} side="bottom">
-          <button
-            type="button"
-            onClick={() => {
-              setCoreMode(m.id)
-              setMode(m.id)
-            }}
-            className={clsx(
-              'rounded-full px-4 py-1 text-[13px] transition-colors duration-300',
-              mode === m.id ? 'bg-ink text-parchment' : 'text-ink-soft hover:text-amber-ink',
-            )}
-          >
-            {m.label}
-          </button>
-        </Tip>
-      ))}
-    </div>
   )
 }
 

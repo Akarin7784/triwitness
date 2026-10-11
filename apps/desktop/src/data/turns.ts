@@ -38,6 +38,8 @@ export type Block = ThinkingBlock | TextBlock | ToolBlock
 
 export interface Turn {
   user: { text: string; time: string; repo: string | null } | null
+  /** 0.3.1：chat = 直接回复（没有结果卡 / 产物）；task = 本轮转成了仓库任务；旧轨迹没有 */
+  kind?: 'chat' | 'task'
   blocks: Block[]
   final: { text: string; meta: string; time: string; status: string } | null
   /** 最后一个块还在写（光标显示在这里） */
@@ -52,11 +54,22 @@ const ms = (ts: string) => Date.parse(ts)
 export function reduceTurn(t: Turn, e: AnyEvent): Turn {
   if (!isKnown(e)) return t
   switch (e.kind) {
+    case 'user_message':
+      return { ...t, user: { text: e.payload.text, time: bjClock(e.ts), repo: e.payload.repo ?? null } }
     case 'task_started':
+      // 对话轮转任务时用户消息已由 user_message 给出（task_started 的标题是整理过的任务描述）
+      if (t.user) return { ...t, kind: 'task' }
       return {
         ...t,
         user: { text: e.payload.issue_title, time: bjClock(e.ts), repo: e.payload.repo },
       }
+    case 'turn_finished': {
+      const p = e.payload
+      const blocks = closeThinking(t.blocks, ms(e.ts)).map((b) => (b.type === 'text' && !b.done ? { ...b, done: true } : b))
+      if (p.kind === 'task') return { ...t, kind: 'task', streaming: false, blocks }
+      // 直接回复：正文已经在 model_delta 里；final 只标记“这一轮结束了”（复制 / 重试 / 赞踩出现）
+      return { ...t, kind: 'chat', streaming: false, blocks, final: { text: '', meta: '', time: bjClock(e.ts), status: 'replied' } }
+    }
     case 'reasoning_delta': {
       const { call_id, text } = e.payload
       const last = t.blocks[t.blocks.length - 1]
