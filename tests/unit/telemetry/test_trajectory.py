@@ -209,3 +209,21 @@ def test_cost_report_matches_fixture(name: str) -> None:
                                  pricing_version=fin["pricing_version"])  # fmt: skip
     assert abs(cr.total_cny - fin["total_cny"]) < 1e-4
     assert abs(cr.cache_hit_rate - fin["cache_hit_rate"]) < 1e-4
+
+
+def test_artifact_redaction_keeps_json_valid(tmp_path: Path) -> None:
+    """W5-13 git-leak-recovery：`secret ===\\"` 被脱敏成 `secret =***"`，JSON 坏了。结构化数据先脱敏再序列化。"""
+    from triwitness.core.redact import redact_text
+
+    cmd = 'cd /app/repo && echo "=== search all objects for secret ===" && git log; API_KEY="abc123def"'
+    args = json.dumps({"command": cmd})
+    rec = TrajectoryRecorder("t", "r", run_dir=tmp_path)
+    ref = rec.artifact("1-response.json", {"tool_calls": [{"name": "bash", "arguments": args}],
+                                           "note": "token=" + "x" * 30})  # fmt: skip
+    assert ref is not None
+    data = json.loads((tmp_path / ref).read_text(encoding="utf-8"))  # 合法 JSON
+    inner = json.loads(data["tool_calls"][0]["arguments"])  # 嵌套的 JSON 字符串也合法
+    assert "abc123def" not in inner["command"] and "x" * 30 not in data["note"]
+    # 纯文本脱敏也不越过 JSON 转义：直接对序列化后的文本做替换，结果仍可解析
+    text = json.dumps({"arguments": args})
+    assert json.loads(json.loads(redact_text(text))["arguments"])["command"].startswith("cd /app/repo")

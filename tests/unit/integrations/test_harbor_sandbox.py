@@ -133,3 +133,43 @@ def test_agent_module_needs_harbor() -> None:
     from triwitness.integrations.harbor_agent import TriWitnessAgent
 
     assert TriWitnessAgent.name() == "triwitness"
+
+
+# —— W5-13 第二轮：外部任务的复现产物（polyglot-c-py 因 tests/tw_repro 残留判 0）——
+
+
+async def test_cleanup_removes_only_new_repro_artifacts(tmp_path: Path) -> None:
+    from triwitness.tools.repro import cleanup_repro_artifacts, snapshot_repro_dirs
+
+    app = tmp_path / "app"
+    (app / "proj" / "tests").mkdir(parents=True)  # 任务自带的 tests：保留
+    (app / "proj" / "tests" / "test_x.py").write_text("x\n")
+    (app / "old" / "__pycache__").mkdir(parents=True)  # 运行前就有的缓存：保留
+    sb = HarborSandbox(LocalEnv(tmp_path), workdir=str(app))
+    before = await snapshot_repro_dirs(sb, str(app))
+    # Agent 运行期间：
+    (app / "polyglot" / "tests" / "tw_repro").mkdir(parents=True)
+    (app / "polyglot" / "tests" / "tw_repro" / "test_issue_1.py").write_text("t\n")
+    (app / "polyglot" / "main.py.c").write_text("c\n")
+    (app / "proj" / "tests" / "tw_repro").mkdir()
+    (app / "proj" / "tests" / "tw_repro" / "test_issue_2.py").write_text("t\n")
+    (app / "proj" / ".pytest_cache").mkdir()
+    (app / "out" / "tests").mkdir(parents=True)  # Agent 新建、且是产物的一部分（非空）：保留
+    (app / "out" / "tests" / "result.txt").write_text("r\n")
+    removed = await cleanup_repro_artifacts(sb, str(app), before)
+    assert sorted(p.removeprefix(str(app)) for p in removed) == sorted(
+        ["/polyglot/tests/tw_repro", "/polyglot/tests", "/proj/tests/tw_repro", "/proj/.pytest_cache"]
+    )
+    assert sorted(x.name for x in (app / "polyglot").iterdir()) == ["main.py.c"]  # verifier 要的样子
+    assert (app / "proj" / "tests" / "test_x.py").is_file() and (app / "old" / "__pycache__").is_dir()
+    assert (app / "out" / "tests" / "result.txt").is_file()
+
+
+async def test_cleanup_noop_when_nothing_new(tmp_path: Path) -> None:
+    from triwitness.tools.repro import cleanup_repro_artifacts, snapshot_repro_dirs
+
+    (tmp_path / "app" / "tests").mkdir(parents=True)
+    sb = HarborSandbox(LocalEnv(tmp_path), workdir=str(tmp_path / "app"))
+    before = await snapshot_repro_dirs(sb, str(tmp_path / "app"))
+    assert await cleanup_repro_artifacts(sb, str(tmp_path / "app"), before) == []
+    assert (tmp_path / "app" / "tests").is_dir()  # 原有的空 tests 不删

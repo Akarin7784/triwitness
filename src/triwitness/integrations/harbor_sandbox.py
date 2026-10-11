@@ -109,3 +109,17 @@ class HarborSandbox:
 
 
 __all__ = ["HarborEnv", "HarborSandbox"]
+
+
+# 外部任务的复现测试位置（W5-13 第二轮）：放在任务目录之外，判分只看任务目录；Agent 运行结束后另有兜底清理
+# （triwitness.tools.repro.cleanup_repro_artifacts）。`--ak repro_dir=` 设为空串可关掉这条提示。
+REPRO_DIR_DEFAULT = "/tmp/tw_repro"
+
+
+def external_task_prompt(instruction: str, repro_dir: str | None = REPRO_DIR_DEFAULT) -> str:
+    """给外部任务的说明追加一条运行约定：复现 / 临时测试写到 repro_dir，任务目录里只留题目要求的产物。"""
+    if not repro_dir:
+        return instruction
+    return (f"{instruction.rstrip()}\n\n---\n（TriWitness 运行约定）这个任务按产物判分，不是代码仓库："
+            f"复现测试或临时脚本请写在 {repro_dir}/ 下（例如 {repro_dir}/test_issue_1.py），不要放进任务目录；"
+            "结束前任务目录里只保留题目要求的文件。")  # fmt: skip

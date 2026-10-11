@@ -63,3 +63,45 @@ def test_report_counts_rewards_and_cost(tmp_path: Path) -> None:
     assert "解决 1/2" in text and "¥0.15" in text
     s = json.loads((tmp_path / "jobs" / "summary.json").read_text(encoding="utf-8"))
     assert s["solved"] == 1 and s["n"] == 2
+
+
+def test_repeats_plan_skips_done_resumes_partial(tmp_path: Path) -> None:
+    out = tmp_path / "r2"
+    (out / "rep0").mkdir(parents=True)
+    (out / "rep0" / "config.json").write_text("{}", encoding="utf-8")
+    done = {"n_total_trials": 10, "n_completed_trials": 10, "n_running_trials": 0, "n_pending_trials": 0}
+    (out / "rep0" / "result.json").write_text(json.dumps({"stats": done}), encoding="utf-8")
+    (out / "rep1").mkdir()
+    (out / "rep1" / "config.json").write_text("{}", encoding="utf-8")
+    part = {"n_total_trials": 10, "n_completed_trials": 4, "n_pending_trials": 6}
+    (out / "rep1" / "result.json").write_text(json.dumps({"stats": part}), encoding="utf-8")
+    assert he.repeat_plan(out, 3) == [("rep0", "done"), ("rep1", "partial"), ("rep2", "missing")]
+
+
+def test_repeats_dry_run_builds_resume_and_named_jobs(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    out = tmp_path / "r2"
+    (out / "rep0").mkdir(parents=True)
+    (out / "rep0" / "config.json").write_text("{}", encoding="utf-8")
+    rc = he.cmd_run(tmp_path, out, concurrency=2, attempts=1, tasks=he.TASKS, thinking=False, allow_peak=True,
+                    dry_run=True, repeats=2)  # fmt: skip
+    text = capsys.readouterr().out
+    assert rc == 0
+    assert "harbor jobs resume -p" in text and str(out / "rep0") in text
+    assert "--job-name rep1" in text and "-k 1" in text
+
+
+def test_report_per_task_counts_with_repeats(tmp_path: Path) -> None:
+    for rep, reward in (("rep0", 1.0), ("rep1", 0.0), ("rep2", 1.0)):
+        d = tmp_path / rep / f"fix-git__{rep}"
+        d.mkdir(parents=True)
+        (d / "result.json").write_text(json.dumps({"task_name": "terminal-bench/fix-git",
+                                                   "verifier_result": {"rewards": {"reward": reward}},
+                                                   "agent_result": {"metadata": {"cost_cny": 0.03}}}))  # fmt: skip
+    he.cmd_report(tmp_path)
+    rep = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert "| terminal-bench/fix-git | 2/3 |" in rep
+    assert {r["job"] for r in json.loads((tmp_path / "summary.json").read_text(encoding="utf-8"))["rows"]} == {
+        "rep0",
+        "rep1",
+        "rep2",
+    }

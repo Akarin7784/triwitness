@@ -78,9 +78,18 @@ class LLMResponse(BaseModel):
     peak: bool | None = None
     latency_ms: int = 0
     source: Literal["live", "replay", "fake"] = "live"
+    # 实际发出去的思考开关（路由 / 变体覆盖之后；W5-13 发现轨迹记的是 LLMRequest.thinking 的默认值 True）
+    thinking: bool | None = None
     request_key: str | None = None
     # 以下由 Router 填写（写入 Trajectory / 证据包）
     role: Role | None = None
     variant: str | None = None
     vendor_policy: Literal["single_vendor", "cross_vendor"] = "single_vendor"
     fallback_from: str | None = None  # 回退前的首选模型
+
+
+def effective_thinking(req: LLMRequest, resp: LLMResponse) -> bool:
+    """轨迹里记的思考开关：优先取回复上记的实际值，其次是覆盖值，最后才是请求默认值。"""
+    if resp.thinking is not None:
+        return resp.thinking
+    return req.thinking if req.thinking_override is None else req.thinking_override

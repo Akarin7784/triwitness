@@ -21,7 +21,7 @@ from triwitness.harness.context import ContextManager
 from triwitness.harness.deltas import DeltaWriter
 from triwitness.harness.replay import journal_write
 from triwitness.llm.stream import streaming
-from triwitness.llm.types import LLMRequest, LLMResponse, Message
+from triwitness.llm.types import LLMRequest, LLMResponse, Message, effective_thinking
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools.base import ToolContext, ToolRegistry
 
@@ -157,12 +157,12 @@ class AgentLoop:
         rec = self.emitter
         seq = rec.next_seq
         req_ref = rec.artifact(f"{seq}-request.json", {
-            "role": req.role, "thinking": req.thinking,
+            "role": req.role, "thinking": effective_thinking(req, resp),
             "messages": [m.model_dump(mode="json", exclude_none=True) for m in req.messages],
         })  # fmt: skip
         rec.emit(
             ModelCallPayload(model=_bare_model(resp.model or resp.served_model or "?"), served_model=resp.served_model,
-                             thinking=req.thinking, usage=resp.usage, **billing(resp), peak=resp.peak,
+                             thinking=effective_thinking(req, resp), usage=resp.usage, **billing(resp), peak=resp.peak,
                              latency_ms=resp.latency_ms, finish_reason=resp.finish_reason, request_ref=req_ref,
                              display="压缩摘要"),
             role="summarizer",
@@ -174,7 +174,7 @@ class AgentLoop:
         rec = self.emitter
         seq = rec.next_seq
         req_ref = rec.artifact(f"{seq}-request.json", {
-            "role": self.role, "thinking": req.thinking, "tools": tool_names,
+            "role": self.role, "thinking": effective_thinking(req, resp), "tools": tool_names,
             "messages": [m.model_dump(mode="json", exclude_none=True) for m in req.messages],
             **({"tool_choice": req.tool_choice} if req.tool_choice != "auto" else {}),
         })  # fmt: skip
@@ -186,7 +186,7 @@ class AgentLoop:
         rec.emit(
             ModelCallPayload(call_id=call_id if self.stream else None,
                              model=_bare_model(resp.model or resp.served_model or "?"),
-                             served_model=resp.served_model, thinking=req.thinking, usage=resp.usage,
+                             served_model=resp.served_model, thinking=effective_thinking(req, resp), usage=resp.usage,
                              **billing(resp), peak=resp.peak, latency_ms=resp.latency_ms,
                              finish_reason=resp.finish_reason, request_ref=req_ref, response_ref=resp_ref,
                              display=model_display(resp.message)),

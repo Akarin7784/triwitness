@@ -99,6 +99,8 @@ class LLMClient:
             replay_deltas(resp.message.reasoning_content, resp.message.content, sink)
         cost, peak = price_call(self.adapter.vendor, name, resp.usage, at)
         resp.model = name
+        sent = payload.get("thinking") if isinstance(payload, dict) else None
+        resp.thinking = sent.get("type") == "enabled" if isinstance(sent, dict) else req.thinking
         # 实付和账本对齐：record / live 模式下命中本地缓存不联网也不计费 → 0；
         # replay 模式（测试 / 离线评测）沿用名义价，保持成本报告可比
         resp.nominal_cost_cny = cost

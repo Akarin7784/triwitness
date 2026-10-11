@@ -10,7 +10,9 @@ Executor 写好复现测试后（**改源码之前**）调用：
 
 from __future__ import annotations
 
+import posixpath
 import re
+import shlex
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -121,3 +123,44 @@ class SubmitRepro(BaseTool):
 
 
 __all__ = ["SubmitRepro", "SubmitReproParams"]
+
+
+# —— 外部任务（Harbor / Terminal-Bench）的复现产物清理（W5-13）——
+# 这类任务没有“仓库 + diff”，判分直接看容器里的产物目录；复现测试留在里面会被当成多余文件
+# （polyglot-c-py：verifier 要求 /app/polyglot 里只有 main.py.c，实际多了 tests/tw_repro/）。
+# 做法：运行前记下已有的相关目录，运行后只删“新出现的”复现 / 缓存目录，再删因此变空、且是新建的 tests 目录。
+ARTIFACT_DIRS: tuple[str, ...] = ("tw_repro", ".pytest_cache", "__pycache__")
+_PRUNE = (".git", "node_modules", ".venv", "venv", "site-packages", "dist-packages")
+_MAX_DEPTH = 8
+
+
+def _find_cmd(root: str) -> str:
+    prune = " -o ".join(f"-name {shlex.quote(n)}" for n in _PRUNE)
+    names = " -o ".join(f"-name {shlex.quote(n)}" for n in ("tests", *ARTIFACT_DIRS))
+    return (f"find {shlex.quote(root)} -maxdepth {_MAX_DEPTH} \\( {prune} \\) -prune -o "
+            f"-type d \\( {names} \\) -print 2>/dev/null || true")  # fmt: skip
+
+
+async def snapshot_repro_dirs(sandbox: Any, root: str) -> set[str]:
+    """运行前：root 下已有的 tests / tw_repro / .pytest_cache / __pycache__ 目录（这些不会被清理）。"""
+    r = await sandbox.exec(_find_cmd(root), timeout_s=60)
+    return {ln for ln in r.stdout.splitlines() if ln.strip()}
+
+
+async def cleanup_repro_artifacts(sandbox: Any, root: str, before: set[str]) -> list[str]:
+    """运行后：删掉新出现的复现 / 缓存目录与因此变空的新 tests 目录；返回删掉的路径（root 之外的不碰）。"""
+    r = await sandbox.exec(_find_cmd(root), timeout_s=60)
+    new = sorted({ln for ln in r.stdout.splitlines() if ln.strip()} - before)
+    doomed = [p for p in new if posixpath.basename(p) in ARTIFACT_DIRS]
+    doomed = [p for p in doomed if not any(p.startswith(q + "/") for q in doomed)]  # 父目录删了，子目录不用再删
+    removed: list[str] = []
+    if doomed:
+        res = await sandbox.exec("rm -rf -- " + " ".join(shlex.quote(p) for p in doomed), timeout_s=60)
+        if res.exit_code == 0:
+            removed += doomed
+    # 新建的 tests 目录：由深到浅，只删已经空了的（rmdir 不会删非空目录）
+    for p in sorted((p for p in new if posixpath.basename(p) == "tests"), key=lambda s: -s.count("/")):
+        res = await sandbox.exec(f"rmdir -- {shlex.quote(p)} 2>/dev/null", timeout_s=30)
+        if res.exit_code == 0:
+            removed.append(p)
+    return removed

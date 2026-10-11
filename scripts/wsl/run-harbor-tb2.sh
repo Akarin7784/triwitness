@@ -1,19 +1,22 @@
 #!/usr/bin/env bash
 # W5-13：在 WSL2（Docker Desktop 的 WSL 集成）里用 Harbor 跑 Terminal-Bench 2.0 子集 × TriWitness，打包结果。
 # 由 scripts/windows/run-harbor-tb2.ps1 调用；也可在任何 Linux（docker + compose 可用、容器能联网）上直接跑：
-#   DEEPSEEK_API_KEY=... bash scripts/wsl/run-harbor-tb2.sh [--smoke] [--allow-peak] [--out-win /mnt/c/...]
+#   DEEPSEEK_API_KEY=... bash scripts/wsl/run-harbor-tb2.sh [--smoke] [--allow-peak] [--out-win /mnt/c/...] [--repeats N --tag NAME]
+# --repeats N：每次重复一个 Harbor job（$WORK/jobs/<tag>/rep0..rep{N-1}），中断后重跑同一命令：已完成的跳过、未完成的 resume。
 # 密钥只从环境变量读取，不写入任何文件。
 set -uo pipefail
 REPO_URL="${TW_REPO_URL:-https://github.com/Akarin7784/triwitness.git}"
 BRANCH="${TW_BRANCH:-main}"
 WORK="${TW_HARBOR_HOME:-$HOME/tw-harbor}"
-SMOKE=0; ALLOW_PEAK=""; OUT_WIN=""; CONC=2
+SMOKE=0; ALLOW_PEAK=""; OUT_WIN=""; CONC=2; REPEATS=0; TAG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --smoke) SMOKE=1 ;;
     --allow-peak) ALLOW_PEAK="--allow-peak" ;;
     --out-win) OUT_WIN="$2"; shift ;;
     --concurrency) CONC="$2"; shift ;;
+    --repeats) REPEATS="$2"; shift ;;
+    --tag) TAG="$2"; shift ;;
   esac
   shift
 done
@@ -40,19 +43,24 @@ echo "==> commit $(git rev-parse --short HEAD)"
 uv sync -q --frozen --no-dev || die "uv sync 失败"
 export TW_HOME="$WORK/tw-home"
 uv run --no-sync python scripts/harbor_external.py fetch --dir "$WORK/terminal-bench-2" || exit 1
-args=(--dir "$WORK/terminal-bench-2" --out "$WORK/jobs" --concurrency "$CONC")
+JOBS="$WORK/jobs"
+if [ "$REPEATS" -gt 0 ] 2>/dev/null; then
+  JOBS="$WORK/jobs/${TAG:-repeats}"   # 与第一轮（$WORK/jobs/<时间戳>）分开，报告和结果包只含这一组
+fi
+args=(--dir "$WORK/terminal-bench-2" --out "$JOBS" --concurrency "$CONC")
+[ "$REPEATS" -gt 0 ] 2>/dev/null && args+=(--repeats "$REPEATS")
 [ "$SMOKE" = 1 ] && args+=(--task fix-git)
 [ -n "$ALLOW_PEAK" ] && args+=("$ALLOW_PEAK")
 uv run --no-sync python scripts/harbor_external.py run "${args[@]}" 2>&1 | tee -a "$WORK/run.log"
 rc=${PIPESTATUS[0]}
-uv run --no-sync python scripts/harbor_external.py report --out "$WORK/jobs" 2>&1 | tee -a "$WORK/run.log"
+uv run --no-sync python scripts/harbor_external.py report --out "$JOBS" 2>&1 | tee -a "$WORK/run.log"
 uv run --no-sync python - <<'PY' 2>&1 | tee -a "$WORK/run.log"
 from triwitness.cost.ledger import GlobalLedger
 led = GlobalLedger()
 print(f"账本（{led.path}）：harbor-external 累计 ¥{led.spent('harbor-external'):.4f}，全部 ¥{led.spent():.4f}")
 PY
-cp "$WORK/run.log" "$WORK/jobs/run.log" 2>/dev/null
-zip=$(uv run --no-sync python scripts/harbor_external.py bundle --out "$WORK/jobs" | sed -n 's/^已打包：\(.*\.zip\).*/\1/p')
+cp "$WORK/run.log" "$JOBS/run.log" 2>/dev/null
+zip=$(uv run --no-sync python scripts/harbor_external.py bundle --out "$JOBS" | sed -n 's/^已打包：\(.*\.zip\).*/\1/p')
 if [ -n "$OUT_WIN" ] && [ -n "$zip" ]; then
   mkdir -p "$OUT_WIN" && cp "$zip" "$OUT_WIN/" && echo "结果包已复制到 $OUT_WIN/$(basename "$zip")"
 fi

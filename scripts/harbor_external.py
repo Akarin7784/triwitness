@@ -2,6 +2,7 @@
 
     uv run python scripts/harbor_external.py fetch  --dir ~/tw-harbor/terminal-bench-2
     uv run python scripts/harbor_external.py run    --dir ~/tw-harbor/terminal-bench-2 --out ~/tw-harbor/jobs
+    uv run python scripts/harbor_external.py run    ... --out ~/tw-harbor/jobs/r2 --repeats 3   # rep0..rep2，可续跑
     uv run python scripts/harbor_external.py report --out ~/tw-harbor/jobs
     uv run python scripts/harbor_external.py bundle --out ~/tw-harbor/jobs
 
@@ -55,17 +56,43 @@ def cmd_fetch(d: Path) -> None:
     print(f"terminal-bench-2 @ {TB2_SHA[:12]}：{len(TASKS)} 题就绪（{d}）")
 
 
-def harbor_args(d: Path, out: Path, *, concurrency: int, attempts: int, tasks: list[str], thinking: bool) -> list[str]:
+def harbor_args(d: Path, out: Path, *, concurrency: int, attempts: int, tasks: list[str], thinking: bool,
+                job_name: str | None = None) -> list[str]:  # fmt: skip
     args = ["uv", "run", "--with", HARBOR, "harbor", "run", "-p", str(d), "-a", AGENT, "--ak", "harness=baseline",
             "--ak", f"thinking={str(thinking).lower()}", "-n", str(concurrency), "-k", str(attempts), "-o", str(out),
             "-y"]  # fmt: skip
+    if job_name:
+        args += ["--job-name", job_name]
     for t in tasks:
         args += ["-i", t]
     return args
 
 
+def job_state(job: Path) -> str:
+    """一次重复对应一个 Harbor job：done（全部试验完成）/ partial（有 config 但没完成，可 resume）/ missing。"""
+    res = job / "result.json"
+    if res.is_file():
+        try:
+            st = json.loads(res.read_text(encoding="utf-8")).get("stats") or {}
+        except (OSError, json.JSONDecodeError):
+            st = {}
+        total = int(st.get("n_total_trials") or 0)
+        if total and int(st.get("n_completed_trials") or 0) >= total and not st.get("n_running_trials") \
+                and not st.get("n_pending_trials"):  # fmt: skip
+            return "done"
+    return "partial" if (job / "config.json").is_file() else "missing"
+
+
+def repeat_plan(out: Path, repeats: int) -> list[tuple[str, str]]:
+    """[(job 名, 状态)]：rep0..rep{N-1}；已完成的跳过，没完成的 resume，没有的新跑。"""
+    return [(f"rep{r}", job_state(out / f"rep{r}")) for r in range(repeats)]
+
+
 def cmd_run(d: Path, out: Path, *, concurrency: int, attempts: int, tasks: list[str], thinking: bool,
-            allow_peak: bool, dry_run: bool) -> int:  # fmt: skip
+            allow_peak: bool, dry_run: bool, repeats: int = 0) -> int:  # fmt: skip
+    if repeats:
+        return cmd_run_repeats(d, out, concurrency=concurrency, tasks=tasks, thinking=thinking, allow_peak=allow_peak,
+                               dry_run=dry_run, repeats=repeats)  # fmt: skip
     if is_peak() and not allow_peak:
         print(f"北京时间 {datetime.now(BJ):%H:%M} 是工作日高峰，不开始；高峰后重跑")
         return PEAK_EXIT
@@ -81,6 +108,34 @@ def cmd_run(d: Path, out: Path, *, concurrency: int, attempts: int, tasks: list[
     return subprocess.run(args, cwd=ROOT, env=env, check=False).returncode
 
 
+def cmd_run_repeats(d: Path, out: Path, *, concurrency: int, tasks: list[str], thinking: bool, allow_peak: bool,
+                    dry_run: bool, repeats: int) -> int:  # fmt: skip
+    """每次重复是一个独立 job（out/rep<r>），中断后重跑同一命令：已完成的 job 跳过、未完成的 `harbor jobs resume`。"""
+    if not os.environ.get("DEEPSEEK_API_KEY") and not dry_run:
+        print("没有 DEEPSEEK_API_KEY 环境变量", file=sys.stderr)
+        return 2
+    out.mkdir(parents=True, exist_ok=True)
+    env = {**os.environ, "TW_LLM_MODE": "live"}
+    rc = 0
+    for name, state in repeat_plan(out, repeats):
+        if state == "done":
+            print(f"==> {name}：已完成，跳过", flush=True)
+            continue
+        if is_peak() and not allow_peak:
+            print(f"北京时间 {datetime.now(BJ):%H:%M} 是工作日高峰，{name} 不开始；高峰后重跑同一命令会接着跑")
+            return PEAK_EXIT
+        if state == "partial":
+            args = ["uv", "run", "--with", HARBOR, "harbor", "jobs", "resume", "-p", str(out / name)]
+        else:
+            args = harbor_args(d, out, concurrency=concurrency, attempts=1, tasks=tasks, thinking=thinking,
+                               job_name=name)  # fmt: skip
+        print(f"==> {name}（{'续跑' if state == 'partial' else '新跑'}）：", " ".join(args), flush=True)
+        if dry_run:
+            continue
+        rc = subprocess.run(args, cwd=ROOT, env=env, check=False).returncode or rc
+    return rc
+
+
 def collect(out: Path) -> list[dict]:
     rows = []
     for f in sorted(out.glob("*/*/result.json")):
@@ -92,6 +147,7 @@ def collect(out: Path) -> list[dict]:
         exc = r.get("exception_info") or {}
         rows.append({
             "task": r.get("task_name") or f.parent.name.split("__")[0], "trial": f.parent.name,
+            "job": f.parent.parent.name,
             "reward": (vr.get("rewards") or {}).get("reward"), "status": meta.get("triwitness_status"),
             "cost_cny": meta.get("cost_cny"), "steps": meta.get("steps"), "cache_hit": meta.get("cache_hit_rate"),
             "error": exc.get("exception_type"),
@@ -120,6 +176,12 @@ def cmd_report(out: Path) -> Path:
         cny = r["cost_cny"] if r["cost_cny"] is not None else "—"
         lines.append(f"| {r['task']} | {r['trial']} | {r['reward']} | {r['status'] or '—'} | "
                      f"{r['steps'] or '—'} | {cny} | {hit} | {r['error'] or ''} |")  # fmt: skip
+    by_task: dict[str, list[bool]] = {}
+    for r in rows:
+        by_task.setdefault(r["task"], []).append((r["reward"] or 0) >= 1)
+    if any(len(v) > 1 for v in by_task.values()):
+        lines += ["", "按题（多次重复）：", "", "| 任务 | 解决 / 次数 |", "|---|---|"]
+        lines += [f"| {t} | {sum(v)}/{len(v)} |" for t, v in sorted(by_task.items())]
     rep = out / "report.md"
     rep.write_text("\n".join(lines) + "\n", encoding="utf-8")
     (out / "summary.json").write_text(json.dumps({"solved": k, "n": n, "cost_cny": cost, "rows": rows},
@@ -155,6 +217,12 @@ def main(argv: list[str] | None = None) -> int:
         if name == "run":
             p.add_argument("--concurrency", type=int, default=2)
             p.add_argument("--attempts", type=int, default=1)
+            p.add_argument(
+                "--repeats",
+                type=int,
+                default=0,
+                help="N>0：每次重复一个 job（out/rep0..rep{N-1}），可续跑；与 --attempts 互斥",
+            )
             p.add_argument("--task", action="append", help="只跑这些（默认 10 题子集）")
             p.add_argument("--thinking", action="store_true")
             p.add_argument("--allow-peak", action="store_true")
@@ -164,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
         cmd_fetch(a.dir)
     elif a.cmd == "run":
         return cmd_run(a.dir, a.out, concurrency=a.concurrency, attempts=a.attempts, tasks=a.task or TASKS,
-                       thinking=a.thinking, allow_peak=a.allow_peak, dry_run=a.dry_run)  # fmt: skip
+                       thinking=a.thinking, allow_peak=a.allow_peak, dry_run=a.dry_run, repeats=a.repeats)  # fmt: skip
     elif a.cmd == "report":
         cmd_report(a.out)
     else:

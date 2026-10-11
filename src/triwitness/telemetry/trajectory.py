@@ -20,7 +20,7 @@ from typing import Any
 
 from triwitness.core.events import DISPLAY_MAX, Payload, TrajectoryEvent, make_event, parse_event_line
 from triwitness.core.models import Role
-from triwitness.core.redact import redact_text
+from triwitness.core.redact import redact_obj, redact_text
 from triwitness.llm.types import Message
 
 _HINTS = ("planner", "executor", "verifier", "reviewer")
@@ -94,11 +94,12 @@ class TrajectoryRecorder:
             text = data.decode("utf-8", errors="replace")
         elif isinstance(data, str):
             text = data
-        else:
-            text = json.dumps(data, ensure_ascii=False, indent=1)
+        else:  # 结构化数据：先逐个字符串脱敏再序列化，替换不会跨过 JSON 的引号与转义
+            text = json.dumps(redact_obj(data), ensure_ascii=False, indent=1)
         target = self.run_dir / "artifacts" / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(redact_text(text), encoding="utf-8", newline="\n")
+        target.write_text(text if not isinstance(data, str | bytes) else redact_text(text), encoding="utf-8",
+                          newline="\n")  # fmt: skip
         return f"artifacts/{name}"
 
     def kinds(self) -> list[str]:

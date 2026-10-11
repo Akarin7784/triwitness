@@ -49,9 +49,11 @@ class FakeRouter:
         if guard is not None:
             guard.precheck(0.0)
         msg = self.script.pop(0) if self.script else Message(role="assistant", content="（脚本结束）")
+        thinking = req.thinking if req.thinking_override is None else req.thinking_override
         resp = LLMResponse(message=msg, usage=self.usage, served_model=self.served_model, raw={}, source="fake",
                            finish_reason="tool_calls" if msg.tool_calls else "stop", model="deepseek-flash",
-                           cost_cny=self.cost_cny, peak=False, latency_ms=self.latency_ms)  # fmt: skip
+                           cost_cny=self.cost_cny, peak=False, latency_ms=self.latency_ms,
+                           thinking=thinking)  # fmt: skip
         if guard is not None:
             try:
                 guard.record(self.usage, self.cost_cny)

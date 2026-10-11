@@ -23,7 +23,7 @@ from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.harness.deltas import DeltaWriter
 from triwitness.harness.local_run import LocalRunOutcome
 from triwitness.llm.stream import streaming
-from triwitness.llm.types import LLMRequest, Message
+from triwitness.llm.types import LLMRequest, Message, effective_thinking
 from triwitness.prompts import load_prompt
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 
@@ -164,7 +164,7 @@ async def run_turn(
                                                      "usage": resp.usage.model_dump(mode="json")})  # fmt: skip
     rec.emit(
         ModelCallPayload(call_id=call_id, model=resp.model or resp.served_model or "?", served_model=resp.served_model,
-                         thinking=req.thinking, usage=resp.usage, **billing(resp), peak=resp.peak,
+                         thinking=effective_thinking(req, resp), usage=resp.usage, **billing(resp), peak=resp.peak,
                          latency_ms=resp.latency_ms, finish_reason=resp.finish_reason, request_ref=req_ref,
                          response_ref=resp_ref, display="对话"),
         role="executor",

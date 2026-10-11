@@ -18,6 +18,13 @@
   powershell -ExecutionPolicy Bypass -File run-harbor-tb2.ps1 -Smoke
 .EXAMPLE
   .\run-harbor-tb2.ps1 -Distro Ubuntu -Concurrency 2
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File scripts\windows\run-harbor-tb2.ps1 -Repeats 3 -Tag r2
+  第二轮：10 题 × 3 次（约 ¥2）。每次重复一个 Harbor job（WSL 里 ~/tw-harbor/jobs/r2/rep0..rep2），
+  中断后重跑同一命令：已完成的 job 跳过、未完成的 harbor jobs resume；结果包只含这一组。
+
+.NOTES
+  -Repeats N（默认 1 = 原来的单次运行）；-Tag 是这一组重复的目录名（默认 repeats）。
 #>
 [CmdletBinding()]
 param(
@@ -26,6 +33,8 @@ param(
   [string]$Branch = "main",
   [string]$OutDir = (Join-Path $env:USERPROFILE "tw-harbor-out"),
   [ValidateRange(1, 4)][int]$Concurrency = 2,
+  [ValidateRange(1, 10)][int]$Repeats = 1,
+  [ValidatePattern('^[A-Za-z0-9_-]*$')][string]$Tag = "",
   [switch]$Smoke,
   [switch]$AllowPeak
 )
@@ -53,6 +62,7 @@ if (-not $outWsl) { Fail "wslpath 失败：WSL 发行版不可用？（wsl -l -v
 
 $flags = @("--out-win", "'$outWsl'", "--concurrency", "$Concurrency")
 if ($Smoke) { $flags += "--smoke" }
+if ($Repeats -gt 1) { $flags += @("--repeats", "$Repeats"); if ($Tag) { $flags += @("--tag", $Tag) } }
 if ($AllowPeak) { $flags += "--allow-peak" }
 $bootstrap = @"
 set -e
