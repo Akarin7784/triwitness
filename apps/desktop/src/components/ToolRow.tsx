@@ -38,7 +38,7 @@ export function ToolRow({ block }: { block: ToolBlock }) {
   const Icon = ICON[block.tool] ?? Wrench
   const detail = !!(block.args || block.output)
   return (
-    <div data-testid="tool-row" className="fade-in">
+    <div data-testid="tool-row" className="cv-auto fade-in">
       <button
         type="button"
         onClick={() => detail && setOpen((o) => !o)}

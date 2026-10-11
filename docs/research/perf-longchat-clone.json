@@ -1,0 +1,59 @@
+{
+  "base": {
+    "tplNodes": 269,
+    "textChars": 1288,
+    "total": 780
+  },
+  "rows": [
+    {
+      "label": "turns=1",
+      "heapMB": 25.4,
+      "domElements": 842,
+      "reflowMs": 1.2,
+      "appendMs": 0.5,
+      "scrollP50": 16.7,
+      "scrollP95": 16.8,
+      "scrollMax": 50
+    },
+    {
+      "label": "turns=50",
+      "heapMB": 26.5,
+      "domElements": 14058,
+      "reflowMs": 24.3,
+      "appendMs": 0.6,
+      "scrollP50": 16.7,
+      "scrollP95": 33.4,
+      "scrollMax": 133.3
+    },
+    {
+      "label": "turns=200",
+      "heapMB": 26.6,
+      "domElements": 54454,
+      "reflowMs": 137.3,
+      "appendMs": 7.6,
+      "scrollP50": 83.3,
+      "scrollP95": 133.3,
+      "scrollMax": 600
+    },
+    {
+      "label": "turns=500",
+      "heapMB": 26.9,
+      "domElements": 135170,
+      "reflowMs": 339.9,
+      "appendMs": 11.2,
+      "scrollP50": 233.4,
+      "scrollP95": 1450,
+      "scrollMax": 1450
+    },
+    {
+      "label": "turns=500 + content-visibility:auto",
+      "heapMB": 27.1,
+      "domElements": 135214,
+      "reflowMs": 6.8,
+      "appendMs": 3.9,
+      "scrollP50": 16.7,
+      "scrollP95": 50,
+      "scrollMax": 50.1
+    }
+  ]
+}

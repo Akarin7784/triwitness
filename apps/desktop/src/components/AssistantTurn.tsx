@@ -1,19 +1,38 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Paperclip, Pencil, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
-import type { Turn } from '../data/turns'
+import type { Block, Turn } from '../data/turns'
 import type { Rating } from '../lib/chats'
 import { CopyButton, Markdown } from './Markdown'
 import { StreamingText } from './StreamingText'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ToolRow } from './ToolRow'
+import { VirtualList } from './VirtualList'
 import { FeedbackDialog } from './ChatDialogs'
 import { Tip } from './Tip'
 import { t as tr } from '../lib/i18n'
 
 const ACT =
   'inline-flex h-7 w-7 items-center justify-center rounded-md text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-ink-soft disabled:pointer-events-none disabled:opacity-40'
+
+/** 块数超过它算“长回合”：关掉 framer 的 layout 动画（每次重渲染都要量全部 layout 节点） */
+const LONG_TURN = 40
+
+const blockKey = (b: Block) => b.id
+/** 没量过的块的估计高度：工具行 / 思考块一行，正文按字数粗估 */
+const estimateBlock = (b: Block) => (b.type === 'tool' ? 36 : b.type === 'thinking' ? 40 : 40 + Math.ceil(b.text.length / 42) * 27)
+
+/** 一个块；块对象不可变（reduceTurn 只换最后一个），memo 让流式时其余块不重渲染 */
+const BlockView = memo(function BlockView({ block: b, streaming }: { block: Block; streaming: boolean }) {
+  if (b.type === 'thinking') return <ThinkingBlock block={b} />
+  if (b.type === 'tool') return <ToolRow block={b} />
+  return (
+    <div className="cv-auto my-2">
+      <StreamingText text={b.text} streaming={streaming} />
+    </div>
+  )
+})
 
 export interface VersionInfo {
   index: number
@@ -38,15 +57,25 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
   const [editing, setEditing] = useState(false)
   const [fb, setFb] = useState<Rating | null>(null)
   const last = turn.blocks[turn.blocks.length - 1]
-  const answer = [
-    ...turn.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])),
-    ...(turn.final ? [turn.final.text] : []),
-  ].join('\n\n')
+  // 整条复制的文本只在回合结束后才需要；流式中不逐帧拼接全部正文
+  const done = !turn.streaming && !!turn.final
+  const answer = useMemo(
+    () =>
+      done
+        ? [...turn.blocks.flatMap((b) => (b.type === 'text' ? [b.text] : [])), ...(turn.final ? [turn.final.text] : [])].join('\n\n')
+        : '',
+    [done, turn.blocks, turn.final],
+  )
+  const long = turn.blocks.length > LONG_TURN
   const v = actions?.versions
   return (
     <div className="space-y-3">
       {turn.user && (
-        <motion.article layout="position" className="group ml-auto max-w-[620px] fade-in" data-testid="user-message">
+        <motion.article
+          layout={long ? false : 'position'}
+          className="group ml-auto max-w-[620px] fade-in"
+          data-testid="user-message"
+        >
           <AnimatePresence mode="wait" initial={false}>
             {editing && actions ? (
               <EditBox
@@ -111,17 +140,12 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
 
       {turn.blocks.length > 0 && (
         <div data-testid="assistant-turn" className="max-w-[720px]">
-          {turn.blocks.map((b) =>
-            b.type === 'thinking' ? (
-              <ThinkingBlock key={b.id} block={b} />
-            ) : b.type === 'tool' ? (
-              <ToolRow key={b.id} block={b} />
-            ) : (
-              <div key={b.id} className="my-2">
-                <StreamingText text={b.text} streaming={!b.done && b === last} />
-              </div>
-            ),
-          )}
+          <VirtualList
+            items={turn.blocks}
+            itemKey={blockKey}
+            estimate={estimateBlock}
+            render={(b) => <BlockView block={b} streaming={b.type === 'text' && !b.done && b === last} />}
+          />
           {turn.final && (
             <div className="fade-in mt-3 border-t border-border-soft pt-3">
               <Markdown text={turn.final.text} />

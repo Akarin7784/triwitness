@@ -1,0 +1,127 @@
+{
+  "A_prod_replay": {
+    "nav": {
+      "dcl": 140,
+      "load": 140,
+      "fcp": null,
+      "transferKB": 480,
+      "fonts": 0
+    },
+    "at_load": {
+      "heapMB": 3.7,
+      "nodes": 291,
+      "docNodes": null,
+      "layouts": 4,
+      "styleRecalcs": 6,
+      "scriptS": 0.09,
+      "layoutS": 0.24,
+      "styleS": 0.01
+    },
+    "after30s": {
+      "heapMB": 8.4,
+      "nodes": 1342,
+      "docNodes": null,
+      "layouts": 580,
+      "styleRecalcs": 2199,
+      "scriptS": 0.53,
+      "layoutS": 0.52,
+      "styleS": 0.51
+    },
+    "domElements": 831,
+    "frames": {
+      "frames": 1796,
+      "fps": 59.8,
+      "p50": 16.7,
+      "p95": 16.7,
+      "p99": 16.8,
+      "max": 50,
+      "over33": 2,
+      "longTasks": 1,
+      "longTaskMs": 61,
+      "longTaskMax": 61
+    }
+  },
+  "A_idle": {
+    "frames": {
+      "frames": 596,
+      "fps": 59.6,
+      "p50": 16.7,
+      "p95": 16.8,
+      "p99": 16.8,
+      "max": 50,
+      "over33": 2,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longTaskMax": 0
+    },
+    "m": {
+      "heapMB": 5.9,
+      "nodes": 1575,
+      "docNodes": null,
+      "layouts": 761,
+      "styleRecalcs": 2893,
+      "scriptS": 0.66,
+      "layoutS": 0.56,
+      "styleS": 0.65
+    }
+  },
+  "B_turns": [
+    {
+      "turn": 1,
+      "secs": 10,
+      "domElements": 765,
+      "heapMB": 36,
+      "frames": {
+        "frames": 619,
+        "fps": 58,
+        "p50": 16.7,
+        "p95": 16.8,
+        "p99": 33.3,
+        "max": 150,
+        "over33": 4,
+        "longTasks": 2,
+        "longTaskMs": 214,
+        "longTaskMax": 145
+      },
+      "url": "?source=live%3Amv3eeb93-d1&speed=8"
+    },
+    {
+      "turn": 2,
+      "secs": 2,
+      "domElements": 810,
+      "heapMB": 33.2,
+      "frames": {
+        "frames": 160,
+        "fps": 59.6,
+        "p50": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 33.4,
+        "over33": 0,
+        "longTasks": 0,
+        "longTaskMs": 0,
+        "longTaskMax": 0
+      },
+      "url": "?source=live%3Amv3eeb93-d1&speed=8"
+    },
+    {
+      "turn": 3,
+      "secs": 2,
+      "domElements": 866,
+      "heapMB": 46.1,
+      "frames": {
+        "frames": 156,
+        "fps": 59.6,
+        "p50": 16.7,
+        "p95": 16.8,
+        "p99": 16.8,
+        "max": 33.4,
+        "over33": 0,
+        "longTasks": 0,
+        "longTaskMs": 0,
+        "longTaskMax": 0
+      },
+      "url": "?source=live%3Amv3eeb93-d1&speed=8"
+    }
+  ]
+}

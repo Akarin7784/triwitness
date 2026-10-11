@@ -333,6 +333,7 @@ export const EN: Record<string, string> = {
   '清除本机会话记录': 'Clear local chat history',
   '清除记录': 'Clear history',
   '演示': 'Demo',
+  '压测': 'Stress test',
   '演示仓库': 'Demo repository',
   '演示任务': 'Demo task',
   '版本 {0}/{1}': 'Version {0}/{1}',

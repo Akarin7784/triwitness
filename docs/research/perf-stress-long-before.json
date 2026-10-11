@@ -1,0 +1,28 @@
+[
+  {
+    "rounds": 1,
+    "repeat": 150,
+    "finished": true,
+    "loadS": 7.8,
+    "stream": {
+      "fps": 38.4,
+      "p50": 16.7,
+      "p95": 50,
+      "p99": 50.1,
+      "over33": 53,
+      "longTasks": 2,
+      "longTaskMs": 136,
+      "longTaskMax": 73
+    },
+    "heapMB": 9.5,
+    "nodes": 7932,
+    "blocks": 1,
+    "domElements": 3596,
+    "reflowMs": 7.9,
+    "appendMs": 0.7,
+    "scrollP50": 16.7,
+    "scrollP95": 16.7,
+    "scrollMax": 16.8,
+    "scrollFps": 60.5
+  }
+]

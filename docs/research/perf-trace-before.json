@@ -1,0 +1,68 @@
+{
+  "A_prod_replay": {
+    "nav": {
+      "dcl": 134,
+      "load": 134,
+      "fcp": null,
+      "transferKB": 481,
+      "fonts": 0
+    },
+    "at_load": {
+      "heapMB": 3.7,
+      "nodes": 291,
+      "docNodes": null,
+      "layouts": 4,
+      "styleRecalcs": 6,
+      "scriptS": 0.08,
+      "layoutS": 0.21,
+      "styleS": 0.01
+    },
+    "after30s": {
+      "heapMB": 5.5,
+      "nodes": 1316,
+      "docNodes": null,
+      "layouts": 581,
+      "styleRecalcs": 2201,
+      "scriptS": 0.51,
+      "layoutS": 0.49,
+      "styleS": 0.48
+    },
+    "domElements": 831,
+    "frames": {
+      "frames": 1798,
+      "fps": 59.9,
+      "p50": 16.7,
+      "p95": 16.7,
+      "p99": 16.8,
+      "max": 50,
+      "over33": 1,
+      "longTasks": 1,
+      "longTaskMs": 66,
+      "longTaskMax": 66
+    }
+  },
+  "A_idle": {
+    "frames": {
+      "frames": 592,
+      "fps": 59.2,
+      "p50": 16.7,
+      "p95": 16.8,
+      "p99": 16.8,
+      "max": 66.7,
+      "over33": 3,
+      "longTasks": 0,
+      "longTaskMs": 0,
+      "longTaskMax": 0
+    },
+    "m": {
+      "heapMB": 6.3,
+      "nodes": 1577,
+      "docNodes": null,
+      "layouts": 763,
+      "styleRecalcs": 2892,
+      "scriptS": 0.63,
+      "layoutS": 0.54,
+      "styleS": 0.6
+    }
+  }
+}

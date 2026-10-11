@@ -1,13 +1,12 @@
-import { useEffect, useEffectEvent, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { Sidebar, type SidebarItem, type SidebarView } from './components/Sidebar'
 import { ArtifactsPanel } from './components/ArtifactsPanel'
-import { ProjectsPage } from './components/ProjectsPage'
-import { ArtifactsPage, type ArtifactEntry } from './components/ArtifactsPage'
+import type { ArtifactEntry } from './components/ArtifactsPage'
 import { AnimatePresence } from 'framer-motion'
 import { ChatPanel } from './components/ChatPanel'
 import { ActivityPanel } from './components/ActivityPanel'
 import { StatusBar } from './components/StatusBar'
-import { SettingsPage, type SettingsSection } from './components/SettingsPage'
+import type { SettingsSection } from './components/SettingsPage'
 import { ConfirmDeleteDialog, RenameDialog, SearchPalette, ShortcutsDialog } from './components/ChatDialogs'
 import { TitleBar } from './components/TitleBar'
 import { ContextMenu } from './components/ContextMenu'
@@ -15,8 +14,10 @@ import { useEventFeed } from './hooks/useEventFeed'
 import { useFixtureCatalog } from './hooks/useFixtureCatalog'
 import { FIXTURES, FixtureSource, type FixtureName } from './data/sources/fixture'
 import { createMockSource } from './data/sources/mock'
-import { foldRun } from './data/mapEvent'
-import { foldTurn } from './data/turns'
+import { createStressSource } from './data/sources/stress'
+import { EMPTY_RUN, reduceRun } from './data/mapEvent'
+import { IncrementalFold } from './lib/incrementalFold'
+import { EMPTY_TURN, foldTurn, reduceTurn } from './data/turns'
 import { getPrefs, setPrefs, takeUnrestricted, usePrefs, type Prefs } from './lib/prefs'
 import {
   addVersion,
@@ -40,13 +41,12 @@ import { buildGuidance } from './lib/guidance'
 import { collectArtifacts, type VersionSource } from './lib/artifacts'
 import { chatToMarkdown, exportFileName } from './lib/exportChat'
 import { copyText, saveText } from './lib/download'
-import { printMarkdown } from './lib/printPdf'
 import type { Attachment } from './lib/attachments'
 import { getTransport } from './bridge/transport'
 import { UNRESTRICTED_PHRASE, type RunChoices } from './bridge/choices'
 import { Toaster } from './components/Toaster'
 import { MotionConfig } from 'framer-motion'
-import { parseSourceParam, speedParam, writeSourceParam, type SourceKey } from './lib/sourceParam'
+import { parseSourceParam, roundsParam, speedParam, writeSourceParam, type SourceKey } from './lib/sourceParam'
 import type { ChatMessage, StreamLine } from './types'
 import type { Phase } from './data/mapEvent'
 import type { TaskMeta } from './bridge/liveTask'
@@ -65,6 +65,20 @@ import {
 } from './bridge/liveStore'
 import { locale, t as tr } from './lib/i18n'
 
+// 重页面拆成独立 chunk（perf）：首屏只加载对话界面；空闲时预取，第一次切过去也不等
+const loadSettings = () => import('./components/SettingsPage')
+const loadProjects = () => import('./components/ProjectsPage')
+const loadArtifacts = () => import('./components/ArtifactsPage')
+const SettingsPage = lazy(() => loadSettings().then((m) => ({ default: m.SettingsPage })))
+const ProjectsPage = lazy(() => loadProjects().then((m) => ({ default: m.ProjectsPage })))
+const ArtifactsPage = lazy(() => loadArtifacts().then((m) => ({ default: m.ArtifactsPage })))
+function prefetchPages() {
+  void loadSettings()
+  void loadProjects()
+  void loadArtifacts()
+}
+const PageFallback = () => <div className="min-w-0 flex-1" />
+
 /** 真实任务尚未注册（续上中）时的占位 key，注册后换成真 key 触发重新订阅 */
 const PENDING = '#pending'
 
@@ -73,6 +87,7 @@ function makeSource(key: string) {
   if (key.startsWith('live:')) return liveTaskFor(key.slice('live:'.length))
   const speed = speedParam(window.location.search)
   if (key === 'mock') return createMockSource({ speed })
+  if (key === 'stress') return createStressSource(roundsParam(window.location.search), { speed, repeat: roundsParam(window.location.search, 'repeat', 1) })
   if (key.startsWith('fixture:')) {
     const name = key.slice('fixture:'.length) as FixtureName
     return new FixtureSource(name, FIXTURES[name], { speed })
@@ -133,6 +148,10 @@ function clock() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const h = window.setTimeout(prefetchPages, 1500)
+    return () => window.clearTimeout(h)
+  }, [])
   const catalog = useFixtureCatalog()
   const prefs = usePrefs()
   const chats = useChats()
@@ -172,9 +191,15 @@ export default function App() {
   const feed = useEventFeed(liveId && !liveTask ? `${display}${PENDING}` : display, makeSource)
 
   // 右侧书写推流的角色点跟笔；对话流（Claude 式）与顶部状态 / 费用签按事件实时走
-  const run = useMemo(() => foldRun(feed.events, revealedSeq), [feed.events, revealedSeq])
-  const live = useMemo(() => foldRun(feed.events), [feed.events])
-  const turn = useMemo(() => foldTurn(feed.events), [feed.events])
+  // 增量折叠：事件只在尾部追加时只 reduce 新增部分（长回合下每帧 O(新事件) 而不是 O(全部)）
+  const [folds] = useState(() => ({
+    run: new IncrementalFold(reduceRun, EMPTY_RUN),
+    live: new IncrementalFold(reduceRun, EMPTY_RUN),
+    turn: new IncrementalFold(reduceTurn, EMPTY_TURN),
+  }))
+  const run = useMemo(() => folds.run.fold(feed.events, revealedSeq), [folds, feed.events, revealedSeq])
+  const live = useMemo(() => folds.live.fold(feed.events), [folds, feed.events])
+  const turn = useMemo(() => folds.turn.fold(feed.events), [folds, feed.events])
 
   const select = (key: SourceKey) => {
     if (key !== source) setArtifact(null)
@@ -200,6 +225,7 @@ export default function App() {
         time: new Date(m.startedAt).toTimeString().slice(0, 5),
       })),
       ...(source === 'mock' ? [{ id: 'mock' as SourceKey, title: tr('演示') }] : []),
+      ...(source === 'stress' ? [{ id: 'stress' as SourceKey, title: tr('压测') }] : []),
       ...catalog.map((c) => ({
         id: `fixture:${c.id}` as SourceKey,
         title: c.title,
@@ -438,7 +464,7 @@ export default function App() {
   const share = {
     copyMarkdown: () => void copyText(exportMd(), tr('已复制为 Markdown')),
     exportMarkdown: () => void saveText(exportFileName(title, 'md'), exportMd(), 'text/markdown'),
-    exportPdf: () => printMarkdown(exportMd(), title || tr('三证会话')),
+    exportPdf: () => void import('./lib/printPdf').then((m) => m.printMarkdown(exportMd(), title || tr('三证会话'))),
   }
 
   // ---- 作品页：所有任务的 pr.md / patch.diff ----
@@ -494,6 +520,7 @@ export default function App() {
             toast(pid ? tr('已加入「{0}」', projects.projects.find((x) => x.id === pid)?.name ?? '') : tr('已移出项目'))
           }}
         />
+        <Suspense fallback={<PageFallback />}>
         {view === 'settings' ? (
           <SettingsPage section={section} onSection={setSection} onBack={() => setView('chat')} onShortcuts={() => setShortcuts(true)} />
         ) : view === 'projects' ? (
@@ -581,6 +608,7 @@ export default function App() {
             </AnimatePresence>
           </>
         )}
+        </Suspense>
       </div>
       <StatusBar />
       <ContextMenu />

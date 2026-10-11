@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import clsx from 'clsx'
 import type { StreamLine } from '../types'
 import { roleColor, roleLabel } from '../data/mock'
-import { useWritingStream, type WrittenChar } from '../hooks/useWritingStream'
+import { useWritingStream } from '../hooks/useWritingStream'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { Tip } from './Tip'
 import { t } from '../lib/i18n'
@@ -62,16 +62,23 @@ export function WritingStream({
     onRevealRef.current?.(id ? lineById.get(id) ?? null : null)
   }, [visibleCount, chars, lineById])
 
-  const grouped = useMemo(() => {
-    const out: { lineId: string; role: StreamLine['role']; items: WrittenChar[] }[] = []
-    for (let i = 0; i < visibleCount; i++) {
-      const c = chars[i]
+  // 行区间（chars 按行连续）：只在 chars 变化（新行到达）时算一次，逐帧只做二分查找，不再每帧从头分组
+  const ranges = useMemo(() => {
+    const out: { lineId: string; role: StreamLine['role']; start: number; end: number }[] = []
+    chars.forEach((c, i) => {
       const cur = out[out.length - 1]
-      if (!cur || cur.lineId !== c.lineId) out.push({ lineId: c.lineId, role: c.role, items: [c] })
-      else cur.items.push(c)
-    }
+      if (!cur || cur.lineId !== c.lineId) out.push({ lineId: c.lineId, role: c.role, start: i, end: i + 1 })
+      else cur.end = i + 1
+    })
     return out
-  }, [chars, visibleCount])
+  }, [chars])
+  let shownLines = 0
+  for (let lo = 0, hi = ranges.length; lo < hi; ) {
+    const mid = (lo + hi) >> 1
+    if (ranges[mid].start < visibleCount) lo = shownLines = mid + 1
+    else hi = mid
+  }
+  const grouped = ranges.slice(0, shownLines)
 
   const lastRole = grouped[grouped.length - 1]?.role
   const activeRole =
@@ -159,44 +166,24 @@ export function WritingStream({
           {grouped.map((line, li) => {
             const isLast = li === grouped.length - 1
             const meta = lineById.get(line.lineId)
-            const tone = meta?.tone ?? 'normal'
-            const caret = isLast && !done && (
-              <span className={clsx('caret-ink', !playing && 'caret-rest')} aria-hidden />
-            )
-            const glyphs = line.items.map((c) => (
-              <span key={c.key} className="ink-char">
-                {c.ch}
-              </span>
-            ))
-            if (tone === 'chapter' || tone === 'divider') {
-              return (
-                <div key={line.lineId} className={clsx('stream-line stream-rule', tone === 'chapter' ? 'stream-chapter' : 'stream-divider')}>
-                  <span className="stream-rule-line" />
-                  <span className="stream-rule-text">
-                    {glyphs}
-                    {caret}
+            // 最后两行逐字（墨迹还在沉淀）；更早的行墨已干，整行一个文本节点 + memo，长任务里 DOM 不再按字膨胀
+            const live = li >= grouped.length - 2
+            const glyphs = live
+              ? chars.slice(line.start, Math.min(line.end, visibleCount)).map((c) => (
+                  <span key={c.key} className="ink-char">
+                    {c.ch}
                   </span>
-                  <span className="stream-rule-line" />
-                </div>
-              )
-            }
+                ))
+              : (meta?.text ?? chars.slice(line.start, line.end).map((c) => c.ch).join(''))
             return (
-              <div key={line.lineId} className={clsx('stream-line relative mb-3 flex gap-3', `tone-${tone}`)}>
-                <span className="relative mt-[0.62em] flex h-[7px] w-[7px] shrink-0">
-                  <span className="ink-bloom" style={{ background: `radial-gradient(circle, ${roleColor[line.role]}55, transparent 70%)` }} />
-                  <span className="role-dot" style={{ background: roleColor[line.role] }} />
-                </span>
-                <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                  <span
-                    className="mr-2 inline-block select-none font-sans text-[10.5px] font-medium tracking-[0.12em]"
-                    style={{ color: roleColor[line.role] }}
-                  >
-                    {roleLabel[line.role]}
-                  </span>
-                  {glyphs}
-                  {caret}
-                </p>
-              </div>
+              <StreamLineView
+                key={line.lineId}
+                role={line.role}
+                tone={meta?.tone ?? 'normal'}
+                caret={isLast && !done ? (playing ? 'on' : 'rest') : 'off'}
+              >
+                {glyphs}
+              </StreamLineView>
             )
           })}
 
@@ -221,3 +208,48 @@ function IconButton({ onClick, label, children }: { onClick: () => void; label: 
     </Tip>
   )
 }
+
+/** 一行推流；墨干的行 children 是字符串，props 不变就不重渲染 */
+const StreamLineView = memo(function StreamLineView({
+  role,
+  tone,
+  caret,
+  children,
+}: {
+  role: StreamLine['role']
+  tone: NonNullable<StreamLine['tone']>
+  caret: 'on' | 'rest' | 'off'
+  children: ReactNode
+}) {
+  const caretEl = caret !== 'off' && <span className={clsx('caret-ink', caret === 'rest' && 'caret-rest')} aria-hidden />
+  if (tone === 'chapter' || tone === 'divider') {
+    return (
+      <div className={clsx('stream-line stream-rule cv-line', tone === 'chapter' ? 'stream-chapter' : 'stream-divider')}>
+        <span className="stream-rule-line" />
+        <span className="stream-rule-text">
+          {children}
+          {caretEl}
+        </span>
+        <span className="stream-rule-line" />
+      </div>
+    )
+  }
+  return (
+    <div className={clsx('stream-line cv-line relative mb-3 flex gap-3', `tone-${tone}`)}>
+      <span className="relative mt-[0.62em] flex h-[7px] w-[7px] shrink-0">
+        <span className="ink-bloom" style={{ background: `radial-gradient(circle, ${roleColor[role]}55, transparent 70%)` }} />
+        <span className="role-dot" style={{ background: roleColor[role] }} />
+      </span>
+      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+        <span
+          className="mr-2 inline-block select-none font-sans text-[10.5px] font-medium tracking-[0.12em]"
+          style={{ color: roleColor[role] }}
+        >
+          {roleLabel[role]}
+        </span>
+        {children}
+        {caretEl}
+      </p>
+    </div>
+  )
+})

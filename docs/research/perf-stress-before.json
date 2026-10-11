@@ -1,0 +1,52 @@
+[
+  {
+    "rounds": 200,
+    "finished": true,
+    "loadS": 12.1,
+    "stream": {
+      "fps": 37.1,
+      "p50": 16.8,
+      "p95": 50,
+      "p99": 50.1,
+      "over33": 80,
+      "longTasks": 1,
+      "longTaskMs": 63,
+      "longTaskMax": 63
+    },
+    "heapMB": 15.8,
+    "nodes": 15817,
+    "blocks": 200,
+    "domElements": 9323,
+    "reflowMs": 22.9,
+    "appendMs": 5.7,
+    "scrollP50": 16.7,
+    "scrollP95": 16.7,
+    "scrollMax": 16.8,
+    "scrollFps": 60.2
+  },
+  {
+    "rounds": 500,
+    "finished": true,
+    "loadS": 52.9,
+    "stream": {
+      "fps": 16.2,
+      "p50": 50,
+      "p95": 150,
+      "p99": 166.6,
+      "over33": 471,
+      "longTasks": 314,
+      "longTaskMs": 26354,
+      "longTaskMax": 159
+    },
+    "heapMB": 30.4,
+    "nodes": 39122,
+    "blocks": 500,
+    "domElements": 22811,
+    "reflowMs": 68.4,
+    "appendMs": 9.7,
+    "scrollP50": 16.7,
+    "scrollP95": 33.4,
+    "scrollMax": 50,
+    "scrollFps": 51.3
+  }
+]

@@ -18,6 +18,7 @@ import type { Artifact } from '../lib/artifacts'
 import { ArtifactCards } from './ArtifactsPanel'
 import { ProjectPicker } from './ProjectPicker'
 import { useStickToBottom } from '../hooks/useStickToBottom'
+import { ChatScrollContext } from '../lib/chatScroll'
 import { Tip } from './Tip'
 import { PHASE_DOT } from './phase'
 import { t } from '../lib/i18n'
@@ -210,6 +211,7 @@ export function ChatPanel({
       </AnimatePresence>
 
       <div className="relative min-h-0 flex-1">
+      <ChatScrollContext.Provider value={scrollRef}>
       <div ref={scrollRef} data-testid="chat-scroll" className="h-full overflow-y-auto scroll-soft px-8 py-5">
       <div ref={contentRef} className="chat-zoom mx-auto max-w-[760px] space-y-3">
         {turn ? (
@@ -226,6 +228,7 @@ export function ChatPanel({
         {notice && <p className="fade-in text-center text-[12px] text-sepia-muted">{notice}</p>}
       </div>
       </div>
+      </ChatScrollContext.Provider>
       <AnimatePresence>
         {!atBottom && (
           <motion.button

@@ -24,7 +24,7 @@
   --color-panel-raised: #faf6ee;
   --color-shadow: rgb(42 28 20 / 0.08);
 
-  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
+  --font-serif: "Noto Serif SC", "Noto Sans SC", "Source Han Serif SC", "Songti SC", "SimSun", serif;
   --font-sans: "Noto Sans SC", "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", "Consolas", ui-monospace, monospace;
 
@@ -100,9 +100,9 @@ body {
   animation: inkSettle 900ms var(--ease-ink) both;
 }
 @keyframes inkSettle {
-  0%   { opacity: 0; color: #c9955a; filter: blur(0.7px); transform: translateY(1.5px); }
-  22%  { opacity: 0.75; color: #b07a3e; filter: blur(0.2px); transform: translateY(0.3px); }
-  60%  { opacity: 1; color: #6b4a33; filter: blur(0); transform: none; }
+  0%   { opacity: 0; color: #c9955a; transform: translateY(1.5px); }
+  22%  { opacity: 0.75; color: #b07a3e; transform: translateY(0.3px); }
+  60%  { opacity: 1; color: #6b4a33; transform: none; }
   100% { opacity: 1; color: inherit; }
 }
 
@@ -414,8 +414,8 @@ html {
   animation: inkIn 620ms var(--ease-ink) both;
 }
 @keyframes inkIn {
-  0%   { opacity: 0; color: #c9955a; filter: blur(0.6px); }
-  45%  { opacity: 0.85; color: #8a603c; filter: blur(0); }
+  0%   { opacity: 0; color: #c9955a; }
+  45%  { opacity: 0.85; color: #8a603c; }
   100% { opacity: 1; color: inherit; }
 }
 
@@ -606,4 +606,28 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
     width: 100%;
     opacity: 0.5;
   }
+}
+
+/* ───────── 性能（perf）───────── */
+
+/* 屏幕外的对话块 / 推流行跳过样式、布局、绘制（content-visibility）；
+   contain-intrinsic-size: auto 记住渲染过的真实高度，滚动条不跳。只放在块的根元素上，兄弟间 margin 照常折叠。 */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 72px;
+}
+.cv-line {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 46px;
+}
+
+/* 虚拟列表的条目：自成 BFC，量到的高度含内部 margin（偏移计算才准）；窗口内的块不再二次跳过 */
+.v-item { display: flow-root; }
+.v-item > .cv-auto { content-visibility: visible; }
+
+/* 窗口隐藏 / 最小化：所有 CSS 动画原地暂停（光标呼吸、思考微光、脉冲点），回来接着播 */
+:root[data-hidden] *,
+:root[data-hidden] *::before,
+:root[data-hidden] *::after {
+  animation-play-state: paused !important;
 }

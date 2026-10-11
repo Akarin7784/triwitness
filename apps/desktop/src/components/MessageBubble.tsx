@@ -5,7 +5,7 @@ import { Tip } from './Tip'
 export function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
   return (
-    <article className={clsx('group max-w-[720px] fade-in', isUser ? 'ml-auto' : 'mr-auto')}>
+    <article className={clsx('cv-auto group max-w-[720px] fade-in', isUser ? 'ml-auto' : 'mr-auto')}>
       <div
         className={clsx(
           'rounded-2xl px-4 py-3.5',

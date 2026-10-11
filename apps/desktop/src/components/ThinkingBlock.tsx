@@ -16,7 +16,7 @@ export function ThinkingBlock({ block }: { block: Block }) {
   }, [block.text, live])
 
   return (
-    <div data-testid="thinking-block" className="my-1.5">
+    <div data-testid="thinking-block" className="cv-auto my-1.5">
       <button
         type="button"
         onClick={() => !live && setOpen((o) => !o)}
