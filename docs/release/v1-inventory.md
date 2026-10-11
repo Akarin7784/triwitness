@@ -24,11 +24,11 @@
 | 前缀缓存纪律（确定性序列化） | ✅ | 测试锁定前缀逐字节不变；实测命中 95–97% |
 | repro-first（先写复现测试再修） | ✅ | 默认 harness（ADR-0006 草稿）；W2/W3 实跑 |
 | 死循环检测（三种信号 + 提醒 / stuck） | 🟡 | W1 版完成；第二级“回滚到最佳快照”未做（W2-16） |
-| 预算：单任务上限、按 cache_miss 计的输入上限、熔断 | ✅ | `cost/guard.py`；评测中真实触发过 |
-| 全局账本（SQLite）、`tw budget`、余额对账 `tw budget sync` | ✅ | CLI 可用；sync 只在 W1 做过一次 |
-| 高峰闸门（北京时间工作日 9–12、14–18） | ✅ | `llm/gate.py` + 调用级检查；单测 |
+| 防失控安全上限：轮数、墙钟、输入 / 未命中输入 / 输出 token（0.3.2 起不再有金额上限和熔断） | ✅ | `cost/guard.py`；单测；0.3.2 按 Eva 决定去掉 ¥ 上限 / 信封 / STOP 熔断（ADR-0002 修订 2026-10-11） |
+| 全局账本（SQLite，用量日志）、`tw usage`（旧名 `tw budget`）、余额对账 `tw usage sync` | ✅ | 0.3.2 起只统计不限制；sync 只在 W1 做过一次 |
+| 高峰时段标注（北京时间工作日 9–12、14–18，2× 价） | ✅ | `llm/gate.py`；0.3.2 起只标注不拦截 |
 | Planner / Reviewer 角色、编排状态机、返工回路 | ❌ | W4-01…07 todo；目前是 **Executor 单角色 + 确定性验证（可加 Verifier 模型）** |
-| 检查点与断点续跑 | ❌ | W4-09 todo（快照 / diff 已有，续跑没有） |
+| 检查点与断点续跑 | ✅ | 0.3.2：`runs/<id>/resume/` + `tw run --resume`；桌面端「继续」；真实 key e2e（截图 `docs/images/v0.3.2/resume-*.jpg`） |
 | HITL（计划确认、依赖升级审批、ask_human） | 🟡 | 只有**工具级权限审批**（审批卡）；计划级 HITL 未做 |
 | 附件、用户说明 / 项目知识文件进任务 | ✅ | `harness/inputs.py`；`--attach`、`--guidance-file`；e2e 覆盖（演示） |
 | 轨迹记录（JSONL + artifacts） | ✅ | `telemetry/trajectory.py` |
@@ -52,7 +52,7 @@
 | 风险分级 L0–L3（因子表、阻断规则） | ✅ | `verify/risk.py` + `configs/policies/risk.yaml` |
 | 证据包 + PR 正文（pr.md） | ✅ | `verify/evidence.py`；桌面端结论卡 + 作品栏可看 pr.md；v0.3 结论卡“复制 PR 说明 / 打开运行目录”，界面与文档如实写“生成本地分支 + PR 说明” |
 | 完整证据页（桌面） | 🟡 | 只有结论卡（UI-12 部分） |
-| **真正向 GitHub 开 PR / 推分支 / 回帖 Issue** | ❌ | 全仓库没有任何 PR 创建代码（W5 GitHub App 全部 todo）；目前只产出本地分支 `tw/<run_id>` + pr.md |
+| 向 GitHub 开 PR / 推分支（审批后） | ✅ | 0.3.2：`tw pr plan` / `tw pr open --yes`（REST 或 gh），审批卡 + 凭据库令牌 + 最小权限指引；真实临时仓库验收（gh 授权）。回帖 Issue / GitHub App 仍未做；令牌路径只有模拟测试；Windows 凭据库未真机验 |
 | CI 回流修复 | ❌ | W5-06 |
 
 ## 3. 沙箱与权限
@@ -110,7 +110,7 @@
 | 导出：复制 Markdown / 导出 Markdown / 导出 PDF | ✅ | 只在本机 |
 | 风格（预设 + 自定义） | ✅ | e2e |
 | 设置：常规 / 个人资料 / 模型 / 权限 / 沙箱 / 隐私 / 关于 | ✅ | e2e |
-| 设置 · 预算页 | ✅ | v0.3：账本和状态栏余额读真实账本（`tw budget --json`），假数据已删 |
+| 设置 · 用量页（0.3.2 前叫预算页） | ✅ | 只读：读真实账本（`tw usage --json`），状态栏显示累计已花 |
 | 中文 / English | ✅ | i18n 覆盖测试 |
 | 浅色 / 深色（纸书配色，AA） | ✅ | 0.2.1 |
 | 浏览器默认行为屏蔽、自绘标题栏 / 右键菜单 | ✅ | test-guards 21 项 |
@@ -142,7 +142,7 @@
 | 自动更新 | ⚪ | v0.3：“检查更新”打开 GitHub Releases 页面；没装 tauri updater（v1.0） |
 | 崩溃上报 | ❌ | 无（隐私上是优点；但出问题时用户只能手动描述） |
 | 遥测 | ✅（不收集） | 代码里没有任何上报；README 和已知限制写明“不收集遥测” |
-| 本地诊断导出（日志打包） | ❌ | |
+| 本地诊断导出（日志打包） | ✅ | 0.3.2：`tw diag export`（脱敏 zip，只存本机）；关于页 / 结论卡入口；真实 e2e |
 | 开源许可（Apache-2.0 + 第三方许可对话框） | ✅ | 关于 → 开源许可 |
 | README / 用户文档 | ✅ | v0.3：README 重写（安装 / SmartScreen / 快速开始 / 权限 / 成本 / 路线图）+ `docs/release/known-limitations.md`；FAQ 未做 |
 | CHANGELOG / tag / GitHub Release | 🟡 | v0.3：CHANGELOG.md + `release.yml`（v* 标签 → 草稿 Release 附安装包 + sha256）就绪；**尚未打标签** |
@@ -157,7 +157,7 @@
 | B1 | **安装包不带 Python 核心** | 普通用户装完点“发送”就是“找不到核心命令”，演示模式也要核心，只剩内置的 3 条回放能看 | 2–4 天：把 python-build-standalone + 核心 wheel 作为 Tauri resources 打进安装包（或首次启动用 uv 自动装），核心路径自动发现 | 决定方案（体积 +30–50 MB）｜**✅ v0.3 已完成（PyInstaller onedir，CI 构建 + 冒烟）** |
 | B2 | **App 里从没真跑过一次 DeepSeek 端到端**（真实 key、真实仓库、流式、审核模型） | 核心卖点在真实模式下未验证；流式和审核模型只有夹具 | 0.5 天 + 修 bug | **要**：真实 key、约 ¥1–3、空闲时段 |
 | B3 | **Windows 真机验证**：凭据管理器、原生文件夹对话框、Git Bash / PowerShell 执行、worktree、权限 / 完全访问、`tw doctor`、一键安装 Docker | 这些只在 CI 或 Linux 上跑过 | 1 天（按 UI-08 清单）+ 修 bug | **要**：真机 |
-| B4 | **“开 PR”并不存在** | README / 产品叙事是 Issue → PR，实际只产出本地分支 + pr.md | 两种选法：①发布说明里改口为“生成可审阅分支 + PR 正文”（0.5 天）；②用 `gh pr create`，在审批后推送（1–2 天，需 GitHub 令牌） | 选方案｜**✅ v0.3 选方案①，已改口** |
+| B4 | **“开 PR”并不存在** | README / 产品叙事是 Issue → PR，实际只产出本地分支 + pr.md | 两种选法：①发布说明里改口为“生成可审阅分支 + PR 正文”（0.5 天）；②用 `gh pr create`，在审批后推送（1–2 天，需 GitHub 令牌） | 选方案｜**✅ v0.3 选方案①，已改口；0.3.2 做了方案②（审批 + 最小权限令牌）** |
 | B5 | **预算页账本是假数据** | 给用户看伪造的花费，必须修 | 0.5–1 天：`tw budget --json` 接桌面 | 否｜**✅ v0.3 已完成** |
 | B6 | **README / 文档过时**，没有安装指南和已知限制 | 公开发布第一印象 | 1 天 | 审阅｜**✅ v0.3 已完成** |
 | B7 | **未签名** → SmartScreen 警告 | 预览版可接受（写清楚）；正式 v1.0 必须签名 | 证书 ¥1–3k/年，或 Azure Trusted Signing 约 $10/月；接入 0.5 天 | **要**：花钱、身份认证 |
@@ -178,7 +178,7 @@
 
 ### v1.0「正式版」（在 v0.3 之上）
 
-必须做：代码签名（B7）、tauri 自动更新（B8）、开 PR（B4 方案②，带审批和最小权限令牌）、断点续跑、本地诊断导出、Windows 真机全清单（UI-08）+ 至少一次一键安装 Docker 走通、真实模式下的审核模型成本 / 质量抽检。
+必须做：代码签名（B7）、tauri 自动更新（B8）、~~开 PR（B4 方案②，带审批和最小权限令牌）、断点续跑、本地诊断导出~~（0.3.2 已做）、Windows 真机全清单（UI-08）+ 至少一次一键安装 Docker 走通、真实模式下的审核模型成本 / 质量抽检。
 
 - AI 约 **2–3 周**；Eva：签名证书（花钱 + 身份认证）、GitHub App / 令牌授权、真机。
 

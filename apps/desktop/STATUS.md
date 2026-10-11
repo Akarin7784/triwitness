@@ -2,6 +2,17 @@
 
 > 不按日历排期，做完一项记一项。
 
+## 0.3.2-preview · 去掉预算控制 + 断点续跑 + 开 PR + 诊断包（2993407 … ，未发布、未打包）
+
+- **金额一致**（2993407 / 18aaf7e）：结论卡显示实付（缓存命中 ¥0），名义价在悬停提示；审核模型花费记 `reviewer` 类别。
+- **去掉预算控制**（Eva 19:14；d4377ac / 5b9faf4 / 30b784c）：只保留用量记录、金额 / 缓存显示、非金钱安全上限和模型白名单；设置“预算”→ 只读“用量”页，状态栏显示累计已花；旧偏好 `maxCost` / `allowPeak` 读取时丢弃并回写。截图 `usage-hello.jpg`、`usage-settings.jpg`。
+- **断点续跑**（a03bb7c）：停止 / 失败 / 中断的任务轮显示「继续」。截图 `resume-stopped.jpg`、`resume-done.jpg`。
+- **开 PR**（9976327 / 338edfe / 4a729fc）：结论卡「开 PR」→ 审批卡（仓库 / 分支→目标 / 标题 / 改动 / 授权方式）→ 确认才推送并开 PR；令牌存凭据库 `github-token`，只注入 `tw pr`；连接器页有令牌行 + 最小权限指引。真实验收：临时私有仓库 `Akarin7784/tw-pr-e2e-20261011`，本机已登录 gh 授权，开出 PR #1，重复调用返回同一个 PR（`created=false`）；之后关闭 PR、删远端分支。**仓库没能删除**：gh 登录没有 `delete_repo` 权限（需 Eva 运行 `gh auth refresh -h github.com -s delete_repo` 后 `gh repo delete Akarin7784/tw-pr-e2e-20261011 --yes`，或网页上删）。令牌（REST）路径只有模拟测试（不从 gh 提取令牌）。截图 `pr-card.jpg`、`pr-opened.jpg`。
+- **诊断包**（2364489 / 424d2af）：关于页「导出诊断包」、结论卡「诊断包」；`tw diag export`。真实验收：95 个文件、116 KB，zip 里查不到本机的 DeepSeek 密钥。截图 `diag-export.jpg`。
+- **Docker**：box 上用 fuse-overlayfs 重装，`pytest -m integration tests/integration` 两次全过（含 `tw eval` 流水线用例），之后 `docker system prune -af`（回收 4.46 GB，磁盘 12%）。
+- **真实 key 花费（2026-10-11，deepseek-flash，高峰调用 0）**：金额一致 ¥0.0146；断点续跑 ¥0.0507；去掉预算控制 ¥0.0008；开 PR ¥0.0210；诊断包 ¥0.0007；合计 ¥0.0878（本机账本累计 ¥0.1640）。
+- 按 Eva 19:39：**本版先不打包**，不取 CI 安装包。
+
 ## 0.3.1-preview · 对话轮 + 正式版移除演示模式（7482a05 / 07e3c68 / …）
 
 - 起因：Eva 在 v0.3 里发“你好”，得到的是演示脚本修 verses.py 的全过程——每条消息都被当成编码任务，演示模式又无视输入。

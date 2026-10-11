@@ -4085,7 +4085,7 @@ dependencies = [
 
 [[package]]
 name = "triwitness-desktop"
-version = "0.3.1-preview"
+version = "0.3.2-preview"
 dependencies = [
  "base64 0.22.1",
  "dirs 6.0.0",
