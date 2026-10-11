@@ -24,3 +24,6 @@ roles:
   reviewer:   {model: deepseek/deepseek-flash, thinking: true, effort: max, variant: adversarial, max_output_tokens: 131072}
   summarizer: {model: deepseek/deepseek-flash, thinking: false, max_output_tokens: 16384}
   classifier: {model: deepseek/deepseek-flash, thinking: false, max_output_tokens: 1024}
+# API 重试（spec 010 §7，CC 报告：官方默认 10 次）：429 / 5xx / 超时指数退避；persistent = 限流 / 过载一直重试
+# （无人值守的长任务 / 评测；也可用环境变量 TW_LLM_PERSISTENT_RETRY=1 打开）
+retry: {attempts: 10, base_s: 1.0, max_s: 32.0, persistent: false, persistent_max_s: 60.0, persistent_total_s: 21600}

@@ -89,6 +89,37 @@ class ContextConfig(BaseModel):
         return int(tokens * self.chars_per_token)
 
 
+class PlannerConfig(BaseModel):
+    enabled: bool = False
+    max_turns: int = Field(default=30, gt=0)  # Planner 自己的回合上限（只读调查 + submit_plan）
+
+
+class ReviewerConfig(BaseModel):
+    enabled: bool = False
+    max_rounds: int = Field(default=2, ge=0)  # blocker → 返工的次数上限（CC Stop hook 式“有上限的不许停”）
+    max_turns: int = Field(default=20, gt=0)
+    consensus: bool = False  # 两个异构变体都给 blocker 才阻断（行业扫描建议，可选）
+    max_diff_chars: int = Field(default=60_000, gt=0)
+
+
+class PlanApprovalConfig(BaseModel):
+    """计划确认（04 §3.7；spec 010 §8 / §11 Q1——待 Eva 拍板，默认取 04 的 L2，可配置）。"""
+
+    min_risk: Literal["L0", "L1", "L2", "L3"] = "L2"
+    on_open_questions: bool = True  # Planner 列了待回答问题 → 需要确认
+    on_sensitive_files: bool = True  # affected_files 命中 risk.yaml 的 build_files / sensitive_paths → 需要确认
+    unattended: Literal["needs_human", "approve"] = "needs_human"  # 没有审批通道（终端 tw run）时
+    eval_reject_from: Literal["L1", "L2", "L3"] = "L3"  # 评测自动策略：≥ 它拒绝，其余批准（§11 Q2）
+
+
+class OrchestrationConfig(BaseModel):
+    """角色开关（spec 010 §8）：默认全关 = W3 行为（基线可复现）；orchestrated-1m.yaml 打开 Planner + Reviewer。"""
+
+    planner: PlannerConfig = Field(default_factory=PlannerConfig)
+    reviewer: ReviewerConfig = Field(default_factory=ReviewerConfig)
+    plan_approval: PlanApprovalConfig = Field(default_factory=PlanApprovalConfig)
+
+
 # W2-26：Executor 流程默认先复现（submit_repro + finish 校验）。`baseline.yaml` 仍是 W2-25 基线与消融的父配置，
 # 显式写 `harness: configs/harness/baseline.yaml` 的 RunConfig（W2-25 基线复跑）不受影响。
 # 1M 档（Eva 2026-10-11 20:26）：默认 long-context-1m.yaml（继承 repro-first，只改上下文参数）；
@@ -97,6 +128,8 @@ DEFAULT_HARNESS = "harness/long-context-1m.yaml"
 
 # 这些字段在 1M 档时新增：等于默认值时不进 config_hash，旧配置的哈希保持不变
 _HASH_COMPAT_CONTEXT = ("tail_max_tokens", "summary_input_tokens", "max_ineffective_compactions", "reread_recent_files")
+# W4 新增的顶层字段：同样等于默认值时不进 config_hash
+_HASH_COMPAT_TOP = ("parallel_read_tools", "orchestration")
 
 
 class HarnessConfig(BaseModel):
@@ -113,6 +146,8 @@ class HarnessConfig(BaseModel):
     failure_threshold: int = 5
     no_progress_threshold: int = 6
     max_warnings: int = 3
+    parallel_read_tools: bool = True  # 同一轮连续的只读工具并发执行（spec 010 §7；只影响耗时）
+    orchestration: OrchestrationConfig = Field(default_factory=OrchestrationConfig)
     reminders: dict[str, str] = Field(default_factory=dict)
     context: ContextConfig = Field(default_factory=ContextConfig)
     tools: list[str] = Field(default_factory=lambda: list(DEFAULT_TOOLS))
@@ -131,12 +166,22 @@ class HarnessConfig(BaseModel):
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any], *, default_name: str = "custom") -> HarnessConfig:
-        known = {"loop", "loop_detection", "reminders", "context", "tools", "prompts", "name", "extends"}
+        known = {
+            "loop",
+            "loop_detection",
+            "reminders",
+            "context",
+            "tools",
+            "prompts",
+            "name",
+            "extends",
+            "orchestration",
+        }
         unknown = set(raw) - known
         if unknown:
             raise ConfigError(f"harness 配置有未知字段：{', '.join(sorted(unknown))}")
         kw: dict[str, Any] = {**(raw.get("loop") or {}), **(raw.get("loop_detection") or {})}
-        for k in ("reminders", "context", "tools", "prompts"):
+        for k in ("reminders", "context", "tools", "prompts", "orchestration"):
             if raw.get(k) is not None:
                 kw[k] = raw[k]
         try:
@@ -162,6 +207,10 @@ class HarnessConfig(BaseModel):
             d = defaults[k].get_default(call_default_factory=True)
             if cfg["context"][k] == (d.model_dump(mode="json") if isinstance(d, BaseModel) else d):
                 del cfg["context"][k]
+        for k in _HASH_COMPAT_TOP:
+            d = HarnessConfig.model_fields[k].get_default(call_default_factory=True)
+            if cfg[k] == (d.model_dump(mode="json") if isinstance(d, BaseModel) else d):
+                del cfg[k]
         blob = json.dumps({"cfg": cfg, "prompts": self.prompt_versions()}, sort_keys=True, ensure_ascii=False)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]
 
@@ -198,4 +247,14 @@ def _resolve(name: str, seen: set[str]) -> dict[str, Any]:
     return raw
 
 
-__all__ = ["DEFAULT_TOOLS", "ContextConfig", "HarnessConfig", "RereadConfig", "TokenAllocation"]
+__all__ = [
+    "DEFAULT_TOOLS",
+    "ContextConfig",
+    "HarnessConfig",
+    "OrchestrationConfig",
+    "PlanApprovalConfig",
+    "PlannerConfig",
+    "RereadConfig",
+    "ReviewerConfig",
+    "TokenAllocation",
+]

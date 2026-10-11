@@ -162,7 +162,7 @@ async def test_ac7_eval_mode_429_retries_then_raises_without_fallback(tmp_path) 
         )
         with pytest.raises(LLMUnavailable):
             await r.complete(_req(), mode="eval")
-        assert hits["n"] == 3  # 首次 + 退避重试 2 次
+        assert hits["n"] == 11  # 首次 + 退避重试 10 次（spec 010 §7；原 2 次）
         assert backup.calls == []
     finally:
         del os.environ["TW_TEST_KEY"]

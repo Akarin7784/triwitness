@@ -45,3 +45,7 @@ class SandboxError(TriWitnessError):
 
 class ToolError(TriWitnessError):
     """工具内部错误（会被包装成 ok=False 的 ToolResult，不终止循环）。"""
+
+
+class IllegalTransition(TriWitnessError):
+    """任务状态机的非法迁移（spec 010 §4）：只有迁移表里的边可以走，终态不能迁出。"""

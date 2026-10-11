@@ -75,6 +75,10 @@ def run_cmd(
         str | None, typer.Option(help="--jsonl 断点续跑：从这个已停止 / 中断的 run_id 的最近进度继续（需 --repo）")
     ] = None,
     model: Annotated[str, typer.Option(help="Executor 模型（只允许 deepseek-flash）")] = "deepseek-flash",
+    harness: Annotated[
+        str | None,
+        typer.Option(help="harness 配置名（configs/harness/<名>.yaml），如 orchestrated-1m = Planner + Reviewer"),
+    ] = None,
     thinking: Annotated[
         str | None, typer.Option(help="思考强度 off / low / medium / high（默认按 configs/models.yaml）")
     ] = None,
@@ -98,7 +102,7 @@ def run_cmd(
         Path | None, typer.Option(help="用户说明文件（个人偏好 / 风格 / 项目说明，UTF-8），放在任务描述前")
     ] = None,
 ) -> None:
-    """以 Executor 单角色修复本地仓库中的一个问题，输出 diff、FinishReport 与成本账单。"""
+    """修复本地仓库的一个问题，输出 diff、FinishReport 与成本账单（orchestrated-1m 加 Planner + Reviewer）。"""
     import asyncio
     import os
 
@@ -133,6 +137,7 @@ def run_cmd(
         raise typer.BadParameter(str(e)) from None
     budget, session = _run_overrides(max_cost, permission_mode, confirm_unrestricted, interactive=jsonl)
     files, guidance = _run_inputs(attach, guidance_file)
+    hcfg = _harness(harness)
     reviewer = None
     if demo:
         try:
@@ -182,7 +187,7 @@ def run_cmd(
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
                              home=home, budget=budget, session=session, attachments=files if fresh else None,
                              guidance=guidance if fresh else None, reviewer=reviewer, recorder=recorder,
-                             resume=resume_state)  # fmt: skip
+                             resume=resume_state, harness=hcfg)  # fmt: skip
 
         def start(approver, on_event):  # type: ignore[no-untyped-def]
             if demo:  # 开发 / 测试用的脚本化任务：不走对话轮
@@ -218,7 +223,7 @@ def run_cmd(
         out = asyncio.run(run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                                     test_command=test_cmd, verify=verify, budget=budget,  # type: ignore[arg-type]
                                     session=session, attachments=files, guidance=guidance,
-                                    reviewer=reviewer))  # fmt: skip
+                                    reviewer=reviewer, harness=hcfg))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None
@@ -233,7 +238,57 @@ def run_cmd(
         typer.echo(
             f"验证 {ev.verdict}｜风险 {ev.risk_level}（{ev.risk_score} 分）｜复现 {ev.repro_status}｜{ev.clean_env}"
         )
+    if r.plan is not None:
+        typer.echo(f"计划：风险 {r.plan.estimated_risk}｜{len(r.plan.acceptance_criteria)} 条验收标准（plan.json）")
+    if r.review is not None:
+        typer.echo(f"评审：{'有阻断问题' if r.review.blocking else '通过'}｜{len(r.review.findings)} 条发现｜"
+                   f"返工 {r.review_rounds} 轮｜变体 {r.review.variant}")  # fmt: skip
     typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl / evidence.json / pr.md）")
+
+
+def _harness(name: str | None):  # type: ignore[no-untyped-def]
+    """--harness：configs/harness/<名>.yaml；不给 = 默认（long-context-1m）。"""
+    if name is None:
+        return None
+    from triwitness.core.errors import ConfigError
+    from triwitness.harness.config import HarnessConfig
+
+    stem = name.removesuffix(".yaml").rsplit("/", 1)[-1]
+    try:
+        return HarnessConfig.load(f"harness/{stem}.yaml")
+    except (ConfigError, FileNotFoundError, OSError) as e:
+        raise typer.BadParameter(f"harness 配置 {stem} 读取失败：{e}") from None
+
+
+@app.command("tasks")
+def tasks_cmd(
+    limit: Annotated[int, typer.Option(help="最多列出多少个")] = 20,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = False,
+) -> None:
+    """列出本机任务库（TW_HOME/tw.db）里的任务与最新状态（W4-15；时间为北京时间）。"""
+    import json
+
+    from triwitness.config import tw_home
+    from triwitness.store.sqlite import TaskStore
+
+    path = tw_home() / "tw.db"
+    if not path.exists():
+        typer.echo("[]" if as_json else "还没有任务记录")
+        return
+    with TaskStore(path) as store:
+        rows = store.list_tasks(limit)
+    if as_json:
+        typer.echo(json.dumps([r.to_dict() for r in rows], ensure_ascii=False))
+        return
+    from datetime import datetime
+
+    from triwitness.llm.pricing import to_shanghai
+
+    for r in rows:
+        cost = f"¥{r.cost_cny:.4f}" if r.cost_cny is not None else "—"
+        when = f"{to_shanghai(datetime.fromisoformat(r.updated_at)):%m-%d %H:%M}"  # 库里存 UTC，展示北京时间
+        typer.echo(f"{when}  {r.task_id}  {r.state:<18} {r.status or '':<12} {cost:>9}  "
+                   f"{r.harness or ''}  {(r.title or '')[:40]}")  # fmt: skip
 
 
 def _run_inputs(attach: list[Path] | None, guidance_file: Path | None) -> "tuple[list[Path], str | None]":

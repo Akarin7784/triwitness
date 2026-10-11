@@ -1,0 +1,14 @@
+# W4 多角色编排（spec 010）：long-context-1m + Planner + Reviewer。全部 deepseek-flash（永不 v4-pro），同厂商异构评审。
+# 默认 harness 仍是 long-context-1m（角色关闭）；桌面端是否默认切到本配置待 Eva 定（spec 010 §11 Q4）。
+extends: long-context-1m.yaml
+orchestration:
+  planner: {enabled: true, max_turns: 30}
+  reviewer: {enabled: true, max_rounds: 2, max_turns: 20, consensus: false}
+  plan_approval:
+    min_risk: L2              # §11 Q1：待 Eva 拍板（更保守可改 L1）
+    on_open_questions: true
+    on_sensitive_files: true
+    unattended: needs_human   # 终端 tw run 无审批通道 → NEEDS_HUMAN
+    eval_reject_from: L3      # §11 Q2：评测里 L0–L2 自动批准、L3 拒绝
+prompts: {executor: executor-repro-first, summarizer: summarizer, planner: planner, reviewer: reviewer,
+          reviewer_checklist: reviewer-checklist}

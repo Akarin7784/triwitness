@@ -12,11 +12,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Literal
 
 from triwitness.core.events import ModelCallPayload, billing
 from triwitness.core.ids import new_run_id
-from triwitness.core.models import CostReport, Evidence, FinishReport, TestRun, Vendor
+from triwitness.core.models import CostReport, Evidence, Finding, FinishReport, RiskFactor, TestRun, Vendor
 from triwitness.llm.types import LLMRequest, LLMResponse
 from triwitness.sandbox.base import BackendName, Capabilities, Probe, Sandbox, SandboxBackend, SandboxSpec
 from triwitness.verify import anticheat
@@ -67,6 +68,35 @@ class PipelineResult:
     reasons: list[str]
     static: StaticReport | None = None
     model: VerifierResult | None = None
+    rebuild: Callable[..., tuple[Evidence, RiskResult]] | None = None  # 带评审结果重建证据包（spec 010 §6.3）
+
+    def with_review(
+        self,
+        *,
+        findings: list[Finding],
+        review_model: str,
+        review_variant: str,
+        vendor_policy: Literal["single_vendor", "cross_vendor"] = "single_vendor",
+        unresolved_blockers: int = 0,
+        cost: CostReport | None = None,
+    ) -> PipelineResult:
+        """把评审结论并进证据包：major / blocker 计入风险（review_major_open）；返工到上限仍有 blocker → 下限 L2。"""
+        if self.rebuild is None:
+            return self
+        kw: dict[str, Any] = {"findings": findings, "review_model": review_model, "review_variant": review_variant}
+        if cost is not None:
+            kw["cost"] = cost
+        ev, risk = self.rebuild(**kw)
+        upd: dict[str, Any] = {"vendor_policy": vendor_policy}
+        if unresolved_blockers and ev.risk_level in ("L0", "L1"):
+            upd["risk_level"] = "L2"
+            upd["risk_factors"] = [*ev.risk_factors, RiskFactor(
+                code="floor:review_blocker_unresolved", points=0,
+                detail=f"评审返工到上限后仍有 {unresolved_blockers} 个阻断问题未解决")]  # fmt: skip
+        ev = ev.model_copy(update=upd)
+        return PipelineResult(evidence=ev, risk=risk, pr_body=render_pr(ev), deterministic=self.deterministic,
+                              reasons=self.reasons, static=self.static, model=self.model,
+                              rebuild=self.rebuild)  # fmt: skip
 
     @property
     def tests_passed(self) -> bool:
@@ -158,6 +188,8 @@ async def verify_task(
     base_ref: str | None = None,
     run_mode: Literal["background", "eval"] = "background",
     category: str = "dev",
+    criteria: list[str] | None = None,
+    root_cause: str = "",
 ) -> PipelineResult:
     spec, t = opts.spec, opts.timeout_s
     reasons: list[str] = []
@@ -199,19 +231,21 @@ async def verify_task(
         vr = await run_verifier(opts.router, VerifierInput(
             issue=issue, diff=patch, repro_status=rr.repro_status, test_runs=runs + ([reg] if reg else []),
             notes=reasons, anticheat_flags=ac.codes, claim_flags=claim.flags, executor_summary=finish.summary,
-            executor_open_risks=finish.open_risks,
+            executor_open_risks=finish.open_risks, criteria=criteria or [],
         ), executor_vendor=opts.executor_vendor, mode=run_mode, task_id=task_id, category=category)  # fmt: skip
         final = combine(det, vr.verdict.verdict)
         reasons += [f"Verifier 缺口：{g}" for g in vr.verdict.evidence_gaps[:3]]
-    ev, risk = build_evidence(
+    rebuild = partial(
+        build_evidence,
         task_id=task_id, finish=finish, patch=patch, rerun=rr, regression=reg, static=static, verdict=final,
         verifier_model=(vr.model if vr else None) or "deterministic",
         verifier_confidence=vr.verdict.confidence if vr else 1.0,
         criteria_results=vr.verdict.criteria_results() if vr else None, claim=claim, cost=cost(),
-        config_hash=config_hash, base_ref=base_ref,
+        config_hash=config_hash, base_ref=base_ref, root_cause=root_cause,
     )  # fmt: skip
+    ev, risk = rebuild()
     return PipelineResult(evidence=ev, risk=risk, pr_body=render_pr(ev), deterministic=det, reasons=reasons,
-                          static=static, model=vr)  # fmt: skip
+                          static=static, model=vr, rebuild=rebuild)  # fmt: skip
 
 
 __all__ = ["EmittingRouter", "EphemeralBackend", "PipelineResult", "VerifyOptions", "verify_task"]

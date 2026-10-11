@@ -3,7 +3,8 @@
 - 按 configs/models.yaml 给每个角色选模型与思考档位；reviewer 可带 variant（同厂商异构评审）。
 - vendor_policy=single_vendor（v0.1 默认）：允许同厂商评审，结果上标注 vendor_policy / variant。
 - vendor_policy=cross_vendor（资金到位后）：reviewer / verifier 必须与 executor 不同厂商，否则 ConstraintViolation。
-- 重试：同模型的 429 / 5xx / 超时退避重试在 HttpTransport 里（2 次，1s、4s，带抖动）；
+- 重试：同模型的 429 / 5xx / 超时退避重试在 HttpTransport 里（默认 10 次，1s 起指数退避、单次 ≤32s、带抖动；
+  持久模式下 429 / 503 一直重试，spec 010 §7）；
   仍失败（LLMUnavailable）→ background 模式走回退链；eval 模式禁止回退，直接抛出。
 - 白名单、空闲闸门、预算预检都在 LLMClient 里，Router 不绕过它们。
 """

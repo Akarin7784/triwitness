@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from collections import deque
@@ -49,6 +50,7 @@ class LoopOutcome(BaseModel):
         "context_overflow",
     ]
     finish: FinishReport | None = None
+    submission: dict[str, Any] | None = None  # 角色终止工具（submit_plan / submit_review）提交的结构化结果
     steps: int
     reason: str | None = None
 
@@ -113,7 +115,12 @@ class AgentLoop:
         category: str = "dev",
         stream: bool = False,
         hard_limit: int | None = None,
+        task_intro: str | None = None,
+        effort: Literal["low", "high", "max"] | None = None,
     ) -> None:
+        self.task_intro = task_intro  # 角色开场白（Planner / Reviewer）；None = Executor 的默认措辞
+        self.effort: Literal["low", "high", "max"] | None = effort  # 覆盖路由的思考强度（同厂商异构评审变体）
+        self.trusted_tail = ""  # 块外的编排器说明（例：Plan），拼在 Issue 块之后
         self.router = router
         self.hard_limit = hard_limit  # 窗口硬上限覆盖（测试用）；默认按角色从 configs/models.yaml 推导
         self.category = category  # 全局账本的类别信封（eval 用 baseline 等）
@@ -179,17 +186,58 @@ class AgentLoop:
                                       f"超过窗口硬上限 {cm.hard_limit // 1000}K")  # fmt: skip
         return None
 
-    async def run(self, task_prompt: str, ctx: ToolContext) -> LoopOutcome:
+    def _parallel_ok(self, call: Any) -> bool:
+        """可并发：配置开启、在只读白名单里、工具声明无副作用且不是终止工具（CC 报告 §2：只读并行、写串行）。"""
+        if not self.config.parallel_read_tools or call.name not in PARALLEL_SAFE_TOOLS:
+            return False
+        tool = self.registry.get(call.name)
+        return tool is not None and tool.side_effects == "none" and not tool.terminal
+
+    async def _timed_dispatch(self, call: Any, ctx: ToolContext) -> tuple[Any, Any, int]:
+        t0 = self.emitter.monotonic()
+        result, outcome = await self.registry.dispatch(call, ctx)
+        return result, outcome, max(0, round((self.emitter.monotonic() - t0) * 1000))
+
+    def seal_dangling(self, reason: str = "任务在此中断") -> int:
+        """给最后一条 assistant 消息里还没有结果的 tool_call 补一条错误结果（CC 报告 §2），保证历史合法、可续写。"""
+        idx = next((i for i in range(len(self.messages) - 1, -1, -1)
+                    if self.messages[i].role == "assistant"), None)  # fmt: skip
+        if idx is None or not self.messages[idx].tool_calls:
+            return 0
+        answered = {m.tool_call_id for m in self.messages[idx + 1 :] if m.role == "tool"}
+        missing = [c for c in self.messages[idx].tool_calls or [] if c.id not in answered]
+        if not missing:
+            return 0
+        # 结果必须紧跟在 assistant 之后、任何 user 消息之前
+        insert_at = idx + 1 + sum(1 for m in self.messages[idx + 1 :] if m.role == "tool")
+        filler = [Message(role="tool", tool_call_id=c.id, name=c.name, content=f"[未执行：{reason}]") for c in missing]
+        self.messages[insert_at:insert_at] = filler
+        return len(filler)
+
+    async def run(self, task_prompt: str, ctx: ToolContext, *, continue_with: str | None = None) -> LoopOutcome:
+        """continue_with：沿用上一次 run 的消息历史，只追加一条 user 反馈（评审返工；只追加 → 缓存命中）。"""
+        try:
+            return await self._run(task_prompt, ctx, continue_with=continue_with)
+        finally:
+            self.seal_dangling()
+
+    async def _run(self, task_prompt: str, ctx: ToolContext, *, continue_with: str | None) -> LoopOutcome:
         cfg = self.config
         rec = self.emitter
         tools = self.registry.schemas()
         tool_names = [t["function"]["name"] for t in tools]
-        cm = ContextManager(cfg, tools_chars=len(json.dumps(tools, ensure_ascii=False)), role=self.role,
-                            hard_limit=self.hard_limit,
-                            summarize=lambda r: self._summarize(r, ctx.task_id))  # fmt: skip
-        self.context = cm
-        self.messages = [Message(role="system", content=self.system_prompt),
-                         Message(role="user", content=cm.task_message(task_prompt))]  # fmt: skip
+        if continue_with is not None and self.context is not None and len(self.messages) > 1:
+            cm = self.context
+            self.seal_dangling("上一轮已结束")
+            self.messages.append(Message(role="user", content=continue_with))
+        else:
+            cm = ContextManager(cfg, tools_chars=len(json.dumps(tools, ensure_ascii=False)), role=self.role,
+                                hard_limit=self.hard_limit,
+                                summarize=lambda r: self._summarize(r, ctx.task_id))  # fmt: skip
+            self.context = cm
+            self.messages = [Message(role="system", content=self.system_prompt),
+                             Message(role="user", content=cm.task_message(task_prompt, intro=self.task_intro,
+                                                                          trusted_tail=self.trusted_tail))]  # fmt: skip
         no_tool = 0
         warnings = 0
         wrapped = False
@@ -219,7 +267,7 @@ class AgentLoop:
                 ended = await self._fit_window(cm, steps, ctx, force_compact=False)
                 if ended is not None:
                     return ended
-            req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools)
+            req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools, effort=self.effort)
             call_id = f"c{rec.next_seq}"
             writer = DeltaWriter(rec, self.role, call_id) if self.stream else None
             try:
@@ -283,16 +331,32 @@ class AgentLoop:
             no_tool = 0
             pending: list[Message] = []  # 提醒放到本轮全部 tool 消息之后（并行 tool_calls 中间插 user 消息会 HTTP 400）
             touched = False  # 本步有成功的工作区改动 → 步末存续跑进度（harness/resume.py）
-            for call in calls:
-                ctx.step_index = rec.next_seq
-                t0 = rec.monotonic()
+            ready: dict[int, Any] = {}  # 并发跑完、待按顺序写回的只读工具结果
+            for i, call in enumerate(calls):
+                if i not in ready and self._parallel_ok(call):
+                    j = i
+                    while j < len(calls) and self._parallel_ok(calls[j]):
+                        j += 1
+                    if j - i >= 2:  # 连续 ≥2 个只读调用：并发执行，不越过有副作用的工具
+                        outs = await asyncio.gather(*(self._timed_dispatch(c, ctx) for c in calls[i:j]),
+                                                    return_exceptions=True)  # fmt: skip
+                        ready.update(zip(range(i, j), outs, strict=True))
                 try:
-                    result, outcome = await self.registry.dispatch(call, ctx)
+                    if i in ready:
+                        got = ready.pop(i)
+                        if isinstance(got, BaseException):
+                            raise got
+                        ctx.step_index = rec.next_seq
+                        result, outcome, duration_ms = got
+                    else:
+                        ctx.step_index = rec.next_seq
+                        result, outcome, duration_ms = await self._timed_dispatch(call, ctx)
                 except NeedsHuman as e:
+                    self.seal_dangling("等待人工审批，任务已暂停")
                     return LoopOutcome(status="needs_human", steps=steps, reason=str(e))
                 except SandboxError as e:
+                    self.seal_dangling("沙箱错误，任务已停止")
                     return LoopOutcome(status="error", steps=steps, reason=f"沙箱错误：{e}")
-                duration_ms = max(0, round((rec.monotonic() - t0) * 1000))
                 limit, ratio = cfg.max_tool_result_chars, cfg.head_ratio_for(call.name)
                 content, cut = truncate_for_model(result.content, limit, ratio)
                 if cut:
@@ -325,8 +389,12 @@ class AgentLoop:
                 if result.ok and tool is not None and tool.side_effects == "workspace" and call.name != "run_tests":
                     touched = True
                 if tool is not None and tool.terminal and result.ok:
-                    report = FinishReport.model_validate((result.data or {}).get("finish_report"))
-                    return LoopOutcome(status="finished", finish=report, steps=steps)
+                    data = result.data or {}
+                    self.seal_dangling(f"本轮已在 {call.name} 处结束")
+                    if "finish_report" in data:
+                        report = FinishReport.model_validate(data.get("finish_report"))
+                        return LoopOutcome(status="finished", finish=report, steps=steps)
+                    return LoopOutcome(status="finished", submission=data.get("submission"), steps=steps)
                 # 死循环检测（spec 003 §5.4）
                 sig = _signature(call.name, call.arguments)
                 history.append((sig, result.ok))
@@ -371,6 +439,8 @@ _WARN_DISPLAY: dict[str, str] = {
     "no_progress": "⚠ 无进展",
 }
 _READ_TOOLS = frozenset({"read_file", "list_files", "grep"})
+# 可并发执行的只读工具（spec 010 §7）：notes 虽不进 diff 但会写 .tw/NOTES.md，不在其中
+PARALLEL_SAFE_TOOLS = frozenset({"read_file", "list_files", "grep", "repo_map", "git"})
 
 
 def _made_progress(tool: Any, name: str, sig: str, ok: bool, seen_reads: set[str]) -> bool:

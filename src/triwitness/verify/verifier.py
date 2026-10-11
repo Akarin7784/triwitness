@@ -24,7 +24,7 @@ from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.harness.context import wrap_untrusted
 from triwitness.llm.types import LLMRequest, LLMResponse, Message
 from triwitness.prompts import load_prompt
-from triwitness.tools.base import _clean_schema
+from triwitness.roles.contracts import extract_json, structured_call, submit_tool_schema
 from triwitness.verify.anticheat import AntiCheatReport
 from triwitness.verify.claim import ClaimVerdict
 
@@ -186,15 +186,7 @@ def combine(*labels: VerdictLabel) -> VerdictLabel:
 
 # ---------------------------------------------------------------- 模型判读
 
-SUBMIT_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "submit_verdict",
-        "description": "提交验证结论（只调用一次）",
-        "parameters": _clean_schema(Verdict.model_json_schema()),
-    },
-}
-_FENCE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.S)
+SUBMIT_TOOL = submit_tool_schema("submit_verdict", "提交验证结论（只调用一次）", Verdict)
 
 
 def render_input(inp: VerifierInput) -> str:
@@ -226,23 +218,6 @@ def render_input(inp: VerifierInput) -> str:
         "## Diff", wrap_untrusted("diff", diff),
     ]  # fmt: skip
     return "\n".join(parts)
-
-
-def extract_json(text: str | None) -> dict[str, Any] | None:
-    if not text:
-        return None
-    cands = [m.group(1) for m in _FENCE.finditer(text)]
-    i, j = text.find("{"), text.rfind("}")
-    if 0 <= i < j:
-        cands.append(text[i : j + 1])
-    for c in cands:
-        try:
-            obj = json.loads(c)
-        except ValueError:
-            continue
-        if isinstance(obj, dict):
-            return obj
-    return None
 
 
 # W3-14：两个漏网的假成功，模型都在 evidence_gaps 里写出了风险却仍判 pass。
@@ -290,44 +265,17 @@ async def run_verifier(
     task_id: str | None = None,
     category: str = "dev",
 ) -> VerifierResult:
+    """降级链见模块说明；实现复用 roles/contracts.structured_call（spec 010 §5，W4-04），请求逐字节不变。"""
     prompt = load_prompt("verifier")
     messages = [Message(role="system", content=prompt.text), Message(role="user", content=render_input(inp))]
-    meta: dict[str, Any] = {"cost_cny": 0.0}
-    last_err = ""
-    for attempt in range(1, MAX_REPAIRS + 2):
-        req = LLMRequest(role="verifier", messages=messages, tools=[SUBMIT_TOOL], tool_choice="auto")
-        resp = await router.complete(req, executor_vendor=executor_vendor, mode=mode, guard=guard,
-                                     task_id=task_id, category=category)  # fmt: skip
-        meta.update(model=resp.model or resp.served_model, variant=resp.variant, vendor_policy=resp.vendor_policy)
-        meta["cost_cny"] += resp.cost_cny
-        msg = resp.message
-        calls = [c for c in msg.tool_calls or [] if c.name == "submit_verdict"]
-        if calls:
-            v, err = _validate(calls[0].arguments)
-            if v is not None:
-                return VerifierResult(verdict=v, path="tool_call" if attempt == 1 else "repair", attempts=attempt,
-                                      **meta)  # fmt: skip
-            last_err = err
-            replies = [
-                Message(role="tool", tool_call_id=c.id, name=c.name,
-                        content=f"参数不合法，请修正后重新调用 submit_verdict：\n{err}" if c is calls[0] else "已忽略")
-                for c in msg.tool_calls or []
-            ]  # fmt: skip
-            messages = [*messages, msg, *replies]
-            continue
-        obj = extract_json(msg.content)
-        if obj is not None:
-            v, err = _validate(obj)
-            if v is not None:
-                return VerifierResult(verdict=v, path="content_json", attempts=attempt, **meta)
-            last_err = err
-        else:
-            last_err = "没有调用 submit_verdict，content 里也没有 JSON"
-        messages = [*messages, Message(role="assistant", content=msg.content or ""),
-                    Message(role="user", content=f"请调用 submit_verdict 提交结论（{last_err[:300]}）。")]  # fmt: skip
-    gap = f"Verifier 输出无法解析（{MAX_REPAIRS + 1} 次）：{last_err[:200]}"
+    res = await structured_call(router, role="verifier", messages=messages, tool=SUBMIT_TOOL, validate=_validate,
+                                executor_vendor=executor_vendor, mode=mode, guard=guard, task_id=task_id,
+                                category=category, max_repairs=MAX_REPAIRS)  # fmt: skip
+    if res.value is not None:
+        return VerifierResult(verdict=res.value, path=res.path, attempts=res.attempts, **res.meta)
+    gap = f"Verifier 输出无法解析（{MAX_REPAIRS + 1} 次）：{res.last_error[:200]}"
     return VerifierResult(verdict=Verdict(verdict="inconclusive", evidence_gaps=[gap], confidence=0.0),
-                          path="failed", attempts=MAX_REPAIRS + 1, **meta)  # fmt: skip
+                          path="failed", attempts=MAX_REPAIRS + 1, **res.meta)  # fmt: skip
 
 
 __all__ = [

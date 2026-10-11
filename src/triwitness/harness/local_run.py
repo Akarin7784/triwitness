@@ -10,6 +10,7 @@ none 后端结束时把改动提交到分支 tw/<run_id>（用户仓库工作区
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,7 @@ from triwitness.telemetry.trajectory import TrajectoryEvent, TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
 from triwitness.verify.pipeline import EphemeralBackend, VerifyOptions
 
+log = logging.getLogger(__name__)
 AGENTS_MD_READ_MAX = 200_000  # 只防超大文件；实际注入长度由 run_task 按 allocation.prefix 的余量决定
 
 BackendPref = Literal["auto", "docker", "none"]
@@ -89,6 +91,11 @@ async def run_local(
     rec = recorder or TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
     if on_event is not None and recorder is None:  # 桌面端桥接（tw run --jsonl）：事件写盘后同步推出去
         rec.subscribe(on_event)
+    store = _open_store(home)  # W4-15：任务与事件写 SQLite（TW_HOME/tw.db）；打不开只记日志
+    if store is not None:
+        for ev in list(rec.events):  # 对话轮已写的事件（同一个 run）
+            store.observe(ev)
+        rec.subscribe(store.observe)
     branch: str | None = None
     result: TaskResult | None = None
     hcfg = harness or HarnessConfig.default()
@@ -137,8 +144,11 @@ async def run_local(
             stream=on_event is not None,  # 桌面端：写流式增量（model_delta / reasoning_delta）
             resume=resume,
             progress_dir=run_dir,  # 每步存续跑进度（harness/resume.py）
+            approver=approver,  # 计划确认（spec 010 §8）与权限审批共用同一通道
         )
     finally:
+        if store is not None:
+            store.close()
         if modes is not None and (back := modes.on_task_finished(rec.task_id)) is not None:
             rec.emit(back)
         finish = getattr(sb, "finish", None)
@@ -165,6 +175,16 @@ async def run_local(
                                                      indent=2), encoding="utf-8")  # fmt: skip
     return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch,
                            repo=str(repo.resolve()))  # fmt: skip
+
+
+def _open_store(home: Path):  # type: ignore[no-untyped-def]
+    from triwitness.store.sqlite import TaskStore
+
+    try:
+        return TaskStore(home / "tw.db")
+    except Exception as e:  # 任务库是辅助记录，打不开不影响任务
+        log.warning("打不开任务库 %s：%s", home / "tw.db", e)
+        return None
 
 
 __all__ = ["LocalRunOutcome", "run_local"]
