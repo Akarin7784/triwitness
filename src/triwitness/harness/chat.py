@@ -184,7 +184,7 @@ async def run_turn(
     out = await work(issue, rec)
     r = out.result
     summary = (r.finish.summary if r.finish else None) or r.outcome.reason or r.status
-    total = chat_cost + r.cost.total_cny
+    total = r.cost.total_cny  # run_task 的成本已含本轮对话调用（同一条轨迹）
     rec.emit(TurnFinishedPayload(kind="task", status=r.status, reply=reply[:2000] or None, cost_cny=round(total, 6)))
     write_turn(run_dir, parent=parent, user=text, assistant=f"{reply}\n\n[任务 {r.status}] {summary}".strip(),
                kind="task")  # fmt: skip

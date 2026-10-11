@@ -102,6 +102,8 @@ async def run_task(
     rec = recorder
     cfg = config or HarnessConfig.default()
     ledger = CostLedger(task_id=rec.task_id, budget_cny=budget.max_cost_cny, pricing_version=pricing_version())
+    for ev in list(rec.events):  # 对话轮已记下的调用（同一个 run）也算进本任务成本：结论卡 = 轮次合计 = 账本
+        ledger.observe(ev)
     rec.subscribe(ledger.observe)
     bridge = bridge_from_env()  # 没配置 OTLP 端点时为 None（spec 005 AC5）
     if bridge is not None:
