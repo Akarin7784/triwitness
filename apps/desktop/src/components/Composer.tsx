@@ -23,8 +23,9 @@ interface ComposerProps {
   /** 任务进行中：发送键变成停止键 */
   running?: boolean
   onStop?: () => void
-  /** 可以不写任务就发送（演示模式） */
+  /** 可以不写内容就发送（测试用） */
   allowEmpty?: boolean
+  placeholder?: string
   /** 草稿按会话保存 */
   draftKey?: string
 }
@@ -35,7 +36,7 @@ const MAX_H = 240
  * Claude 式输入框：上面是自动增高的文本区；下面一行左边 +、仓库签，右边模型选择与发送 / 停止。
  * Enter 发送、Shift+Enter 换行、Esc 停止；草稿按会话保存。
  */
-export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey = 'default', project }: ComposerProps) {
+export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey = 'default', project, placeholder }: ComposerProps) {
   const [value, setValue] = useState(() => getDraft(draftKey))
   const [menu, setMenu] = useState<'plus' | 'model' | 'effort' | 'repo' | null>(null)
   const armed = useUnrestrictedArmed()
@@ -151,7 +152,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
             }
           }}
           rows={1}
-          placeholder={tr('写下任务…')}
+          placeholder={placeholder ?? tr('问点什么，或描述要修的问题…')}
           aria-label={tr('输入')}
           className="block max-h-[240px] min-h-[44px] w-full resize-none bg-transparent px-1.5 py-1 font-serif text-[15px] leading-relaxed text-ink outline-none placeholder:text-sepia-muted/80"
         />

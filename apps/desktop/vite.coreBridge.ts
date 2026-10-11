@@ -131,7 +131,17 @@ export function coreBridge(repoRoot: string): Plugin {
     apply: 'serve',
     configureServer(server) {
       if (process.env.TW_DEV_BRIDGE !== '1') return
-      server.middlewares.use('/__tw', async (req, res) => {
+      server.middlewares.use('/__tw', handler)
+    },
+    // `vite preview`（正式版前端包 + 开发桥）：截图 / e2e 用正式构建，侧栏里没有开发用的回放来源
+    configurePreviewServer(server) {
+      if (process.env.TW_DEV_BRIDGE !== '1') return
+      server.middlewares.use('/__tw', handler)
+    },
+  }
+
+  async function handler(req: IncomingMessage, res: ServerResponse) {
+      {
         const url = new URL(req.url ?? '/', 'http://localhost')
         try {
           if (url.pathname === '/health') return json(res, 200, { bridge: 'tw-bridge/1' })
@@ -240,7 +250,6 @@ export function coreBridge(repoRoot: string): Plugin {
         } catch (e) {
           return json(res, 500, { error: String(e) })
         }
-      })
-    },
+      }
   }
 }

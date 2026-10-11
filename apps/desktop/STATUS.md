@@ -2,6 +2,17 @@
 
 > 不按日历排期，做完一项记一项。
 
+## 0.3.1-preview · 对话轮 + 正式版移除演示模式（7482a05 / 07e3c68 / …）
+
+- 起因：Eva 在 v0.3 里发“你好”，得到的是演示脚本修 verses.py 的全过程——每条消息都被当成编码任务，演示模式又无视输入。
+- **对话轮**（核心 `harness/chat.py`、`prompts/chat.md` v1）：每条消息先一次对话调用（带 `start_repo_work{goal}` 工具）。不调工具 → 直接回复，`turn_finished.kind=chat`，没有 finish / 验证 / 证据 / 补丁；调工具且已选仓库 → 同一个 run、同一个 recorder 接着跑 `run_local`；没选仓库 → 不再调模型，直接请用户选仓库。没有额外的分类调用。
+- **多轮**：`tw run --jsonl --parent-run <run_id>`；每个 run 目录写 `turn.json`（parent / user / assistant / kind），沿链取最近 20 轮。前端 `chats.threads[根]` 记各轮，之前各轮只读显示在上面（读盘回放折叠），重试 / 编辑只作用于最后一轮（同一个 parent 分叉）。
+- **界面**：直接回复是一条普通助手消息（无结果卡 / 作品卡），状态签“已回复”；输入框跟进时提示“回复…”；仓库选择在会话里一直可用、可空。
+- **正式版移除演示模式**：PyInstaller 排除 `bridge.demo` / `harness.testing` / `verify.testing` / `llm.fake` 并在构建时用 `pyi-archive_viewer` 校验；`tw.exe run --demo` → “正式版不含演示模式”。Rust 发行构建只有 live（调试构建才放行 demo / replay）、仓库可空、`--parent-run` 只放行合法 run_id、没密钥返回 `missing_api_key`。前端 fixture / mock / 压测来源只在 `import.meta.env.DEV`，正式版默认打开新会话；去掉“运行方式”设置和全部「演示」文案；`npm run check:bundle` 扫正式版前端包（CI desktop job + package-windows）。
+- **密钥引导**：凭据库没有密钥时首次打开弹“连接 DeepSeek”（链接 platform.deepseek.com/api_keys），没密钥就发送也弹，保存后自动把那条消息发出去。
+- **测试**：本机 OpenAI 兼容模拟服务 `packaging/mock_llm.py` + `TW_LLM_BASE_URL_OVERRIDE`（只允许 127.0.0.1 / localhost，用到时 stderr 告警）。`smoke_core.py` 改为：拒绝 `--demo`、「你好」直接回复（无 task_started / tool_call / patch）、「我刚才说了什么」复述、未选仓库请选、verses 小任务（询问模式 + 自动批准）done / pass、所有请求带鉴权且是 SSE、账本有记录——Linux 打包核心本机全过。Python 单测 +15（`tests/unit/harness/test_chat.py`），vitest +6（`chatTurn.test.ts`），e2e `tools/shoot-v031.mjs`（正式版前端包 + `vite preview` 开发桥 + 打包核心 + 模拟服务，13 项全过）。截图 `docs/images/v0.3.1/`。
+- **还没做**：用真实 DeepSeek 密钥从 App 发起的运行（box 上没有项目密钥）。
+
 ## 0.3.0-preview · 公开预览（84244a0 … d8f800e）
 
 - **安装包自带核心**：PyInstaller onedir（`tw.exe` + `_internal/`）作为 Tauri 资源装到 `<安装目录>\core\`；Rust `bundled_core()` 优先用它，再退回 TW_CORE / PATH / `python -m`。选 onedir 不选 onefile：onefile 每次启动都要把 ~40 MB 解压到临时目录（桌面端每个任务、每次查规则 / 账本都会起一次核心，冷启动多 1–3 秒，杀毒软件还会反复扫），onedir 启动约 0.1 s（Linux 实测），以后也便于逐个文件签名。

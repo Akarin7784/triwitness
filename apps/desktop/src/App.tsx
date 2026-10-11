@@ -274,10 +274,12 @@ export default function App() {
 
   const isLocal = display.startsWith('local:')
   const meta = liveId ? metas.find((m) => m.id === liveId) : undefined
+  // 多轮：标题跟着会话第一轮
+  const rootMeta = source.startsWith('live:') ? metas.find((m) => m.id === source.slice(5)) : undefined
   const rootItem = items.find((i) => i.id === source)
   const title = isLocal
     ? (rootItem?.title ?? locals.find((l) => l.id === source)?.title ?? '')
-    : chats.overlay[source]?.title || live.title || (meta?.title ?? '')
+    : chats.overlay[source]?.title || rootMeta?.title || live.title || (meta?.title ?? '')
   const messages = [...run.messages, ...(localMessages[display] ?? [])]
   const running = !!snap && !snap.exited && !snap.result
   const approvals = snap?.approvals ?? []

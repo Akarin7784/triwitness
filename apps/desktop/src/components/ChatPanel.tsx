@@ -266,6 +266,7 @@ export function ChatPanel({
         onStop={onStop}
         allowEmpty={allowEmpty}
         project={project}
+        placeholder={turn?.user ? t('回复…') : undefined}
       />
     </section>
   )
