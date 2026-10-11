@@ -4,8 +4,9 @@
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const DIST = new URL('../dist/', import.meta.url).pathname
+const DIST = fileURLToPath(new URL('../dist/', import.meta.url))
 const MARKERS = [
   '演示', // 「演示」选项 / 签 / 文案
   'demo/verses', // 演示仓库
@@ -27,7 +28,7 @@ const walk = (d) => {
   }
 }
 walk(DIST)
-const jsonl = files.filter((f) => f.endsWith('.jsonl') || /\/(success|failure|budget_exceeded|recorded)-[\w-]+\.js$/.test(f))
+const jsonl = files.filter((f) => f.endsWith('.jsonl') || /[\\/](success|failure|budget_exceeded|recorded)-[\w-]+\.js$/.test(f))
 const hits = []
 for (const f of files) {
   if (!/\.(js|css|html|json|jsonl|txt|map)$/.test(f)) continue
