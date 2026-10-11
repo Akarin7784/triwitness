@@ -78,6 +78,7 @@ async def test_demo_end_to_end_with_approval_card(env: dict[str, Path]) -> None:
     assert (res["status"], res["verdict"]) == ("done", "pass"), res
     assert res["risk_level"] in ("L1", "L2") and res["clean_env"] == "unverified"  # 宿主机后端：无干净环境
     assert res["pr_md"] and res["branch"] and res["cost_cny"] == 0.0
+    assert res["repo"] and res["run_id"].startswith("r_")  # 开 PR 用
     seqs = [x["seq"] for x in h.lines if "seq" in x]
     assert seqs == list(range(len(seqs)))  # 事件按 seq 连续、无重复
     on_disk = (Path(res["run_dir"]) / "trajectory.jsonl").read_text(encoding="utf-8").splitlines()

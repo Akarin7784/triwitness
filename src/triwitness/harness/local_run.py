@@ -44,6 +44,7 @@ class LocalRunOutcome:
     backend: str
     run_dir: Path
     branch: str | None  # none 后端：保留改动的分支
+    repo: str | None = None  # 本地仓库路径（开 PR 用）
 
 
 def _backends(home: Path) -> list[SandboxBackend]:
@@ -150,12 +151,14 @@ async def run_local(
     if result.finish is not None:
         (run_dir / "finish.json").write_text(result.finish.model_dump_json(indent=2), encoding="utf-8")
     (run_dir / "summary.json").write_text(json.dumps({"status": result.status, "backend": choice.backend.name,
-                                                      "branch": branch, "steps": result.outcome.steps,
+                                                      "branch": branch, "repo": str(repo.resolve()),
+                                                      "steps": result.outcome.steps,
                                                       "verdict": result.verification.evidence.verdict
                                                       if result.verification else None,
                                                       "reason": result.outcome.reason}, ensure_ascii=False,
                                                      indent=2), encoding="utf-8")  # fmt: skip
-    return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch)
+    return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch,
+                           repo=str(repo.resolve()))  # fmt: skip
 
 
 __all__ = ["LocalRunOutcome", "run_local"]

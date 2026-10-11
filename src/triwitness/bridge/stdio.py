@@ -50,7 +50,7 @@ def result_message(out: LocalRunOutcome) -> dict[str, Any]:
         "backend": out.backend, "cost_cny": round(r.cost.total_cny, 6), "steps": r.outcome.steps,
         "reason": r.outcome.reason, "summary": r.finish.summary if r.finish else None,
         "verdict": ev.verdict if ev else None, "risk_level": ev.risk_level if ev else None,
-        "clean_env": ev.clean_env if ev else None, "pr_md": pr_md,
+        "clean_env": ev.clean_env if ev else None, "pr_md": pr_md, "repo": out.repo, "run_id": out.run_dir.name,
     }  # fmt: skip
 
 

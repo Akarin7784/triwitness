@@ -600,6 +600,59 @@ def sandbox_install(
     raise typer.Exit(0 if rc == 0 else 1)
 
 
+pr_app = typer.Typer(add_completion=False, no_args_is_help=True, help="GitHub PR（审批后推送分支并开 PR）")
+app.add_typer(pr_app, name="pr")
+_RunOpt = Annotated[str, typer.Option("--run", help="运行 id（r_…）")]
+_PrRepoOpt = Annotated[Path | None, typer.Option("--repo", help="本地仓库路径（默认取任务记录的仓库）")]
+
+
+@pr_app.command("plan")
+def pr_plan(
+    run: _RunOpt,
+    repo: _PrRepoOpt = None,
+    base: Annotated[str | None, typer.Option(help="目标分支（默认：仓库当前分支，否则 main）")] = None,
+    remote: Annotated[str, typer.Option(help="远端名")] = "origin",
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON（审批卡用）")] = True,
+) -> None:
+    """不联网、不推送：列出将要推送的仓库 / 分支 / 目标分支 / 标题 / 改动文件和鉴权方式（审批卡内容）。"""
+    from triwitness.config import tw_home
+    from triwitness.github.pr import plan_pr
+
+    del as_json
+    _perm_call(lambda: {k: v for k, v in plan_pr(tw_home(), run, repo, remote=remote, base=base).card().items()
+                        if k != "ok"})  # fmt: skip
+
+
+@pr_app.command("open")
+def pr_open(
+    run: _RunOpt,
+    repo: _PrRepoOpt = None,
+    yes: Annotated[bool, typer.Option("--yes", help="用户已在审批卡上确认：推送分支并开 PR")] = False,
+    base: Annotated[str | None, typer.Option(help="目标分支")] = None,
+    title: Annotated[str | None, typer.Option(help="PR 标题（默认取结论摘要）")] = None,
+    remote: Annotated[str, typer.Option(help="远端名")] = "origin",
+    draft: Annotated[bool, typer.Option("--draft", help="开成草稿 PR")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="输出 JSON")] = True,
+) -> None:
+    """推送 tw/<run_id> 并开 PR。必须 --yes（审批后）；令牌从环境变量 GITHUB_TOKEN 读，否则用已登录的 gh。"""
+    from triwitness.config import tw_home
+    from triwitness.github.pr import open_pr, plan_pr, record_pr
+
+    del as_json
+    if not yes:
+        typer.echo('{"ok": false, "error": "未执行：需要用户在审批卡上确认后加 --yes"}')
+        raise typer.Exit(2)
+
+    def go() -> dict[str, object]:
+        plan = plan_pr(tw_home(), run, repo, remote=remote, base=base, title=title)
+        res = open_pr(plan, draft=draft)
+        record_pr(tw_home(), plan, res)
+        return {"url": res.url, "number": res.number, "created": res.created, "repo": plan.full_name,
+                "head": plan.head, "base": plan.base, "title": plan.title}  # fmt: skip
+
+    _perm_call(go)
+
+
 perm_app = typer.Typer(add_completion=False, no_args_is_help=True, help="权限规则（桌面端规则编辑器）")
 app.add_typer(perm_app, name="permissions")
 _LayerOpt = Annotated[str, typer.Option(help="user（~/.triwitness/permissions.yaml）/ local（仓库本地）")]
