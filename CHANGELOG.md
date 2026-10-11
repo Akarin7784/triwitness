@@ -16,6 +16,14 @@
 - **长上下文实测**：`scripts/probe_long_context.py` 只用 deepseek-flash，测针召回和首字延迟。2026-10-11 的结果放在 `evals/baselines/2026-10-11-long-context-probe/`：约 900K 时召回全对，冷请求首字约 19 s，热请求约 5 s。本机账本新增类别 `long_context_probe`。
 
 ### 新增
+- **W4 多角色编排（spec 010，初稿待 Eva 审）**：`tw run --harness orchestrated-1m` 走 Planner → （计划确认）→ 复现 → Executor → 验证 → Reviewer → 整理结果；全部 deepseek-flash（永不 v4-pro）。默认 harness 仍是 long-context-1m（角色关闭，行为与之前一致）。
+  - 显式状态机 `core/state_machine.py`（04 §3.1 迁移表，非法迁移抛 `IllegalTransition`，可从事件重放）；编排器 `orchestrator/inprocess.py`，`harness/run.py` 只剩兼容入口。
+  - 角色契约 `roles/contracts.py`：`submit_plan` / `submit_review` 终止工具 + 结构化输出降级助手（auto → 修复 ×2 → 正文抽 JSON），Verifier 也改用它（回放夹具不变）。
+  - Planner（只读工具、可执行验收标准、open_questions）与 Reviewer（只报有依据的问题，文件 / 行号 / 严重级别 / 建议）；同厂商异构变体 adversarial（思考 max）/ checklist（思考 high + 清单式提示），证据包标注 `review_variant` 与 `vendor_policy=single_vendor`。
+  - 评审 blocker → 在同一个 Executor 上下文里返工（有上限，默认 2 轮）；到上限仍有 blocker 时保留改动、发现标 open、风险至少 L2。可选共识模式（`orchestrated-1m-consensus`）：两个变体都报 blocker 才返工。
+  - 计划确认：风险 ≥ L2、Planner 要求确认、有待确认问题或动构建 / 敏感文件时等待确认（桌面端走审批卡，终端无审批通道 → needs_human；评测自动批准 L0–L2、拒绝 L3），阈值可配置（spec 010 §11 Q1，待 Eva 定）。
+  - 任务库：任务与事件写 `TW_HOME/tw.db`（SQLite），`tw tasks [--json]` 列出（W4-15）。
+- **Agent 循环（借鉴 Claude Code 核心循环）**：同一轮里连续的只读工具（read_file / list_files / grep / repo_map / git）并发执行，结果顺序不变；中途结束 / 中断时给没执行的工具调用补“未执行”结果，续写请求始终合法；API 重试默认 10 次指数退避（1 s 起、32 s 封顶、带抖动），`TW_LLM_PERSISTENT_RETRY=1` 时 429 / 503 一直重试（单次 ≤ 60 s、总计 ≤ 6 h）。
 - **上下文保护**：请求前估算超过窗口硬上限时先强制清理 / 压缩，仍超就体面结束（`context_overflow`）；厂商报上下文超限时压缩后重试一次；连续 2 次压完仍超压缩线就停下（`context_thrash`），不再无限压缩；压缩后重读最近修改的 5 个文件。
 - **断点续跑**：任务每一步把改动文件全文、复现结论、NOTES 存进 `runs/<id>/resume/`；停止 / 失败 / 中断（进程退出）的任务轮显示「继续」，新开一轮从上次进度接着做（`tw run --jsonl --resume <run_id>`）。复现测试已被接受就沿用，没被接受只恢复测试侧文件、重新复现。
 - **开 PR（审批后）**：结论卡「开 PR」先弹审批卡（仓库 / `tw/<run_id>` → 目标分支 / 标题 / 提交与改动文件 / 授权方式），确认后才推送分支并在 GitHub 上创建 PR，结论卡显示 PR 链接；同一分支已有 PR 时直接返回，不重复开。核心 `tw pr plan`（不联网）/ `tw pr open --yes`（REST API 或本机已登录的 `gh`）；结果记在 `runs/<id>/pr.json`。GitHub 令牌在 设置 → 连接器 填写，存系统凭据库（`github-token`），只注入 `tw pr` 子进程（推送用环境变量里的 `GIT_CONFIG_*` 头，不进命令行、文件或日志）；附最小权限指引：细粒度令牌、只选这个仓库、只给 Contents 与 Pull requests 读写、设过期时间。

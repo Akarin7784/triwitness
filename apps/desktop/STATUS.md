@@ -11,6 +11,8 @@
 - **诊断包**（2364489 / 424d2af）：关于页「导出诊断包」、结论卡「诊断包」；`tw diag export`。真实验收：95 个文件、116 KB，zip 里查不到本机的 DeepSeek 密钥。截图 `diag-export.jpg`。
 - **Docker**：box 上用 fuse-overlayfs 重装，`pytest -m integration tests/integration` 两次全过（含 `tw eval` 流水线用例），之后 `docker system prune -af`（回收 4.46 GB，磁盘 12%）。
 - **真实 key 花费（2026-10-11，deepseek-flash，高峰调用 0）**：金额一致 ¥0.0146；断点续跑 ¥0.0507；去掉预算控制 ¥0.0008；开 PR ¥0.0210；诊断包 ¥0.0007；合计 ¥0.0878（本机账本累计 ¥0.1640）。
+- **W4 多角色编排（核心，00a1a22；spec 010 初稿待 Eva 审）**：`tw run --harness orchestrated-1m` = Planner → 计划确认 → 复现 → Executor → 验证 → Reviewer（同厂商异构变体，可选共识）→ 整理结果；评审 blocker 有上限地返工；任务与事件写 `tw.db`（`tw tasks`）。桌面端不用改：计划确认复用审批卡（tool = Plan），评审走已有的 review 事件。默认 harness 仍是 long-context-1m（是否切换见 spec 010 §11 Q4）。
+- **W4 真实 key 实测（2026-10-11 21:09–21:16 UTC+8，周日空闲价，deepseek-flash，高峰调用 0）**：5 次运行合计 ¥0.4001；local 规则放行 python 后 add 修复 done（复现 + Verifier pass + 评审通过，¥0.0598）；`--jsonl` 计划审批 → 双评审共识 done（¥0.0997）。暴露终端 `tw run` 无审批通道时测试命令全被拒（spec 010 §11 Q5）。
 - 按 Eva 19:39：**本版先不打包**，不取 CI 安装包。
 
 ## 0.3.1-preview · 对话轮 + 正式版移除演示模式（7482a05 / 07e3c68 / …）
