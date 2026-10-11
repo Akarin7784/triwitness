@@ -98,3 +98,24 @@ async def test_live_mode_bypasses_cache_but_records(tmp_path) -> None:
     await c.complete(cases.text_nonthinking(), cases.MODEL)
     assert inner.calls == 2  # 不读缓存：重复尝试各自真采样
     assert len(list((tmp_path / "cache").glob("*.json"))) == 1  # 但会录下来，之后可离线回放
+
+
+async def test_record_mode_cache_hit_costs_nothing(tmp_path) -> None:
+    """0.3.2：本地缓存命中没联网也没计费 → 实付 0（和账本一致），名义价照算。"""
+    from triwitness.cost.ledger import GlobalLedger
+
+    raw = json.loads((FIXTURES / "text_nonthinking.json").read_text(encoding="utf-8"))["response"]
+    c, _ = client_with(CannedTransport(raw), "record", tmp_path)
+    c.ledger = GlobalLedger(tmp_path / "ledger.sqlite")
+    r1 = await c.complete(cases.text_nonthinking(), cases.MODEL, category="reviewer")
+    r2 = await c.complete(cases.text_nonthinking(), cases.MODEL, category="reviewer")
+    assert r1.cost_cny > 0 and not r1.cached
+    assert r2.cached and r2.cost_cny == 0.0 and r2.nominal_cost_cny == r1.cost_cny
+    assert c.ledger.spent() == r1.cost_cny + r2.cost_cny
+    assert c.ledger.spent("reviewer") == r1.cost_cny
+
+
+async def test_replay_mode_keeps_nominal_cost() -> None:
+    """replay（测试 / 离线评测）沿用名义价，成本报告可比。"""
+    r = await replay_client().complete(cases.text_nonthinking(), cases.MODEL)
+    assert r.cached and r.cost_cny == r.nominal_cost_cny > 0

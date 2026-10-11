@@ -24,6 +24,8 @@ export const EN: Record<string, string> = {
   '{0} 转高峰': 'peak at {0}',
   '{0}：{1}': '{0}: {1}',
   '¥{0} · {1} 步': '¥{0} · {1} steps',
+  '实付 ¥{0}（与账本一致）': 'Paid ¥{0} (matches the ledger)',
+  '实付 ¥{0}（与账本一致）；名义价 ¥{1}，差额来自本地缓存命中，未计费': 'Paid ¥{0} (matches the ledger); list price ¥{1}, the difference is local cache hits that were not billed',
   '· 思考 {0}': '· thinking {0}',
   '✓ 规则有效': '✓ Valid rule',
   '、': ', ',

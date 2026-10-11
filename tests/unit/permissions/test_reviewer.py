@@ -86,6 +86,19 @@ async def test_model_reviewer_non_thinking_flash_and_cost() -> None:
     assert r.thinking is False and r.role == "classifier" and r.max_output_tokens == 200
 
 
+async def test_model_reviewer_spend_goes_to_reviewer_category() -> None:
+    """0.3.2：审核模型的花费记在账本 reviewer 类别（之前落在默认的 dev）。"""
+    seen: list[dict[str, Any]] = []
+
+    class _R(_Router):
+        async def complete(self, r: Any, **kw: Any) -> _Resp:
+            seen.append(kw)
+            return await super().complete(r, **kw)
+
+    await ModelReviewer(_R('{"decision": "allow", "reason": "x"}')).review(req("pytest"))
+    assert seen[0]["category"] == "reviewer"
+
+
 async def test_model_reviewer_failure_falls_back_to_user() -> None:
     d = await ModelReviewer(_Router(RuntimeError("down"))).review(req("pytest"))
     assert d.decision == "uncertain"
@@ -145,6 +158,35 @@ async def test_gate_reviewer_decides_without_user(repo: Path, decision: str) -> 
     assert res["by"] == "reviewer" and res["decision"] == decision
     assert "deepseek-flash" in res["comment"] and "¥0.0002" in res["comment"]
     assert em.kinds().count("approval_requested") == 1
+
+
+async def test_gate_records_reviewer_model_call(repo: Path) -> None:
+    """审核模型的调用记成 role=reviewer 的 model_call：结论卡金额（运行成本）与账本一致。"""
+    from triwitness.core.models import Usage
+    from triwitness.cost.report import cost_report_from_events
+
+    resp = type(
+        "R",
+        (),
+        {
+            "model": "deepseek/deepseek-flash",
+            "served_model": "deepseek-flash",
+            "peak": False,
+            "latency_ms": 5,
+            "finish_reason": "stop",
+            "cost_cny": 0.0004,
+            "nominal_cost_cny": 0.0004,
+            "cached": False,
+            "usage": Usage(input_tokens=300, cache_miss_tokens=300, output_tokens=20),
+        },
+    )()
+    em = EventEmitter("t", "r")
+    rv = _Fixed(ReviewDecision("allow", "常规", cost_cny=0.0004, model="deepseek-flash", response=resp))
+    await _run(PermissionGate(engine(repo), em, reviewer=rv), em, "make build")
+    calls = [e for e in em.events if e.kind == "model_call" and e.role == "reviewer"]
+    assert len(calls) == 1 and calls[0].payload["cost_cny"] == 0.0004 and calls[0].payload["model"] == "deepseek-flash"
+    rep = cost_report_from_events(em.events, task_id="t", budget_cny=1, pricing_version="p")
+    assert any(ln.role == "reviewer" and ln.cost_cny == 0.0004 for ln in rep.lines)
 
 
 async def test_gate_uncertain_asks_user(repo: Path) -> None:

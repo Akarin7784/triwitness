@@ -59,9 +59,11 @@ def turn_message(out: Outcome) -> dict[str, Any]:
     if isinstance(out, LocalRunOutcome):
         return {**result_message(out), "kind": "task"}
     if out.task is not None:
-        return {**result_message(out.task), "kind": "task", "reply": out.reply, "cost_cny": round(out.cost_cny, 6)}
+        return {**result_message(out.task), "kind": "task", "reply": out.reply, "cost_cny": round(out.cost_cny, 6),
+                "nominal_cost_cny": round(out.nominal_cost_cny, 6)}  # fmt: skip
     return {"bridge": "result", "kind": "chat", "status": "replied", "reply": out.reply, "run_dir": str(out.run_dir),
-            "run_id": out.run_id, "cost_cny": round(out.cost_cny, 6)}  # fmt: skip
+            "run_id": out.run_id, "cost_cny": round(out.cost_cny, 6),
+            "nominal_cost_cny": round(out.nominal_cost_cny, 6)}  # fmt: skip
 
 
 def error_message(e: BaseException) -> dict[str, Any]:

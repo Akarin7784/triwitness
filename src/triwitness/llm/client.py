@@ -127,7 +127,11 @@ class LLMClient:
             replay_deltas(resp.message.reasoning_content, resp.message.content, sink)
         cost, peak = price_call(self.adapter.vendor, name, resp.usage, at)
         resp.model = name
-        resp.cost_cny = cost
+        # 实付和账本对齐：record / live 模式下命中本地缓存不联网也不计费 → 0；
+        # replay 模式（测试 / 离线评测）沿用名义价，保持成本报告可比
+        resp.nominal_cost_cny = cost
+        resp.cached = not live
+        resp.cost_cny = cost if live or self.transport.mode == "replay" else 0.0
         resp.peak = peak
         resp.latency_ms = latency
         resp.source = "live" if live else "replay"
@@ -147,5 +151,5 @@ class LLMClient:
                 at=at,
             )
         if guard is not None:
-            guard.record(resp.usage, cost)
+            guard.record(resp.usage, resp.cost_cny)
         return resp

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChevronDown, ClipboardCopy, FolderOpen, GitBranch, ScrollText } from 'lucide-react'
 import clsx from 'clsx'
 import type { ResultMsg } from '../bridge/protocol'
+import { costTitle, fmtCny } from '../lib/money'
 import { prSummary } from '../bridge/liveTask'
 import { t } from '../lib/i18n'
 import { revealPath } from '../lib/open'
@@ -45,7 +46,9 @@ export function ResultCard({ result }: { result: ResultMsg }) {
         </span>
         {result.risk_level && <span className="chip">{t('风险 {0}', result.risk_level)}</span>}
         {result.clean_env === 'verified' && <span className="chip">{t('干净环境')}</span>}
-        <span className="chip ml-auto tabular-nums">{t('¥{0} · {1} 步', result.cost_cny.toFixed(3), result.steps)}</span>
+        <span data-testid="result-cost" className="chip ml-auto tabular-nums" title={costTitle(result)}>
+          {t('¥{0} · {1} 步', fmtCny(result.cost_cny), result.steps)}
+        </span>
       </div>
       {result.summary && <p className="selectable mt-3 text-[14px] leading-[1.8] text-ink-soft">{result.summary}</p>}
       {result.reason && !result.summary && (

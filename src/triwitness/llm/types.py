@@ -70,7 +70,9 @@ class LLMResponse(BaseModel):
     # 以下由 LLMClient 填写
     model: str = ""
     vendor: Vendor = "deepseek"
-    cost_cny: float = 0.0
+    cost_cny: float = 0.0  # 实付：本地缓存命中（record / live 模式）为 0，和账本一致
+    nominal_cost_cny: float = 0.0  # 名义价：按 usage 计的价格，缓存命中也照算
+    cached: bool = False  # 本地 llm-cache 命中，没有联网、没有计费
     peak: bool | None = None
     latency_ms: int = 0
     source: Literal["live", "replay", "fake"] = "live"

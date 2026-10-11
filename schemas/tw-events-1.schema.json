@@ -2196,6 +2196,11 @@
     "ModelCallPayload": {
       "additionalProperties": true,
       "properties": {
+        "cached": {
+          "default": false,
+          "title": "Cached",
+          "type": "boolean"
+        },
         "call_id": {
           "anyOf": [
             {
@@ -2246,6 +2251,19 @@
         "model": {
           "title": "Model",
           "type": "string"
+        },
+        "nominal_cost_cny": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Nominal Cost Cny"
         },
         "peak": {
           "anyOf": [

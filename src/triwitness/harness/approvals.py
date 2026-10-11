@@ -22,7 +22,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from triwitness.core.errors import TriWitnessError
-from triwitness.core.events import ApprovalRequestedPayload, ApprovalResolvedPayload
+from triwitness.core.events import ApprovalRequestedPayload, ApprovalResolvedPayload, ModelCallPayload, billing
 from triwitness.core.ids import new_hitl_id
 from triwitness.harness.events import EventEmitter
 from triwitness.llm.types import ToolCallSpec
@@ -135,6 +135,17 @@ class PermissionGate:
         return GateOutcome(allowed=False, result=ToolResult(ok=False, content=msg, error_code="permission_denied"),
                            permission="deny", rule=v.rule_raw)  # fmt: skip
 
+    def _record_review_call(self, rv: Any) -> None:
+        """审核模型的调用记成 role=reviewer 的 model_call：运行成本 / 结论卡与账本（类别 reviewer）对得上。"""
+        resp = getattr(rv, "response", None)
+        if resp is None or getattr(resp, "usage", None) is None:
+            return
+        self.emitter.emit(ModelCallPayload(
+            model=str(resp.model or resp.served_model or "?").rsplit("/", 1)[-1], served_model=resp.served_model,
+            thinking=False, usage=resp.usage, **billing(resp), peak=resp.peak, latency_ms=resp.latency_ms,
+            finish_reason=resp.finish_reason, display=f"审核模型 · {rv.decision}",
+        ), role="reviewer")  # fmt: skip
+
     async def __call__(self, tool: Tool, params: BaseModel, ctx: ToolContext, call: ToolCallSpec) -> GateOutcome:
         action = action_for(tool, params, ctx, shell_category=self.shell_category)
         if action is None:
@@ -165,6 +176,7 @@ class PermissionGate:
         )
         if self.reviewer is not None and self.engine.mode == "auto_review":
             rv = await self.reviewer.review(req)
+            self._record_review_call(rv)
             if rv.decision in ("allow", "deny"):
                 self.emitter.emit(req)
                 fee = f"，¥{rv.cost_cny:.4f}" if rv.cost_cny else ""

@@ -14,7 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from triwitness.core.events import ModelCallPayload
+from triwitness.core.events import ModelCallPayload, billing
 from triwitness.core.ids import new_run_id
 from triwitness.core.models import CostReport, Evidence, FinishReport, TestRun, Vendor
 from triwitness.llm.types import LLMRequest, LLMResponse
@@ -137,7 +137,7 @@ class EmittingRouter:
         resp = await self.inner.complete(req, **kw)
         self.emit(ModelCallPayload(
             model=(resp.model or resp.served_model or "?").rsplit("/", 1)[-1], served_model=resp.served_model,
-            thinking=req.thinking, usage=resp.usage, cost_cny=resp.cost_cny, peak=resp.peak,
+            thinking=req.thinking, usage=resp.usage, **billing(resp), peak=resp.peak,
             latency_ms=resp.latency_ms, finish_reason=resp.finish_reason, display="Verifier 判读",
         ))  # fmt: skip
         return resp

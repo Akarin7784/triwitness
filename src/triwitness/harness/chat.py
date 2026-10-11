@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from triwitness.core.events import ModelCallPayload, TurnFinishedPayload, UserMessagePayload
+from triwitness.core.events import ModelCallPayload, TurnFinishedPayload, UserMessagePayload, billing
 from triwitness.core.models import Budget
 from triwitness.core.redact import redact_text
 from triwitness.cost.guard import TaskBudgetGuard
@@ -59,6 +59,17 @@ class TurnOutcome:
     reply: str | None
     cost_cny: float
     task: LocalRunOutcome | None = None
+    nominal_cost_cny: float = 0.0  # 名义价（含本地缓存命中）；实付见 cost_cny
+
+
+def nominal_total(events: Any) -> float:
+    """本轮所有 model_call 的名义价之和（没写名义价的就是实付）。"""
+    total = 0.0
+    for e in events:
+        if e.kind == "model_call":
+            p = e.payload
+            total += float(p.get("nominal_cost_cny") if p.get("nominal_cost_cny") is not None else p["cost_cny"])
+    return total
 
 
 def valid_run_id(run_id: str) -> bool:
@@ -153,7 +164,7 @@ async def run_turn(
                                                      "usage": resp.usage.model_dump(mode="json")})  # fmt: skip
     rec.emit(
         ModelCallPayload(call_id=call_id, model=resp.model or resp.served_model or "?", served_model=resp.served_model,
-                         thinking=req.thinking, usage=resp.usage, cost_cny=resp.cost_cny, peak=resp.peak,
+                         thinking=req.thinking, usage=resp.usage, **billing(resp), peak=resp.peak,
                          latency_ms=resp.latency_ms, finish_reason=resp.finish_reason, request_ref=req_ref,
                          response_ref=resp_ref, display="对话"),
         role="executor",
@@ -167,7 +178,8 @@ async def run_turn(
         reply = reply or "（模型没有给出回复）"
         rec.emit(TurnFinishedPayload(kind="chat", status="replied", reply=reply[:2000], cost_cny=chat_cost))
         write_turn(run_dir, parent=parent, user=text, assistant=reply, kind="chat")
-        return TurnOutcome(kind="chat", run_id=rec.run_id, run_dir=run_dir, reply=reply, cost_cny=chat_cost)
+        return TurnOutcome(kind="chat", run_id=rec.run_id, run_dir=run_dir, reply=reply, cost_cny=chat_cost,
+                           nominal_cost_cny=nominal_total(rec.events))  # fmt: skip
     issue = work_issue(text, _goal(calls[0].arguments), history)
     out = await work(issue, rec)
     r = out.result
@@ -176,7 +188,8 @@ async def run_turn(
     rec.emit(TurnFinishedPayload(kind="task", status=r.status, reply=reply[:2000] or None, cost_cny=round(total, 6)))
     write_turn(run_dir, parent=parent, user=text, assistant=f"{reply}\n\n[任务 {r.status}] {summary}".strip(),
                kind="task")  # fmt: skip
-    return TurnOutcome(kind="task", run_id=rec.run_id, run_dir=run_dir, reply=reply or None, cost_cny=total, task=out)
+    return TurnOutcome(kind="task", run_id=rec.run_id, run_dir=run_dir, reply=reply or None, cost_cny=total, task=out,
+                       nominal_cost_cny=nominal_total(rec.events))  # fmt: skip
 
 
 __all__ = ["NO_REPO_REPLY", "TOOLS", "TurnOutcome", "load_history", "run_turn", "valid_run_id", "write_turn"]

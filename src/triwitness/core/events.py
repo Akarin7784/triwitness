@@ -84,12 +84,22 @@ class ModelCallPayload(Payload):
     served_model: str | None = None
     thinking: bool
     usage: Usage
-    cost_cny: float = Field(ge=0)
+    cost_cny: float = Field(ge=0)  # 实付（与账本一致；本地缓存命中为 0）
+    nominal_cost_cny: float | None = Field(default=None, ge=0)  # 名义价（与实付不同才写）
+    cached: bool = False  # 本地 llm-cache 命中
     peak: bool | None = None
     latency_ms: int = Field(ge=0)
     finish_reason: str | None = None
     request_ref: str | None = None  # artifacts/<seq>-request.json（完整请求，不内联）
     response_ref: str | None = None  # artifacts/<seq>-response.json
+
+
+def billing(resp: Any) -> dict[str, Any]:
+    """LLMResponse → ModelCallPayload 的计费字段（实付 / 名义价 / 是否缓存命中）。"""
+    cost = float(getattr(resp, "cost_cny", 0.0) or 0.0)
+    nominal = float(getattr(resp, "nominal_cost_cny", 0.0) or 0.0)
+    return {"cost_cny": cost, "cached": bool(getattr(resp, "cached", False)),
+            "nominal_cost_cny": nominal if nominal and abs(nominal - cost) > 1e-12 else None}  # fmt: skip
 
 
 class ToolCallPayload(Payload):

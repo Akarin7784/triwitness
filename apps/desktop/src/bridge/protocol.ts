@@ -33,7 +33,10 @@ export interface ResultMsg {
   run_dir: string
   branch: string | null
   backend: string
+  /** 实付（与账本一致；本地缓存命中不计费） */
   cost_cny: number
+  /** 名义价（含本地缓存命中，按 usage 计）；0.3.2 起 */
+  nominal_cost_cny?: number
   steps: number
   reason: string | null
   summary: string | null

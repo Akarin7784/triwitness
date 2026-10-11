@@ -78,12 +78,14 @@ export type TraceId1 = string | null
 export type Ts1 = string
 export type V1 = 1
 export type Kind2 = 'model_call'
+export type Cached = boolean
 export type CallId = string | null
 export type CostCny = number
 export type Display2 = string | null
 export type FinishReason = string | null
 export type LatencyMs = number
 export type Model = string
+export type NominalCostCny = number | null
 export type Peak = boolean | null
 export type RequestRef = string | null
 export type ResponseRef = string | null
@@ -483,12 +485,14 @@ export interface ModelCallEvent {
   v?: V2
 }
 export interface ModelCallPayload {
+  cached?: Cached
   call_id?: CallId
   cost_cny: CostCny
   display?: Display2
   finish_reason?: FinishReason
   latency_ms: LatencyMs
   model: Model
+  nominal_cost_cny?: NominalCostCny
   peak?: Peak
   request_ref?: RequestRef
   response_ref?: ResponseRef

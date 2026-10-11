@@ -36,6 +36,7 @@ class ReviewDecision:
     reason: str
     cost_cny: float = 0.0
     model: str = "fake"
+    response: Any = None  # ModelReviewer：原始 LLMResponse（门把它记成 role=reviewer 的 model_call，进运行成本）
 
 
 class Reviewer(Protocol):
@@ -113,7 +114,7 @@ class ModelReviewer:
         msgs = [Message(role="system", content=POLICY), Message(role="user", content=body)]
         llm_req = LLMRequest(role="classifier", thinking=False, max_output_tokens=200, temperature=0.0, messages=msgs)
         try:
-            resp = await asyncio.wait_for(self.router.complete(llm_req), timeout=self.timeout_s)
+            resp = await asyncio.wait_for(self.router.complete(llm_req, category="reviewer"), timeout=self.timeout_s)
         except Exception as e:
             return ReviewDecision(
                 "uncertain", f"审核模型不可用（{type(e).__name__}），交给你决定", model="deepseek-flash"
@@ -121,4 +122,5 @@ class ModelReviewer:
         cost = float(getattr(resp, "cost_cny", 0.0) or 0.0)
         content = getattr(getattr(resp, "message", None), "content", None) or ""
         decision, reason = parse_decision(content if isinstance(content, str) else str(content))
-        return ReviewDecision(decision, reason, cost_cny=cost, model=str(getattr(resp, "model", "deepseek-flash")))
+        return ReviewDecision(decision, reason, cost_cny=cost, model=str(getattr(resp, "model", "deepseek-flash")),
+                              response=resp)  # fmt: skip

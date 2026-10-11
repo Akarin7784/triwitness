@@ -10,7 +10,7 @@ from typing import Any, Literal, Protocol
 from pydantic import BaseModel
 
 from triwitness.core.errors import BudgetExceeded, SandboxError, TriWitnessError
-from triwitness.core.events import LoopWarningPayload, ModelCallPayload, ToolCallPayload
+from triwitness.core.events import LoopWarningPayload, ModelCallPayload, ToolCallPayload, billing
 from triwitness.core.models import Budget, FinishReport, Role
 from triwitness.core.redact import redact_text
 from triwitness.cost.guard import TaskBudgetGuard
@@ -130,7 +130,7 @@ class AgentLoop:
         })  # fmt: skip
         rec.emit(
             ModelCallPayload(model=_bare_model(resp.model or resp.served_model or "?"), served_model=resp.served_model,
-                             thinking=req.thinking, usage=resp.usage, cost_cny=resp.cost_cny, peak=resp.peak,
+                             thinking=req.thinking, usage=resp.usage, **billing(resp), peak=resp.peak,
                              latency_ms=resp.latency_ms, finish_reason=resp.finish_reason, request_ref=req_ref,
                              display="压缩摘要"),
             role="summarizer",
@@ -199,7 +199,7 @@ class AgentLoop:
                 ModelCallPayload(call_id=call_id if self.stream else None,
                                  model=_bare_model(resp.model or resp.served_model or "?"),
                                  served_model=resp.served_model, thinking=req.thinking, usage=resp.usage,
-                                 cost_cny=resp.cost_cny, peak=resp.peak, latency_ms=resp.latency_ms,
+                                 **billing(resp), peak=resp.peak, latency_ms=resp.latency_ms,
                                  finish_reason=resp.finish_reason, request_ref=req_ref, response_ref=resp_ref,
                                  display=model_display(resp.message)),
                 role=self.role,
