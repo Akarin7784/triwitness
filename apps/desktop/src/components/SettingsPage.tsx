@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { Tip } from './Tip'
+import { DiagButton } from './DiagButton'
 import { UnrestrictedDialog } from './ChatDialogs'
 import { RulesEditor } from './settings/RulesEditor'
 import { SandboxInstall } from './settings/SandboxInstall'
@@ -900,6 +901,9 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
           >
             {tr('打开发布页')}
           </button>
+        </Row>
+        <Row label={tr('诊断包')} hint={tr('日志 + 最近 3 次运行打成 zip，密钥已脱敏，只存本机；出问题时你自己决定发给谁')}>
+          <DiagButton />
         </Row>
         <Row label={tr('开源许可')}>
           <button type="button" data-testid="open-licenses" onClick={() => setLicenses(true)} className="chip hover:text-amber-ink">

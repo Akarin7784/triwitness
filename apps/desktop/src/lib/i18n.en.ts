@@ -516,4 +516,11 @@ export const EN: Record<string, string> = {
   'GitHub 令牌（开 PR 用）': 'GitHub token (for opening PRs)',
   '只在你确认开 PR 时用来推送分支和创建 PR。建议用细粒度令牌：只选要开 PR 的仓库，只给 Contents 与 Pull requests 读写权限，设过期时间。': 'Used only when you confirm opening a PR, to push the branch and create the PR. Use a fine-grained token: select only the repository, grant only Contents and Pull requests read/write, and set an expiry.',
   'PR #{0}': 'PR #{0}',
+  '导出诊断包失败：{0}': 'Diagnostics export failed: {0}',
+  '诊断包已导出（{0} 个文件，{1} KB，密钥已脱敏）：{2}': 'Diagnostics exported ({0} files, {1} KB, secrets redacted): {2}',
+  '正在导出…': 'Exporting…',
+  '导出诊断包': 'Export diagnostics',
+  '诊断包': 'Diagnostics',
+  '想让别人帮忙看：导出诊断包（脱敏，只存本机）': 'Need someone to take a look? Export diagnostics (redacted, saved locally only)',
+  '日志 + 最近 3 次运行打成 zip，密钥已脱敏，只存本机；出问题时你自己决定发给谁': 'Zips logs and the last 3 runs with secrets redacted, saved only on this machine. You decide whom to send it to.',
 }

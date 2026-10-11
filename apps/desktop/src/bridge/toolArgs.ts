@@ -51,6 +51,11 @@ export function toolArgsOk(a: unknown): a is string[] {
     return ['docker', 'wsl'].includes(s[2]) && ['--plan', '--yes'].includes(s[3])
   }
   if (s[0] === 'pr' && (s[1] === 'plan' || s[1] === 'open')) return prArgsOk(s.slice(2), s[1] === 'open')
+  // 诊断包：只写 $TW_HOME/diagnostics（不放行 --out），可选单个合法运行 id
+  if (s[0] === 'diag' && s[1] === 'export') {
+    if (s.length === 3) return s[2] === '--json'
+    return s.length === 5 && s[2] === '--run' && RUN_ID.test(s[3]) && s[4] === '--json'
+  }
   if (s[0] !== 'permissions') return false
   const rest = s.slice(2)
   switch (s[1]) {

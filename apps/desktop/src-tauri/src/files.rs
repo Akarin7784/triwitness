@@ -193,6 +193,9 @@ pub fn tool_args_ok(a: &[String]) -> bool {
         // 开 PR：plan 不联网；open 只有用户在审批卡上确认后前端才带 --yes
         ["pr", "plan", ..] => pr_args_ok(&a[2..], false),
         ["pr", "open", ..] => pr_args_ok(&a[2..], true),
+        // 诊断包：只写 $TW_HOME/diagnostics（不放行 --out），可选单个合法运行 id
+        ["diag", "export", "--json"] => true,
+        ["diag", "export", "--run", run, "--json"] => crate::core::valid_run_id(run),
         ["sandbox", "install", "docker" | "wsl", "--plan" | "--yes"] => true,
         ["permissions", "list", ..] => opt_pairs(&a[2..], &["--repo"]).is_some(),
         ["permissions", "validate", ..] => opt_pairs(&a[2..], &["--kind", "--rule"]).is_some_and(|p| p.len() == 2),
@@ -306,6 +309,10 @@ mod tests {
     fn tool_whitelist() {
         assert!(tool_args_ok(&v(&["doctor", "--json"])));
         assert!(tool_args_ok(&v(&["usage", "--json"])));
+        assert!(tool_args_ok(&v(&["diag", "export", "--json"])));
+        assert!(tool_args_ok(&v(&["diag", "export", "--run", "r_01M4NANDBP5J50KF7ESFJ0M7E3", "--json"])));
+        assert!(!tool_args_ok(&v(&["diag", "export", "--run", "../x", "--json"])));
+        assert!(!tool_args_ok(&v(&["diag", "export", "--out", "/etc/x.zip", "--json"])));
         let run = "r_01M4NANDBP5J50KF7ESFJ0M7E3";
         assert!(tool_args_ok(&v(&["pr", "plan", "--run", run, "--repo", "C:/src/x", "--json"])));
         assert!(tool_args_ok(&v(&["pr", "open", "--run", run, "--repo", "/r", "--yes", "--json"])));
