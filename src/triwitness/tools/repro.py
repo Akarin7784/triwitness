@@ -3,12 +3,14 @@
 Executor 写好复现测试后（**改源码之前**）调用：
 - 工作区里只能有测试文件的改动，否则拒绝（error_code=repro_after_fix）；
 - 复现命令在当前（未修复）代码上必须**失败**，通过就拒绝（error_code=repro_passes_on_base）；
+- 命令本身跑不起来（找不到命令 / 没装测试框架 / pytest 用法错误或没收集到测试）不算失败（error_code=repro_cmd_broken）；
 - 确实无法复现（文档 / 重构类）→ `not_applicable=true` + 原因，走降级（风险至少 L1）。
 结果写进 ctx.state["repro_check"]；finish 在 repro-first 模式下要求先有它。
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -20,6 +22,21 @@ from triwitness.tools.pytest_report import _TEST_FILE, changed_paths
 
 MAX_REJECTS_HINT = 2  # 第 2 次被拒后提示可以声明 not_applicable
 TIMEOUT_S = 300
+# 0.3.1 真实 key 首跑发现：`python: command not found`（exit 127）被当成「复现成立」，复验时自然两边都失败
+_BROKEN_OUT = re.compile(
+    r"command not found|is not recognized as an internal or external command|No module named '?(pytest|py\.test)\b"
+)
+
+
+def broken_command(cmd: str, exit_code: int, output: str) -> str | None:
+    """复现命令自身无法运行时给出原因；正常的测试失败返回 None。"""
+    if exit_code in (126, 127):
+        return f"命令无法执行（exit {exit_code}）"
+    if m := _BROKEN_OUT.search(output):
+        return f"命令无法运行：{m.group(0)}"
+    if "pytest" in cmd and exit_code in (4, 5):
+        return "pytest 用法错误或没有收集到测试（exit 4/5）"
+    return None
 
 
 class SubmitReproParams(BaseModel):
@@ -92,6 +109,11 @@ class SubmitRepro(BaseTool):
             return self._reject(ctx, "repro_passes_on_base",
                                 "复现在未修改的代码上**通过了**，没有证明问题存在。请对照 Issue 描述的行为、"
                                 f"名字与错误信息改写断言。\n$ {params.cmd}\n{tail[-600:]}")  # fmt: skip
+        if why := broken_command(params.cmd, r.exit_code, tail):
+            return self._reject(ctx, "repro_cmd_broken",
+                                f"{why}，这不是复现失败，而是命令本身跑不起来。请先用 bash 确认可用的解释器"
+                                "和测试框架（例如 python3 / 项目自带的 unittest），再提交能真正运行断言的命令。"
+                                f"\n$ {params.cmd}\n{tail[-600:]}")  # fmt: skip
         check = {"status": "reproduced", "path": params.path, "cmd": params.cmd, "exit_code": r.exit_code,
                  "output_tail": tail}  # fmt: skip
         return self._accept(ctx, check, f"复现成立：在原始代码上失败（exit {r.exit_code}）。现在开始修复。\n"

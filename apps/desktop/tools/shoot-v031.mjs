@@ -9,6 +9,13 @@ mkdirSync(out, { recursive: true })
 const REPO = process.env.REPO ?? ''
 const TASK = process.env.TASK ?? 'line_count 把空行也算进去了：「床前明月光\\n\\n疑是地上霜\\n」应为 2 行，实际返回 4。帮我修一下。'
 const MODE = process.env.MODE ?? 'ask'
+// 额外偏好（真实 key 跑时：ALLOW_PEAK=1 MAX_COST=0.5 BACKEND=none）；ONLY=chat|task 只跑一部分
+const EXTRA = {
+  ...(process.env.ALLOW_PEAK === '1' ? { allowPeak: true } : {}),
+  ...(process.env.MAX_COST ? { maxCost: Number(process.env.MAX_COST) } : {}),
+  ...(process.env.BACKEND ? { backend: process.env.BACKEND } : {}),
+}
+const ONLY = process.env.ONLY ?? ''
 const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--hide-scrollbars'] })
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 const results = []
@@ -41,13 +48,14 @@ const turnDone = (n) =>
 
 // 正式版行为：开发构建也默认真实模式；清空本地状态，从一个新会话开始（不选仓库）
 await page.goto(`${base}/?source=new`, { waitUntil: 'networkidle0' })
-await page.evaluate((mode) => {
+await page.evaluate((mode, extra) => {
   localStorage.clear()
-  localStorage.setItem('tw.prefs', JSON.stringify({ permissionMode: mode }))
-}, MODE)
+  localStorage.setItem('tw.prefs', JSON.stringify({ permissionMode: mode, ...extra }))
+}, MODE, EXTRA)
 await page.goto(`${base}/?source=new`, { waitUntil: 'networkidle0' })
 check('没有「演示」字样', !(await body()).includes('演示'))
 
+if (ONLY !== 'task') {
 // 1) 你好 → 直接回复：没有工具行、结果卡、产物
 await send('你好')
 check('已起一轮', await until(() => page.evaluate(() => /live(%3A|:)/.test(location.search)), 20_000))
@@ -71,8 +79,10 @@ await calm()
 await wait(500)
 await page.screenshot({ path: out + 'followup.jpg', type: 'jpeg', quality: 86 })
 
+}
+
 // 3) 小任务：新会话 + 仓库
-if (REPO) {
+if (REPO && ONLY !== 'chat') {
   await page.evaluate((repo) => localStorage.setItem('tw.core.repo', repo), REPO)
   await page.goto(`${base}/?source=new`, { waitUntil: 'networkidle0' })
   await send(TASK)

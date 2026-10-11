@@ -19,6 +19,9 @@ BUGGY, FIXED = "def add(a, b):\n    return a - b\n", "def add(a, b):\n    return
 
 def handler(cmd: str, sb: FakeSandbox) -> ExecResult:
     """“测试”看 calc.py 是否已修好；`true` 命令永远通过（模拟没复现出问题的测试）。"""
+    if cmd.startswith("python "):  # 0.3.1：机器上没有 `python`
+        return ExecResult(exit_code=127, stdout="", stderr="bash: python: command not found", duration_ms=1,
+                          timed_out=False)  # fmt: skip
     code = 0 if cmd.startswith("true") or sb.files.get("calc.py") == FIXED.encode() else 1
     return ExecResult(exit_code=code, stdout="1 failed" if code else "1 passed", stderr="", duration_ms=1,
                       timed_out=False)  # fmt: skip
@@ -118,3 +121,31 @@ def test_submit_repro_command_goes_through_permission_gate() -> None:
     a = action_for(SubmitRepro(), SubmitReproParams(path=REPRO, cmd="pytest x; rm -rf /"), ctx)
     assert a is not None and a.tool == "submit_repro" and "rm -rf" in a.value and a.category == "Bash"
     assert action_for(SubmitRepro(), SubmitReproParams(not_applicable=True, reason="r"), ctx) is None
+
+
+async def test_broken_command_is_not_a_repro() -> None:
+    """0.3.1 真实 key 首跑：`python: command not found`（exit 127）曾被当成复现成立。"""
+    res, rec, _ = await run([
+        say(WRITE_REPRO),
+        say(call("submit_repro", path=REPRO, cmd=f"python -m pytest {REPRO}")),  # 命令跑不起来 → 拒绝
+        say(call("submit_repro", path=REPRO, cmd=f"pytest {REPRO}")),
+        say(FIX),
+        say(call("run_tests")),
+        say(finish()),
+    ])  # fmt: skip
+    subs = tool_results(rec, "submit_repro")
+    assert [s["ok"] for s in subs] == [False, True]
+    assert subs[0]["error_type"] == "repro_cmd_broken"
+    assert res.status == "done" and res.repro_status == "reproduced"
+
+
+def test_broken_command_classifier() -> None:
+    from triwitness.tools.repro import broken_command
+
+    assert broken_command("python -m pytest t.py", 127, "") is not None
+    assert broken_command("python3 -m pytest t.py", 1, "/usr/bin/python3: No module named pytest") is not None
+    assert broken_command("python t.py", 1, "'python' is not recognized as an internal or external command")
+    assert broken_command("pytest -q nope.py", 4, "ERROR: file or directory not found") is not None
+    assert broken_command("pytest -q t.py", 1, "1 failed") is None
+    assert broken_command("python3 -m unittest t", 1, "AssertionError: 4 != 2") is None
+    assert broken_command("python3 -m unittest t", 1, "ModuleNotFoundError: No module named 'calc'") is None
