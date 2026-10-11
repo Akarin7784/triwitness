@@ -333,6 +333,32 @@ class DockerSandbox:
             shutil.rmtree(root, ignore_errors=True)
 
 
+def container_kwargs(spec: SandboxSpec) -> dict[str, Any]:
+    """`containers.run` 的参数（纯函数，便于测试）。"""
+    kwargs: dict[str, Any] = {
+        "command": ["sleep", "infinity"],
+        "detach": True,
+        "init": True,
+        "labels": {LABEL: "true"},
+        "network_mode": "none" if spec.network == "none" else "bridge",
+        "nano_cpus": int(spec.cpus * 1e9),
+        "mem_limit": f"{spec.memory_mb}m",
+        "memswap_limit": f"{spec.memory_mb}m",
+        "pids_limit": PIDS_LIMIT,
+        "cap_drop": ["ALL"],
+        "security_opt": ["no-new-privileges"],
+        "environment": {},
+        "name": f"tw-{uuid.uuid4().hex[:12]}",
+    }
+    if spec.block_code_hosts and spec.network != "none":  # network=none 时 docker 不允许 extra_hosts
+        from triwitness.eval.task_hardening import CODE_HOSTS
+
+        kwargs["extra_hosts"] = dict.fromkeys(CODE_HOSTS, "0.0.0.0")
+    if spec.disk_mb:
+        kwargs["storage_opt"] = {"size": f"{spec.disk_mb}M"}
+    return kwargs
+
+
 class DockerSandboxBackend:
     name: BackendName = "docker"
     capabilities = Capabilities(
@@ -376,23 +402,7 @@ class DockerSandboxBackend:
                 client.images.get(image)
             except ImageNotFound:
                 client.images.pull(image)
-            kwargs: dict[str, Any] = {
-                "command": ["sleep", "infinity"],
-                "detach": True,
-                "init": True,
-                "labels": {LABEL: "true"},
-                "network_mode": "none" if spec.network == "none" else "bridge",
-                "nano_cpus": int(spec.cpus * 1e9),
-                "mem_limit": f"{spec.memory_mb}m",
-                "memswap_limit": f"{spec.memory_mb}m",
-                "pids_limit": PIDS_LIMIT,
-                "cap_drop": ["ALL"],
-                "security_opt": ["no-new-privileges"],
-                "environment": {},
-                "name": f"tw-{uuid.uuid4().hex[:12]}",
-            }
-            if spec.disk_mb:
-                kwargs["storage_opt"] = {"size": f"{spec.disk_mb}M"}
+            kwargs = container_kwargs(spec)
             container = client.containers.run(image, **kwargs)
             try:
                 wd = spec.workdir.lstrip("/")

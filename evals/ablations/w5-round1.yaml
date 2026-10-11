@@ -1,0 +1,23 @@
+# W5-09/10/11 第一轮 OFAT 消融（一次只改一个因素，其余保持基线）。
+# 生成配置：uv run python scripts/ofat_ablation.py plan evals/ablations/w5-round1.yaml
+# 在 Eva 的 PC 上跑：scripts/windows/run-ofat-ablation.ps1（不在 box 上跑重评测）
+name: w5-round1
+suite: dev                     # 15 题；test 集只出报告，不调参
+base: configs/runs/baseline-deepseek-nothink.yaml   # flash 非思考（W2 基线 12/15，¥0.054/题）
+per_task_cny: 0.06             # 预估单价（W2 实测 ¥0.054 + 余量）；思考档另乘 cost_factor
+reference: evals/baselines/2026-10-10-w2/dev/baseline-deepseek-nothink   # 次要对照（代码已漂移，主对照是本轮重跑的基线）
+factors:
+  context:                     # 1M 窗口下 128K 工作预算很少触发清理 / 压缩，预期差异小（如实报告）
+    none: {harness: configs/harness/no-context-mgmt.yaml}
+    compact-only: {harness: configs/harness/compact-only.yaml}
+    clear-only: {harness: configs/harness/clear-only.yaml}
+  tools:
+    minimal-4: {harness: configs/harness/minimal-4-tools.yaml}
+    repo-map: {harness: configs/harness/repo-map.yaml}
+  thinking:
+    low: {executor: {thinking: true, effort: low}, cost_factor: 1.5}
+    high: {executor: {thinking: true, effort: high}, cost_factor: 2.5}
+  repro_first:
+    enabled: {harness: configs/harness/repro-first.yaml}
+  planner:
+    enabled: {harness: configs/harness/planner-only.yaml, cost_factor: 1.3}

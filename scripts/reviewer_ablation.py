@@ -409,6 +409,7 @@ def cmd_score(out: Path, tol: int) -> None:
             f"{_rate(cnt['loose'], len(d))} | {_rate(fp, len(c))} | {_rate(fpm, len(c))} | {fail} | "
             f"{cost / max(len(rs), 1):.4f} | {cost:.4f} |"
         )
+    lines += _paired_sections(by)
     cats = sorted({r["truth"]["category"] for r in rows if r["kind"] == "defect"})
     lines += [
         "\n## 按缺陷类别（检出/题数，位置判定）\n",
@@ -447,6 +448,33 @@ def cmd_score(out: Path, tol: int) -> None:
                     ]
                 )
     print("\n".join(lines))
+
+
+def _paired_sections(by: dict[str, list[dict[str, Any]]]) -> list[str]:
+    """各臂对 adversarial（当前默认）的配对比较：McNemar + Holm + 配对 bootstrap（triwitness.eval.ablation）。"""
+    from triwitness.eval.ablation import compare, render_rows
+
+    base = "adversarial"
+    if base not in by:
+        return []
+    out: list[str] = []
+    for kind, key, title in (("defect", "hit", "检出（位置）"), ("clean", "fp", "干净补丁放行（没有误报 blocker）")):
+        res: dict[str, dict[str, bool]] = {}
+        costs: dict[str, float] = {}
+        for arm, rs in by.items():
+            sel = [r for r in rs if r["kind"] == kind]
+            if sel:
+                # 干净题取“没有误报”，两节都是越高越好
+                res[arm] = {f"{r['item']}#r{r['rep']}": bool(r["cls"].get(key)) != (kind == "clean") for r in sel}
+                costs[arm] = round(sum(float(r.get("cost_cny") or 0) for r in sel), 4)
+        if base not in res or len(res) < 2:
+            continue
+        order = {base: res.pop(base), **dict(sorted(res.items()))}
+        out += [f"\n## 对 adversarial 的配对比较 · {title}\n", render_rows(compare(order, base, costs=costs),
+                unit="命中" if kind == "defect" else "放行")]  # fmt: skip
+    if out:
+        out.append("\n（两节都是越高越好；n 小时以区间与 n_eff 为准，单次运行的结论是探索性的。）")
+    return out
 
 
 # ---------------------------------------------------------------- bundle

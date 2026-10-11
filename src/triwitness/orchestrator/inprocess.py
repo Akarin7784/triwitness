@@ -17,6 +17,7 @@ import fnmatch
 import json
 import logging
 import posixpath
+import re
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
@@ -39,6 +40,8 @@ from triwitness.core.models import Budget, CostReport, FinishReport, Plan, TaskS
 from triwitness.core.state_machine import TaskStateMachine, Transition, eval_auto_decision, risk_at_least
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.cost.report import CostLedger
+from triwitness.github.ci import CiResult, ci_feedback
+from triwitness.github.publish import PrRef, Publisher, pr_action
 from triwitness.harness.approvals import Approver
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import AgentLoop, LoopOutcome, RouterLike, build_system_prompt
@@ -92,6 +95,8 @@ class TaskResult:
     review_rounds: int = 0  # 评审返工次数
     unresolved_blockers: int = 0  # 返工到上限后仍未解决的阻断问题
     states: list[str] | None = None  # 本次迁移序列（审计 / 测试）
+    pr: PrRef | None = None  # W5：开出的 PR
+    ci: CiResult | None = None  # W5：最后一轮 CI 结果
 
 
 def classify(outcome: LoopOutcome) -> tuple[FinishStatus, TaskState, str]:
@@ -132,6 +137,7 @@ class InProcessOrchestrator:
         resume: ResumeState | None = None,
         progress_dir: Path | None = None,
         approver: Approver | None = None,
+        publisher: Publisher | None = None,
     ) -> None:
         self.rec = recorder
         self.router = router
@@ -155,6 +161,7 @@ class InProcessOrchestrator:
         self.resume = resume
         self.progress_dir = progress_dir
         self.approver = approver
+        self.publisher = publisher  # W5：tw run --open-pr 时开 PR + 盯 CI（评测永远为 None）
         self.ledger = CostLedger(task_id=recorder.task_id, pricing_version=pricing_version())
         self.sm = TaskStateMachine(on_transition=self._emit_transition)
 
@@ -354,8 +361,14 @@ class InProcessOrchestrator:
                                 steps=outcome.steps + (resume.steps if resume else 0),
                                 event_seq=rec.next_seq)  # fmt: skip
         diff = await self._diff(base_ref)
+        pr_ref: PrRef | None = None
+        ci: CiResult | None = None
         if status == "done":
             self.go(S.PACKAGING, "整理结果")
+            if self.publisher is not None and self.mode != "eval" and diff.strip():
+                pub = await self._publish(loop, ctx, prompt, outcome, verification, plan, label)
+                status, final, label, outcome, pr_ref, ci = pub
+                diff = await self._diff(base_ref)
         self.go(final, label)
         cost = self.ledger.report()
         shown = f"{label} · ¥{cost.total_cny:.3f}"
@@ -365,7 +378,7 @@ class InProcessOrchestrator:
         return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish,
                           repro_status=repro_status, verification=verification, verify_rounds=rounds,
                           prepared=prepared, plan=plan, review=review, review_rounds=review_rounds,
-                          unresolved_blockers=unresolved, states=self._states())  # fmt: skip
+                          unresolved_blockers=unresolved, states=self._states(), pr=pr_ref, ci=ci)  # fmt: skip
 
     # ---------------------------------------------------------------- 角色
     def _on_repro_accepted(self, check: dict[str, Any]) -> None:
@@ -434,6 +447,109 @@ class InProcessOrchestrator:
             display=f"验证{_VERDICT[ev.verdict]} · 风险 {ev.risk_level}",
         ), role="verifier")  # fmt: skip
         return res
+
+    # ---------------------------------------------------------------- 开 PR + CI 回流（W5-04/05/06，spec 012）
+    async def _publish(
+        self, loop: AgentLoop, ctx: ToolContext, prompt: str, outcome: LoopOutcome,
+        verification: PipelineResult | None, plan: Plan | None, label: str,
+    ) -> tuple[FinishStatus, TaskState, str, LoopOutcome, PrRef | None, CiResult | None]:  # fmt: skip
+        """PACKAGING 之后：按风险决定开不开 PR →（确认）→ PR_OPENED → CI_WATCH ⇄ EXECUTING。返回新的收尾状态。"""
+        assert self.publisher is not None
+        gh = self.cfg.github
+        risk = verification.evidence.risk_level if verification is not None else (
+            plan.estimated_risk if plan is not None else None)  # fmt: skip
+        level = risk or gh.unknown_risk
+        action = pr_action(risk, gh)
+        shown = level if risk else f"{level}（无验证结论，按 {level}）"
+        done: tuple[FinishStatus, TaskState] = ("done", S.DONE)
+        if action == "none":
+            return (*done, f"{label} · 风险 {shown}，不开 PR（分支保留）", outcome, None, None)
+        draft = action == "draft"
+        kind = "Draft PR" if draft else "PR"
+        title = self._pr_title(outcome)
+        body = verification.pr_body if verification is not None else self._pr_body(outcome)
+        if action in ("confirm", "draft"):
+            self.go(S.AWAIT_PR_APPROVAL, clip(f"等待确认开 {kind} · 风险 {shown}"))
+            d = await self._approve_pr(level, kind, title, body)
+            if d != "approve":
+                why = "被拒绝" if d == "reject" else "需要确认，可稍后在桌面端或 `tw pr open` 开"
+                return (*done, f"{label} · 未开 PR（{why}）", outcome, None, None)
+        try:
+            ref = await self.publisher.open(title=title, body=body, draft=draft)
+        except Exception as e:  # 推送 / 开 PR 失败不影响任务结论：改动在分支里
+            msg = str(e)[:300]
+            self.rec.emit(ErrorPayload(type="PublishFailed", message=msg, display=clip(f"开 PR 失败：{msg}")))
+            return (*done, clip(f"{label} · 开 PR 失败"), outcome, None, None)
+        reused = "（沿用已有）" if ref.reused else ""
+        self.go(S.PR_OPENED, clip(f"已开 {kind} #{ref.number}{reused} · {ref.url}"))
+        art = {"url": ref.url, "number": ref.number, "repo": ref.repo, "head": ref.head, "sha": ref.sha,
+               "draft": ref.draft, "reused": ref.reused, "risk": level}  # fmt: skip
+        self.rec.artifact("pr.json", art)
+        if not gh.ci.watch:
+            return (*done, f"{label} · {kind} #{ref.number}", outcome, ref, None)
+        sha, rounds = ref.sha, 0
+        res: CiResult | None = None
+        while True:
+            self.go(S.CI_WATCH, "等待 CI" if rounds == 0 else f"等待 CI（返工第 {rounds} 轮后）")
+            try:
+                res = await self.publisher.ci(sha, gh.ci)
+            except Exception as e:
+                msg = str(e)[:300]
+                shown_err = clip(f"取不到 CI 状态：{msg}")
+                self.rec.emit(ErrorPayload(type="CiWatchFailed", message=msg, display=shown_err))
+                return (*done, f"{label} · {kind} #{ref.number} · 取不到 CI 状态", outcome, ref, res)
+            self.rec.artifact(f"ci-{rounds + 1}.json", res.to_json())
+            if res.state != "failure":
+                return (*done, clip(f"{label} · {kind} #{ref.number} · {res.display()}"), outcome, ref, res)
+            if rounds >= gh.ci.max_fix_rounds:
+                return (*done, clip(f"{label} · {kind} #{ref.number} · CI 仍失败（已返工 {rounds} 轮）"),
+                        outcome, ref, res)  # fmt: skip
+            rounds += 1
+            self.go(S.EXECUTING, clip(f"根据 CI 失败返工（第 {rounds} 轮） · {res.display()}"))
+            outcome = await loop.run(prompt, ctx, continue_with=ci_feedback(res))
+            st, fin, lab = classify(outcome)
+            if st != "done":
+                return (st, fin, f"{lab}（CI 返工时）", outcome, ref, res)
+            self.go(S.PACKAGING, f"整理 CI 修复（第 {rounds} 轮）")
+            try:
+                sha = await self.publisher.push(rounds)
+            except Exception as e:
+                msg = str(e)[:300]
+                shown_err = clip(f"推送 CI 修复失败：{msg}")
+                self.rec.emit(ErrorPayload(type="PublishFailed", message=msg, display=shown_err))
+                return (*done, clip(f"{label} · {kind} #{ref.number} · 推送 CI 修复失败"), outcome, ref, res)
+            self.go(S.PR_OPENED, f"已推送 CI 修复（第 {rounds} 轮）")
+
+    def _pr_title(self, outcome: LoopOutcome) -> str:
+        s = (outcome.finish.summary if outcome.finish is not None else "") or self.issue_title
+        first = re.split(r"[。；;，\n]|\. ", s.strip())[0].strip() or self.issue_title
+        return "[TriWitness] " + (first if len(first) <= 72 else first[:71] + "…")
+
+    def _pr_body(self, outcome: LoopOutcome) -> str:
+        lines = [f"TriWitness 运行 `{self.rec.run_id}` 的改动（未启用确定性验证，没有证据包）。", ""]
+        if outcome.finish is not None:
+            lines += ["## 执行者自述", outcome.finish.summary]
+        return "\n".join(lines)
+
+    async def _approve_pr(self, risk: str, kind: str, title: str, body: str) -> Literal["approve", "reject",
+                                                                                         "needs_human"]:  # fmt: skip
+        rid = new_hitl_id()
+        req = ApprovalRequestedPayload(request_id=rid, tool="OpenPR", action=f"开 {kind}：{title}\n\n{body}"[:2000],
+                                       reason=f"风险 {risk}：按 github.pr_policy 需要确认", risk=risk,  # type: ignore[arg-type]
+                                       options=["allow_once", "deny"],
+                                       display=clip(f"待批 · 开 {kind} · 风险 {risk} · {title}"))  # fmt: skip
+        self.rec.emit(req)
+        if self.approver is None:
+            return "needs_human"
+        decision = await self.approver(req)
+        if decision is None:
+            return "needs_human"
+        self.rec.emit(ApprovalResolvedPayload(
+            request_id=rid, decision=decision.decision, by="user", comment=decision.comment,
+            display=f"已同意开 {kind}" if decision.decision == "allow" else clip(f"不开 {kind}" + (
+                f"：{decision.comment}" if decision.comment else "")),
+        ))  # fmt: skip
+        return "approve" if decision.decision == "allow" else "reject"
 
     # ---------------------------------------------------------------- 计划确认（04 §3.7；spec 010 §11 Q1）
     def _plan_approval_reasons(self, plan: Plan) -> list[str]:

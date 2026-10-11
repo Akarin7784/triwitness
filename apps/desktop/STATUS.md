@@ -17,6 +17,8 @@
 - **第二批真实 key 实测（2026-10-11 21:41–21:46 UTC+8，周日空闲价，deepseek-flash，高峰调用 0）**：4 次运行合计 ¥0.1013——计划确认 needs_human → `--resume` 沿用原计划 → done（¥0.0065 + ¥0.053）；伪终端里计划 y/N → done（¥0.0303）；一次测试驱动问题作废（约 ¥0.01）。
 - **W4 第三批（核心，桌面端不用改）**：W4-09 事件日志重放续跑 + 工具预写日志 + 对外副作用幂等键（b482cdd，`tw pr open` 重复执行复用同一个 PR）；spec 011 初稿（W4-02，待 Eva 审）；W4-13 评审者注入缺陷集 40 题；W4-14 消融脚本 + Windows 一键脚本（全量 160 次评审交给 Eva 本机跑，box 只做了冒烟）。默认权限模式仍是 auto_review（等 Eva 决定）。
 - **第三批真实 key 花费（2026-10-11 21:5x–22:25 UTC+8，周日空闲价，deepseek-flash，高峰调用 0）**：W4-09 崩溃续跑 ¥0.0178；消融冒烟 4 题 × 4 臂 ¥0.7671（box 账本）+ 容器端到端 1 次 ¥0.0060（容器账本）；合计 ¥0.7909。
+- **W5 第一批（核心，桌面端暂不改；GitHub App 暂缓）**：`tw run --open-pr` 接上 PR_OPENED / CI_WATCH（按风险：L0 / L1 确认、L2 Draft、L3 不开；CI 失败把精简日志交给 Executor 返工，最多 2 轮；推送与开 PR 带幂等键）；spec 012 草稿（待 Eva 审）。桌面端仍走 0.3.2 的“审批后开 PR”，确认卡复用审批卡（tool = OpenPR），接入编排器发布流程放到 W6。另有 `eval/ablation.py`、OFAT 消融脚本 + Windows 一键脚本（`scripts/windows/run-ofat-ablation.ps1`）、评测防作弊加固与 `task_factory.py audit`。
+- **W5 第一批真实 key 花费（2026-10-11 23:0x UTC+8，周日空闲价，deepseek-flash，高峰调用 0）**：OFAT 容器冒烟 1 题 ¥0.0083（容器账本）；其余全部离线测试。清掉 1.4 GB 的 `tw-reviewer-ablation` 镜像等（磁盘 12%）。
 - **延后（Eva 21:36）**：“模型自动审批”（auto_review）权限模式的专门实测，本轮不做。
 - 按 Eva 19:39：**本版先不打包**，不取 CI 安装包。
 

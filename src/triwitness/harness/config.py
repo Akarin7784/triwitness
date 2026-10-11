@@ -132,6 +132,35 @@ class OrchestrationConfig(BaseModel):
     replay_on_resume: bool = True
 
 
+PrAction = Literal["auto", "confirm", "draft", "none"]
+
+
+class CiWatchConfig(BaseModel):
+    """PR 分支的 CI 回流（spec 012 §6，W5-06）：gh 轮询检查结果，失败把精简日志交给 Executor 修，最多 N 轮。"""
+
+    watch: bool = True
+    max_fix_rounds: int = Field(default=2, ge=0, le=5)
+    timeout_s: int = Field(default=1800, ge=30)  # 单轮等待 CI 的上限
+    poll_s: int = Field(default=30, ge=1)
+    no_checks_grace_s: int = Field(default=120, ge=0)  # 这么久还没有任何检查 → 认为仓库没配 CI
+    log_max_chars: int = Field(default=6000, ge=500)
+
+
+class GithubConfig(BaseModel):
+    """开 PR 的风险分级决策（04 §3.7 / §4.6，spec 012 §5，W5-05）。只在 `tw run --open-pr` 时生效。
+
+    auto = 直接开 PR；confirm = 先确认再开；draft = 先确认再开 Draft PR；
+    none = 不开 PR（保留分支，可手动 `tw pr open`）。
+    默认 L0 也要确认（对外可见的动作，Eva 未授权自动开）；可在 harness 里改成 auto。
+    """
+
+    pr_policy: dict[Literal["L0", "L1", "L2", "L3"], PrAction] = Field(
+        default_factory=lambda: {"L0": "confirm", "L1": "confirm", "L2": "draft", "L3": "none"}
+    )
+    unknown_risk: Literal["L0", "L1", "L2", "L3"] = "L2"  # 没有验证结论也没有计划时按这个等级
+    ci: CiWatchConfig = Field(default_factory=CiWatchConfig)
+
+
 # W2-26：Executor 流程默认先复现（submit_repro + finish 校验）。`baseline.yaml` 仍是 W2-25 基线与消融的父配置，
 # 显式写 `harness: configs/harness/baseline.yaml` 的 RunConfig（W2-25 基线复跑）不受影响。
 # 1M 档（Eva 2026-10-11 20:26）：默认 long-context-1m.yaml（继承 repro-first，只改上下文参数）；
@@ -141,7 +170,7 @@ DEFAULT_HARNESS = "harness/long-context-1m.yaml"
 # 这些字段在 1M 档时新增：等于默认值时不进 config_hash，旧配置的哈希保持不变
 _HASH_COMPAT_CONTEXT = ("tail_max_tokens", "summary_input_tokens", "max_ineffective_compactions", "reread_recent_files")
 # W4 新增的顶层字段：同样等于默认值时不进 config_hash
-_HASH_COMPAT_TOP = ("parallel_read_tools", "orchestration")
+_HASH_COMPAT_TOP = ("parallel_read_tools", "orchestration", "github")
 
 
 class HarnessConfig(BaseModel):
@@ -160,6 +189,7 @@ class HarnessConfig(BaseModel):
     max_warnings: int = 3
     parallel_read_tools: bool = True  # 同一轮连续的只读工具并发执行（spec 010 §7；只影响耗时）
     orchestration: OrchestrationConfig = Field(default_factory=OrchestrationConfig)
+    github: GithubConfig = Field(default_factory=GithubConfig)  # W5：开 PR 决策与 CI 回流（默认不开 PR）
     reminders: dict[str, str] = Field(default_factory=dict)
     context: ContextConfig = Field(default_factory=ContextConfig)
     tools: list[str] = Field(default_factory=lambda: list(DEFAULT_TOOLS))
@@ -261,11 +291,14 @@ def _resolve(name: str, seen: set[str]) -> dict[str, Any]:
 
 __all__ = [
     "DEFAULT_TOOLS",
+    "CiWatchConfig",
     "ContextConfig",
+    "GithubConfig",
     "HarnessConfig",
     "OrchestrationConfig",
     "PlanApprovalConfig",
     "PlannerConfig",
+    "PrAction",
     "RereadConfig",
     "ReviewerConfig",
     "TokenAllocation",

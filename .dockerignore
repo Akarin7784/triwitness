@@ -1,4 +1,4 @@
-# 只影响以仓库根为上下文的构建（evals/reviewer/Dockerfile）；任务镜像以各自 environment/ 为上下文，不受影响。
+# 只影响以仓库根为上下文的构建（evals/reviewer/Dockerfile、evals/runner/Dockerfile）；任务镜像以各自 environment/ 为上下文，不受影响。
 # 白名单：只送镜像需要的文件。
 *
 !pyproject.toml
@@ -9,6 +9,9 @@
 !scripts
 !evals/reviewer
 !evals/tasks
+!evals/suites
+!evals/ablations
+!evals/baselines/2026-10-10-w2/dev
 **/.env
 **/.env.*
 **/__pycache__

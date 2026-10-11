@@ -41,6 +41,8 @@ def make_tty_approver(
                 prompt = "回答（n = 否；直接回车 = 不回答）："
             elif req.tool == "Plan":
                 prompt = "批准这个计划？[y/N] "
+            elif req.tool == "OpenPR":
+                prompt = "推送分支并开这个 PR？[y/N] "
             elif "allow_session" in req.options:
                 prompt = "允许？[y] 一次 / [s] 本次任务 / [N] 拒绝："
             else:

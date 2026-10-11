@@ -25,6 +25,8 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
+from triwitness.eval.task_hardening import HOOKS_OFF, anon_task_id, sanitize_instruction
+
 DATASET = "nebius/SWE-rebench"
 ROWS_API = (
     "https://datasets-server.huggingface.co/rows?dataset={ds}&config=default&split=filtered&offset={off}&length=100"
@@ -128,13 +130,17 @@ RUN pip install --no-cache-dir --no-deps -e /workspace/repo || true
     {lines}
 RUN pip install --no-cache-dir -e /workspace/repo
 """
+    if row.get("_harden"):
+        out += HOOKS_OFF + " && rm -rf /workspace/repo/.git\n"
     return out + "RUN chown -R 1000:1000 /workspace\nWORKDIR /workspace/repo\n"
 
 
 def convert(row: dict, suite: str) -> Path:
     iid = row["instance_id"]
     owner_repo, num = iid.rsplit("-", 1)
-    name = f"swe-{owner_repo.split('__', 1)[1].lower()}-{num}"
+    # W5 防作弊（triwitness.eval.task_hardening）：任务工厂新建的任务用匿名 ID、清洗 Issue 正文、镜像禁用 git hooks
+    harden = bool(row.get("_harden"))
+    name = anon_task_id(iid) if harden else f"swe-{owner_repo.split('__', 1)[1].lower()}-{num}"
     d = ROOT / "evals" / "tasks" / suite / name
     py = (row.get("install_config") or {}).get("python") or "3.11"
     f2p = row["FAIL_TO_PASS"] if isinstance(row["FAIL_TO_PASS"], list) else json.loads(row["FAIL_TO_PASS"])
@@ -160,7 +166,7 @@ def convert(row: dict, suite: str) -> Path:
 
 [task]
 name = "triwitness/{name}"
-description = {json.dumps(f"SWE-rebench {iid}")}
+description = {json.dumps("SWE-rebench 任务" if harden else f"SWE-rebench {iid}")}
 keywords = ["python", "bugfix", "swe-rebench"]
 
 [metadata]
@@ -193,7 +199,10 @@ pass_to_pass = {toml_list(p2p)}
 max_cost_cny = 0.5
 ''',
     )
-    write(d / "instruction.md", row["problem_statement"].strip() + "\n")
+    statement = row["problem_statement"].strip()
+    if harden:
+        statement, _removed = sanitize_instruction(statement)
+    write(d / "instruction.md", statement + "\n")
     write(d / "environment" / "Dockerfile", dockerfile(row, py))
     for rel, content in hidden.items():
         write(d / "tests" / "files" / rel, content)
@@ -225,10 +234,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="SWE-rebench → TriWitness 任务目录")
     ap.add_argument("ids", nargs="+")
     ap.add_argument("--suite", default="dev")
+    ap.add_argument("--harden", action="store_true", help="匿名 ID + 清洗 Issue 正文 + 禁用 git hooks（W5 防作弊）")
     a = ap.parse_args()
     rows = fetch_rows(set(a.ids))
     for i in a.ids:
-        print(convert(rows[i], a.suite).relative_to(ROOT))
+        print(convert(dict(rows[i], _harden=a.harden), a.suite).relative_to(ROOT))
 
 
 if __name__ == "__main__":

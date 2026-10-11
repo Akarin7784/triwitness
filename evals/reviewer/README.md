@@ -37,6 +37,8 @@ uv run python scripts/build_reviewer_defects.py check   # 每个补丁对基线 
 
 判定：缺陷题“检出”= blocker/major 发现落在注入文件、行号差 ≤ 3；干净题“误报”= 出现 blocker（verdict 退回）。区间为 Wilson 95%。`findings.csv` 列出全部发现，供人工复核。
 
+配对比较（W5，`triwitness.eval.ablation`）：各臂与 adversarial 在同一批题上配对——缺陷题比“检出”、干净题比“放行”（= 不误报），给出 McNemar 精确检验、Holm 校正和配对 bootstrap 95% 区间；只有 Holm p < 0.05 且区间不含 0 才写“更好 / 更差”。
+
 ### 在 Windows 上一键运行（Eva）
 
 ```powershell

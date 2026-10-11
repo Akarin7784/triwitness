@@ -104,6 +104,15 @@ def run_cmd(
     no_input: Annotated[
         bool, typer.Option("--no-input", help="终端里也不弹 y/N 确认：需要确认的操作一律拒绝（脚本 / CI 用）")
     ] = False,
+    open_pr: Annotated[
+        bool,
+        typer.Option("--open-pr", help="完成后按风险等级开 PR（L0/L1 确认后开、L2 确认后开 Draft、L3 不开），并盯 CI"),
+    ] = False,
+    pr_base: Annotated[str | None, typer.Option(help="--open-pr 的目标分支（默认当前分支或 main）")] = None,
+    pr_remote: Annotated[str, typer.Option(help="--open-pr 推送的远端")] = "origin",
+    watch_ci: Annotated[
+        bool | None, typer.Option("--watch-ci/--no-watch-ci", help="开 PR 后是否等 CI 并在失败时返工（默认看 harness）")
+    ] = None,
 ) -> None:
     """修复本地仓库的一个问题，输出 diff、FinishReport 与成本账单（orchestrated-1m 加 Planner + Reviewer）。"""
     import asyncio
@@ -141,6 +150,13 @@ def run_cmd(
         raise typer.BadParameter(str(e)) from None
     budget, session = _run_overrides(max_cost, permission_mode, confirm_unrestricted, interactive=jsonl)
     files, guidance = _run_inputs(attach, guidance_file)
+    publish = None
+    if open_pr:
+        if demo:
+            raise typer.BadParameter("--demo 不能开 PR")
+        from triwitness.harness.local_run import PublishOptions
+
+        publish = PublishOptions(remote=pr_remote, base=pr_base, watch_ci=watch_ci)
     hcfg = _harness(harness)
     reviewer = None
     if demo:
@@ -192,7 +208,7 @@ def run_cmd(
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
                              home=home, budget=budget, session=session, attachments=files if fresh else None,
                              guidance=guidance if fresh else None, reviewer=reviewer, recorder=recorder,
-                             resume=resume_state, harness=hcfg)  # fmt: skip
+                             resume=resume_state, harness=hcfg, publish=publish)  # fmt: skip
 
         def start(approver, on_event):  # type: ignore[no-untyped-def]
             if demo:  # 开发 / 测试用的脚本化任务：不走对话轮
@@ -233,7 +249,8 @@ def run_cmd(
         out = asyncio.run(run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                                     test_command=test_cmd, verify=verify, budget=budget,  # type: ignore[arg-type]
                                     session=session, attachments=files, guidance=guidance,
-                                    reviewer=reviewer, harness=hcfg, approver=tty_approver))  # fmt: skip
+                                    reviewer=reviewer, harness=hcfg, approver=tty_approver,
+                                    publish=publish))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None
@@ -253,6 +270,8 @@ def run_cmd(
     if r.review is not None:
         typer.echo(f"评审：{'有阻断问题' if r.review.blocking else '通过'}｜{len(r.review.findings)} 条发现｜"
                    f"返工 {r.review_rounds} 轮｜变体 {r.review.variant}")  # fmt: skip
+    if r.pr is not None:
+        typer.echo(f"PR：{r.pr.url}{'（Draft）' if r.pr.draft else ''}" + (f"｜{r.ci.display()}" if r.ci else ""))
     typer.echo(f"产物：{out.run_dir}（patch.diff / finish.json / cost.md / trajectory.jsonl / evidence.json / pr.md）")
 
 

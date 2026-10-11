@@ -303,6 +303,17 @@ class LocalSandbox:
         self._closed = True
         _LIVE.pop(self.run_id, None)
 
+    async def commit_branch(self, message: str) -> str | None:
+        """把当前改动提交到本沙箱的分支 tw/<run_id>（不移除 worktree，W5 开 PR / CI 返工后推送用）。
+        没有新改动时不建空提交；返回分支 HEAD 的 sha（分支相对基线没有任何提交时返回 None）。"""
+        await git("add", "-A", "--", ".", *EXCLUDES, cwd=self.worktree)
+        code, _, _ = await git("diff", "--cached", "--quiet", cwd=self.worktree, check=False)
+        if code != 0:
+            await git("commit", "-q", "--no-verify", "-m", message, cwd=self.worktree)
+        _, sha, _ = await git("rev-parse", "HEAD", cwd=self.worktree)
+        head = sha.decode().strip()
+        return None if head == self.snap.base else head
+
     # ------------------------------------------------------------ 结束
     async def finish(self, action: FinishAction) -> str | None:
         """apply：把 diff 应用到用户仓库工作区（不提交、不切分支），然后丢弃 worktree；

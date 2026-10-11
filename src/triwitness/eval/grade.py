@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from triwitness.core.errors import SandboxError
 from triwitness.eval.task import EvalTask
+from triwitness.eval.task_hardening import GIT_ENV
 from triwitness.eval.validate import ensure_image, run_verifier
 from triwitness.sandbox.base import SandboxSpec
 from triwitness.sandbox.docker import DockerSandbox, DockerSandboxBackend
@@ -160,7 +161,10 @@ class Grader:
             cpus=env.cpus or 1.0,
             memory_mb=env.memory_mb or 2048,
             network="none",
-            env={"HOME": "/tmp"},  # uid 1000 在镜像里没有 passwd 条目，默认 HOME=/ 不可写（W2-25 ultraplot / xcp_d）
+            # uid 1000 在镜像里没有 passwd 条目，默认 HOME=/ 不可写（W2-25 ultraplot / xcp_d）；
+            # GIT_ALLOW_PROTOCOL=file：git 只能用本地协议（W5 防作弊，见 eval/task_hardening.py）
+            env={"HOME": "/tmp", **GIT_ENV},
+            block_code_hosts=True,
         )
         sb = await self.backend.create(spec)
         assert isinstance(sb, DockerSandbox)

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 from triwitness.core.models import Budget
+from triwitness.github.publish import Publisher
 from triwitness.harness.approvals import Approver
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import RouterLike
@@ -49,12 +50,14 @@ async def run_task(
     resume: ResumeState | None = None,
     progress_dir: Path | None = None,
     approver: Approver | None = None,
+    publisher: Publisher | None = None,
 ) -> TaskResult:
     orch = InProcessOrchestrator(
         recorder=recorder, router=router, registry=registry, sandbox=sandbox, issue_title=issue_title,
         task_prompt=task_prompt, repo=repo, budget=budget, config_hash=config_hash, issue_number=issue_number,
         test_command=test_command, mode=mode, agents_md=agents_md, config=config, tw_dir=tw_dir, category=category,
         verify=verify, prepare=prepare, stream=stream, resume=resume, progress_dir=progress_dir, approver=approver,
+        publisher=publisher,
     )  # fmt: skip
     return await orch.run()
 

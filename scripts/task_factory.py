@@ -228,7 +228,7 @@ def _build_one(cand: dict, row: dict, staging: str) -> dict:
     from triwitness.eval.validate import run_phase, validate_sync
 
     rec = {"instance_id": cand["instance_id"], "source": cand["source"], "created_at": cand["created_at"]}
-    row = dict(row, _dataset=cand["source"].split(":")[0], _license=cand["license"])
+    row = dict(row, _dataset=cand["source"].split(":")[0], _license=cand["license"], _harden=HARDEN)
     try:
         if not row.get("requirements"):
             install = (row.get("install_config") or {}).get("install") or "pip install -e ."
@@ -278,6 +278,7 @@ def _build_one(cand: dict, row: dict, staging: str) -> dict:
         return rec | {"status": "error", "log": f"{type(e).__name__}: {e}"[-800:]}
 
 
+HARDEN = True  # W5：新建任务默认匿名 ID + 清洗 Issue + 禁用 hooks；--no-harden 复现旧格式
 RETRY: set[str] = set()  # --retry 指定的状态会重跑（例如修了镜像模板之后）
 
 
@@ -384,6 +385,28 @@ def split(log_path: Path, staging: str, n_test: int, n_dev_new: int) -> None:
     print(f"备用（通过校验但未入选）：{len(reserve)} 个")
 
 
+def audit(roots: list[Path], out: Path | None, strict: bool) -> int:
+    """防作弊审计（W5-12）：逐个任务检查 ID 匿名、git 历史 / hooks、Issue 里的上游提交链接等。只读。"""
+    from collections import Counter
+
+    from triwitness.eval.task_hardening import audit_task
+
+    dirs = [d for r in roots for d in sorted(r.glob("*/*")) if (d / "task.toml").exists()]
+    findings = [{"task": f"{d.parent.name}/{d.name}", **f.__dict__} for d in dirs for f in audit_task(d)]
+    counts = Counter((f["level"], f["code"]) for f in findings)
+    print(f"审计 {len(dirs)} 个任务：{', '.join(str(r) for r in roots)}")
+    for (level, code), n in sorted(counts.items()):
+        print(f"  {level:5} {code:22} {n}")
+    for f in findings:
+        if f["level"] == "error":
+            print(f"  ERROR {f['task']}: {f['code']} {f['message']}")
+    if out:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(findings, ensure_ascii=False, indent=1) + "\n")
+    bad = any(f["level"] == "error" for f in findings) or (strict and bool(findings))
+    return 1 if bad else 0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="任务工厂（W2-20～22）")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -400,6 +423,11 @@ def main() -> None:
     b.add_argument("--log", type=Path, default=ROOT / "evals" / "factory" / "build_log.json")
     b.add_argument("--staging", default="_staging")
     b.add_argument("--retry", nargs="*", default=[], help="重跑这些状态的记录，如 validate_failed")
+    b.add_argument("--no-harden", action="store_true", help="不做 W5 防作弊加固（复现旧任务格式）")
+    au = sub.add_parser("audit", help="防作弊审计（只读）：匿名 ID / git 历史与 hooks / Issue 中的上游链接")
+    au.add_argument("--root", type=Path, nargs="+", default=[ROOT / "evals" / "tasks"])
+    au.add_argument("--out", type=Path, default=None)
+    au.add_argument("--strict", action="store_true", help="有 warn 也返回 1")
     sp = sub.add_parser("split", help="冻结 dev / test / dev-smoke 切分，写 evals/suites/*.yaml")
     sp.add_argument("--log", type=Path, default=ROOT / "evals" / "factory" / "build_log.json")
     sp.add_argument("--staging", default="_staging")
@@ -410,7 +438,11 @@ def main() -> None:
         split(a.log, a.staging, a.test, a.dev_new)
     elif a.cmd == "mine":
         mine(a.out, a.months, a.filtered_pages)
+    elif a.cmd == "audit":
+        sys.exit(audit(a.root, a.out, a.strict))
     elif a.cmd == "build":
+        global HARDEN
+        HARDEN = not a.no_harden
         RETRY.update(a.retry)
         ids = a.ids
         if not ids:

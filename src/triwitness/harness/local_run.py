@@ -42,6 +42,16 @@ BackendPref = Literal["auto", "docker", "none"]
 VerifyPref = Literal["off", "deterministic", "model"]
 
 
+@dataclass(frozen=True)
+class PublishOptions:
+    """`tw run --open-pr`：收尾时按风险决定开 PR、盯 CI（W5，spec 012）。
+    只支持 none 后端（改动在 tw/<run_id> 分支）。"""
+
+    remote: str = "origin"
+    base: str | None = None
+    watch_ci: bool | None = None  # None = 用 harness 的 github.ci.watch
+
+
 @dataclass
 class LocalRunOutcome:
     result: TaskResult
@@ -79,6 +89,7 @@ async def run_local(
     reviewer: Reviewer | None = None,
     recorder: TrajectoryRecorder | None = None,
     resume: ResumeState | None = None,
+    publish: PublishOptions | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -125,6 +136,18 @@ async def run_local(
         if verify != "off":
             opts = VerifyOptions(backend=EphemeralBackend(choice.backend), spec=SandboxSpec(repo=repo, network="none"),
                                  mode=verify, router=router if verify == "model" else None)  # type: ignore[arg-type]  # fmt: skip
+        publisher = None
+        if publish is not None:
+            if hasattr(sb, "commit_branch"):
+                from triwitness.github.publish import GitHubPublisher
+
+                publisher = GitHubPublisher(sandbox=sb, repo_path=repo, run_id=run_id, home=home,  # type: ignore[arg-type]
+                                            remote=publish.remote, base=publish.base)  # fmt: skip
+                if publish.watch_ci is not None:
+                    hcfg = hcfg.model_copy(update={"github": hcfg.github.model_copy(update={
+                        "ci": hcfg.github.ci.model_copy(update={"watch": publish.watch_ci})})})  # fmt: skip
+            else:
+                log.warning("--open-pr 只支持 none 后端（%s 后端不开 PR，改动照常保留）", choice.backend.name)
         result = await run_task(
             recorder=rec,
             router=router,
@@ -146,6 +169,7 @@ async def run_local(
             resume=resume,
             progress_dir=run_dir,  # 每步存续跑进度（harness/resume.py）
             approver=approver,  # 计划确认（spec 010 §8）与权限审批共用同一通道
+            publisher=publisher,
         )
     finally:
         if store is not None:
@@ -172,7 +196,10 @@ async def run_local(
                                                       "steps": result.outcome.steps,
                                                       "verdict": result.verification.evidence.verdict
                                                       if result.verification else None,
-                                                      "reason": result.outcome.reason}, ensure_ascii=False,
+                                                      "reason": result.outcome.reason,
+                                                      "pr": result.pr.url if result.pr else None,
+                                                      "ci": result.ci.state if result.ci else None},
+                                                     ensure_ascii=False,
                                                      indent=2), encoding="utf-8")  # fmt: skip
     return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch,
                            repo=str(repo.resolve()))  # fmt: skip
@@ -188,4 +215,4 @@ def _open_store(home: Path):  # type: ignore[no-untyped-def]
         return None
 
 
-__all__ = ["LocalRunOutcome", "run_local"]
+__all__ = ["LocalRunOutcome", "PublishOptions", "run_local"]

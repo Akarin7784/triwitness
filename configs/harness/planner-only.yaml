@@ -1,0 +1,7 @@
+# W5 OFAT 因素“planner”：基线 + Planner（无 Reviewer）。只改这一处，其余与 baseline.yaml 相同；全部 deepseek-flash。
+extends: baseline.yaml
+orchestration:
+  planner: {enabled: true, max_turns: 30}
+  reviewer: {enabled: false}
+  plan_approval: {eval_reject_from: never}   # Eva 21:36：评测里计划全部自动批准，含 L3
+prompts: {executor: executor, summarizer: summarizer, planner: planner}

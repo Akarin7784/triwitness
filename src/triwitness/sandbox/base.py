@@ -69,6 +69,8 @@ class SandboxSpec(BaseModel):
     run_id: str | None = None  # none 后端：worktree / 分支名 tw/<run_id>；缺省时自动生成
     env_passthrough: list[str] = Field(default_factory=list)  # none 后端：任务配置显式声明可继承的宿主变量名
     additional_directories: list[Path] = Field(default_factory=list)  # none 后端：文件工具可访问的额外目录
+    # 评测防作弊（W5）：出网时把代码托管域名解析到 0.0.0.0（docker 后端；network=none 时本来就不通）
+    block_code_hosts: bool = False
 
 
 class Probe(BaseModel):
