@@ -2,6 +2,16 @@
 
 > 不按日历排期，做完一项记一项。
 
+## 0.3.0-preview · 公开预览（84244a0 … d8f800e）
+
+- **安装包自带核心**：PyInstaller onedir（`tw.exe` + `_internal/`）作为 Tauri 资源装到 `<安装目录>\core\`；Rust `bundled_core()` 优先用它，再退回 TW_CORE / PATH / `python -m`。选 onedir 不选 onefile：onefile 每次启动都要把 ~40 MB 解压到临时目录（桌面端每个任务、每次查规则 / 账本都会起一次核心，冷启动多 1–3 秒，杀毒软件还会反复扫），onedir 启动约 0.1 s（Linux 实测），以后也便于逐个文件签名。
+- 构建：`.github/workflows/package-windows.yml`（windows-latest；PyInstaller 不能交叉编译）。冒烟：打包后的 `tw.exe` 跑 `--version`、`budget --json`、两次 `run --demo --jsonl`（模型自动审批 / 询问 + 批准），再静默安装、对安装目录里的核心再跑一遍。`tauri.core.conf.json` 只在这个 job 里叠加资源，Linux 上 cargo-xwin 的无核心构建不受影响。
+- 预算页 / 状态栏余额读真实账本（`tw budget --json`，白名单在 Rust / TS / 开发桥三处一致）；没连上核心显示“—”。删掉 `src/data/budget.ts` 里的假账本。
+- 如实表述交付：结论卡写明“已生成本地分支和 PR 说明；没有推送，也没有在 GitHub 上创建 PR”，按钮是“复制 PR 说明 / 打开运行目录”（tauri-plugin-opener `revealItemInDir`）；状态名改为“待确认交付 / 分支已就绪”。
+- 关于 → 检查更新：打开 https://github.com/Akarin7784/triwitness/releases 。
+- 版本号集中在 `src/lib/version.ts`；README 截图 `docs/images/v0.3/`（`tools/shoot-v03.mjs`，9 项检查全过，¥0）。
+- 发布：`release.yml`（推 `v*` 标签 → 构建 → CHANGELOG 取说明 → 草稿 Release 附安装包和 sha256，不自动发布）。**尚未打标签。**
+
 ## 0.2.1 · 性能 + Eva 0.2.0 真机反馈（a2de105 / 5ad5617 / 9638d53）
 
 - 性能（a2de105）：事件按帧批量提交 + 增量折叠、长回合虚拟化、content-visibility、增量 Markdown、懒加载分包、字体子集。500 轮推流 16.2 → 59.5 fps，long task 26.4 s → 0.16 s，主 JS 971 → 177 KB。详见 `docs/research/native-vs-web-ui.md` §6
