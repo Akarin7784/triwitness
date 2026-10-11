@@ -192,4 +192,38 @@ async def run_turn(
                        nominal_cost_cny=nominal_total(rec.events))  # fmt: skip
 
 
-__all__ = ["NO_REPO_REPLY", "TOOLS", "TurnOutcome", "load_history", "run_turn", "valid_run_id", "write_turn"]
+RESUME_TEXT = "继续"
+
+
+async def run_resume(
+    state: Any,
+    *,
+    rec: TrajectoryRecorder,
+    run_dir: Path,
+    repo: Path,
+    work: Callable[[str, TrajectoryRecorder, Any], Awaitable[LocalRunOutcome]],
+) -> TurnOutcome:
+    """断点续跑（harness/resume.py）：新的一轮直接是任务，不过对话模型；轮次挂在被续跑的那一轮后面。"""
+    rec.emit(UserMessagePayload(text=RESUME_TEXT, repo=str(repo), parent_run=state.from_run,
+                                display=f"继续 · 从 {state.from_run} 的进度"))  # fmt: skip
+    out = await work(state.issue, rec, state)
+    r = out.result
+    summary = (r.finish.summary if r.finish else None) or r.outcome.reason or r.status
+    total = r.cost.total_cny
+    rec.emit(TurnFinishedPayload(kind="task", status=r.status, reply=None, cost_cny=round(total, 6)))
+    write_turn(run_dir, parent=state.from_run, user=RESUME_TEXT, assistant=f"[任务 {r.status}] {summary}", kind="task")
+    return TurnOutcome(kind="task", run_id=rec.run_id, run_dir=run_dir, reply=None, cost_cny=total, task=out,
+                       nominal_cost_cny=nominal_total(rec.events))  # fmt: skip
+
+
+__all__ = [
+    "NO_REPO_REPLY",
+    "RESUME_TEXT",
+    "TOOLS",
+    "TurnOutcome",
+    "load_history",
+    "run_resume",
+    "run_turn",
+    "valid_run_id",
+    "write_turn",
+]

@@ -219,6 +219,7 @@ class AgentLoop:
                 continue
             no_tool = 0
             pending: list[Message] = []  # 提醒放到本轮全部 tool 消息之后（并行 tool_calls 中间插 user 消息会 HTTP 400）
+            touched = False  # 本步有成功的工作区改动 → 步末存续跑进度（harness/resume.py）
             for call in calls:
                 ctx.step_index = rec.next_seq
                 t0 = rec.monotonic()
@@ -258,6 +259,8 @@ class AgentLoop:
                 )  # fmt: skip
                 self.messages.append(tool_msg)
                 tool = self.registry.get(call.name)
+                if result.ok and tool is not None and tool.side_effects == "workspace" and call.name != "run_tests":
+                    touched = True
                 if tool is not None and tool.terminal and result.ok:
                     report = FinishReport.model_validate((result.data or {}).get("finish_report"))
                     return LoopOutcome(status="finished", finish=report, steps=steps)
@@ -290,6 +293,9 @@ class AgentLoop:
                     pending.append(Message(role="user", content=cfg.reminder(signal.reminder,
                                                                              detail=signal.detail)))  # fmt: skip
             self.messages.extend(pending)
+            after_step: Any = ctx.state.get("after_step")
+            if touched and after_step is not None:
+                await after_step(steps)
             if self.guard.should_wrap_up and not wrapped:
                 wrapped = True
                 self.messages.append(Message(role="user", content=cfg.reminder("wrap_up")))

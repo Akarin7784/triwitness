@@ -71,6 +71,9 @@ def run_cmd(
     parent_run: Annotated[
         str | None, typer.Option(help="--jsonl 多轮对话：上一轮的 run_id（沿 turn.json 链取历史）")
     ] = None,
+    resume: Annotated[
+        str | None, typer.Option(help="--jsonl 断点续跑：从这个已停止 / 中断的 run_id 的最近进度继续（需 --repo）")
+    ] = None,
     model: Annotated[str, typer.Option(help="Executor 模型（只允许 deepseek-flash）")] = "deepseek-flash",
     thinking: Annotated[
         str | None, typer.Option(help="思考强度 off / low / medium / high（默认按 configs/models.yaml）")
@@ -116,6 +119,12 @@ def run_cmd(
 
         if not jsonl or not valid_run_id(parent_run):
             raise typer.BadParameter("--parent-run 只能在 --jsonl 下使用，且必须是 run_id")
+    if resume is not None:
+        from triwitness.harness.chat import valid_run_id
+
+        if not jsonl or not valid_run_id(resume) or repo is None or demo:
+            raise typer.BadParameter("--resume 只能在 --jsonl 下使用，需要 --repo，且必须是 run_id")
+        issue = issue or "继续"
     from triwitness.llm.router import executor_override
 
     try:
@@ -167,11 +176,13 @@ def run_cmd(
 
         home = tw_home()
 
-        def work(text, approver, on_event, recorder=None):  # type: ignore[no-untyped-def]
+        def work(text, approver, on_event, recorder=None, resume_state=None):  # type: ignore[no-untyped-def]
+            fresh = resume_state is None  # 续跑：任务描述里已含当时的用户设置 / 附件，不再叠一遍
             return run_local(repo, text, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
-                             home=home, budget=budget, session=session, attachments=files,
-                             guidance=guidance, reviewer=reviewer, recorder=recorder)  # fmt: skip
+                             home=home, budget=budget, session=session, attachments=files if fresh else None,
+                             guidance=guidance if fresh else None, reviewer=reviewer, recorder=recorder,
+                             resume=resume_state)  # fmt: skip
 
         def start(approver, on_event):  # type: ignore[no-untyped-def]
             if demo:  # 开发 / 测试用的脚本化任务：不走对话轮
@@ -182,6 +193,15 @@ def run_cmd(
 
             run_id = new_run_id()
             run_dir = home / "runs" / run_id
+            if resume is not None:  # 先校验（不能续跑就直接报错，不建新 run）
+                from triwitness.harness.chat import run_resume
+                from triwitness.harness.resume import load_resume
+
+                state = load_resume(home, resume)
+                rec = TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
+                rec.subscribe(on_event)
+                return run_resume(state, rec=rec, run_dir=run_dir, repo=repo,  # type: ignore[arg-type]
+                                  work=lambda text, r, s: work(text, approver, on_event, r, s))  # fmt: skip
             rec = TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
             rec.subscribe(on_event)
             return run_turn(issue, router=router, rec=rec, run_dir=run_dir, home=home, repo=repo,

@@ -23,6 +23,7 @@ from triwitness.harness.approvals import Approver, PermissionGate
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.inputs import archive_attachments, compose_task
 from triwitness.harness.loop import RouterLike
+from triwitness.harness.resume import ResumeState
 from triwitness.harness.run import TaskResult, run_task
 from triwitness.permissions.config import SessionOverrides, load_policy
 from triwitness.permissions.engine import PermissionEngine
@@ -72,6 +73,7 @@ async def run_local(
     guidance: str | None = None,
     reviewer: Reviewer | None = None,
     recorder: TrajectoryRecorder | None = None,
+    resume: ResumeState | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -126,6 +128,8 @@ async def run_local(
             category="dogfood",
             verify=opts,
             stream=on_event is not None,  # 桌面端：写流式增量（model_delta / reasoning_delta）
+            resume=resume,
+            progress_dir=run_dir,  # 每步存续跑进度（harness/resume.py）
         )
     finally:
         if modes is not None and (back := modes.on_task_finished(rec.task_id)) is not None:

@@ -13,6 +13,8 @@ export interface StartOptions extends RunChoices {
   mode: CoreMode
   /** 多轮对话：上一轮的 run_id */
   parentRun?: string
+  /** 断点续跑：从这个已停止 / 中断的 run_id 的最近进度继续（0.3.2） */
+  resume?: string
 }
 
 export interface SavedAttachment {
@@ -59,6 +61,7 @@ class TauriTransport implements CoreTransport {
       repo: o.repo,
       issue: o.issue,
       parentRun: o.parentRun ?? null,
+      resume: o.resume ?? null,
       choices: {
         model: o.model,
         thinking: o.thinking,

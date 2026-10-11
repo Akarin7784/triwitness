@@ -123,6 +123,14 @@ pub fn valid_run_id(id: &str) -> bool {
     id.len() >= 10 && id.len() <= 42 && id.starts_with("r_") && id[2..].chars().all(|c| c.is_ascii_alphanumeric())
 }
 
+/// 断点续跑（0.3.2）：从这个已停止 / 中断的 run 的最近进度继续；非法 run_id 直接忽略
+pub fn resume_args(resume: Option<&str>) -> Vec<String> {
+    match resume.filter(|r| valid_run_id(r)) {
+        Some(r) => vec!["--resume".to_string(), r.to_string()],
+        None => vec![],
+    }
+}
+
 /// 组装 `tw run` 参数（纯函数，便于单测）。仓库可空：对话轮只聊天，要动手时核心会请用户选仓库
 pub fn run_args(repo: &str, issue: &str, mode: &str, parent_run: Option<&str>) -> Vec<String> {
     let mut a = vec!["run".to_string(), "--jsonl".into()];
@@ -204,6 +212,7 @@ pub fn core_start(
     issue: String,
     mode: Option<String>,
     parent_run: Option<String>,
+    resume: Option<String>,
     choices: Option<Choices>,
 ) -> Result<String, String> {
     if issue.trim().is_empty() {
@@ -211,6 +220,7 @@ pub fn core_start(
     }
     let mode = effective_mode(mode.as_deref().unwrap_or("live"));
     let mut args = run_args(&repo, &issue, mode, parent_run.as_deref());
+    args.extend(resume_args(resume.as_deref()));
     let choices = choices.unwrap_or_default();
     args.extend(choice_args(&choices));
     let home = crate::files::tw_home();
@@ -365,6 +375,8 @@ mod tests {
         assert_eq!(run_args("", "你好", "live", Some("r_01ABCDEFGH")),
                    ["run", "--jsonl", "--issue", "你好", "--parent-run", "r_01ABCDEFGH", "--live"]);
         assert_eq!(run_args(" ", "你好", "live", Some("../x")), ["run", "--jsonl", "--issue", "你好", "--live"]);
+        assert_eq!(resume_args(Some("r_01ABCDEFGH")), ["--resume", "r_01ABCDEFGH"]);
+        assert!(resume_args(Some("../x")).is_empty() && resume_args(None).is_empty());
         assert_eq!(effective_mode("live"), "live");
         assert_eq!(effective_mode("whatever"), "live");
         assert!(!valid_run_id("r_; rm -rf") && valid_run_id("r_01M4N6SQ7D25BFZW24M35BK811"));

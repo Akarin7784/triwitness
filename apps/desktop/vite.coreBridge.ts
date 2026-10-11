@@ -69,11 +69,12 @@ interface Task {
 }
 
 /** 与 Rust run_args 一致；开发桥额外允许 demo（仅开发 / 测试，正式版核心不含） */
-export function runArgs(repo: string, issue: string, mode: string, parentRun = ''): string[] {
+export function runArgs(repo: string, issue: string, mode: string, parentRun = '', resume = ''): string[] {
   const a = ['run', '--jsonl']
   if (repo.trim()) a.push('--repo', repo)
   if (issue.trim()) a.push('--issue', issue)
   if (/^r_[0-9A-Za-z]{8,40}$/.test(parentRun)) a.push('--parent-run', parentRun)
+  if (/^r_[0-9A-Za-z]{8,40}$/.test(resume)) a.push('--resume', resume)
   if (mode === 'demo') a.push('--demo')
   else if (mode !== 'replay') a.push('--live')
   return a
@@ -149,7 +150,7 @@ export function coreBridge(repoRoot: string): Plugin {
             const b = await body(req)
             const [cmd, ...pre] = core()
             const key = `d${++n}`
-            const args = [...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'live'), String(b.parentRun ?? '')), ...choiceArgs(b), ...inputArgs(b, key)]
+            const args = [...runArgs(String(b.repo ?? ''), String(b.issue ?? ''), String(b.mode ?? 'live'), String(b.parentRun ?? ''), String(b.resume ?? '')), ...choiceArgs(b), ...inputArgs(b, key)]
             const child = spawn(cmd, [...pre, ...args], {
               env: { ...process.env, PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' },
               stdio: ['pipe', 'pipe', 'pipe'],

@@ -12,7 +12,8 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import dataclass, replace
-from typing import Literal
+from pathlib import Path
+from typing import Any, Literal
 
 from triwitness.core.errors import SandboxError
 from triwitness.core.events import (
@@ -29,6 +30,7 @@ from triwitness.cost.report import CostLedger
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import AgentLoop, LoopOutcome, RouterLike, build_system_prompt
 from triwitness.harness.prepare import PrepareOptions, PrepareResult, prepare_env
+from triwitness.harness.resume import ResumeState, apply_resume, resume_note, save_progress
 from triwitness.llm.pricing import pricing_version
 from triwitness.prompts import load_prompt
 from triwitness.sandbox.base import Sandbox
@@ -94,6 +96,8 @@ async def run_task(
     verify: VerifyOptions | None = None,
     prepare: PrepareOptions | None = None,
     stream: bool = False,
+    resume: ResumeState | None = None,
+    progress_dir: Path | None = None,
 ) -> TaskResult:
     rec = recorder
     cfg = config or HarnessConfig.default()
@@ -119,7 +123,15 @@ async def run_task(
                 return _needs_human(rec, st, ledger, prepared)
         base_ref = await _checkpoint(rec, sandbox, "start")
         repro_first = "submit_repro" in registry.names
-        if repro_first:
+        prompt = task_prompt
+        repro_first_done: dict[str, Any] | None = None
+        if resume is not None:  # 断点续跑：start 快照是原始代码（diff / 复验基线），再写回上次的进度
+            applied, held = await apply_resume(sandbox, resume, repro_first=repro_first)
+            await _checkpoint(rec, sandbox, "resumed")
+            prompt = f"{task_prompt}\n\n{resume_note(resume, applied, held)}"
+            if resume.repro_check is not None and repro_first:
+                repro_first_done = dict(resume.repro_check)
+        if repro_first and repro_first_done is None:
             st.go(TaskState.REPRODUCING, "复现")
         else:
             st.go(TaskState.EXECUTING, "修复")
@@ -141,7 +153,17 @@ async def run_task(
             ctx.state["on_repro_accepted"] = lambda check: st.go(
                 TaskState.EXECUTING, "修复" if check.get("status") == "reproduced" else "修复（无法复现，已降级）"
             )
-        outcome = await loop.run(task_prompt, ctx)
+            if repro_first_done is not None:
+                ctx.state["repro_check"] = repro_first_done
+        if progress_dir is not None:
+            pdir = progress_dir
+
+            async def after_step(steps: int) -> None:
+                await save_progress(pdir, sandbox, issue=task_prompt, state=ctx.state, tw_dir=tw_dir,
+                                    steps=steps + (resume.steps if resume else 0))  # fmt: skip
+
+            ctx.state["after_step"] = after_step
+        outcome = await loop.run(prompt, ctx)
         check = ctx.state.get("repro_check")
         repro_status = check.get("status") if check else ("missing" if repro_first else None)
         status, final, label = _classify(outcome)
@@ -183,6 +205,9 @@ async def run_task(
             etype = {"budget_exhausted": "BudgetExceeded", "stuck": "Stuck", "error": "Error"}[outcome.status]
             rec.emit(ErrorPayload(type=etype, message=outcome.reason or etype, display=_clip(outcome.reason or label)))
         await _checkpoint(rec, sandbox, "final")
+        if progress_dir is not None and status != "done":  # 停下 / 失败：留一份最新进度给“继续”
+            await save_progress(progress_dir, sandbox, issue=task_prompt, state=ctx.state, tw_dir=tw_dir,
+                                steps=outcome.steps + (resume.steps if resume else 0))  # fmt: skip
         diff = await _diff(sandbox, base_ref)
         if status == "done":
             st.go(TaskState.PACKAGING, "整理结果")

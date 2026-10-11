@@ -415,6 +415,7 @@ export const EN: Record<string, string> = {
   '重播': 'Replay',
   '重新检测': 'Check again',
   '重试': 'Retry',
+  '从上次停下的进度继续（已改的文件、已通过的复现会沿用）': 'Resume from where it stopped (edited files and an accepted repro are kept)',
   '附件：{0}': 'Attachments: {0}',
   '隐私': 'Privacy',
   '非思考': 'Non-thinking',

@@ -115,6 +115,9 @@ function livePhase(m: TaskMeta): Phase {
   return 'failed'
 }
 
+/** 可以“继续”的终态（与核心 harness/resume.py RESUMABLE 一致） */
+const RESUMABLE = new Set(['cancelled', 'error', 'stuck', 'budget_exceeded', 'needs_human', 'failed', 'interrupted'])
+
 const LIVE_LABEL: Record<string, string> = {
   replied: tr('已回复'),
   done: tr('已完成'),
@@ -320,6 +323,7 @@ export default function App() {
     files: { name: string; path: string }[],
     chat: string,
     parentRun?: string | null,
+    resume?: string | null,
   ): Promise<SourceKey> => {
     const mode = coreMode()
     const warrior = takeUnrestricted()
@@ -332,6 +336,7 @@ export default function App() {
       issue,
       mode,
       parentRun,
+      resume,
       ...runChoices(p, mode, warrior),
       attachments: paths.length ? paths.slice(0, 20) : undefined,
       guidance: guidance || undefined,
@@ -413,8 +418,23 @@ export default function App() {
       .catch((e) => onLaunchError(e, null))
   }
 
+  /** 断点续跑（0.3.2）：停止 / 失败 / 中断的任务轮，从核心存下的最近进度继续，作为同一会话的新一轮 */
+  const stoppedRun = snap?.runId ?? meta?.runId ?? null
+  const canContinue =
+    !!coreOk && !running && !turn.streaming && !!stoppedRun && !!(meta?.repo || repo) &&
+    (RESUMABLE.has(meta?.status ?? '') || (!meta?.status && !!snap?.exited))
+  const onContinue = () => {
+    if (!stoppedRun) return
+    const root = source
+    setStartErr(null)
+    launch(tr('继续'), meta?.repo || repo, [], root, null, stoppedRun)
+      .then((key) => appendTurn(root, key))
+      .catch((e) => onLaunchError(e, null))
+  }
+
   const versions = chats.versions[lastTurnKey]
   const turnActions = {
+    onContinue: canContinue ? onContinue : undefined,
     enabled: !!coreOk && !running && !turn.streaming,
     onRetry: () => newVersion('retry'),
     onEdit: (text: string) => newVersion('edit', text),

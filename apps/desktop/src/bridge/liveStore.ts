@@ -144,14 +144,16 @@ export async function startTask(
     userAttachments?: string[]
     /** 多轮对话：上一轮的 run_id */
     parentRun?: string | null
+    /** 断点续跑：从这个已停止 / 中断的 run_id 继续（0.3.2） */
+    resume?: string | null
   } & RunChoices,
 ): Promise<string> {
   const transport = await getTransport()
   if (!transport) throw new Error(tr('未连接核心'))
   // 仓库可空：核心先按对话处理，要动手时会请用户选仓库
   const repo = opts.repo.trim()
-  const { attachmentNames, userAttachments, parentRun, ...run } = opts
-  const key = await transport.start({ ...run, repo, parentRun: parentRun ?? undefined })
+  const { attachmentNames, userAttachments, parentRun, resume, ...run } = opts
+  const key = await transport.start({ ...run, repo, parentRun: parentRun ?? undefined, resume: resume ?? undefined })
   const id = `${Date.now().toString(36)}-${key}`
   const t = new LiveTask(id)
   registry.set(id, t)

@@ -1,5 +1,5 @@
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Paperclip, Pencil, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Paperclip, Pencil, Play, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import clsx from 'clsx'
 import type { Block, Turn } from '../data/turns'
@@ -47,9 +47,27 @@ export interface TurnActions {
   enabled: boolean
   onRetry: () => void
   onEdit: (text: string) => void
+  /** 停止 / 中断的任务：从最近进度继续（0.3.2）；不可继续时不传 */
+  onContinue?: () => void
   versions?: VersionInfo
   feedback?: Rating
   onFeedback: (rating: Rating | null, note?: string) => void
+}
+
+/** 停止 / 中断的任务：从最近进度继续 */
+function ContinueButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      data-testid="continue"
+      title={tr('从上次停下的进度继续（已改的文件、已通过的复现会沿用）')}
+      className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-border-soft px-2.5 py-0.5 text-[12px] text-ink-soft hover:bg-border-soft"
+      onClick={onClick}
+    >
+      <Play size={11} strokeWidth={1.8} />
+      {tr('继续')}
+    </button>
+  )
 }
 
 /** 一轮对话：用户消息（气泡）+ 助手（无气泡）：思考块 · 正文 · 工具行交错，收尾摘要与操作条 */
@@ -151,8 +169,14 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
               <Markdown text={turn.final.text} />
             </div>
           )}
+          {!turn.streaming && !turn.final && actions?.onContinue && (
+            <div className="fade-in mt-1.5">
+              <ContinueButton onClick={actions.onContinue} />
+            </div>
+          )}
           {!turn.streaming && turn.final && (
             <div data-testid="message-actions" className="fade-in mt-1.5 flex items-center gap-0.5">
+              {actions?.onContinue && <ContinueButton onClick={actions.onContinue} />}
               <Tip label={tr('复制')}>
                 <CopyButton text={answer} className={ACT} />
               </Tip>
