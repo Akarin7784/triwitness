@@ -159,7 +159,9 @@ class LLMAgent:
             config=harness,
             category=self.category,
         )
-        claimed = res.status == "done" and res.finish is not None and res.finish.tests_passed
+        # 评审无结论记为未解决（Eva 2026-10-12）：不算 agent 声称成功
+        claimed = (res.status == "done" and res.finish is not None and res.finish.tests_passed
+                   and not res.review_inconclusive)  # fmt: skip
         return AgentRun(
             status="error" if res.outcome.status == "cancelled" else res.outcome.status,
             claimed_success=claimed,

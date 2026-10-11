@@ -78,6 +78,7 @@ class PipelineResult:
         review_variant: str,
         vendor_policy: Literal["single_vendor", "cross_vendor"] = "single_vendor",
         unresolved_blockers: int = 0,
+        reviewer_inconclusive: bool = False,
         cost: CostReport | None = None,
     ) -> PipelineResult:
         """把评审结论并进证据包：major / blocker 计入风险（review_major_open）；返工到上限仍有 blocker → 下限 L2。"""
@@ -87,12 +88,20 @@ class PipelineResult:
         if cost is not None:
             kw["cost"] = cost
         ev, risk = self.rebuild(**kw)
-        upd: dict[str, Any] = {"vendor_policy": vendor_policy}
-        if unresolved_blockers and ev.risk_level in ("L0", "L1"):
-            upd["risk_level"] = "L2"
-            upd["risk_factors"] = [*ev.risk_factors, RiskFactor(
-                code="floor:review_blocker_unresolved", points=0,
-                detail=f"评审返工到上限后仍有 {unresolved_blockers} 个阻断问题未解决")]  # fmt: skip
+        upd: dict[str, Any] = {"vendor_policy": vendor_policy,
+                               "review_status": "inconclusive" if reviewer_inconclusive else "concluded"}  # fmt: skip
+        factors = list(ev.risk_factors)
+        low = ev.risk_level in ("L0", "L1")
+        if unresolved_blockers and low:
+            detail = f"评审返工到上限后仍有 {unresolved_blockers} 个阻断问题未解决"
+            factors.append(RiskFactor(code="floor:review_blocker_unresolved", points=0, detail=detail))
+        if reviewer_inconclusive:  # 无论原等级都记一条（审计用），低于 L2 时抬到 L2
+            factors.append(RiskFactor(code="floor:reviewer_inconclusive", points=0,
+                                      detail="评审强制提交后仍没有结论（不当成通过）"))  # fmt: skip
+        if len(factors) > len(ev.risk_factors):
+            upd["risk_factors"] = factors
+            if low:
+                upd["risk_level"] = "L2"
         ev = ev.model_copy(update=upd)
         return PipelineResult(evidence=ev, risk=risk, pr_body=render_pr(ev), deterministic=self.deterministic,
                               reasons=self.reasons, static=self.static, model=self.model,

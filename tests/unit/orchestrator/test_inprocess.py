@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -77,8 +77,8 @@ class RoleRouter:
 
     async def complete(self, req: LLMRequest, **kw: Any) -> LLMResponse:
         key = str(req.role)
-        if key == "reviewer" and "清单式" in (req.messages[0].content or ""):
-            key = "reviewer_checklist"
+        if key == "reviewer" and "清单式" in (req.messages[0].content or "") and "reviewer_checklist" in self.r:
+            key = "reviewer_checklist"  # 共识测试单独给清单式变体脚本；单评审（默认 checklist）用 reviewer 脚本
         return await self.r[key].complete(req, **kw)
 
 
@@ -155,11 +155,17 @@ async def test_full_flow_plan_verify_review_pass(env: tuple, tmp_path: Path) -> 
     v = res.verification
     assert v is not None and v.evidence.verdict == "pass"
     assert v.evidence.root_cause == "calc.add 用了减法"
-    assert v.evidence.review_variant == "adversarial" and v.evidence.vendor_policy == "single_vendor"
+    # 默认评审 = checklist（Eva 2026-10-12，W4-14）
+    assert v.evidence.review_variant == "checklist" and v.evidence.vendor_policy == "single_vendor"
+    assert v.evidence.review_status == "concluded"
     assert [f.severity for f in v.evidence.findings] == ["minor"]
     assert "评审" in v.pr_body
     (rv,) = kinds(rec, "review")
-    assert rv["blocking"] is False and rv["round"] == 1 and rv["variant"] == "adversarial"
+    assert rv["blocking"] is False and rv["round"] == 1 and rv["variant"] == "checklist"
+    assert rv["inconclusive"] is False
+    # checklist 变体：非思考 + temperature 1.0（覆盖路由的思考开关）
+    (rq,) = router.r["reviewer"].requests
+    assert rq.thinking_override is False and rq.temperature == 1.0 and rq.tool_choice == "auto"
     roles = {e.role for e in rec.events if e.kind == "model_call"}
     assert roles == {"planner", "executor", "reviewer"}
     # 5 次 planner/executor + 1 次 reviewer，每次 ¥0.001，全部进任务成本
@@ -207,6 +213,59 @@ async def test_unresolved_blocker_lands_in_evidence(env: tuple) -> None:  # type
     assert v.evidence.risk_level in ("L2", "L3")
 
 
+READ_ONLY = say(call("read_file", path="calc.py"))
+
+
+async def test_reviewer_inconclusive_eval_is_unresolved(env: tuple) -> None:  # type: ignore[type-arg]
+    """评审强制提交后仍没结论：不静默放行——证据包 review_status=inconclusive、风险下限 L2；评测里记为未解决。"""
+    router = RoleRouter(planner=[plan()], executor=[say(WRITE_REPRO), say(RIGHT), finish()],
+                        reviewer=[READ_ONLY, READ_ONLY])  # fmt: skip
+    res, rec = await go(env, router, verify=True, config=cfg(reviewer__max_turns=2), mode="eval")
+    assert res.status == "done" and res.review_inconclusive and res.review is not None
+    assert res.review.inconclusive and not res.review.blocking
+    v = res.verification
+    assert v is not None and v.evidence.review_status == "inconclusive"
+    assert v.evidence.risk_level in ("L2", "L3")
+    assert "floor:reviewer_inconclusive" in {f.code for f in v.evidence.risk_factors}
+    (rv,) = kinds(rec, "review")
+    assert rv["inconclusive"] is True and "无结论" in rv["display"]
+    # 第二次（最后一次）评审调用是强制提交
+    assert router.r["reviewer"].requests[-1].tool_choice != "auto"
+    (fin,) = kinds(rec, "task_finished")
+    assert "记为未解决" in fin["display"]
+
+
+async def test_reviewer_inconclusive_interactive_needs_human(env: tuple) -> None:  # type: ignore[type-arg]
+    router = RoleRouter(planner=[plan()], executor=[say(RIGHT), finish()], reviewer=[READ_ONLY, READ_ONLY])
+    res, rec = await go(env, router, config=cfg(reviewer__max_turns=2))
+    assert res.status == "needs_human" and res.review_inconclusive
+    assert states(rec)[-2:] == ["reviewing", "needs_human"]
+    (req,) = kinds(rec, "approval_requested")
+    assert req["tool"] == "ReviewInconclusive"
+
+
+@pytest.mark.parametrize(("decision", "status"), [("allow", "done"), ("deny", "failed")])
+async def test_reviewer_inconclusive_interactive_decision(env: tuple, decision: str, status: str) -> None:  # type: ignore[type-arg]
+    async def approver(req: Any) -> ApprovalDecision:
+        return ApprovalDecision(decision=decision)  # type: ignore[arg-type]
+
+    router = RoleRouter(planner=[plan()], executor=[say(RIGHT), finish()], reviewer=[READ_ONLY, READ_ONLY])
+    res, rec = await go(env, router, config=cfg(reviewer__max_turns=2), approver=approver)
+    assert res.status == status and res.review_inconclusive
+    (resolved,) = [p for p in kinds(rec, "approval_resolved") if p["by"] == "user"]
+    assert resolved["decision"] == decision
+
+
+async def test_eval_agent_does_not_claim_success_when_review_inconclusive() -> None:
+    """LLMAgent：评审无结论 → claimed_success=False（评测里记为未解决）。"""
+    import inspect
+
+    from triwitness.eval import agents
+
+    src = inspect.getsource(agents.LLMAgent.solve)
+    assert "not res.review_inconclusive" in src
+
+
 async def test_consensus_split_does_not_rework(env: tuple) -> None:  # type: ignore[type-arg]
     router = RoleRouter(planner=[plan()], executor=[say(WRONG), finish()], reviewer=[review(BLOCKER)],
                         reviewer_checklist=[review()])  # fmt: skip
@@ -215,9 +274,11 @@ async def test_consensus_split_does_not_rework(env: tuple) -> None:  # type: ign
     (rv,) = kinds(rec, "review")
     assert rv["consensus"] is True and rv["variant"] == "adversarial+checklist"
     assert [f["severity"] for f in rv["findings"]] == ["major"]
-    # 清单式变体用 effort=high
+    # 清单式变体：非思考 t=1.0（W4-14 checklist_t10）；对抗式沿用路由（思考 effort=max）
     req = router.r["reviewer_checklist"].requests[0]
-    assert req.effort == "high" and router.r["reviewer"].requests[0].effort is None
+    assert req.thinking_override is False and req.temperature == 1.0
+    adv = router.r["reviewer"].requests[0]
+    assert adv.effort is None and adv.thinking_override is None
 
 
 async def test_consensus_agreement_reworks(env: tuple) -> None:  # type: ignore[type-arg]
@@ -461,3 +522,33 @@ def test_eval_agent_runs_without_permission_gate() -> None:
     src = inspect.getsource(LLMAgent.solve)
     assert "registry=ToolRegistry(default_tools(names=harness.tools))," in src
     assert 'mode="eval"' in src
+
+
+def test_with_review_floors_inconclusive_to_l2() -> None:
+    """低风险（L0）证据包 + 评审无结论 → L2 + floor:reviewer_inconclusive。"""
+    from triwitness.verify.pipeline import PipelineResult
+
+    captured: dict[str, Any] = {}
+
+    class _Ev:
+        risk_level = "L0"
+        risk_factors: ClassVar[list[Any]] = []
+
+        def model_copy(self, update: dict[str, Any]) -> Any:
+            captured.update(update)
+            return self
+
+    pr = PipelineResult.__new__(PipelineResult)
+    pr.rebuild = lambda **kw: (_Ev(), None)  # type: ignore[assignment]
+    import triwitness.verify.pipeline as pl
+
+    orig = pl.render_pr
+    pl.render_pr = lambda ev: ""  # type: ignore[assignment]
+    try:
+        for name in ("deterministic", "reasons", "static", "model"):
+            setattr(pr, name, None)
+        pr.with_review(findings=[], review_model="m", review_variant="checklist", reviewer_inconclusive=True)
+    finally:
+        pl.render_pr = orig
+    assert captured["risk_level"] == "L2" and captured["review_status"] == "inconclusive"
+    assert [f.code for f in captured["risk_factors"]] == ["floor:reviewer_inconclusive"]

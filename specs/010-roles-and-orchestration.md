@@ -73,7 +73,7 @@ CC 报告的核心结论：Claude Code 的主循环没有显式状态机，结�
   最多修复 2 次 → 模型没调工具时从 content 抽 JSON → 仍失败返回 `path=failed`。Verifier 改为调用它（请求逐字节不变，
   回放夹具不用重录）。
 - 角色 Loop 里模型只说话不调工具：沿用 AgentLoop 的 `no_tool` 提醒；最终 `stuck` 时再用 `extract_json` 从最后一条
-  assistant 文本里抽一次（Planner 抽不到 → 无计划继续，Reviewer 抽不到 → 记为“评审无结论”，不阻断）。
+  assistant 文本里抽一次（Planner 抽不到 → 无计划继续，Reviewer 抽不到 → 记为“评审无结论”，**不当成通过**，见 §6.2.1）。
 
 ## 6. 角色
 
@@ -90,9 +90,28 @@ CC 报告的核心结论：Claude Code 的主循环没有显式状态机，结�
 - 输入：Issue、Plan（如有）、diff、验证结论与关键证据摘要、Executor 自述。
 - 工具：只读 + submit_review。**只报有依据的问题**：每条带文件 / 行号 / 严重级别 / 修复建议，禁止风格挑刺。
 - `blocker` 才会退回 Executor；major / minor / nit 进证据包，major 计入风险分（spec 009 `review_major_open`）。
-- 单厂商变体（04 §5.2 规则 1，W4-08）：主评审 `adversarial`（flash 思考 effort=max + 对抗式提示，独立上下文）；
-  共识模式的第二评审 `checklist`（flash 思考 effort=high + 清单式提示，独立上下文）。证据包 `review_variant`、
+- 单厂商变体（04 §5.2 规则 1，W4-08）：`checklist`（flash **非思考** temperature 1.0 + 清单式提示，独立上下文）；
+  `adversarial`（flash 思考 effort=max + 对抗式提示，独立上下文）。证据包 `review_variant`、
   `vendor_policy=single_vendor` 标注“同厂商评审”。
+- **默认评审 = `checklist`（Eva 2026-10-12 01:01 决定，ADR-0007）**：`orchestration.reviewer.variant`（默认 checklist，
+  可改回 adversarial）。依据 W4-14 消融（`evals/baselines/2026-10-12-reviewer-ablation/`，40 题 × 1 次）：
+  checklist_t10 检出 90%（Wilson 70–97%）/ 误报 25%，adversarial 85% / 25%，配对比较无显著差异；
+  checklist 花费与耗时约为 adversarial 的 1/3。统计上**不是**“更好”，是“同等质量下更便宜更快”；第二轮重复（§13）用来确认。
+- 共识模式仍**默认关**（同一决定）：第二评审 checklist 同样改为非思考 t=1.0（= 消融里的 consensus_t10）。
+
+#### 6.2.1 评审必须给结论（Eva 2026-10-12 01:01）
+- W4-14 里 14%（22/160）的评审用完 20 轮没提交，旧编排器把它当成通过（静默放行）。
+- **强制提交**：`orchestration.reviewer.force_submit`（默认 true）。最后一次允许的调用（`turns + 1 = max_turns`）
+  追加一条提醒，并发 `tool_choice={"type":"function","function":{"name":"submit_review"}}`；DeepSeek 思考模式不接受
+  强制 tool_choice（HTTP 400），所以**这一次关思考**（`thinking_override=false`）。适配器兜底：思考模式下的强制 tool_choice
+  一律降为 auto。2026-10-12 用 deepseek-flash 实测：带思考历史（reasoning_content）的会话，最后一次关思考 + 强制工具返回 200，
+  得到 submit_review（¥0.0015）。
+- **上限那次调用不丢**：安全上限在调用后记账时才触发（第 N 次调用），以前回复被丢弃——轨迹少记一次花费（W4-14 的 ¥0.14 缺口），
+  回复里的 submit_review 也丢了。现在 `BudgetExceeded.response` 带回这次回复：照常写 model_call，回复里有终止工具就执行并接住提交。
+- **仍无结论**（`ReviewResult.inconclusive`）：证据包 `review_status=inconclusive`，加 `floor:reviewer_inconclusive`，风险下限 L2；
+  - 交互（桌面端 / 终端）：发审批卡 `tool=ReviewInconclusive`，人同意 → DONE；拒绝 → FAILED；没有审批通道 → NEEDS_HUMAN（改动保留）；
+  - 评测：状态 done、改动保留，但 `TaskResult.review_inconclusive=true`，LLMAgent 不算“声称成功”（记为未解决）。
+- W4-14 消融脚本关掉 `force_submit`，让第二轮重复与第一轮协议一致；结果里记 `verdict_on_last_call`，事后可按第一轮口径复算。
 
 ### 6.3 返工回路（借鉴 CC Stop hook 的“有上限的不许停”）
 - Reviewer 给出 blocker 且 `review_rounds < orchestration.reviewer.max_rounds`（默认 2）→ REVIEWING → EXECUTING，
@@ -184,6 +203,9 @@ Q1–Q6 由 Eva 于 2026-10-11 21:35 决定（Q1–Q4 维持现状，Q5/Q6 按�
   （只用 deepseek-flash）与非金钱的失控上限（轮数、wall time、token 预算、返工轮数）。想恢复旧策略可设 `eval_reject_from: L3`。
 - Q3 评审返工到上限仍有 blocker — **已决定（Eva 21:35，维持现状）**：保留改动、状态 done、证据包标 open + 风险下限 L2。
 - Q4 桌面端默认 harness — **已决定（Eva 21:35，维持现状）**：仍是 long-context-1m，等 W4-14 评审消融数据再议。
+  （W4-14 已出数据，Eva 2026-10-12 01:01 先定了评审默认 = checklist、共识关；桌面端默认 harness 本身没改，仍待议。）
+- Q8 默认评审与“没结论 = 放行” — **已决定（Eva 2026-10-12 01:01）**：默认评审改 checklist（非思考 t=1.0）、共识默认关；
+  最后一次调用强制提交，仍无结论标 `reviewer_inconclusive`（交互要人确认，评测记未解决）。见 §6.2 / §6.2.1、ADR-0007。
 - Q5 终端 `tw run` 审批通道 — **已决定（Eva 21:35）并实现**：stdin 是 TTY 时 `tw run` 弹 y/N（`cli/tty.py`）：
   命令 / 编辑 `[y] 允许一次 [s] 本次任务都允许 [N] 拒绝`，计划确认 y/N，ask_human 直接输入回答；EOF / Ctrl-D 视为无人。
   非 TTY（管道 / CI）或 `--no-input` 保持原行为（需确认的一律拒绝）。
@@ -221,7 +243,19 @@ Q1–Q6 由 Eva 于 2026-10-11 21:35 决定（Q1–Q4 维持现状，Q5/Q6 按�
 本轮合计 ¥0.1013（账本 ¥17.7409 → ¥17.8422），高峰价调用 0。命令审批在这几次运行里由默认的 auto_review 模式自动批准（`configs/permissions.default.yaml`），
 所以终端只弹了计划确认；auto_review 本身的实测按 Eva 21:36 决定延后，本轮没有专门测。
 
+## 13. W4-14 第二轮（待 Eva 本机跑）
+
+只跑 adversarial 与 checklist_t10，在同样 40 题上补 r1、r2（加第一轮 r0 共 3 次），约 ¥10：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\run-reviewer-ablation.ps1 -Arms adversarial,checklist_t10 -Repeats 3
+```
+
+结果与第一轮在同一个 `-OutDir` 里合并（已有 r0 按文件名跳过）；`reviewer_ablation_posthoc.py` 给出逐次稳定性、按题聚类的
+差值区间，以及按第一轮口径（最后一次调用里的提交算没结论）的复算。
+
 ## 变更记录
 
 - 2026-10-11：初稿 + 首版实现（W4-01/03/04/05/06/07/15 部分）；补 §12 实测记录与 Q5/Q6；新增 `configs/harness/orchestrated-1m-consensus.yaml`。
+- 2026-10-12：Eva 01:01 决定 Q8——默认评审 checklist、共识关、强制提交 + reviewer_inconclusive（§6.2 / §6.2.1，ADR-0007）；§13 第二轮重复。
 - 2026-10-11（晚）：Eva 21:35 / 21:36 决定 Q1–Q6（Q2 改为评测完全放开）；实现 Q5 终端 y/N、Q6 计划确认续跑点；新增 §8.1 ask_human、§8.2 跨厂商评审、Q7 人工确认点（依赖 / CI 配置）；§12.1 第二轮实测。

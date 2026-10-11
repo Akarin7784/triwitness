@@ -120,11 +120,19 @@ class AgentLoop:
         task_intro: str | None = None,
         effort: Literal["low", "high", "max"] | None = None,
         executor_vendor: str | None = None,
+        thinking: bool | None = None,
+        temperature: float | None = None,
+        force_submit: str | None = None,
     ) -> None:
         # Reviewer 的 loop 带上 Executor 的厂商：vendor_policy=cross_vendor 时路由据此排除同厂商（W4-08）
         self.executor_vendor = executor_vendor
         self.task_intro = task_intro  # 角色开场白（Planner / Reviewer）；None = Executor 的默认措辞
         self.effort: Literal["low", "high", "max"] | None = effort  # 覆盖路由的思考强度（同厂商异构评审变体）
+        self.thinking = thinking  # 覆盖路由的思考开关（None = 路由配置；W4-14 默认评审 checklist 非思考）
+        self.temperature = temperature  # 非思考时生效（思考模式下适配器丢弃）
+        # 最后一次允许的调用强制调用这个终止工具（角色的 submit_*；spec 010 §6.2“评审必须给结论”）。
+        # DeepSeek 思考模式不接受强制 tool_choice，所以这一次关思考。
+        self.force_submit = force_submit
         self.trusted_tail = ""  # 块外的编排器说明（例：Plan），拼在 Issue 块之后
         self.router = router
         self.hard_limit = hard_limit  # 窗口硬上限覆盖（测试用）；默认按角色从 configs/models.yaml 推导
@@ -160,6 +168,66 @@ class AgentLoop:
             role="summarizer",
         )  # fmt: skip
         return resp
+
+    def _record_call(self, req: LLMRequest, resp: LLMResponse, call_id: str, tool_names: list[str]) -> None:
+        """写 model_call 事件与请求 / 回复附件（账本之外的另一份成本事实；必须每次已付费调用都写）。"""
+        rec = self.emitter
+        seq = rec.next_seq
+        req_ref = rec.artifact(f"{seq}-request.json", {
+            "role": self.role, "thinking": req.thinking, "tools": tool_names,
+            "messages": [m.model_dump(mode="json", exclude_none=True) for m in req.messages],
+            **({"tool_choice": req.tool_choice} if req.tool_choice != "auto" else {}),
+        })  # fmt: skip
+        resp_ref = rec.artifact(f"{seq}-response.json", {
+            "message": resp.message.model_dump(mode="json", exclude_none=True),
+            "usage": resp.usage.model_dump(mode="json"), "served_model": resp.served_model,
+            "finish_reason": resp.finish_reason, "degraded": resp.degraded,
+        })  # fmt: skip
+        rec.emit(
+            ModelCallPayload(call_id=call_id if self.stream else None,
+                             model=_bare_model(resp.model or resp.served_model or "?"),
+                             served_model=resp.served_model, thinking=req.thinking, usage=resp.usage,
+                             **billing(resp), peak=resp.peak, latency_ms=resp.latency_ms,
+                             finish_reason=resp.finish_reason, request_ref=req_ref, response_ref=resp_ref,
+                             display=model_display(resp.message)),
+            role=self.role,
+        )  # fmt: skip
+
+    async def _terminal_at_cap(self, msg: Message, ctx: ToolContext, steps: int) -> LoopOutcome | None:
+        """安全上限在这次调用后触发：回复里若有终止工具（finish / submit_*）就照常执行并接住提交——
+        这次调用在上限之内、已经付费，提交不该丢（W4-14：第 20 次调用里的 submit_review 曾被当成没结论）。"""
+        for call in msg.tool_calls or []:
+            tool = self.registry.get(call.name)
+            if tool is None or not tool.terminal:
+                continue
+            ctx.step_index = self.emitter.next_seq
+            try:
+                result, outcome, duration_ms = await self._timed_dispatch(call, ctx)
+            except (NeedsHuman, SandboxError):
+                return None
+            tool_msg = Message(role="tool", tool_call_id=call.id, name=call.name, content=result.content)
+            seq = self.emitter.next_seq
+            self.emitter.emit(
+                ToolCallPayload(tool=call.name, ok=result.ok, exit_code=result.exit_code, duration_ms=duration_ms,
+                                output_ref=self.emitter.artifact(f"{seq}-output.txt", result.content),
+                                message_ref=self.emitter.artifact(
+                                    f"{seq}-tool.json", tool_msg.model_dump(mode="json", exclude_none=True)),
+                                error_type=result.error_code,
+                                permission=outcome.permission if outcome else None,
+                                permission_rule=outcome.rule if outcome else None,
+                                display=tool_display(call.name, call.arguments, result)),
+                role=self.role,
+            )  # fmt: skip
+            self.messages.append(tool_msg)
+            if not result.ok:
+                return None
+            data = result.data or {}
+            self.seal_dangling(f"本轮已在 {call.name} 处结束（安全上限）")
+            if "finish_report" in data:
+                return LoopOutcome(status="finished", finish=FinishReport.model_validate(data.get("finish_report")),
+                                   steps=steps)  # fmt: skip
+            return LoopOutcome(status="finished", submission=data.get("submission"), steps=steps)
+        return None
 
     def _thrash(self, cm: ContextManager, steps: int) -> LoopOutcome:
         return LoopOutcome(status="context_thrash", steps=steps,
@@ -274,6 +342,7 @@ class AgentLoop:
         seen_reads: set[str] = set()
         steps = 0
         overflow_retried = False
+        forced_note = False
         while True:
             # 上下文管理（spec 007）：先批量清理，仍超线再压缩；两者都会写 context_event
             cleared = cm.maybe_clear(self.messages)
@@ -294,7 +363,19 @@ class AgentLoop:
                 ended = await self._fit_window(cm, steps, ctx, force_compact=False)
                 if ended is not None:
                     return ended
-            req = LLMRequest(role=self.role, messages=list(self.messages), tools=tools, effort=self.effort)
+            # 最后一次允许的调用：强制提交（只对配置了 force_submit 的角色；按轮数上限判断）
+            force = (self.force_submit is not None and self.force_submit in tool_names
+                     and self.guard.turns + 1 >= self.guard.budget.max_turns)  # fmt: skip
+            if force and not forced_note:
+                forced_note = True
+                note = cfg.reminder("final_submit", tool=self.force_submit or "")
+                self.messages.append(Message(role="user", content=note))
+            req = LLMRequest(
+                role=self.role, messages=list(self.messages), tools=tools, effort=self.effort,
+                temperature=None if force else self.temperature,
+                thinking_override=False if force else self.thinking,
+                tool_choice={"type": "function", "function": {"name": self.force_submit}} if force else "auto",
+            )  # fmt: skip
             call_id = f"c{rec.next_seq}"
             writer = DeltaWriter(rec, self.role, call_id) if self.stream else None
             try:
@@ -304,7 +385,15 @@ class AgentLoop:
                         req, guard=self.guard, task_id=ctx.task_id, mode=self.mode, category=self.category, **extra
                     )
             except BudgetExceeded as e:
-                return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
+                resp_at_cap: LLMResponse | None = e.response
+                if resp_at_cap is None:  # 调用前就超限：没有发出请求
+                    return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
+                # 调用后记账才触发上限：这次调用已付费，照样写轨迹，并接住回复里的终止工具
+                steps += 1
+                self._record_call(req, resp_at_cap, call_id, tool_names)
+                self.messages.append(resp_at_cap.message)
+                done = await self._terminal_at_cap(resp_at_cap.message, ctx, steps)
+                return done or LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))
             except ContextOverflow as e:
                 # 估算偏低、厂商报上下文超限：强制压缩后重试一次；再超就结束
                 if writer is not None:
@@ -324,25 +413,7 @@ class AgentLoop:
             overflow_retried = False
             steps += 1
             cm.observe(len(req.messages), resp.usage)
-            seq = rec.next_seq
-            req_ref = rec.artifact(f"{seq}-request.json", {
-                "role": self.role, "thinking": req.thinking, "tools": tool_names,
-                "messages": [m.model_dump(mode="json", exclude_none=True) for m in req.messages],
-            })  # fmt: skip
-            resp_ref = rec.artifact(f"{seq}-response.json", {
-                "message": resp.message.model_dump(mode="json", exclude_none=True),
-                "usage": resp.usage.model_dump(mode="json"), "served_model": resp.served_model,
-                "finish_reason": resp.finish_reason, "degraded": resp.degraded,
-            })  # fmt: skip
-            rec.emit(
-                ModelCallPayload(call_id=call_id if self.stream else None,
-                                 model=_bare_model(resp.model or resp.served_model or "?"),
-                                 served_model=resp.served_model, thinking=req.thinking, usage=resp.usage,
-                                 **billing(resp), peak=resp.peak, latency_ms=resp.latency_ms,
-                                 finish_reason=resp.finish_reason, request_ref=req_ref, response_ref=resp_ref,
-                                 display=model_display(resp.message)),
-                role=self.role,
-            )  # fmt: skip
+            self._record_call(req, resp, call_id, tool_names)
             self.messages.append(resp.message)
             # 客户端在 record() 里已检查上限；这里再查一次，覆盖不经 LLMClient 的路由
             try:

@@ -221,3 +221,13 @@ def test_deepseek_default_applies_runconfig_executor() -> None:
     route = r.route_for("executor")
     assert route.thinking is False and route.effort is None
     assert Router.deepseek_default().route_for("executor").thinking is True
+
+
+async def test_thinking_override_beats_route() -> None:
+    """W4-14 默认评审 checklist：请求显式关思考时不被路由的 thinking=true 覆盖；None 时沿用路由。"""
+    fc = FakeClient()
+    r = Router.from_config({"deepseek": fc})
+    await r.complete(_req("reviewer").model_copy(update={"thinking_override": False, "temperature": 1.0}))
+    await r.complete(_req("reviewer"))
+    assert (fc.calls[0][1].thinking, fc.calls[0][1].temperature) == (False, 1.0)
+    assert fc.calls[1][1].thinking is True

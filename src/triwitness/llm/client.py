@@ -14,7 +14,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 
-from triwitness.core.errors import ConfigError
+from triwitness.core.errors import BudgetExceeded, ConfigError
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.cost.ledger import GlobalLedger
 from triwitness.llm.adapter import ModelAdapter, ModelPolicy
@@ -123,5 +123,10 @@ class LLMClient:
                 at=at,
             )
         if guard is not None:
-            guard.record(resp.usage, resp.cost_cny)
+            try:
+                guard.record(resp.usage, resp.cost_cny)
+            except BudgetExceeded as e:
+                # 这次调用已付费、已记账：把回复带给调用方，让轨迹 / 结果和账本对得上（W4-14 记账缺口）
+                e.response = resp
+                raise
         return resp

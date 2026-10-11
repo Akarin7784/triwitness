@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sqlite3
 import statistics
 import sys
@@ -35,7 +36,9 @@ ORDER = ["same", "adversarial", "checklist_t03", "checklist_t10", "consensus_t03
 TOL = 3
 
 
-def ledger_by_run(bundle: Path) -> dict[str, dict[str, Any]]:
+def ledger_by_run(bundle: Path, existing: dict[str, dict[str, Any]] | None = None) -> dict[str, dict[str, Any]]:
+    """每次运行的账本汇总。task_id 优先取结果 JSON（第二轮起写入），其次取轨迹第一行；都没有就沿用已入库的记录
+    （第二轮结果包只带没结论那几次的轨迹，第一轮的对账已在 ledger_by_run.json 里）。"""
     con = sqlite3.connect(bundle / "ledger.sqlite")
     led = {
         t: {"calls": n, "cost_cny": round(c, 6), "first_ts": a, "last_ts": b, "peak_calls": p}
@@ -44,11 +47,17 @@ def ledger_by_run(bundle: Path) -> dict[str, dict[str, Any]]:
             " where category = 'reviewer-ablation' group by task_id"
         )
     }
-    out: dict[str, dict[str, Any]] = {}
-    for traj in sorted((bundle / "ablation" / "runs").glob("*/trajectory.jsonl")):
-        with traj.open(encoding="utf-8") as fh:
-            tid = json.loads(fh.readline())["task_id"]
-        out[traj.parent.name] = led[tid]
+    out: dict[str, dict[str, Any]] = dict(existing or {})
+    for p in sorted((bundle / "ablation" / "results").glob("*.json")):
+        tid = json.loads(p.read_text(encoding="utf-8")).get("task_id")
+        traj = bundle / "ablation" / "runs" / p.stem / "trajectory.jsonl"
+        if tid is None and traj.is_file():
+            with traj.open(encoding="utf-8") as fh:
+                tid = json.loads(fh.readline())["task_id"]
+        if tid is not None and tid in led:
+            out[p.stem] = led[tid]
+        elif p.stem not in out:
+            raise SystemExit(f"{p.stem}：结果里没有 task_id、也没有轨迹和已入库记录，无法对账")
     return out
 
 
@@ -69,6 +78,7 @@ def load(d: Path) -> dict[str, list[dict[str, Any]]]:
         r["hit"] = bool(c.get("hit"))
         r["block"] = bool(c.get("blocked")) if r["kind"] == "defect" else bool(c.get("fp"))
         r["led"] = led[f"{r['item']}__{r['arm']}__r{r['rep']}"]
+        r["last_call"] = bool(r.get("verdict_on_last_call"))
         by.setdefault(r["arm"], []).append(r)
     adv = {(r["item"], r["rep"]): r for r in by.get("adversarial", [])}
     for ck in [a for a in list(by) if a.startswith("checklist_")]:
@@ -143,15 +153,77 @@ def analyse(by: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, Any], str]:
             cells.append(f"{k}/{n}（{lo:.0%}–{hi:.0%}）")
         md.append(f"| {cat} | {n} | " + " | ".join(cells) + " |")
     # 保守口径下的配对比较（干净题：没结论也算误报）
-    res = {a: {r["item"]: not r["cons_block"] for r in by[a] if r["kind"] == "clean"} for a in arms}
+    res = {a: {f"{r['item']}#r{r['rep']}": not r["cons_block"] for r in by[a] if r["kind"] == "clean"} for a in arms}
     order = {"adversarial": res.pop("adversarial"), **res}
     md += ["", "保守口径 · 干净补丁放行，对 adversarial 配对（McNemar + Holm + 配对 bootstrap）：", "",
            render_rows(compare(order, "adversarial"), unit="放行")]  # fmt: skip
-    n_items = summary[arms[0]]["n_defect"]
+    n_items = len({r["item"] for r in by[arms[0]] if r["kind"] == "defect"})
     mde1, mde3 = mde_paired(n_items), mde_paired(3 * n_items)
     md += ["", f"每臂 {n_items} 道缺陷题 / {n_items} 道干净题、各 1 次：配对检验在 80% 功效下大约要差 {mde1:.0%} "
            f"才看得出（mde_paired，不一致率按 20% 估）；3 次重复约 {mde3:.0%}。"]  # fmt: skip
-    return {"arms": summary, "by_category": per_cat, "tol": TOL}, "\n".join(md) + "\n"
+    data: dict[str, Any] = {"arms": summary, "by_category": per_cat, "tol": TOL}
+    reps_md, reps_data = _repeats(by)
+    if reps_md:
+        md += reps_md
+        data["repeats"] = reps_data
+    return data, "\n".join(md) + "\n"
+
+
+def _cluster_diff(a: dict[str, list[bool]], b: dict[str, list[bool]], n: int = 10_000) -> tuple[float, float, float]:
+    """按题聚类的配对 bootstrap：重抽“题”（同题的几次重复一起进出），统计 b − a 的比例差。"""
+    items = sorted(set(a) & set(b))
+    rng = random.Random(0)
+
+    def diff(sample: list[str]) -> float:
+        xa = [v for it in sample for v in a[it]]
+        xb = [v for it in sample for v in b[it]]
+        return sum(xb) / len(xb) - sum(xa) / len(xa)
+
+    stats = sorted(diff([rng.choice(items) for _ in items]) for _ in range(n))
+    return diff(items), stats[int(0.025 * n)], stats[int(0.975 * n) - 1]
+
+
+def _repeats(by: dict[str, list[dict[str, Any]]]) -> tuple[list[str], dict[str, Any]]:
+    """有重复（rep ≥ 1）的臂：逐次稳定性、按题聚类的差值区间，以及按第一轮口径（最后一次调用里的提交算没结论）复算。"""
+    arms = [a for a in ("adversarial", "checklist_t10") if a in by and len({r["rep"] for r in by[a]}) > 1]
+    if not arms:
+        return [], {}
+    md = ["", "## 重复（按次与按题聚类）", "", "| 臂 | 次 | 检出 | 误报 | 没下结论 | 最后一次调用才提交 |",
+          "|---|---|---|---|---|---|"]  # fmt: skip
+    data: dict[str, Any] = {"per_rep": {}}
+    for arm in arms:
+        for rep in sorted({r["rep"] for r in by[arm]}):
+            rs = [r for r in by[arm] if r["rep"] == rep]
+            d = [r for r in rs if r["kind"] == "defect"]
+            c = [r for r in rs if r["kind"] == "clean"]
+            row = {"hit": sum(r["hit"] for r in d), "n_defect": len(d), "fp": sum(r["block"] for r in c),
+                   "n_clean": len(c), "no_verdict": sum(not r["ok"] for r in rs),
+                   "last_call": sum(r["last_call"] for r in rs)}  # fmt: skip
+            data["per_rep"][f"{arm}#r{rep}"] = row
+            md.append(f"| {arm} | r{rep} | {_w(row['hit'], len(d))} | {_w(row['fp'], len(c))} | "
+                      f"{row['no_verdict']} | {row['last_call']} |")  # fmt: skip
+    if len(arms) == 2:
+
+        def per_item(arm: str, kind: str, key: str, legacy: bool = False) -> dict[str, list[bool]]:
+            out: dict[str, list[bool]] = {}
+            for r in by[arm]:
+                if r["kind"] != kind:
+                    continue
+                v = bool(r[key]) and not (legacy and r["last_call"])  # 第一轮口径：最后一次才提交 = 没结论
+                out.setdefault(r["item"], []).append(v if kind == "defect" else not v)
+            return out
+
+        md += ["", "checklist_t10 − adversarial（按题聚类 bootstrap 95%，越高越好）：", "",
+               "| 指标 | 口径 | 差值 | 区间 |", "|---|---|---|---|"]  # fmt: skip
+        for kind, key, title in (("defect", "hit", "检出"), ("clean", "block", "干净放行")):
+            for legacy in (False, True):
+                d0, lo, hi = _cluster_diff(per_item("adversarial", kind, key, legacy),
+                                           per_item("checklist_t10", kind, key, legacy))  # fmt: skip
+                tag = "第一轮口径" if legacy else "当前"
+                data[f"diff_{key}{'_legacy' if legacy else ''}"] = [round(d0, 4), round(lo, 4), round(hi, 4)]
+                md.append(f"| {title} | {tag} | {d0:+.0%} | {lo:+.0%}～{hi:+.0%} |")
+        md.append("\n区间不含 0 才算有差异；同一题的几次重复不独立，所以按题重抽。")
+    return md, data
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -160,9 +232,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bundle", type=Path, help="解压后的结果包目录（生成 ledger_by_run.json）")
     a = ap.parse_args(argv)
     if a.bundle:
-        (a.dir / "ledger_by_run.json").write_text(
-            json.dumps(ledger_by_run(a.bundle), ensure_ascii=False, indent=1), encoding="utf-8"
-        )
+        led_path = a.dir / "ledger_by_run.json"
+        existing = json.loads(led_path.read_text(encoding="utf-8")) if led_path.is_file() else None
+        led_path.write_text(json.dumps(ledger_by_run(a.bundle, existing), ensure_ascii=False, indent=1),
+                            encoding="utf-8")  # fmt: skip
     data, md = analyse(load(a.dir))
     (a.dir / "posthoc.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     (a.dir / "posthoc.md").write_text("# 评审者消融 · 事后分析\n\n" + md, encoding="utf-8")

@@ -47,6 +47,16 @@ powershell -ExecutionPolicy Bypass -File scripts\windows\run-reviewer-ablation.p
 powershell -ExecutionPolicy Bypass -File scripts\windows\run-reviewer-ablation.ps1          # 全量 160 次
 ```
 
+第二轮（Eva 2026-10-12 定）：只跑 adversarial 与 checklist_t10，补两次重复（与第一轮 r0 合计 3 次），约 ¥10：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\windows\run-reviewer-ablation.ps1 -Arms adversarial,checklist_t10 -Repeats 3
+```
+
+`-Repeats N` 是每题每臂一共 N 次（r0..r{N-1}），已有结果按文件名跳过；`-OutDir` 里找不到第一轮 r0 会拒绝运行（加 `-Force` 才重跑 r0）。
+消融里关掉了编排器默认的“最后一次强制提交”，与第一轮协议一致；结果 JSON 多了 `task_id`（对账）与 `verdict_on_last_call`。
+结果包默认只带没下结论 / 出错那几次的轨迹（`bundle --all-runs` 带全部）。
+
 脚本会克隆 / 更新仓库 → 构建 `evals/reviewer/Dockerfile` 镜像（构建时下载基线源码）→ 在容器里并发跑 → 评分 → 把结果、轨迹和账本打成 `%USERPROFILE%\tw-ablation-out\reviewer-ablation-<时间>.zip`。密钥只经 `docker run -e DEEPSEEK_API_KEY` 透传，不进镜像和结果包。中断后重跑同一命令会跳过已完成的题。
 
 ### 在 Linux / box 上

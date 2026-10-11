@@ -101,6 +101,7 @@ class TaskResult:
     review: ReviewResult | None = None  # 最后一轮评审
     review_rounds: int = 0  # 评审返工次数
     unresolved_blockers: int = 0  # 返工到上限后仍未解决的阻断问题
+    review_inconclusive: bool = False  # 评审强制提交后仍没有结论（不当成通过；评测里记为未解决）
     states: list[str] | None = None  # 本次迁移序列（审计 / 测试）
     pr: PrRef | None = None  # W5：开出的 PR
     ci: CiResult | None = None  # W5：最后一轮 CI 结果
@@ -313,6 +314,7 @@ class InProcessOrchestrator:
         verification: PipelineResult | None = None
         review: ReviewResult | None = None
         rounds = review_rounds = unresolved = 0
+        inconclusive = False
         rc = cfg.orchestration.reviewer
         while status == "done" and outcome.finish is not None:
             patch = await self._diff(base_ref)
@@ -344,16 +346,19 @@ class InProcessOrchestrator:
                 status, final, label = classify(outcome)
                 continue
             unresolved = blockers if review.blocking else 0
+            inconclusive = review.inconclusive
             if verification is not None:
                 verification = verification.with_review(
                     findings=review.findings, review_model=review.model, review_variant=review.variant,
                     vendor_policy=getattr(self.router, "vendor_policy", "single_vendor"),
-                    unresolved_blockers=unresolved, cost=self.ledger.report(),
+                    unresolved_blockers=unresolved, reviewer_inconclusive=inconclusive, cost=self.ledger.report(),
                 )  # fmt: skip
                 self.rec.artifact(f"evidence-{rounds}-reviewed.json", verification.evidence.model_dump(mode="json"))
                 self.rec.artifact(f"pr-{rounds}-reviewed.md", verification.pr_body)
             if unresolved:
                 label = f"完成（评审仍有 {unresolved} 个阻断问题）"
+            if inconclusive:  # 没有结论 ≠ 通过（Eva 2026-10-12 01:01）：交互要人确认，评测记为未解决
+                status, final, label = await self._settle_inconclusive(verification)
             break
 
         # ---- 收尾
@@ -398,7 +403,8 @@ class InProcessOrchestrator:
         return TaskResult(status=status, outcome=outcome, diff=diff, cost=cost, finish=outcome.finish,
                           repro_status=repro_status, verification=verification, verify_rounds=rounds,
                           prepared=prepared, plan=plan, review=review, review_rounds=review_rounds,
-                          unresolved_blockers=unresolved, states=self._states(), pr=pr_ref, ci=ci)  # fmt: skip
+                          unresolved_blockers=unresolved, review_inconclusive=inconclusive, states=self._states(),
+                          pr=pr_ref, ci=ci)  # fmt: skip
 
     # ---------------------------------------------------------------- 角色
     def _on_repro_accepted(self, check: dict[str, Any]) -> None:
@@ -435,12 +441,13 @@ class InProcessOrchestrator:
         blockers = sum(1 for f in res.findings if f.severity == "blocker")
         shown = (("有阻断问题 " + str(blockers) if res.blocking else "通过")
                  + f" · {len(res.findings)} 条发现" + (" · 共识" if res.consensus else "")
-                 if res.concluded else "评审无结论（未提交）")  # fmt: skip
+                 if not res.inconclusive else "评审无结论（强制提交后仍未提交）")  # fmt: skip
         self.rec.emit(ReviewPayload.model_validate({
             "model": res.model, "variant": res.variant,
             "vendor_policy": getattr(self.router, "vendor_policy", "single_vendor"),
             "findings": [f.model_dump(mode="json") for f in res.findings], "display": f"评审{shown}",
             "blocking": res.blocking, "round": round_ + 1, "consensus": res.consensus,
+            "inconclusive": res.inconclusive,
             "paths": {r.variant: r.path[:120] for r in res.reviews},
         }), role="reviewer")  # fmt: skip
         return res
@@ -576,6 +583,33 @@ class InProcessOrchestrator:
         if outcome.finish is not None:
             lines += ["## 执行者自述", outcome.finish.summary]
         return "\n".join(lines)
+
+    async def _settle_inconclusive(self, verification: PipelineResult | None) -> tuple[FinishStatus, TaskState, str]:
+        """评审无结论：评测 → 保留改动、记为未解决（不算 agent 声称成功）；交互 → 审批卡问人，同意才算完成，
+        拒绝 → FAILED，没有审批通道 → NEEDS_HUMAN（可续跑）。风险下限 L2 已由 with_review 写进证据包。"""
+        if self.mode == "eval":
+            return "done", S.DONE, "完成（评审无结论，记为未解决）"
+        risk = verification.evidence.risk_level if verification is not None else "L2"
+        rid = new_hitl_id()
+        req = ApprovalRequestedPayload(
+            request_id=rid, tool="ReviewInconclusive",
+            action="评审在强制提交后仍没有给出结论。改动已保留在工作区，请人工看过 diff 后决定是否接受。",
+            reason="评审无结论：不能当成通过（spec 010 §6.2）", risk=risk,  # type: ignore[arg-type]
+            options=["allow_once", "deny"], display=clip(f"待批 · 评审无结论 · 风险 {risk} · 接受这次改动？"),
+        )  # fmt: skip
+        self.rec.emit(req)
+        decision = await self.approver(req) if self.approver is not None else None
+        if decision is None:
+            return "needs_human", S.NEEDS_HUMAN, "评审无结论 · 等待人工复核"
+        ok = decision.decision == "allow"
+        self.rec.emit(ApprovalResolvedPayload(
+            request_id=rid, decision=decision.decision, by="user", comment=decision.comment,
+            display="已人工接受（评审无结论）" if ok else clip("未接受改动" + (
+                f"：{decision.comment}" if decision.comment else "")),
+        ))  # fmt: skip
+        if ok:
+            return "done", S.DONE, "完成（评审无结论，已人工确认）"
+        return "failed", S.FAILED, "评审无结论，人工未接受改动"
 
     async def _approve_pr(self, risk: str, kind: str, title: str, body: str) -> Literal["approve", "reject",
                                                                                          "needs_human"]:  # fmt: skip

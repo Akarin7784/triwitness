@@ -98,8 +98,12 @@ class ReviewerConfig(BaseModel):
     enabled: bool = False
     max_rounds: int = Field(default=2, ge=0)  # blocker → 返工的次数上限（CC Stop hook 式“有上限的不许停”）
     max_turns: int = Field(default=20, gt=0)
-    consensus: bool = False  # 两个异构变体都给 blocker 才阻断（行业扫描建议，可选）
+    consensus: bool = False  # 两个异构变体都给 blocker 才阻断（行业扫描建议，可选；W4-14 不建议默认开）
     max_diff_chars: int = Field(default=60_000, gt=0)
+    # 单评审用哪个变体（共识模式固定 adversarial + checklist）。W4-14 消融后 Eva 2026-10-12 01:01 定为 checklist
+    # （flash 非思考 temperature 1.0 + 清单式提示）
+    variant: Literal["adversarial", "checklist", "plain"] = "checklist"
+    force_submit: bool = True  # 最后一次允许的调用强制 submit_review（关思考）；W4-14 消融脚本关掉以保持协议可比
 
 
 class PlanApprovalConfig(BaseModel):
@@ -260,6 +264,8 @@ class HarnessConfig(BaseModel):
         defaults = {
             "no_tool": "请调用工具继续，或调用 finish 结束。",
             "wrap_up": "预算已用到警戒线，请尽快收尾。",
+            "final_submit": "这是最后一次调用：现在必须调用 {tool} 提交结论"
+            "（拿不准的写进 summary 或 findings），不能再调用其他工具。",
             "repeat": "你在重复同样的动作（{detail}），请换个思路。",
             "failures": "连续多次工具调用失败（{detail}），请换一种做法。",
             "no_progress": "已经 {detail}，请修改代码、运行测试或调用 finish。",

@@ -18,6 +18,13 @@
   .\run-reviewer-ablation.ps1 -Smoke            # 先冒烟：2 题 × 4 臂，约 ¥0.1
 .EXAMPLE
   .\run-reviewer-ablation.ps1 -Parallel 3 -Repeats 2
+.EXAMPLE
+  # 第二轮（Eva 2026-10-12）：只跑 adversarial 与 checklist_t10，补 r1、r2 两次重复（已有的 r0 自动跳过），约 ¥10
+  .\run-reviewer-ablation.ps1 -Arms adversarial,checklist_t10 -Repeats 3
+
+.NOTES
+  -Repeats N 表示每题每臂一共 N 次（r0..r{N-1}），不是“再加 N 次”；已有结果按文件名跳过，所以可随时中断重跑。
+  结果包默认只带没下结论 / 出错那几次的轨迹（全部轨迹太大，上传会超限）；结果 JSON 和账本全带。
 #>
 [CmdletBinding()]
 param(
@@ -31,6 +38,7 @@ param(
   [string]$Items = "",
   [string]$PipIndex = "",
   [switch]$Smoke,
+  [switch]$Force,
   [switch]$AllowPeak,
   [switch]$NoPull
 )
@@ -90,6 +98,16 @@ try { & docker @buildArgs; if ($LASTEXITCODE -ne 0) { Fail "docker build 失败"
 
 # ---- 3. 运行 ------------------------------------------------------------------
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+# 续跑 / 补重复前先数一下已有结果：-Repeats > 1 却找不到第一轮（r0）的结果，多半是换了 -OutDir 或删过目录，
+# 那样会把 r0 也重跑一遍（多花钱）——要求显式 -Force
+$resDir = Join-Path $OutDir "ablation\results"
+$armList = @($Arms.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$have = @(Get-ChildItem -Path $resDir -Filter "*.json" -ErrorAction SilentlyContinue)
+$haveR0 = @($have | Where-Object { $n = $_.BaseName; ($armList | Where-Object { $n -like "*__$($_)__r0" }) })
+Write-Host ("已有结果 {0} 条（其中所选臂的 r0：{1} 条），已完成的会跳过" -f $have.Count, $haveR0.Count)
+if ($Repeats -gt 1 -and -not $Smoke -and -not $Items -and $haveR0.Count -lt 40 * $armList.Count -and -not $Force) {
+  Fail ("在 $resDir 只找到 {0} / {1} 条第一轮（r0）结果，会重跑 r0。确认要重跑请加 -Force" -f $haveR0.Count, (40 * $armList.Count))
+}
 $runArgs = @("--arms", $Arms, "--repeats", "$Repeats", "--parallel", "$Parallel")
 if ($Smoke) { $runArgs += @("--items", "d01-defect,d01-clean") }
 elseif ($Items) { $runArgs += @("--items", $Items) }

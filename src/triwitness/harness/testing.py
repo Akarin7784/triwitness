@@ -8,7 +8,7 @@ from collections.abc import Callable
 from itertools import count
 from typing import Any
 
-from triwitness.core.errors import SandboxError
+from triwitness.core.errors import BudgetExceeded, SandboxError
 from triwitness.core.models import Usage
 from triwitness.cost.guard import TaskBudgetGuard
 from triwitness.llm.types import LLMRequest, LLMResponse, Message, ToolCallSpec
@@ -53,7 +53,11 @@ class FakeRouter:
                            finish_reason="tool_calls" if msg.tool_calls else "stop", model="deepseek-flash",
                            cost_cny=self.cost_cny, peak=False, latency_ms=self.latency_ms)  # fmt: skip
         if guard is not None:
-            guard.record(self.usage, self.cost_cny)
+            try:
+                guard.record(self.usage, self.cost_cny)
+            except BudgetExceeded as e:
+                e.response = resp  # 与 LLMClient 一致：超限那次调用的回复随异常带回
+                raise
         return resp
 
 

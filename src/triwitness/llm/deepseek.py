@@ -76,7 +76,12 @@ class DeepSeekAdapter:
             payload["reasoning_effort"] = req.effort
         if has_tools:
             payload["tools"] = req.tools
-            payload["tool_choice"] = req.tool_choice
+            choice = req.tool_choice
+            if req.thinking and choice not in ("auto", "none"):
+                # 思考模式只接受 auto / none（强制工具会 HTTP 400）；强制提交要由调用方关思考
+                log.debug("DeepSeek 思考模式不支持强制 tool_choice，已改为 auto")
+                choice = "auto"
+            payload["tool_choice"] = choice
         if req.max_output_tokens:
             payload["max_tokens"] = req.max_output_tokens
         if req.temperature is not None:

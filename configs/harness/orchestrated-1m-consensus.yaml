@@ -1,5 +1,5 @@
-# W4 多角色编排 + 双评审共识（spec 010 §6.3）：adversarial 与 checklist 两个同厂商变体，
+# W4 多角色编排 + 双评审共识（spec 010 §6.3，可选，默认不用）：adversarial 与 checklist（非思考 t=1.0）两个同厂商变体，
 # 两边都报 blocker 才算阻断（单边 blocker 降为 major，写进发现但不返工）。全部 deepseek-flash。
 extends: orchestrated-1m.yaml
 orchestration:
-  reviewer: {enabled: true, max_rounds: 2, max_turns: 20, consensus: true}
+  reviewer: {enabled: true, max_rounds: 2, max_turns: 20, consensus: true, force_submit: true}

@@ -21,6 +21,7 @@
 - **W5 第二批（桌面端不改）**：CI 修复返工后先重跑验证器再推送（验证不过不推送）；L0 仍确认；不建新仓库。扩充任务集 ext（加固构建，冻结套件 `ext.yaml`，dev / test 不动）。Harbor 集成：`TriWitnessAgent` + `HarborSandbox`，TB2 10 题子集脚本 `scripts/windows/run-harbor-tb2.ps1`（WSL2，待 Eva 本机跑）。
 - **W5 第二批真实 key 花费（2026-10-11 23:3x UTC+8，周日空闲价，deepseek-flash，高峰调用 0）**：Harbor 实测 1 题 ¥0.0126（box 账本，类别 harbor-external）；其余离线。
 - **W4-14 评审者消融全量（Eva 本机，2026-10-11 23:52–00:26 UTC+8，空闲价，高峰调用 0，账本 ¥8.715）**：160 次评审全部完成，结果入库 `evals/baselines/2026-10-12-reviewer-ablation/`。checklist_t10 检出 90%、误报 25%，花费和耗时约为 adversarial 的 1/3；各臂差异都不显著。建议默认评审改 checklist_t10、共识保持关闭，待 Eva 定；另需修“评审没下结论 = 放行”（占 14%）。桌面端不用改。
+- **Eva 01:01 决定落地（核心）**：默认评审改 checklist（flash 非思考 t=1.0），共识默认关；评审最后一次调用强制提交，仍无结论标 `reviewer_inconclusive`（交互弹审批卡 `ReviewInconclusive`，评测记未解决）；修复“上限那次调用不进轨迹”的记账缺口。box 真实调用 1 次 ¥0.0015（验证关思考 + 强制 tool_choice 可用）。桌面端：审批卡是通用的，`ReviewInconclusive` 直接复用，不用改。W4-14 第二轮脚本已备好，待 Eva 本机跑（约 ¥10）。
 - **W5 第一批真实 key 花费（2026-10-11 23:0x UTC+8，周日空闲价，deepseek-flash，高峰调用 0）**：OFAT 容器冒烟 1 题 ¥0.0083（容器账本）；其余全部离线测试。清掉 1.4 GB 的 `tw-reviewer-ablation` 镜像等（磁盘 12%）。
 - **延后（Eva 21:36）**：“模型自动审批”（auto_review）权限模式的专门实测，本轮不做。
 - 按 Eva 19:39：**本版先不打包**，不取 CI 安装包。

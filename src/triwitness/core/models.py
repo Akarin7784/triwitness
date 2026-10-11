@@ -339,6 +339,8 @@ class Evidence(_Model):
     criteria_results: dict[str, Literal["met", "unmet", "unknown"]]
     review_model: str | None = None
     review_variant: str | None = None  # v0.1 同厂商异构评审的变体名
+    # 评审是否给出结论（W4-14 后）：inconclusive = 强制提交后仍没结论，风险下限 L2，不当成通过；None = 没跑评审
+    review_status: Literal["concluded", "inconclusive"] | None = None
     vendor_policy: VendorPolicy = "single_vendor"
     findings: list[Finding] = Field(default_factory=list)
     risk_score: int

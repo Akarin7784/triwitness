@@ -1,5 +1,9 @@
 """结构化异常。给模型看的错误要说明“错在哪、怎么改”。"""
 
+from __future__ import annotations
+
+from typing import Any
+
 
 class TriWitnessError(Exception):
     """所有 TriWitness 异常的基类。"""
@@ -37,6 +41,8 @@ class BudgetExceeded(TriWitnessError):
         self.limit = limit
         self.used = used
         self.cap = cap
+        # 调用后记账才触发上限时，那次已付费调用的 LLMResponse（调用方据此写轨迹、接住终止工具的提交）
+        self.response: Any = None
 
 
 class SandboxError(TriWitnessError):

@@ -40,6 +40,8 @@ class LLMRequest(BaseModel):
     tools: list[dict[str, Any]] | None = None  # OpenAI function 格式；调用方应按名称排序保证前缀稳定
     tool_choice: Literal["auto", "none", "required"] | dict[str, Any] = "auto"
     thinking: bool = True
+    # 角色变体覆盖路由的思考开关（W4-14：默认评审 checklist 非思考）；None = 用路由配置
+    thinking_override: bool | None = None
     effort: Literal["low", "high", "max"] | None = None
     temperature: float | None = None  # 思考模式下会被丢弃
     max_output_tokens: int | None = None

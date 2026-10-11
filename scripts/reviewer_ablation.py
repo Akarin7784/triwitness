@@ -188,6 +188,7 @@ def _arm_router(arm: Arm) -> Any:
         async def complete(self, req: Any, **kw: Any) -> Any:  # type: ignore[override]
             upd: dict[str, Any] = {}
             if req.role == "reviewer":
+                upd["thinking_override"] = arm.thinking  # 臂的定义优先于变体默认（checklist 默认已是非思考 t=1.0）
                 if arm.temperature is not None:
                     upd["temperature"] = arm.temperature
                 if arm.thinking and arm.effort:
@@ -229,11 +230,15 @@ async def _one_job(
         "arm": arm.name,
         "rep": rep,
         "model": MODEL,
+        "task_id": rec.task_id,  # 账本 calls.task_id，事后按次对账用
     }
     try:
         diff = git("diff", "HEAD~1", "HEAD", cwd=repo)
         issue = (ITEMS / it["id"] / "issue.md").read_text(encoding="utf-8")
         cfg = HarnessConfig.default()
+        # 与第一轮（2026-10-12）协议一致：不强制最后一次提交，便于把重复结果合并（编排器默认是强制提交）
+        cfg.orchestration.reviewer.force_submit = False
+        row["max_turns"] = cfg.orchestration.reviewer.max_turns
         ctx = ToolContext(sandbox=sb, task_id=rec.task_id, run_id=run_id)
         vr = await run_variant(
             arm.variant,  # type: ignore[arg-type]
@@ -264,6 +269,9 @@ async def _one_job(
     for k in ("input_tokens", "cache_hit_tokens", "output_tokens"):
         row[k] = sum(int((e.payload.get("usage") or {}).get(k) or 0) for e in calls)
     row["models"] = sorted({str(e.payload.get("model")) for e in calls})
+    # 在最后一次允许的调用里才提交：第一轮（c6e32c0）这种情况会因记账后抛上限而丢掉提交、记成没结论；
+    # 合并重复时据此可以按第一轮口径复算（见 reviewer_ablation_posthoc.py）
+    row["verdict_on_last_call"] = bool(row.get("verdict")) and len(calls) >= int(row.get("max_turns") or 0) > 0
     row["elapsed_s"] = round(time.monotonic() - t0, 1)
     res_path.write_text(json.dumps(row, ensure_ascii=False, indent=1), encoding="utf-8")
     tag = row["verdict"] or ("ERR " + (row["error"] or ""))[:60]
@@ -480,15 +488,27 @@ def _paired_sections(by: dict[str, list[dict[str, Any]]]) -> list[str]:
 # ---------------------------------------------------------------- bundle
 
 
-def cmd_bundle(out: Path, ledger: Path | None) -> Path:
+def cmd_bundle(out: Path, ledger: Path | None, all_runs: bool = False) -> Path:
     stamp = datetime.now(BJ).strftime("%Y%m%d-%H%M")
     dest = out.parent / f"reviewer-ablation-{stamp}.zip"
     ledger = ledger or Path(os.environ.get("TW_HOME", Path.home() / ".triwitness")) / "ledger.sqlite"
+    # 轨迹很大（160 次约 164 MB）：默认只打包没下结论 / 出错的运行，结果 JSON 全部打包（--all-runs 打全部）
+    keep: set[str] | None = None
+    if not all_runs:
+        keep = set()
+        for p in sorted((out / "results").glob("*.json")) if (out / "results").is_dir() else []:
+            r = json.loads(p.read_text(encoding="utf-8"))
+            if r.get("verdict") is None or r.get("error") or r.get("verdict_on_last_call"):
+                keep.add(p.stem)
     with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
         for sub in ("results", "runs"):
             for p in sorted((out / sub).rglob("*")) if (out / sub).is_dir() else []:
-                if p.is_file() and "/.tw/" not in p.as_posix():
-                    z.write(p, f"ablation/{p.relative_to(out).as_posix()}")
+                if not p.is_file() or "/.tw/" in p.as_posix():
+                    continue
+                rel = p.relative_to(out)
+                if sub == "runs" and keep is not None and rel.parts[1] not in keep:
+                    continue
+                z.write(p, f"ablation/{rel.as_posix()}")
         for name in ("report.md", "summary.json", "findings.csv", "run.log", "env.json"):
             if (out / name).is_file():
                 z.write(out / name, f"ablation/{name}")
@@ -518,6 +538,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--tol", type=int, default=3)
         if name == "bundle":
             p.add_argument("--ledger", type=Path)
+            p.add_argument("--all-runs", action="store_true", help="打包全部轨迹（默认只打包没下结论 / 出错的）")
     a = ap.parse_args(argv)
     out = a.out.resolve()
     only = a.items.split(",") if getattr(a, "items", None) else None
@@ -539,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
     elif a.cmd == "score":
         cmd_score(out, a.tol)
     else:
-        cmd_bundle(out, a.ledger)
+        cmd_bundle(out, a.ledger, a.all_runs)
     return 0
 
 

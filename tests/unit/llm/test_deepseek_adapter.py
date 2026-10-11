@@ -88,3 +88,15 @@ def test_parse_tool_call_and_reasoning() -> None:
 def test_served_model_drift_flagged() -> None:
     raw = _fixture("text_nonthinking")["response"] | {"model": "deepseek-v4-pro"}
     assert A.parse_response(raw).degraded == ["served_model_drift:deepseek-v4-pro"]
+
+
+def test_forced_tool_choice_only_without_thinking() -> None:
+    """DeepSeek 思考模式只接受 auto / none：强制工具降级为 auto（不让请求 400）；非思考原样发送。"""
+    forced = {"type": "function", "function": {"name": "get_weather"}}
+    msgs = [Message(role="user", content="q")]
+    think = A.build_request("deepseek-flash", LLMRequest(role="reviewer", messages=msgs, tools=[cases.WEATHER_TOOL],
+                                                         tool_choice=forced, thinking=True))  # fmt: skip
+    plain = A.build_request("deepseek-flash", LLMRequest(role="reviewer", messages=msgs, tools=[cases.WEATHER_TOOL],
+                                                         tool_choice=forced, thinking=False))  # fmt: skip
+    assert think["tool_choice"] == "auto"
+    assert plain["tool_choice"] == forced and plain["thinking"] == {"type": "disabled"}

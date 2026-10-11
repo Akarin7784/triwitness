@@ -3,7 +3,9 @@
 extends: long-context-1m.yaml
 orchestration:
   planner: {enabled: true, max_turns: 30}
-  reviewer: {enabled: true, max_rounds: 2, max_turns: 20, consensus: false}
+  # 默认评审 = checklist（flash 非思考 t=1.0 + 清单式提示）；共识关（Eva 2026-10-12 01:01，W4-14 消融）。
+  # force_submit：最后一次调用强制 submit_review；仍无结论 → 证据包 reviewer_inconclusive，不静默放行
+  reviewer: {enabled: true, max_rounds: 2, max_turns: 20, consensus: false, variant: checklist, force_submit: true}
   plan_approval:
     min_risk: L2              # §11 Q1：待 Eva 拍板（更保守可改 L1）
     on_open_questions: true

@@ -116,3 +116,47 @@ async def test_arm_router_flash_only_and_sampling(monkeypatch: pytest.MonkeyPatc
     await r.complete(LLMRequest(role="reviewer", messages=[]))
     req, route = seen[-1]
     assert req.effort == "max" and route.thinking is True and req.temperature is None
+
+
+async def test_arm_router_forces_arm_thinking_over_variant_default() -> None:
+    """第二轮与第一轮可比：臂定义的思考开关覆盖变体默认（checklist 默认非思考，adversarial 臂必须思考）。"""
+    from triwitness.llm.types import LLMRequest, Message
+
+    seen: list[Any] = []
+
+    class _Client:
+        async def complete(self, req: Any, model: str, **kw: Any) -> Any:
+            from triwitness.llm.types import LLMResponse
+
+            seen.append(req)
+            from triwitness.core.models import Usage
+
+            return LLMResponse(message=Message(role="assistant", content="x"), raw={}, source="fake", usage=Usage(),
+                               served_model="fake", finish_reason="stop")  # fmt: skip
+
+    for arm in ("adversarial", "checklist_t10"):
+        r = ab._arm_router(ab.ARMS[arm])
+        r.clients = {"deepseek": _Client()}
+        await r.complete(LLMRequest(role="reviewer", messages=[Message(role="user", content="q")],
+                                    thinking_override=False))  # fmt: skip
+    assert (seen[0].thinking, seen[0].effort) == (True, "max")
+    assert (seen[1].thinking, seen[1].temperature) == (False, 1.0)
+
+
+def test_bundle_keeps_only_inconclusive_trajectories(tmp_path: Path) -> None:
+    import zipfile
+
+    out = tmp_path / "ablation"
+    (out / "results").mkdir(parents=True)
+    for stem, verdict in (("d01-clean__adversarial__r1", None), ("d01-defect__adversarial__r1", "approve")):
+        (out / "results" / f"{stem}.json").write_text(json.dumps({"verdict": verdict}), encoding="utf-8")
+        (out / "runs" / stem).mkdir(parents=True)
+        (out / "runs" / stem / "trajectory.jsonl").write_text("{}\n", encoding="utf-8")
+    z = zipfile.ZipFile(ab.cmd_bundle(out, tmp_path / "none.sqlite"))
+    names = set(z.namelist())
+    assert "ablation/runs/d01-clean__adversarial__r1/trajectory.jsonl" in names
+    assert "ablation/runs/d01-defect__adversarial__r1/trajectory.jsonl" not in names
+    assert {
+        "ablation/results/d01-clean__adversarial__r1.json",
+        "ablation/results/d01-defect__adversarial__r1.json",
+    } <= names

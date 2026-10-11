@@ -152,7 +152,8 @@ class Router:
         return chain[:1] if mode == "eval" else chain
 
     def _apply_route(self, req: LLMRequest, route: RoleRoute) -> LLMRequest:
-        upd: dict[str, Any] = {"thinking": route.thinking}
+        thinking = route.thinking if req.thinking_override is None else req.thinking_override
+        upd: dict[str, Any] = {"thinking": thinking}
         if req.effort is None and route.effort is not None:
             upd["effort"] = route.effort
         if req.max_output_tokens is None and route.max_output_tokens is not None:
