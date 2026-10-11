@@ -133,7 +133,23 @@ RECEIVED → PREPARING →（planner）PLANNING →（需审批）AWAIT_PLAN_APP
   - 交互（桌面端 / `tw run --jsonl`）：复用权限审批通道，发 `approval_requested(tool="Plan")`，用户批准 / 拒绝写
     `approval_resolved`（审计日志）；拒绝附言回给 Planner 不重规划，直接 CANCELLED。
   - 非交互（终端 `tw run`、无审批通道）：`unattended: needs_human`（默认）→ NEEDS_HUMAN；可改 `approve`。
-  - 评测：按 §4 自动策略，写 `approval_resolved(by="policy")`，禁止人工介入。
+  - 评测：按 §11 Q2 全部自动批准（含 L3），写 `approval_resolved(by="policy")`，禁止人工介入。
+  - 续跑（§11 Q6）：停在计划确认时落续跑点，`--resume` 沿用原计划重新请求确认。
+
+### 8.1 ask_human（W4-10）
+
+- Executor 工具 `ask_human(question, blocking, options, context)`；orchestrated-1m 默认启用，回答视为用户指示（trusted_tools）。
+- blocking=true：交互运行发 `approval_requested(tool="AskHuman")`；用户输入的文字（批准 / 拒绝附言）作为“用户的回答”回给模型，
+  没写字时批准 = “是 / 同意”，拒绝 = “否 / 不同意”；写 `approval_resolved(by="user")`。无审批通道（非交互）→ 任务停在
+  NEEDS_HUMAN 并落续跑点。
+- blocking=false：不打断，工具结果要求模型按最佳判断继续，并在 finish 的 open_risks 里写明假设（问题本身暂不单独进证据包，W5 再接）。
+- 评测：不允许人工介入，不发提问，写 `approval_resolved(by="policy", decision="deny")`，让模型按最佳判断继续并写明假设。
+
+### 8.2 跨厂商评审（W4-08）
+
+- `orchestration.reviewer.vendor_policy: cross_vendor` 时，Reviewer 的 loop 把 Executor 的厂商传给 Router，路由排除同厂商候选。
+- 编排器在第一次模型调用前预检：Reviewer 路由（含 fallback）里没有异厂商模型 → 直接 FAILED（不花钱）。
+- 只用 FakeRouter 测试（本轮只允许 deepseek-flash，不发真实跨厂商请求）。
 
 ## 9. 存储（`store/sqlite.py`，W4-15）
 
@@ -154,22 +170,30 @@ RECEIVED → PREPARING →（planner）PLANNING →（需审批）AWAIT_PLAN_APP
 - [x] AC7：中断补结果：finish 在一轮中间时，其后的 tool_call 有 `[未执行]` 结果，续写请求合法。
 - [x] AC8：端到端（FakeRouter + 真实 none 后端 + 真 pytest）跑通 PLANNING → … → DONE 并产出 Evidence（含 review_variant、vendor_policy）。
 - [x] AC9：真实 DeepSeek（deepseek-flash）端到端跑通一个 dev 任务（orchestrated-1m），花费如实记账。
-- [ ] AC10：Eva 审阅本 spec 并决定 §11 的待决事项。
+- [x] AC10：Eva 决定 §11 Q1–Q6（2026-10-11 21:35 / 21:36）；Q7 默认开，待审。
 
-## 11. 待决事项（需要 Eva 拍板；当前默认值可配置）
+## 11. 决定与待决事项
 
-- Q1 计划确认阈值：默认 `min_risk: L2`（与 04 §3.7 一致）+ needs_approval / open_questions / 构建与敏感路径 → 需确认；
-  终端非交互默认进 NEEDS_HUMAN。更保守可改 L1（几乎每个任务都要点一次）。
-- Q2 评测模式的自动审批：04 只写了“批准 L0–L1、拒绝 L3”，L2 未定义；当前默认 **批准 L2**（否则 L2 任务在评测里全部记为未解决）。
-- Q3 评审返工到上限仍有 blocker：当前“保留改动、状态 done、证据包标 open + 风险下限 L2”；另一选项是记为 failed。
-- Q4 桌面端默认是否切到 orchestrated-1m（每个任务多 1 次 Planner + 每轮 1 次 Reviewer 调用）。当前默认仍是 long-context-1m，
-  等 W4-14 评审消融数据出来再定。
-- Q5 终端 `tw run`（非 --jsonl）没有审批通道：默认 ask 模式下所有“需要确认”的命令（含 `python -m unittest`）一律拒绝，
-  Executor 会在 submit_repro 上反复撞墙，最后降级为 not_applicable 或卡住（W3 起的既有行为，不是本次引入）。实测要么写
-  `.triwitness/permissions.local.yaml` 放行 `Bash(python *)`，要么走 `--jsonl`。是否给终端加 y/N 交互审批、或让 docker 后端
-  默认放行测试命令，待定。
-- Q6 计划确认被搁置（NEEDS_HUMAN）时还没有续跑进度（还没改文件），`--resume` 会提示“直接重新发送”，Planner 要重跑一次（约 ¥0.01）。
-  是否在 AWAIT_PLAN_APPROVAL 时也落一个续跑点、批准后直接沿用 plan.json，待定。
+Q1–Q6 由 Eva 于 2026-10-11 21:35 决定（Q1–Q4 维持现状，Q5/Q6 按建议实现）；Q2 于 21:36 改为评测完全放开。
+
+- Q1 计划确认阈值 — **已决定（Eva 21:35，维持现状）**：`min_risk: L2` + needs_approval / open_questions / 构建与敏感路径
+  → 需确认；无审批通道时进 NEEDS_HUMAN。仍可配置（`plan_approval.min_risk`）。
+- Q2 评测模式的权限 — **已决定（Eva 21:36）**：评测 / 基准跑分时权限默认完全放开——计划全部自动批准（含 L3，
+  `plan_approval.eval_reject_from: never`，写 `approval_resolved(by="policy")`），命令不审批（评测工具集不挂权限闸门，
+  沙箱内完全访问）。**只适用于评测**（`tw eval` / eval harness），桌面端与终端 `tw run` 不变。仍保留模型白名单
+  （只用 deepseek-flash）与非金钱的失控上限（轮数、wall time、token 预算、返工轮数）。想恢复旧策略可设 `eval_reject_from: L3`。
+- Q3 评审返工到上限仍有 blocker — **已决定（Eva 21:35，维持现状）**：保留改动、状态 done、证据包标 open + 风险下限 L2。
+- Q4 桌面端默认 harness — **已决定（Eva 21:35，维持现状）**：仍是 long-context-1m，等 W4-14 评审消融数据再议。
+- Q5 终端 `tw run` 审批通道 — **已决定（Eva 21:35）并实现**：stdin 是 TTY 时 `tw run` 弹 y/N（`cli/tty.py`）：
+  命令 / 编辑 `[y] 允许一次 [s] 本次任务都允许 [N] 拒绝`，计划确认 y/N，ask_human 直接输入回答；EOF / Ctrl-D 视为无人。
+  非 TTY（管道 / CI）或 `--no-input` 保持原行为（需确认的一律拒绝）。
+- Q6 计划确认搁置的续跑点 — **已决定（Eva 21:35）并实现**：停在 AWAIT_PLAN_APPROVAL 时写 `progress.json(stage=await_plan_approval)`
+  与 plan.json；`--resume` 走 PREPARING → AWAIT_PLAN_APPROVAL，沿用原计划重新请求确认，不再跑 Planner。
+- Q7 人工确认点（W4-10，新增，**默认开，待 Eva 审**）：改依赖声明（pyproject / requirements / package.json / lock 文件，
+  或 `uv add` / `pip install` / `npm install <pkg>` 等）与改 CI / 构建配置（.github/workflows、Makefile、Dockerfile、tox.ini …）
+  在交互运行里必须由人确认（不交给自动审核模型，`[s]` 可放行本任务剩余同类操作）；非交互一律拒绝并说明原因；评测与 full_access 不经过。
+  开关：`orchestration.hitl.dependency_changes / ci_changes`。
+- 延后（Eva 21:36）：“模型自动审批”（auto_review）权限模式的实测本轮不做，不花真实调用；单测维持现状。
 
 ## 12. 实测记录（2026-10-11 21:09–21:16 北京时间，周日空闲价，只用 deepseek-flash）
 
@@ -185,6 +209,19 @@ RECEIVED → PREPARING →（planner）PLANNING →（需审批）AWAIT_PLAN_APP
 
 合计 ¥0.4001（本机账本 2026-W41 从 ¥17.3408 到 ¥17.7409），高峰价调用 0。真实模型下没有出现评审 blocker，返工回路只在 FakeRouter 测试里覆盖。
 
+### 12.1 第二轮（2026-10-11 21:41–21:46 北京时间，周日空闲价，只用 deepseek-flash）：Q5 / Q6 实测
+
+| 运行 | harness | 结果 | 花费 |
+|---|---|---|---|
+| mean([]) bug，终端非 TTY（stdin=/dev/null） | orchestrated-1m-consensus | needs_human：计划 L1 + 1 个待确认问题 → 无审批通道 → **落续跑点**（plan.json） | ¥0.0065 |
+| 同一任务 `--resume <run_id> --jsonl`（脚本批准） | orchestrated-1m-consensus | **done**：PREPARING → AWAIT_PLAN_APPROVAL（沿用原计划，未重跑 Planner）→ 批准 → 复现 → 修复 → 验证 → 双评审 → done | ¥0.053 |
+| add bug，伪终端 `tw run`（`yes y \| script` 喂输入） | orchestrated-1m | 计划 y/N 弹出并批准；跑到复现阶段时整条管道被 SIGKILL（测试驱动的问题：`yes` 无限灌 pty，未复现于下一行），作废 | 约 ¥0.01 |
+| add bug，伪终端 `tw run`（pty 驱动，只在看到提示时答 y） | orchestrated-1m | **done**：终端弹出“需要你确认 · 计划 L0 · 1 个待确认问题 · [y/N]”→ y → 13 步完成 | ¥0.0303 |
+
+本轮合计 ¥0.1013（账本 ¥17.7409 → ¥17.8422），高峰价调用 0。命令审批在这几次运行里由默认的 auto_review 模式自动批准（`configs/permissions.default.yaml`），
+所以终端只弹了计划确认；auto_review 本身的实测按 Eva 21:36 决定延后，本轮没有专门测。
+
 ## 变更记录
 
 - 2026-10-11：初稿 + 首版实现（W4-01/03/04/05/06/07/15 部分）；补 §12 实测记录与 Q5/Q6；新增 `configs/harness/orchestrated-1m-consensus.yaml`。
+- 2026-10-11（晚）：Eva 21:35 / 21:36 决定 Q1–Q6（Q2 改为评测完全放开）；实现 Q5 终端 y/N、Q6 计划确认续跑点；新增 §8.1 ask_human、§8.2 跨厂商评审、Q7 人工确认点（依赖 / CI 配置）；§12.1 第二轮实测。

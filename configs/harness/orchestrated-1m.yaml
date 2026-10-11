@@ -9,6 +9,11 @@ orchestration:
     on_open_questions: true
     on_sensitive_files: true
     unattended: needs_human   # 终端 tw run 无审批通道 → NEEDS_HUMAN
-    eval_reject_from: L3      # §11 Q2：评测里 L0–L2 自动批准、L3 拒绝
+    eval_reject_from: never   # §11 Q2（Eva 21:36）：评测里计划全部自动批准，含 L3
+  hitl: {dependency_changes: true, ci_changes: true}   # §11 Q7：改依赖声明 / CI 配置必须人确认（默认，待 Eva 审）
+# ask_human（W4-10）：Executor 可以向人提问（阻塞 / 不阻塞）；评测里不问人，直接按最佳判断继续
+# 用户对 ask_human 的回答是用户指示，不包成不可信数据
+context: {trusted_tools: [ask_human, edit_file, finish, write_file]}
+tools: [ask_human, bash, edit_file, finish, git, grep, list_files, notes, read_file, run_tests, submit_repro, write_file]
 prompts: {executor: executor-repro-first, summarizer: summarizer, planner: planner, reviewer: reviewer,
           reviewer_checklist: reviewer-checklist}

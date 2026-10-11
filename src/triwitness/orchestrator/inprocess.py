@@ -20,7 +20,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
-from triwitness.core.errors import SandboxError
+from triwitness.core.errors import ConfigError, ConstraintViolation, NeedsHuman, SandboxError
 from triwitness.core.events import (
     ApprovalRequestedPayload,
     ApprovalResolvedPayload,
@@ -51,6 +51,7 @@ from triwitness.sandbox.base import Sandbox
 from triwitness.telemetry.otel import bridge_from_env
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools.base import ToolContext, ToolRegistry
+from triwitness.tools.human import STATE_KEY as ASK_HUMAN_KEY
 from triwitness.verify.pipeline import EmittingRouter, PipelineResult, VerifyOptions, verify_task
 from triwitness.verify.risk import load_policy as load_risk_policy
 
@@ -187,6 +188,9 @@ class InProcessOrchestrator:
         resume, registry = self.resume, self.registry
         test_command = self.test_command
         self.go(S.PREPARING, "准备沙箱")
+        violation = self._vendor_violation()
+        if violation is not None:  # cross_vendor 配置不满足：开工前就失败，不花一分钱
+            return self._fail_early("ConstraintViolation", violation, "厂商约束不满足")
         prepared: PrepareResult | None = None
         if self.prepare is not None:
             prepared = await self._prepare(test_command)
@@ -200,7 +204,8 @@ class InProcessOrchestrator:
         if resume is not None:  # 断点续跑：start 快照是原始代码（diff / 复验基线），再写回上次的进度
             applied, held = await apply_resume(sandbox, resume, repro_first=repro_first)
             await self._checkpoint("resumed")
-            prompt = f"{self.task_prompt}\n\n{resume_note(resume, applied, held)}"
+            if resume.stage != "await_plan_approval":  # 停在计划确认的任务还没开始干活：不需要续跑说明
+                prompt = f"{self.task_prompt}\n\n{resume_note(resume, applied, held)}"
             if resume.repro_check is not None and repro_first:
                 repro_first_done = dict(resume.repro_check)
         ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
@@ -214,6 +219,14 @@ class InProcessOrchestrator:
             if plan is not None and self.progress_dir is not None:  # 续跑：沿用原计划，并留一份给下一次续跑
                 (self.progress_dir / PLAN_FILE).write_text(plan.model_dump_json(indent=2), encoding="utf-8")
                 plan_note = " · 沿用原计划"
+            if plan is not None and resume is not None and resume.stage == "await_plan_approval":
+                # spec 010 §11 Q6：上次停在计划确认 → 不重新规划，拿原计划重新请求确认
+                rec.artifact(PLAN_FILE, plan.model_dump(mode="json"))
+                reasons = self._plan_approval_reasons(plan) or ["续跑：确认原计划"]
+                self.go(S.AWAIT_PLAN_APPROVAL, clip("等待确认计划（沿用原计划） · " + "；".join(reasons)))
+                decision = await self._approve_plan(plan, reasons)
+                if decision != "approve":
+                    return await self._stop_before_work(decision, plan, ctx)
             if plan is None:
                 self.go(S.PLANNING, "规划")
                 pr = await self._plan(ctx, test_command, prepared)
@@ -227,7 +240,7 @@ class InProcessOrchestrator:
                         self.go(S.AWAIT_PLAN_APPROVAL, clip("等待确认计划 · " + "；".join(reasons)))
                         decision = await self._approve_plan(plan, reasons)
                         if decision != "approve":
-                            return self._stop_before_work(decision, plan)
+                            return await self._stop_before_work(decision, plan, ctx)
                 plan_note = (f" · 计划 {plan.estimated_risk}，{len(plan.acceptance_criteria)} 条验收标准"
                              if plan is not None else " · 无计划（Planner 未提交）")  # fmt: skip
             if plan is not None:
@@ -247,6 +260,7 @@ class InProcessOrchestrator:
                          system_prompt=build_system_prompt(role_prompt, agents_md=self.agents_md,
                                                            tool_names=registry.names,
                                                            agents_md_max_chars=max(0, room)))  # fmt: skip
+        ctx.state[ASK_HUMAN_KEY] = self._ask_human
         if repro_first:
             ctx.state["repro_first"] = True
             ctx.state["on_repro_accepted"] = self._on_repro_accepted
@@ -455,11 +469,14 @@ class InProcessOrchestrator:
         ))  # fmt: skip
         return "approve" if decision.decision == "allow" else "reject"
 
-    def _stop_before_work(self, decision: str, plan: Plan) -> TaskResult:
+    async def _stop_before_work(self, decision: str, plan: Plan, ctx: ToolContext) -> TaskResult:
         if decision == "reject":
             status, final, label = "cancelled", S.CANCELLED, "计划被拒绝"
         else:
             status, final, label = "needs_human", S.NEEDS_HUMAN, "等待确认计划"
+            if self.progress_dir is not None:  # spec 010 §11 Q6：留续跑点，确认后沿用这份计划（不重新规划）
+                await save_progress(self.progress_dir, self.sandbox, issue=self.task_prompt, state=ctx.state,
+                                    tw_dir=self.tw_dir, steps=0, stage="await_plan_approval")  # fmt: skip
         self.go(final, label)  # type: ignore[arg-type]
         cost = self.ledger.report()
         self.rec.emit(TaskFinishedPayload(status=status, cost_report=cost,  # type: ignore[arg-type]
@@ -467,6 +484,63 @@ class InProcessOrchestrator:
         outcome = LoopOutcome(status="needs_human" if status == "needs_human" else "cancelled", steps=0, reason=label)
         return TaskResult(status=status, outcome=outcome, diff="", cost=cost, finish=None, plan=plan,  # type: ignore[arg-type]
                           states=self._states())  # fmt: skip
+
+    # ---------------------------------------------------------------- ask_human（04 §3.4 / §3.7，W4-10）
+    async def _ask_human(self, question: str, blocking: bool, options: list[str], context: str) -> str:
+        rid = new_hitl_id()
+        text = (
+            question + ("\n候选：" + " / ".join(options) if options else "") + (f"\n背景：{context}" if context else "")
+        )
+        if not blocking:
+            return "已记下这个问题（不等待回答）。按你的最佳判断继续，并在 finish 的 open_risks 里写明你的假设。"
+        if self.mode == "eval":  # 评测禁止人工介入：不问，写审计
+            self.rec.emit(ApprovalResolvedPayload(request_id=rid, decision="deny", by="policy",
+                                                  comment=clip(f"评测禁止人工介入：{question}", 500),
+                                                  display="提问未发出（评测模式）"))  # fmt: skip
+            return "评测模式不能问人。按你的最佳判断继续，并在 finish 的 open_risks 里写明假设。"
+        req = ApprovalRequestedPayload(request_id=rid, tool="AskHuman", action=text[:2000],
+                                       reason="Executor 需要你决定", risk="L1", options=["allow_once", "deny"],
+                                       display=clip(f"提问 · {question}"))  # fmt: skip
+        self.rec.emit(req)
+        decision = await self.approver(req) if self.approver is not None else None
+        if decision is None:  # 没有审批通道：任务暂停（needs_human，可续跑）
+            raise NeedsHuman(rid, clip(f"Executor 提问：{question}", 120))
+        yes = decision.decision == "allow"
+        answer = decision.comment or ("是 / 同意，按你的提议做" if yes else "否 / 不同意")
+        self.rec.emit(ApprovalResolvedPayload(request_id=rid, decision=decision.decision, by="user",
+                                              comment=clip(answer, 2000),
+                                              display=clip(f"已回答 · {answer}")))  # fmt: skip
+        return f"用户的回答：{answer}"
+
+    # ---------------------------------------------------------------- 厂商约束（W4-08）
+    def _vendor_violation(self) -> str | None:
+        """vendor_policy=cross_vendor：开工前检查 reviewer / verifier 能否路由到与 executor 不同的厂商。"""
+        checks: list[tuple[Any, str]] = []
+        if self.cfg.orchestration.reviewer.enabled:
+            checks.append((self.router, "reviewer"))
+        if self.verify is not None and self.verify.mode == "model" and self.verify.router is not None:
+            checks.append((self.verify.router, "verifier"))
+        for router, role in checks:
+            if getattr(router, "vendor_policy", "single_vendor") != "cross_vendor":
+                continue
+            from triwitness.llm.router import vendor_of
+
+            try:
+                ev = vendor_of(router.route_for("executor").model)
+                router.candidates(role, executor_vendor=ev, mode=self.mode)
+            except (ConstraintViolation, ConfigError) as e:
+                return str(e)
+        return None
+
+    def _fail_early(self, etype: str, message: str, label: str) -> TaskResult:
+        self.rec.emit(ErrorPayload(type=etype, message=message, display=clip(f"{label}：{message}")))
+        self.go(S.FAILED, label)
+        cost = self.ledger.report()
+        self.rec.emit(
+            TaskFinishedPayload(status="failed", cost_report=cost, display=f"{label} · ¥{cost.total_cny:.3f}")
+        )
+        outcome = LoopOutcome(status="error", steps=0, reason=f"{label}：{message}")
+        return TaskResult(status="failed", outcome=outcome, diff="", cost=cost, finish=None, states=self._states())
 
     def _saved_plan(self) -> Plan | None:
         """续跑：沿用被续跑那次 run 的计划（runs/<from_run>/plan.json），不重新规划、不重复审批。"""

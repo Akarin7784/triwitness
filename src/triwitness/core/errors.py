@@ -47,5 +47,14 @@ class ToolError(TriWitnessError):
     """工具内部错误（会被包装成 ok=False 的 ToolResult，不终止循环）。"""
 
 
+class NeedsHuman(TriWitnessError):
+    """需要人来决定（权限审批、ask_human、计划确认）而当前没有审批通道：任务进入 NEEDS_HUMAN。
+    工具里抛出时 ToolRegistry 不把它包成工具错误，直接交给 AgentLoop。"""
+
+    def __init__(self, request_id: str, reason: str) -> None:
+        super().__init__(f"等待人工审批：{reason}")
+        self.request_id = request_id
+
+
 class IllegalTransition(TriWitnessError):
     """任务状态机的非法迁移（spec 010 §4）：只有迁移表里的边可以走，终态不能迁出。"""

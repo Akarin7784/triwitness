@@ -15,7 +15,13 @@ from triwitness.core.models import Budget, Finding, FinishReport, Plan
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.context import wrap_untrusted
 from triwitness.harness.loop import LoopOutcome, RouterLike
-from triwitness.roles.common import last_model, read_only_registry, role_loop, submission_or_fallback
+from triwitness.roles.common import (
+    executor_vendor,
+    last_model,
+    read_only_registry,
+    role_loop,
+    submission_or_fallback,
+)
 from triwitness.roles.contracts import Review, ReviewFinding, check_review, submit_review_tool
 from triwitness.roles.planner import render_plan
 from triwitness.telemetry.trajectory import TrajectoryRecorder
@@ -106,7 +112,8 @@ async def _one(variant: str, inp: ReviewInput, *, router: RouterLike, rec: Traje
     prompt = cfg.prompts.get(prompt_key, prompt_key.replace("_", "-"))
     loop = role_loop(role="reviewer", prompt=prompt, router=router, registry=read_only_registry(submit_review_tool(),
                      gate=gate), rec=rec, cfg=cfg, budget=budget, max_turns=cfg.orchestration.reviewer.max_turns,
-                     mode=mode, category=category, agents_md=None, intro=INTRO, effort=effort)  # fmt: skip
+                     mode=mode, category=category, agents_md=None, intro=INTRO, effort=effort,
+                     executor_vendor=executor_vendor(router))  # fmt: skip
     outcome = await loop.run(inp.render(), ctx)
     review, path = submission_or_fallback(loop, outcome, Review, check_review)
     return VariantReview(variant=variant, review=review, outcome=outcome, path=path, model=last_model(rec, "reviewer"))

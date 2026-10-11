@@ -86,11 +86,13 @@ def test_replay_rejects_illegal_or_inconsistent_history() -> None:
         TaskStateMachine.replay([("received", "preparing"), ("planning", "executing")])
 
 
-@pytest.mark.parametrize(("risk", "want"), [("L0", "approve"), ("L1", "approve"), ("L2", "approve"), ("L3", "reject")])
-def test_eval_auto_decision_default(risk: str, want: str) -> None:
-    assert eval_auto_decision(risk) == want
+@pytest.mark.parametrize("risk", ["L0", "L1", "L2", "L3"])
+def test_eval_auto_decision_default(risk: str) -> None:
+    """Eva 2026-10-11 21:36：评测里计划全部自动批准（含 L3）。"""
+    assert eval_auto_decision(risk) == "approve"
 
 
 def test_eval_auto_decision_configurable() -> None:
     assert eval_auto_decision("L2", reject_from="L2") == "reject"
     assert eval_auto_decision("L1", reject_from="L2") == "approve"
+    assert eval_auto_decision("L3", reject_from="L3") == "reject"

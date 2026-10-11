@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from triwitness.tools.base import BaseTool, GateOutcome, Tool, ToolContext, ToolRegistry, ToolResult
 from triwitness.tools.files import EditFile, Grep, ListFiles, ReadFile, WriteFile
+from triwitness.tools.human import AskHuman
 from triwitness.tools.repo_map import RepoMap
 from triwitness.tools.repro import SubmitRepro
 from triwitness.tools.shell import Bash, Finish, PowerShell, RunTests
@@ -11,7 +12,21 @@ from triwitness.tools.workspace import Git, Notes
 
 ALL_TOOLS: dict[str, type[Tool]] = {
     t.name: t
-    for t in (ReadFile, WriteFile, EditFile, ListFiles, Grep, Bash, RunTests, Finish, Notes, Git, RepoMap, SubmitRepro)
+    for t in (
+        ReadFile,
+        WriteFile,
+        EditFile,
+        ListFiles,
+        Grep,
+        Bash,
+        RunTests,
+        Finish,
+        Notes,
+        Git,
+        RepoMap,
+        SubmitRepro,
+        AskHuman,
+    )
 }  # type: ignore[misc]
 W1_TOOLS = ["bash", "edit_file", "finish", "grep", "list_files", "read_file", "run_tests", "write_file"]
 

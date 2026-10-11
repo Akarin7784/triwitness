@@ -34,6 +34,7 @@ class RouterLike(Protocol):
         task_id: str | None = ...,
         mode: Any = ...,
         category: str = ...,
+        executor_vendor: Any = ...,
     ) -> LLMResponse: ...
 
 
@@ -117,7 +118,10 @@ class AgentLoop:
         hard_limit: int | None = None,
         task_intro: str | None = None,
         effort: Literal["low", "high", "max"] | None = None,
+        executor_vendor: str | None = None,
     ) -> None:
+        # Reviewer 的 loop 带上 Executor 的厂商：vendor_policy=cross_vendor 时路由据此排除同厂商（W4-08）
+        self.executor_vendor = executor_vendor
         self.task_intro = task_intro  # 角色开场白（Planner / Reviewer）；None = Executor 的默认措辞
         self.effort: Literal["low", "high", "max"] | None = effort  # 覆盖路由的思考强度（同厂商异构评审变体）
         self.trusted_tail = ""  # 块外的编排器说明（例：Plan），拼在 Issue 块之后
@@ -272,8 +276,9 @@ class AgentLoop:
             writer = DeltaWriter(rec, self.role, call_id) if self.stream else None
             try:
                 with streaming(writer):
+                    extra: dict[str, Any] = {"executor_vendor": self.executor_vendor} if self.executor_vendor else {}
                     resp = await self.router.complete(
-                        req, guard=self.guard, task_id=ctx.task_id, mode=self.mode, category=self.category
+                        req, guard=self.guard, task_id=ctx.task_id, mode=self.mode, category=self.category, **extra
                     )
             except BudgetExceeded as e:
                 return LoopOutcome(status="budget_exhausted", steps=steps, reason=str(e))

@@ -46,10 +46,12 @@ class ResumeState:
     notes: str | None = None
     steps: int = 0
     skipped: list[str] = field(default_factory=list)  # 太大没存的文件
+    # work = 干活途中停下；await_plan_approval = 停在计划确认（spec 010 §11 Q6）：续跑沿用原计划、重新请求确认
+    stage: str = "work"
 
 
 async def save_progress(run_dir: Path, sandbox: Any, *, issue: str, state: dict[str, Any], tw_dir: str,
-                        steps: int) -> int:  # fmt: skip
+                        steps: int, stage: str = "work") -> int:  # fmt: skip
     """把当前进度写进 run_dir/resume/。返回存下的文件数；失败不影响任务本身。"""
     try:
         paths = changed_paths(await sandbox.diff("base"))
@@ -81,7 +83,7 @@ async def save_progress(run_dir: Path, sandbox: Any, *, issue: str, state: dict[
     check = state.get("repro_check")
     doc = {"format": FORMAT, "issue": issue, "files": entries, "skipped": skipped, "steps": steps,
            "repro_check": _jsonable(check), "notes": redact_text(notes) if notes else None,
-           "updated_at": datetime.now(UTC).isoformat()}  # fmt: skip
+           "stage": stage, "updated_at": datetime.now(UTC).isoformat()}  # fmt: skip
     (tmp / "resume.json").write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     if root.exists():
         _rmtree(root)
@@ -145,7 +147,7 @@ def load_resume(home: Path, run_id: str) -> ResumeState:
     try:
         doc = json.loads((root / "resume.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        raise ConfigError("这个任务没有可续跑的进度（还没改过文件就停了，直接重新发送即可）") from None
+        raise ConfigError("这个任务没有可续跑的进度（还没开始干活就停了，直接重新发送即可）") from None
     if doc.get("format") != FORMAT:
         raise ConfigError(f"续跑进度格式不认识：{doc.get('format')}")
     files: dict[str, bytes | None] = {}
@@ -156,7 +158,7 @@ def load_resume(home: Path, run_id: str) -> ResumeState:
         files[path] = None if e.get("deleted") else (root / "files" / str(e["blob"])).read_bytes()
     return ResumeState(from_run=run_id, issue=str(doc.get("issue") or ""), files=files,
                        repro_check=doc.get("repro_check"), notes=doc.get("notes"), steps=int(doc.get("steps") or 0),
-                       skipped=list(doc.get("skipped") or []))  # fmt: skip
+                       skipped=list(doc.get("skipped") or []), stage=str(doc.get("stage") or "work"))  # fmt: skip
 
 
 async def apply_resume(sandbox: Any, state: ResumeState, *, repro_first: bool) -> tuple[list[str], list[str]]:

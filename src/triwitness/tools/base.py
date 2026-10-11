@@ -11,6 +11,7 @@ from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, ValidationError
 
+from triwitness.core.errors import NeedsHuman
 from triwitness.llm.types import ToolCallSpec
 from triwitness.sandbox.base import Sandbox
 
@@ -178,6 +179,8 @@ class ToolRegistry:
                 return outcome.result, outcome
         try:
             return await tool.run(parsed, ctx), outcome
+        except NeedsHuman:  # ask_human 没有审批通道：交给 AgentLoop 结束为 needs_human
+            raise
         except Exception as e:  # 工具内部异常不终止循环（spec 003 §5.5）
             return ToolResult(ok=False, content=f"{call.name} 内部错误：{type(e).__name__}: {e}",
                               error_code="internal"), outcome  # fmt: skip

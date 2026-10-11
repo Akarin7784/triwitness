@@ -115,7 +115,8 @@ async def run_local(
             if changed is not None:  # 桌面端横幅以这条事件为准（勇士模式 risk=high）
                 rec.emit(changed)
         engine = PermissionEngine(policy, workspace=sb.spec.workdir)
-        gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo, reviewer=reviewer)
+        gate = PermissionGate(engine, rec, approver=approver, repo_for_always=repo, reviewer=reviewer,
+                              hitl=hcfg.orchestration.hitl)  # fmt: skip
         shell = getattr(getattr(sb, "shell", None), "kind", "bash")
         registry = ToolRegistry(default_tools(shell=shell, names=hcfg.tools), gate=gate)
         tw_dir = str(getattr(sb, "tw_dir", "/workspace/.tw"))

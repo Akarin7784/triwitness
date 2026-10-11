@@ -101,10 +101,14 @@ def run_cmd(
     guidance_file: Annotated[
         Path | None, typer.Option(help="用户说明文件（个人偏好 / 风格 / 项目说明，UTF-8），放在任务描述前")
     ] = None,
+    no_input: Annotated[
+        bool, typer.Option("--no-input", help="终端里也不弹 y/N 确认：需要确认的操作一律拒绝（脚本 / CI 用）")
+    ] = False,
 ) -> None:
     """修复本地仓库的一个问题，输出 diff、FinishReport 与成本账单（orchestrated-1m 加 Planner + Reviewer）。"""
     import asyncio
     import os
+    import sys
 
     from triwitness.config import tw_home
     from triwitness.core.errors import TriWitnessError
@@ -170,7 +174,8 @@ def run_cmd(
         elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
             raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
         router = Router.deepseek_default(allow_peak=allow_peak, executor=override or None)
-        if jsonl:  # auto_review：deepseek-flash 非思考审核；失败 / 不确定退回问用户（只在交互运行中才会用到）
+        # auto_review：deepseek-flash 非思考审核；失败 / 不确定退回问用户（只在交互运行：--jsonl 或终端 TTY 中才会用到）
+        if jsonl or (not no_input and sys.stdin.isatty()):
             from triwitness.permissions.reviewer import ModelReviewer
 
             reviewer = ModelReviewer(router)
@@ -219,11 +224,16 @@ def run_cmd(
 
         raise typer.Exit(asyncio.run(main()))
 
+    tty_approver = None
+    if not no_input and sys.stdin.isatty():  # spec 010 §11 Q5：交互终端里 y/N 审批；管道 / CI 仍一律拒绝
+        from triwitness.cli.tty import make_tty_approver
+
+        tty_approver = make_tty_approver()
     try:
         out = asyncio.run(run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                                     test_command=test_cmd, verify=verify, budget=budget,  # type: ignore[arg-type]
                                     session=session, attachments=files, guidance=guidance,
-                                    reviewer=reviewer, harness=hcfg))  # fmt: skip
+                                    reviewer=reviewer, harness=hcfg, approver=tty_approver))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None

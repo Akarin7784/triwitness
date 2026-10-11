@@ -23,7 +23,8 @@ _ESCAPES: frozenset[TaskState] = frozenset({S.NEEDS_HUMAN, S.BUDGET_EXCEEDED, S.
 
 _EDGES: dict[TaskState, frozenset[TaskState]] = {
     S.RECEIVED: frozenset({S.PREPARING}),
-    S.PREPARING: frozenset({S.PLANNING, S.REPRODUCING, S.EXECUTING}),
+    # PREPARING → AWAIT_PLAN_APPROVAL：续跑停在计划确认的任务（沿用原计划，不重新规划）
+    S.PREPARING: frozenset({S.PLANNING, S.AWAIT_PLAN_APPROVAL, S.REPRODUCING, S.EXECUTING}),
     S.PLANNING: frozenset({S.AWAIT_PLAN_APPROVAL, S.REPRODUCING, S.EXECUTING}),
     S.AWAIT_PLAN_APPROVAL: frozenset({S.REPRODUCING, S.EXECUTING}),
     S.REPRODUCING: frozenset({S.EXECUTING}),
@@ -108,8 +109,11 @@ def risk_at_least(level: RiskLevel | str, floor: RiskLevel | str) -> bool:
     return _ORDER[str(level)] >= _ORDER[str(floor)]
 
 
-def eval_auto_decision(risk: RiskLevel | str, *, reject_from: RiskLevel = "L3") -> Decision:
-    """评测模式的 AWAIT_* 自动策略（04 §3.1；spec 010 §11 Q2）：默认 L0–L2 批准、L3 拒绝。"""
+def eval_auto_decision(risk: RiskLevel | str, *, reject_from: RiskLevel | Literal["never"] = "never") -> Decision:
+    """评测模式的 AWAIT_* 自动策略（04 §3.1；spec 010 §11 Q2，Eva 2026-10-11 21:36 决定）：
+    评测里全部自动批准（含 L3）；reject_from 设成 L1–L3 时 ≥ 它拒绝（旧策略，可配置回去）。"""
+    if reject_from == "never":
+        return "approve"
     return "reject" if risk_at_least(risk, reject_from) else "approve"
 
 

@@ -109,7 +109,16 @@ class PlanApprovalConfig(BaseModel):
     on_open_questions: bool = True  # Planner 列了待回答问题 → 需要确认
     on_sensitive_files: bool = True  # affected_files 命中 risk.yaml 的 build_files / sensitive_paths → 需要确认
     unattended: Literal["needs_human", "approve"] = "needs_human"  # 没有审批通道（终端 tw run）时
-    eval_reject_from: Literal["L1", "L2", "L3"] = "L3"  # 评测自动策略：≥ 它拒绝，其余批准（§11 Q2）
+    # 评测自动策略（§11 Q2，Eva 21:36）：never = 全部批准（含 L3）；L1–L3 = ≥ 它拒绝
+    eval_reject_from: Literal["L1", "L2", "L3", "never"] = "never"
+
+
+class HitlConfig(BaseModel):
+    """人工确认点（04 §3.7，W4-10；spec 010 §8.3 / §11 Q7——默认开，待 Eva 审）：交互运行必须由人确认，
+    不交给审核模型；非交互拒绝；评测与 full_access 不经过。"""
+
+    dependency_changes: bool = True  # 改依赖声明（pyproject / requirements / package.json / lock …；uv add 等）
+    ci_changes: bool = True  # 改 CI / 构建配置（.github/workflows、Makefile、Dockerfile、tox.ini …）
 
 
 class OrchestrationConfig(BaseModel):
@@ -118,6 +127,7 @@ class OrchestrationConfig(BaseModel):
     planner: PlannerConfig = Field(default_factory=PlannerConfig)
     reviewer: ReviewerConfig = Field(default_factory=ReviewerConfig)
     plan_approval: PlanApprovalConfig = Field(default_factory=PlanApprovalConfig)
+    hitl: HitlConfig = Field(default_factory=HitlConfig)
 
 
 # W2-26：Executor 流程默认先复现（submit_repro + finish 校验）。`baseline.yaml` 仍是 W2-25 基线与消融的父配置，

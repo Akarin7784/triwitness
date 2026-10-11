@@ -21,25 +21,20 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from triwitness.core.errors import TriWitnessError
+from triwitness.core.errors import NeedsHuman
 from triwitness.core.events import ApprovalRequestedPayload, ApprovalResolvedPayload, ModelCallPayload, billing
 from triwitness.core.ids import new_hitl_id
 from triwitness.harness.events import EventEmitter
 from triwitness.llm.types import ToolCallSpec
 from triwitness.permissions.config import save_local_rules
 from triwitness.permissions.engine import Action, PermissionEngine, Verdict
+from triwitness.permissions.hitl import HitlPoint, hitl_point
 from triwitness.permissions.reviewer import Reviewer
 from triwitness.tools.base import GateOutcome, Tool, ToolContext, ToolResult
 from triwitness.tools.shell import RunTests
 
 READ_TOOLS = {"read_file": "path", "list_files": "path", "grep": "path"}
 EDIT_TOOLS = {"write_file": "path", "edit_file": "path"}
-
-
-class NeedsHuman(TriWitnessError):
-    def __init__(self, request_id: str, reason: str) -> None:
-        super().__init__(f"等待人工审批：{reason}")
-        self.request_id = request_id
 
 
 @dataclass
@@ -122,7 +117,11 @@ class PermissionGate:
         repo_for_always: Path | None = None,
         shell_category: str = "Bash",
         reviewer: Reviewer | None = None,
+        hitl: Any = None,
     ) -> None:
+        """hitl：HitlConfig（dependency_changes / ci_changes）；None = 两个人工确认点都开（04 §3.7）。"""
+        self.hitl = hitl
+        self._hitl_ok: set[str] = set()  # “本次任务内允许”过的确认点（按类别）
         self.reviewer = reviewer
         self.engine = engine
         self.emitter = emitter
@@ -146,11 +145,55 @@ class PermissionGate:
             finish_reason=resp.finish_reason, display=f"审核模型 · {rv.decision}",
         ), role="reviewer")  # fmt: skip
 
+    def _hitl_point(self, action: Action, v: Verdict) -> HitlPoint | None:
+        pol = self.engine.policy
+        if v.decision == "deny" or pol.eval_mode or self.engine.mode == "full_access":
+            return None
+        h = self.hitl
+        p = hitl_point(action.category, action.value, dependency=getattr(h, "dependency_changes", True),
+                       ci=getattr(h, "ci_changes", True))  # fmt: skip
+        return None if p is None or p.kind in self._hitl_ok else p
+
+    async def _ask_hitl(self, action: Action, v: Verdict, point: HitlPoint) -> GateOutcome:
+        """04 §3.7 人工确认点：不交给审核模型；非交互直接拒绝；交互必须由人决定。"""
+        why = f"{point.label}：需要人工确认（04 §3.7），不由审核模型自动放行"
+        if not self.engine.policy.interactive:
+            self.emitter.emit(ApprovalResolvedPayload(request_id=new_hitl_id(), decision="deny", by="policy",
+                                                      comment=f"非交互运行：{why}",
+                                                      display=f"已拒绝 · {point.label}（非交互运行）"))  # fmt: skip
+            msg = (f"权限拒绝：{why}；这次运行没有人可以确认。不要改这个文件 / 不要跑这个命令；"
+                   "如果确实必须改，在 finish 的 open_risks 里写明要改什么、为什么。")  # fmt: skip
+            return GateOutcome(allowed=False, result=ToolResult(ok=False, content=msg, error_code="permission_denied"),
+                               permission="deny", rule=f"hitl:{point.kind}")  # fmt: skip
+        req = ApprovalRequestedPayload(
+            request_id=new_hitl_id(), tool=action.category, action=action.value[:2000], reason=why,
+            rule=f"hitl:{point.kind}", risk="L2", options=["allow_once", "allow_session", "deny"],
+            backend=self.engine.policy.backend, timeout_s=self.engine.policy.approval_timeout_s,  # type: ignore[arg-type]
+            display=f"待批 · {point.label} · {action.value[:160]}",
+        )  # fmt: skip
+        self.emitter.emit(req)
+        decision = await self.approver(req) if self.approver is not None else None
+        if decision is None:
+            raise NeedsHuman(req.request_id, why)
+        if decision.decision == "allow" and decision.scope != "once":
+            self._hitl_ok.add(point.kind)  # “总是允许”也只在本次任务内生效：确认点不写进规则文件
+        self.emitter.emit(ApprovalResolvedPayload(request_id=req.request_id, decision=decision.decision,
+                                                  scope=decision.scope, by="user", comment=decision.comment,
+                                                  display=_resolved_display(decision)))  # fmt: skip
+        if decision.decision == "deny":
+            msg = f"权限拒绝：用户拒绝{point.label}" + (f"：{decision.comment}" if decision.comment else "")
+            return GateOutcome(allowed=False, result=ToolResult(ok=False, content=msg, error_code="permission_denied"),
+                               permission="deny", rule=f"hitl:{point.kind}")  # fmt: skip
+        return GateOutcome(allowed=True, permission="ask", rule=f"hitl:{point.kind}")
+
     async def __call__(self, tool: Tool, params: BaseModel, ctx: ToolContext, call: ToolCallSpec) -> GateOutcome:
         action = action_for(tool, params, ctx, shell_category=self.shell_category)
         if action is None:
             return GateOutcome(allowed=True)
         v = self.engine.check(action)
+        point = self._hitl_point(action, v)
+        if point is not None:
+            return await self._ask_hitl(action, v, point)
         if v.decision == "allow":
             return GateOutcome(allowed=True, permission="allow", rule=v.rule_raw)
         backend: Any = self.engine.policy.backend

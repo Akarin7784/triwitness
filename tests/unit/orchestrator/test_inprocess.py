@@ -99,23 +99,25 @@ def cfg(**orch: Any) -> HarnessConfig:
     return c
 
 
-async def go(env: tuple, router: RoleRouter, *, verify: bool = False, config: HarnessConfig | None = None,
+async def go(env: tuple, router: Any, *, verify: bool | VerifyOptions = False, config: HarnessConfig | None = None,
              mode: str = "background", approver: Any = None, store: TaskStore | None = None,
+             tools: list[str] | None = None, progress_dir: Path | None = None, resume: Any = None,
              ) -> tuple[TaskResult, TrajectoryRecorder]:  # type: ignore[type-arg]  # fmt: skip
     backend, repo = env
     sb = await backend.create(SandboxSpec(repo=repo, run_id="exec1"))
     rec = TrajectoryRecorder("t_o", "r_o", run_dir=repo.parent / "run")
     if store is not None:
         rec.subscribe(store.observe)
-    opts = None
-    if verify:
+    opts = verify if isinstance(verify, VerifyOptions) else None
+    if verify is True:
         opts = VerifyOptions(backend=EphemeralBackend(backend), spec=SandboxSpec(repo=repo), static_tools=("ruff",),
                              python=Path(sys.executable).as_posix())  # fmt: skip
     try:
-        res = await run_task(recorder=rec, router=router, registry=ToolRegistry(default_tools()), sandbox=sb,
+        res = await run_task(recorder=rec, router=router, registry=ToolRegistry(default_tools(names=tools)), sandbox=sb,
                              issue_title="add 是减法", task_prompt=ISSUE, repo="o/r", budget=Budget(),
                              config_hash="c", test_command=PY, verify=opts, tw_dir=str(sb.tw_dir),  # type: ignore[attr-defined]
-                             config=config or cfg(), mode=mode, approver=approver)  # type: ignore[arg-type]  # fmt: skip
+                             config=config or cfg(), mode=mode, approver=approver,  # type: ignore[arg-type]
+                             progress_dir=progress_dir, resume=resume)  # fmt: skip
     finally:
         await sb.finish("discard")  # type: ignore[attr-defined]
     return res, rec
@@ -269,10 +271,14 @@ async def test_user_rejects_plan(env: tuple) -> None:  # type: ignore[type-arg]
     assert "pyproject.toml" in req["reason"]
 
 
-@pytest.mark.parametrize(("risk", "status"), [("L2", "done"), ("L3", "cancelled")])
-async def test_eval_mode_auto_policy(env: tuple, risk: str, status: str) -> None:  # type: ignore[type-arg]
+@pytest.mark.parametrize(
+    ("risk", "reject_from", "status"),
+    [("L2", "never", "done"), ("L3", "never", "done"), ("L3", "L3", "cancelled")],
+)
+async def test_eval_mode_auto_policy(env: tuple, risk: str, reject_from: str, status: str) -> None:  # type: ignore[type-arg]
+    """Eva 21:36：评测里计划全部自动批准（含 L3）；eval_reject_from 仍可配置回旧策略。"""
     router = RoleRouter(planner=[plan(risk)], executor=[say(RIGHT), finish()], reviewer=[review()])
-    res, rec = await go(env, router, mode="eval")
+    res, rec = await go(env, router, mode="eval", config=cfg(plan_approval__eval_reject_from=reject_from))
     assert res.status == status
     (resolved,) = kinds(rec, "approval_resolved")
     assert resolved["by"] == "policy" and not kinds(rec, "approval_requested")
@@ -298,3 +304,160 @@ async def test_roles_off_keeps_w3_sequence(env: tuple) -> None:  # type: ignore[
     router = RoleRouter(executor=[say(RIGHT), finish()])
     res, rec = await go(env, router, config=HarnessConfig.default())
     assert states(rec) == ["preparing", "executing", "packaging", "done"] and res.plan is None and res.review is None
+
+
+# ---------------------------------------------------------------- W4-10：ask_human
+W1_ASK = ["bash", "edit_file", "finish", "grep", "list_files", "read_file", "run_tests", "write_file", "ask_human"]
+ASK = call("ask_human", question="add 要支持字符串拼接吗？", options=["只要数字", "也支持字符串"])
+
+
+async def test_ask_human_blocking_gets_answer(env: tuple) -> None:  # type: ignore[type-arg]
+    seen: list[Any] = []
+
+    async def approver(req: Any) -> ApprovalDecision:
+        seen.append(req)
+        return ApprovalDecision("allow", comment="只要数字")
+
+    router = RoleRouter(planner=[plan()], executor=[say(ASK), say(RIGHT), finish()], reviewer=[review()])
+    res, rec = await go(env, router, approver=approver, tools=W1_ASK)
+    assert res.status == "done"
+    (req,) = seen
+    assert req.tool == "AskHuman" and "字符串拼接" in req.action and "也支持字符串" in req.action
+    answer = router.r["executor"].requests[1].messages[-1]
+    assert answer.role == "tool" and "用户的回答：只要数字" in (answer.content or "")
+    (resolved,) = kinds(rec, "approval_resolved")
+    assert resolved["by"] == "user" and resolved["comment"] == "只要数字"
+
+
+async def test_ask_human_without_channel_pauses_and_is_resumable(env: tuple, tmp_path: Path) -> None:  # type: ignore[type-arg]
+    router = RoleRouter(planner=[plan()], executor=[say(ASK), say(RIGHT), finish()])
+    (tmp_path / "run1").mkdir()
+    res, rec = await go(env, router, tools=W1_ASK, progress_dir=tmp_path / "run1")
+    assert res.status == "needs_human" and "Executor 提问" in (res.outcome.reason or "")
+    assert states(rec)[-1] == "needs_human"
+    assert (tmp_path / "run1" / "resume" / "resume.json").is_file()
+
+
+async def test_ask_human_non_blocking_and_eval(env: tuple) -> None:  # type: ignore[type-arg]
+    nb = call("ask_human", question="要不要顺便加类型注解？", blocking=False)
+    router = RoleRouter(planner=[plan()], executor=[say(nb), say(ASK), say(RIGHT), finish()], reviewer=[review()])
+    res, rec = await go(env, router, tools=W1_ASK, mode="eval")
+    assert res.status == "done"
+    reqs = router.r["executor"].requests
+    assert "不等待回答" in (reqs[1].messages[-1].content or "")
+    assert "评测模式不能问人" in (reqs[2].messages[-1].content or "")
+    assert "approval_requested" not in [e.kind for e in rec.events]
+    (audit,) = kinds(rec, "approval_resolved")
+    assert audit["by"] == "policy" and audit["decision"] == "deny"
+
+
+# ---------------------------------------------------------------- spec 010 §11 Q6：计划确认的续跑点
+async def test_plan_pending_saves_resume_point_and_resume_reuses_plan(env: tuple, tmp_path: Path) -> None:  # type: ignore[type-arg]
+    from triwitness.core.ids import new_run_id
+    from triwitness.harness.resume import load_resume
+
+    home = tmp_path / "home2"
+    first = new_run_id()
+    run1 = home / "runs" / first
+    run1.mkdir(parents=True)
+    router = RoleRouter(planner=[plan("L2")])
+    res, _ = await go(env, router, progress_dir=run1)
+    assert res.status == "needs_human"
+    doc = json.loads((run1 / "resume" / "resume.json").read_text(encoding="utf-8"))
+    assert doc["stage"] == "await_plan_approval" and doc["files"] == []
+    (run1 / "summary.json").write_text(json.dumps({"status": "needs_human"}), encoding="utf-8")
+    state = load_resume(home, first)
+    assert state.stage == "await_plan_approval"
+
+    asked: list[Any] = []
+
+    async def approver(req: Any) -> ApprovalDecision:
+        asked.append(req)
+        return ApprovalDecision("allow")
+
+    router2 = RoleRouter(planner=[], executor=[say(WRITE_REPRO), say(RIGHT), finish()], reviewer=[review()])
+    run2 = home / "runs" / new_run_id()
+    run2.mkdir()
+    res2, rec2 = await go(env, router2, approver=approver, progress_dir=run2, resume=state)
+    assert res2.status == "done", res2.outcome
+    assert router2.r["planner"].requests == []  # 没有重新规划
+    assert [r.tool for r in asked] == ["Plan"] and "风险预估 L2" in asked[0].reason
+    assert states(rec2)[:3] == ["preparing", "await_plan_approval", "executing"]
+    first_prompt = router2.r["executor"].requests[0].messages[1].content or ""
+    assert '<plan source="planner">' in first_prompt and "<resume" not in first_prompt
+
+
+# ---------------------------------------------------------------- W4-08：cross_vendor（假模型，不联网）
+class ScriptClient:
+    """某个厂商的假客户端：按脚本回复，记录 (角色, 模型)。"""
+
+    def __init__(self, script: list[Message]) -> None:
+        self.fake = FakeRouter(script)
+        self.calls: list[tuple[str, str]] = []
+
+    async def complete(self, req: LLMRequest, model: str, **kw: Any) -> LLMResponse:
+        self.calls.append((str(req.role), model))
+        resp = await self.fake.complete(req, guard=kw.get("guard"))
+        resp.model = model.rsplit("/", 1)[-1]
+        resp.served_model = resp.model
+        return resp
+
+
+def cross_router(reviewer_model: str, ds: list[Message], zp: list[Message], qw: list[Message]) -> Any:
+    from triwitness.llm.router import RoleRoute, Router
+
+    routes = {
+        "executor": RoleRoute(model="deepseek/deepseek-flash"),
+        "planner": RoleRoute(model="deepseek/deepseek-flash"),
+        "verifier": RoleRoute(model="qwen/qwen3.8-flash"),
+        "reviewer": RoleRoute(model=reviewer_model, variant="cross"),
+    }
+    clients = {"deepseek": ScriptClient(ds), "zhipu": ScriptClient(zp), "qwen": ScriptClient(qw)}
+    return Router(routes, clients, vendor_policy="cross_vendor"), clients  # type: ignore[arg-type]
+
+
+VERDICT = say(call("submit_verdict", verdict="pass", criteria=[{"criterion": "AC1", "judgement": "met"}],
+                   confidence=0.9, rationale="复现转绿，全量通过"))  # fmt: skip
+
+
+async def test_cross_vendor_end_to_end(env: tuple) -> None:  # type: ignore[type-arg]
+    """DoD：cross_vendor 只改配置即可启用——reviewer 走智谱、verifier 走千问，证据包标注不同厂商。"""
+    backend, repo = env
+    nit = {"severity": "nit", "file": "calc.py", "line": 2, "message": "可加注解"}
+    router, clients = cross_router("zhipu/glm-5.3", ds=[plan(), say(WRITE_REPRO), say(RIGHT), finish()],
+                                   zp=[review(nit)], qw=[VERDICT])  # fmt: skip
+    opts = VerifyOptions(backend=EphemeralBackend(backend), spec=SandboxSpec(repo=repo), static_tools=("ruff",),
+                         python=Path(sys.executable).as_posix(), mode="model", router=router,
+                         model_policy="always")  # fmt: skip
+    res, rec = await go(env, router, verify=opts)
+    assert res.status == "done", res.outcome
+    assert {r for r, _ in clients["deepseek"].calls} == {"planner", "executor"}
+    assert clients["zhipu"].calls == [("reviewer", "zhipu/glm-5.3")]
+    assert clients["qwen"].calls == [("verifier", "qwen/qwen3.8-flash")]
+    ev = res.verification.evidence  # type: ignore[union-attr]
+    assert ev.vendor_policy == "cross_vendor" and ev.review_model == "glm-5.3"
+    assert ev.verifier_model == "qwen3.8-flash"
+    (rv,) = kinds(rec, "review")
+    assert rv["vendor_policy"] == "cross_vendor"
+    assert "与执行者不同厂商" in res.verification.pr_body  # type: ignore[union-attr]
+
+
+async def test_cross_vendor_same_vendor_reviewer_fails_before_any_call(env: tuple) -> None:  # type: ignore[type-arg]
+    router, clients = cross_router("deepseek/deepseek-flash", ds=[plan()], zp=[], qw=[])
+    res, rec = await go(env, router)
+    assert res.status == "failed" and states(rec) == ["preparing", "failed"]
+    (err,) = kinds(rec, "error")
+    assert err["type"] == "ConstraintViolation" and "reviewer" in err["message"]
+    assert all(not c.calls for c in clients.values())
+
+
+def test_eval_agent_runs_without_permission_gate() -> None:
+    """Eva 21:36：评测默认完全放开——tw eval 的工具集不挂权限闸门（不审批命令），
+    只受模型白名单与非金钱安全上限约束。"""
+    import inspect
+
+    from triwitness.eval.agents import LLMAgent
+
+    src = inspect.getsource(LLMAgent.solve)
+    assert "registry=ToolRegistry(default_tools(names=harness.tools))," in src
+    assert 'mode="eval"' in src

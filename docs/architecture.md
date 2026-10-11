@@ -314,7 +314,7 @@ stateDiagram-v2
 ```
 
 - 状态迁移只能由编排器执行，并写入事件日志（`TaskEvent`），**角色不能直接改状态**。
-- 评测模式下：`AWAIT_*` 自动按策略处理（默认批准 L0–L1，拒绝 L3），`PR_OPENED` 替换为"把 diff 交给 Grader"。
+- 评测模式下：`AWAIT_*` 自动按策略处理（Eva 2026-10-11 决定：评测权限完全放开，计划全部自动批准含 L3、命令不审批；只限评测，见 spec 010 §11 Q2），`PR_OPENED` 替换为"把 diff 交给 Grader"。
 
 ### 3.2 Agent loop（单个角色内部）
 
