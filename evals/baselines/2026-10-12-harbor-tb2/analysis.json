@@ -1,0 +1,475 @@
+{
+ "kind": "harbor-tb2",
+ "dataset": "terminal-bench-2@2fd12b88aafd (10-task subset)",
+ "agent": "TriWitness harness=baseline, deepseek-flash non-thinking",
+ "full": {
+  "solved": 9,
+  "n": 10,
+  "rate": 0.9,
+  "wilson95": [
+   0.5958,
+   0.9821
+  ],
+  "bootstrap95": [
+   0.7,
+   1.0
+  ],
+  "trials": 10,
+  "cost_cny": 0.6614,
+  "cost_median": 0.0454,
+  "cost_max": 0.159802,
+  "calls": 318,
+  "input_tokens": 5114165,
+  "cache_hit_tokens": 4988032,
+  "output_tokens": 108873,
+  "cache_hit_rate": 0.9753,
+  "agent_s_median": 67.6,
+  "agent_s_max": 385.5,
+  "trial_s_sum": 1780.6,
+  "steps_median": 21.5,
+  "compact_or_clear": 0
+ },
+ "all_trials": {
+  "solved": 10,
+  "n": 11,
+  "wilson95": [
+   0.6226,
+   0.9838
+  ],
+  "trials": 11,
+  "cost_cny": 0.6893,
+  "cost_median": 0.0418,
+  "cost_max": 0.159802,
+  "calls": 338,
+  "input_tokens": 5262949,
+  "cache_hit_tokens": 5129728,
+  "output_tokens": 113377,
+  "cache_hit_rate": 0.9747,
+  "agent_s_median": 63.9,
+  "agent_s_max": 385.5,
+  "trial_s_sum": 1848.1,
+  "steps_median": 21,
+  "compact_or_clear": 0
+ },
+ "mde": {
+  "independent_n10": 0.6265,
+  "paired_n10": 0.3962,
+  "paired_n30": 0.2287
+ },
+ "ledger_total": {
+  "calls": 338,
+  "cost_cny": 0.689324,
+  "peak_calls": 0,
+  "first_ts": "2026-10-11T19:09:09.021547+00:00",
+  "last_ts": "2026-10-11T19:24:53.803798+00:00"
+ },
+ "trials": [
+  {
+   "job": "2026-10-12__03-08-52",
+   "run": "smoke",
+   "task": "fix-git",
+   "trial": "fix-git__rB9tFGE",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 20,
+   "exception": null,
+   "model_calls": 20,
+   "tool_calls": 25,
+   "top_tools": {
+    "bash": 17,
+    "notes": 2,
+    "read_file": 2,
+    "write_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 20,
+    "cost_cny": 0.027938,
+    "input_tokens": 148784,
+    "cache_hit_tokens": 141696,
+    "cache_miss_tokens": 7088,
+    "output_tokens": 4504,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:09:09.021547+00:00",
+    "last_ts": "2026-10-11T19:09:37.395542+00:00"
+   },
+   "cache_hit_rate": 0.9524,
+   "seconds": {
+    "total": 67.5,
+    "env_setup": 14.6,
+    "agent": 33.0,
+    "verifier": 14.5
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "cobol-modernization",
+   "trial": "cobol-modernization__wGfuyS8",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 70,
+   "exception": null,
+   "model_calls": 70,
+   "tool_calls": 85,
+   "top_tools": {
+    "bash": 68,
+    "edit_file": 6,
+    "write_file": 4,
+    "read_file": 3
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 70,
+    "cost_cny": 0.159802,
+    "input_tokens": 1675818,
+    "cache_hit_tokens": 1652224,
+    "cache_miss_tokens": 23594,
+    "output_tokens": 25791,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:10:50.644573+00:00",
+    "last_ts": "2026-10-11T19:17:09.940990+00:00"
+   },
+   "cache_hit_rate": 0.9859,
+   "seconds": {
+    "total": 422.4,
+    "env_setup": 13.2,
+    "agent": 385.5,
+    "verifier": 18.3
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "constraints-scheduling",
+   "trial": "constraints-scheduling__9Shva5E",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 19,
+   "exception": null,
+   "model_calls": 19,
+   "tool_calls": 22,
+   "top_tools": {
+    "bash": 12,
+    "read_file": 3,
+    "write_file": 3,
+    "notes": 2
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 19,
+    "cost_cny": 0.041849,
+    "input_tokens": 184475,
+    "cache_hit_tokens": 176512,
+    "cache_miss_tokens": 7963,
+    "output_tokens": 7589,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:10:49.656942+00:00",
+    "last_ts": "2026-10-11T19:11:29.920646+00:00"
+   },
+   "cache_hit_rate": 0.9568,
+   "seconds": {
+    "total": 133.4,
+    "env_setup": 11.8,
+    "agent": 45.5,
+    "verifier": 70.0
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "fix-git",
+   "trial": "fix-git__i43xRdi",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 22,
+   "exception": null,
+   "model_calls": 22,
+   "tool_calls": 23,
+   "top_tools": {
+    "bash": 17,
+    "write_file": 2,
+    "list_files": 1,
+    "edit_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 22,
+    "cost_cny": 0.030937,
+    "input_tokens": 184963,
+    "cache_hit_tokens": 176512,
+    "cache_miss_tokens": 8451,
+    "output_tokens": 4739,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:12:52.770412+00:00",
+    "last_ts": "2026-10-11T19:13:26.467365+00:00"
+   },
+   "cache_hit_rate": 0.9543,
+   "seconds": {
+    "total": 59.3,
+    "env_setup": 1.9,
+    "agent": 37.6,
+    "verifier": 14.5
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "git-leak-recovery",
+   "trial": "git-leak-recovery__Ua5YKmS",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 41,
+   "exception": null,
+   "model_calls": 41,
+   "tool_calls": 53,
+   "top_tools": {
+    "bash": 44,
+    "notes": 2,
+    "write_file": 2,
+    "read_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 41,
+    "cost_cny": 0.06575,
+    "input_tokens": 532785,
+    "cache_hit_tokens": 518272,
+    "cache_miss_tokens": 14513,
+    "output_tokens": 10218,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:14:00.712060+00:00",
+    "last_ts": "2026-10-11T19:16:16.576238+00:00"
+   },
+   "cache_hit_rate": 0.9728,
+   "seconds": {
+    "total": 181.1,
+    "env_setup": 10.5,
+    "agent": 140.8,
+    "verifier": 23.8
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "multi-source-data-merger",
+   "trial": "multi-source-data-merger__xdXBAPS",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 21,
+   "exception": null,
+   "model_calls": 21,
+   "tool_calls": 28,
+   "top_tools": {
+    "bash": 20,
+    "notes": 3,
+    "write_file": 2,
+    "list_files": 1
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 21,
+    "cost_cny": 0.048995,
+    "input_tokens": 225628,
+    "cache_hit_tokens": 216960,
+    "cache_miss_tokens": 8668,
+    "output_tokens": 8997,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:17:10.334029+00:00",
+    "last_ts": "2026-10-11T19:18:16.454194+00:00"
+   },
+   "cache_hit_rate": 0.9616,
+   "seconds": {
+    "total": 130.4,
+    "env_setup": 19.0,
+    "agent": 71.3,
+    "verifier": 34.4
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "nginx-request-logging",
+   "trial": "nginx-request-logging__cG2LUkP",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 19,
+   "exception": null,
+   "model_calls": 19,
+   "tool_calls": 27,
+   "top_tools": {
+    "bash": 19,
+    "notes": 2,
+    "write_file": 2,
+    "list_files": 1
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 19,
+    "cost_cny": 0.040502,
+    "input_tokens": 202791,
+    "cache_hit_tokens": 192128,
+    "cache_miss_tokens": 10663,
+    "output_tokens": 6499,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:17:46.836334+00:00",
+    "last_ts": "2026-10-11T19:18:46.148979+00:00"
+   },
+   "cache_hit_rate": 0.9474,
+   "seconds": {
+    "total": 90.6,
+    "env_setup": 7.0,
+    "agent": 63.9,
+    "verifier": 14.1
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "openssl-selfsigned-cert",
+   "trial": "openssl-selfsigned-cert__c2FRxvW",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 15,
+   "exception": null,
+   "model_calls": 15,
+   "tool_calls": 20,
+   "top_tools": {
+    "bash": 13,
+    "notes": 2,
+    "write_file": 2,
+    "list_files": 1
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 15,
+    "cost_cny": 0.024628,
+    "input_tokens": 89632,
+    "cache_hit_tokens": 85376,
+    "cache_miss_tokens": 4256,
+    "output_tokens": 4666,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:19:07.352260+00:00",
+    "last_ts": "2026-10-11T19:19:43.492737+00:00"
+   },
+   "cache_hit_rate": 0.9525,
+   "seconds": {
+    "total": 73.5,
+    "env_setup": 5.6,
+    "agent": 40.2,
+    "verifier": 22.3
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "overfull-hbox",
+   "trial": "overfull-hbox__UGG75JK",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 52,
+   "exception": null,
+   "model_calls": 52,
+   "tool_calls": 57,
+   "top_tools": {
+    "bash": 46,
+    "read_file": 5,
+    "notes": 2,
+    "write_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 52,
+    "cost_cny": 0.111981,
+    "input_tokens": 994138,
+    "cache_hit_tokens": 972928,
+    "cache_miss_tokens": 21210,
+    "output_tokens": 17828,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:19:24.712761+00:00",
+    "last_ts": "2026-10-11T19:21:29.879970+00:00"
+   },
+   "cache_hit_rate": 0.9787,
+   "seconds": {
+    "total": 273.5,
+    "env_setup": 14.2,
+    "agent": 130.2,
+    "verifier": 122.9
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "polyglot-c-py",
+   "trial": "polyglot-c-py__Av7ZYDk",
+   "reward": 0.0,
+   "tw_status": "done",
+   "steps": 41,
+   "exception": null,
+   "model_calls": 41,
+   "tool_calls": 50,
+   "top_tools": {
+    "bash": 44,
+    "write_file": 3,
+    "notes": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 41,
+    "cost_cny": 0.115159,
+    "input_tokens": 935723,
+    "cache_hit_tokens": 912384,
+    "cache_miss_tokens": 23339,
+    "output_tokens": 18393,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:20:27.969919+00:00",
+    "last_ts": "2026-10-11T19:23:48.414698+00:00"
+   },
+   "cache_hit_rate": 0.9751,
+   "seconds": {
+    "total": 270.6,
+    "env_setup": 12.7,
+    "agent": 205.7,
+    "verifier": 45.7
+   }
+  },
+  {
+   "job": "2026-10-12__03-10-36",
+   "run": "full",
+   "task": "prove-plus-comm",
+   "trial": "prove-plus-comm__eTM5Jtb",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 18,
+   "exception": null,
+   "model_calls": 18,
+   "tool_calls": 23,
+   "top_tools": {
+    "bash": 14,
+    "edit_file": 3,
+    "notes": 2,
+    "list_files": 1
+   },
+   "compact_or_clear_events": 0,
+   "ledger": {
+    "calls": 18,
+    "cost_cny": 0.021783,
+    "input_tokens": 88212,
+    "cache_hit_tokens": 84736,
+    "cache_miss_tokens": 3476,
+    "output_tokens": 4153,
+    "peak_calls": 0,
+    "first_ts": "2026-10-11T19:24:21.957907+00:00",
+    "last_ts": "2026-10-11T19:24:53.803798+00:00"
+   },
+   "cache_hit_rate": 0.9606,
+   "seconds": {
+    "total": 145.8,
+    "env_setup": 38.0,
+    "agent": 37.1,
+    "verifier": 65.1
+   }
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+{
+    "job_name": "2026-10-12__03-08-52",
+    "jobs_dir": "/home/administrator/tw-harbor/jobs",
+    "n_concurrent_trials": 2,
+    "agents": [
+        {
+            "name": "triwitness.integrations.harbor_agent:TriWitnessAgent",
+            "kwargs": {
+                "harness": "baseline",
+                "thinking": false
+            }
+        }
+    ],
+    "datasets": [
+        {
+            "path": "/home/administrator/tw-harbor/terminal-bench-2",
+            "task_names": [
+                "fix-git"
+            ]
+        }
+    ]
+}

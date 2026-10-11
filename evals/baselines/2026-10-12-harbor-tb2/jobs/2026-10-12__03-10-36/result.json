@@ -1,0 +1,50 @@
+{
+    "id": "398ebd67-e5a4-47c4-9cbf-9bf58d36a58b",
+    "started_at": "2026-10-12T03:10:37.127542",
+    "updated_at": "2026-10-12T03:26:09.559181",
+    "finished_at": "2026-10-12T03:26:09.559181",
+    "n_total_trials": 10,
+    "stats": {
+        "n_completed_trials": 10,
+        "n_errored_trials": 0,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "triwitness__terminal-bench-2": {
+                "n_trials": 10,
+                "n_errors": 0,
+                "metrics": [
+                    {
+                        "mean": 0.9
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "1.0": [
+                            "cobol-modernization__wGfuyS8",
+                            "constraints-scheduling__9Shva5E",
+                            "fix-git__i43xRdi",
+                            "git-leak-recovery__Ua5YKmS",
+                            "multi-source-data-merger__xdXBAPS",
+                            "nginx-request-logging__cG2LUkP",
+                            "openssl-selfsigned-cert__c2FRxvW",
+                            "overfull-hbox__UGG75JK",
+                            "prove-plus-comm__eTM5Jtb"
+                        ],
+                        "0.0": [
+                            "polyglot-c-py__Av7ZYDk"
+                        ]
+                    }
+                },
+                "exception_stats": {}
+            }
+        },
+        "n_input_tokens": 5114165,
+        "n_cache_tokens": 4988032,
+        "n_output_tokens": 108873,
+        "cost_usd": null
+    }
+}

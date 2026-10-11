@@ -1,0 +1,117 @@
+{
+ "solved": 10,
+ "n": 11,
+ "cost_cny": 0.6893,
+ "rows": [
+  {
+   "task": "terminal-bench/fix-git",
+   "trial": "fix-git__rB9tFGE",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.027938,
+   "steps": 20,
+   "cache_hit": 0.95236,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/cobol-modernization",
+   "trial": "cobol-modernization__wGfuyS8",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.159802,
+   "steps": 70,
+   "cache_hit": 0.985921,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/constraints-scheduling",
+   "trial": "constraints-scheduling__9Shva5E",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.041849,
+   "steps": 19,
+   "cache_hit": 0.956834,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/fix-git",
+   "trial": "fix-git__i43xRdi",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.030937,
+   "steps": 22,
+   "cache_hit": 0.95431,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/git-leak-recovery",
+   "trial": "git-leak-recovery__Ua5YKmS",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.06575,
+   "steps": 41,
+   "cache_hit": 0.97276,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/multi-source-data-merger",
+   "trial": "multi-source-data-merger__xdXBAPS",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.048995,
+   "steps": 21,
+   "cache_hit": 0.961583,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/nginx-request-logging",
+   "trial": "nginx-request-logging__cG2LUkP",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.040502,
+   "steps": 19,
+   "cache_hit": 0.947419,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/openssl-selfsigned-cert",
+   "trial": "openssl-selfsigned-cert__c2FRxvW",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.024628,
+   "steps": 15,
+   "cache_hit": 0.952517,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/overfull-hbox",
+   "trial": "overfull-hbox__UGG75JK",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.111981,
+   "steps": 52,
+   "cache_hit": 0.978665,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/polyglot-c-py",
+   "trial": "polyglot-c-py__Av7ZYDk",
+   "reward": 0.0,
+   "status": "done",
+   "cost_cny": 0.115159,
+   "steps": 41,
+   "cache_hit": 0.975058,
+   "error": null
+  },
+  {
+   "task": "terminal-bench/prove-plus-comm",
+   "trial": "prove-plus-comm__eTM5Jtb",
+   "reward": 1.0,
+   "status": "done",
+   "cost_cny": 0.021783,
+   "steps": 18,
+   "cache_hit": 0.960595,
+   "error": null
+  }
+ ]
+}
