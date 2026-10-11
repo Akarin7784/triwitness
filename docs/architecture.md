@@ -184,6 +184,7 @@ flowchart TB
 7. **评审**：Reviewer（**另一家厂商的模型**）读 diff、Plan、证据，输出问题清单；有阻断级问题就退回 Executor（最多 N 轮）。
 8. **打包**：生成 `evidence.json`、风险等级、成本账单，渲染成 PR 正文。
 9. **交付**：根据风险等级和配置决定是否需要人工点"开 PR"；推送到 `tw/<task-id>` 分支，开 PR，回帖 Issue。
+   > v0.3 预览的实际行为：只在本地生成分支 `tw/<run_id>` + PR 说明（pr.md），**不推送、不在 GitHub 上创建 PR、不回帖**；桌面端提供“复制 PR 说明 / 打开运行目录”。推送和开 PR 留给 W5 GitHub App（见 docs/release/known-limitations.md）。
 10. **CI 回流**：订阅 CI 结果，失败则把**精简后的失败日志**交给 Executor 修一轮（最多 N 轮）。
 11. **归档**：轨迹（Trajectory）落盘、上报 Langfuse；评测模式下交给 Grader 用隐藏测试判分。
 

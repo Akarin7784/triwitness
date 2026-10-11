@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { ChevronDown, ScrollText } from 'lucide-react'
+import { ChevronDown, ClipboardCopy, FolderOpen, GitBranch, ScrollText } from 'lucide-react'
 import clsx from 'clsx'
 import type { ResultMsg } from '../bridge/protocol'
 import { prSummary } from '../bridge/liveTask'
 import { t } from '../lib/i18n'
+import { revealPath } from '../lib/open'
+import { inTauri } from '../lib/appWindow'
+import { toast } from '../lib/toast'
 
 const VERDICT: Record<string, { label: string; cls: string }> = {
   pass: { label: t('复验通过'), cls: 'bg-sage/14 text-sage' },
@@ -20,7 +23,11 @@ const STATUS: Record<string, string> = {
   error: t('出错'),
 }
 
-/** 任务结尾的结论卡（UI-10，最小版）：裁决 · 风险 · PR 摘要；完整证据页后续做 */
+/**
+ * 任务结尾的结论卡（UI-10，最小版）：裁决 · 风险 · PR 说明摘要；完整证据页后续做。
+ * v0.3 如实表述：核心只生成本地分支 tw/<run_id> + PR 说明（pr.md），不推送、不在 GitHub 上创建 PR；
+ * 按钮只是“复制 PR 说明”和“打开运行目录”，由你自己决定是否推送 / 开 PR。
+ */
 export function ResultCard({ result }: { result: ResultMsg }) {
   const [open, setOpen] = useState(false)
   const v = result.verdict ? VERDICT[result.verdict] : null
@@ -63,7 +70,46 @@ export function ResultCard({ result }: { result: ResultMsg }) {
           </button>
         </div>
       )}
-      {result.branch && <p className="mt-2 font-mono text-[11px] text-sepia-muted">{result.branch}</p>}
+      {(result.branch || result.pr_md) && (
+        <div className="mt-3 border-t border-border-soft pt-3" data-testid="result-delivery">
+          <p className="text-[12px] leading-relaxed text-sepia">
+            {t('已生成本地分支和 PR 说明；没有推送，也没有在 GitHub 上创建 PR。')}
+          </p>
+          {result.branch && (
+            <p className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] text-sepia-muted">
+              <GitBranch size={11} strokeWidth={1.6} />
+              {result.branch}
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {result.pr_md && (
+              <button type="button" className="chip hover:text-amber-ink" data-testid="copy-pr-body" onClick={() => void copyPr(result.pr_md!)}>
+                <ClipboardCopy size={11} strokeWidth={1.7} />
+                {t('复制 PR 说明')}
+              </button>
+            )}
+            {result.run_dir && inTauri && (
+              <button type="button" className="chip hover:text-amber-ink" data-testid="open-run-dir" onClick={() => void openRunDir(result.run_dir!)}>
+                <FolderOpen size={11} strokeWidth={1.7} />
+                {t('打开运行目录')}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   )
+}
+
+async function copyPr(md: string) {
+  try {
+    await navigator.clipboard.writeText(md)
+    toast(t('已复制 PR 说明'))
+  } catch {
+    toast(t('复制失败'))
+  }
+}
+
+async function openRunDir(dir: string) {
+  if (!(await revealPath(dir))) toast(t('打不开运行目录'))
 }
