@@ -12,11 +12,12 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, Field
 
+from triwitness.config import resource_root
 from triwitness.core.models import RiskFactor, RiskLevel
 from triwitness.verify.anticheat import AntiCheatReport
 from triwitness.verify.diffutil import added_lines, changed_line_count, is_test_file, removed_lines, split_patch
 
-DEFAULT_POLICY = Path(__file__).resolve().parents[3] / "configs" / "policies" / "risk.yaml"
+DEFAULT_POLICY = resource_root() / "configs" / "policies" / "risk.yaml"
 ORDER: tuple[RiskLevel, ...] = ("L0", "L1", "L2", "L3")
 ReproStatus = Literal["reproduced", "not_applicable", "inconclusive", "failed"]
 _PUBLIC_DEF = re.compile(r"^(?:async\s+)?def\s+([A-Za-z]\w*)\s*\((.*)$|^class\s+([A-Za-z]\w*)\b(.*)$")

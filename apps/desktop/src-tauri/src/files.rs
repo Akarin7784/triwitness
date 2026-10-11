@@ -159,6 +159,7 @@ pub fn tool_args_ok(a: &[String]) -> bool {
     let s: Vec<&str> = a.iter().map(String::as_str).collect();
     match s.as_slice() {
         ["doctor", "--json"] => true,
+        ["budget", "--json"] => true,
         ["sandbox", "install", "docker" | "wsl", "--plan" | "--yes"] => true,
         ["permissions", "list", ..] => opt_pairs(&a[2..], &["--repo"]).is_some(),
         ["permissions", "validate", ..] => opt_pairs(&a[2..], &["--kind", "--rule"]).is_some_and(|p| p.len() == 2),
@@ -190,13 +191,14 @@ pub struct ToolOut {
 }
 
 #[tauri::command(async)]
-pub fn core_tool(args: Vec<String>) -> Result<ToolOut, String> {
+pub fn core_tool(app: tauri::AppHandle, args: Vec<String>) -> Result<ToolOut, String> {
     if !tool_args_ok(&args) {
         return Err("不允许的核心命令".into());
     }
     let tw_core = std::env::var("TW_CORE").ok();
     let mut last = String::from("找不到核心命令");
-    for prefix in crate::core::core_candidates(tw_core.as_deref()) {
+    let bundled = crate::core::bundled_core(&app);
+    for prefix in crate::core::core_candidates(tw_core.as_deref(), bundled.as_deref()) {
         let mut cmd = Command::new(&prefix[0]);
         cmd.args(&prefix[1..])
             .args(&args)
@@ -265,6 +267,8 @@ mod tests {
     #[test]
     fn tool_whitelist() {
         assert!(tool_args_ok(&v(&["doctor", "--json"])));
+        assert!(tool_args_ok(&v(&["budget", "--json"])));
+        assert!(!tool_args_ok(&v(&["budget", "sync"])));
         assert!(tool_args_ok(&v(&["sandbox", "install", "wsl", "--yes"])));
         assert!(!tool_args_ok(&v(&["sandbox", "install", "kernel", "--yes"])));
         assert!(!tool_args_ok(&v(&["run", "--repo", "x"])));

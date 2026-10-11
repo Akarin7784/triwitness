@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 #[derive(Default)]
 pub struct CoreState {
@@ -124,8 +124,15 @@ pub fn run_args(repo: &str, issue: &str, mode: &str) -> Vec<String> {
     a
 }
 
-/// 候选核心命令：TW_CORE（JSON 数组）优先，否则 tw → python -m triwitness
-pub fn core_candidates(tw_core: Option<&str>) -> Vec<Vec<String>> {
+/// 安装包内置核心（PyInstaller onedir，CI 在 Windows 上构建）：`<资源目录>/core/tw(.exe)`
+pub fn bundled_core(app: &AppHandle) -> Option<String> {
+    let exe = if cfg!(windows) { "tw.exe" } else { "tw" };
+    let p = app.path().resource_dir().ok()?.join("core").join(exe);
+    p.is_file().then(|| p.to_string_lossy().to_string())
+}
+
+/// 候选核心命令：TW_CORE（JSON 数组，开发用）优先 → 安装包内置核心 → PATH 上的 tw → python -m triwitness
+pub fn core_candidates(tw_core: Option<&str>, bundled: Option<&str>) -> Vec<Vec<String>> {
     if let Some(raw) = tw_core {
         if let Ok(v) = serde_json::from_str::<Vec<String>>(raw) {
             if !v.is_empty() {
@@ -133,7 +140,11 @@ pub fn core_candidates(tw_core: Option<&str>) -> Vec<Vec<String>> {
             }
         }
     }
-    let mut c = vec![vec!["tw".to_string()]];
+    let mut c = Vec::new();
+    if let Some(b) = bundled {
+        c.push(vec![b.to_string()]);
+    }
+    c.push(vec!["tw".to_string()]);
     if cfg!(windows) {
         c.push(vec!["py".into(), "-3".into(), "-m".into(), "triwitness".into()]);
     }
@@ -198,7 +209,8 @@ pub fn core_start(
     let tw_core = std::env::var("TW_CORE").ok();
     let mut last_err = String::from("找不到核心命令");
     let mut child = None;
-    for prefix in core_candidates(tw_core.as_deref()) {
+    let bundled = bundled_core(&app);
+    for prefix in core_candidates(tw_core.as_deref(), bundled.as_deref()) {
         match spawn(&prefix, &args, api_key.as_deref()) {
             Ok(c) => {
                 child = Some(c);
@@ -364,11 +376,15 @@ mod tests {
 
     #[test]
     fn core_override_and_fallbacks() {
-        let c = core_candidates(Some(r#"["uv","run","tw"]"#));
+        let c = core_candidates(Some(r#"["uv","run","tw"]"#), Some("C:/x/core/tw.exe"));
         assert_eq!(c, vec![vec!["uv", "run", "tw"]]);
-        let d = core_candidates(Some("not json"));
+        let d = core_candidates(Some("not json"), None);
         assert_eq!(d[0], vec!["tw"]);
         assert!(d.iter().any(|p| p.join(" ") == "python -m triwitness"));
+        // 内置核心排在 PATH 之前
+        let e = core_candidates(None, Some("C:/x/core/tw.exe"));
+        assert_eq!(e[0], vec!["C:/x/core/tw.exe"]);
+        assert_eq!(e[1], vec!["tw"]);
     }
 
     #[test]

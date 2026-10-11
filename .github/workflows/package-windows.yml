@@ -1,0 +1,97 @@
+# v0.3：Windows 安装包（内置 PyInstaller 打包的核心 tw.exe）。
+# PyInstaller 不能交叉编译，所以核心和安装包都在 windows-latest 上构建；全程 ¥0（只跑演示 / 假模型）。
+# - push main / 手动触发：产出 artifact（保留 14 天）
+# - release.yml 在打 v* 标签时复用本工作流，再把安装包挂到草稿 Release
+name: package-windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      installer:
+        description: 安装包文件名
+        value: ${{ jobs.package.outputs.installer }}
+
+concurrency:
+  group: package-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: windows installer (bundled core)
+    runs-on: windows-latest
+    outputs:
+      installer: ${{ steps.info.outputs.installer }}
+    env:
+      PYTHONUTF8: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Keep LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+
+      - name: Build core (PyInstaller onedir, no dev deps)
+        run: |
+          uv sync --locked --no-dev --group package
+          uv run --no-dev --group package python packaging/core/build_core.py
+      - name: Smoke-test bundled tw.exe (--version, budget --json, demo JSONL round-trip)
+        run: uv run --no-dev python packaging/core/smoke_core.py apps/desktop/src-tauri/resources/core/tw.exe
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+      - name: Build NSIS installer with bundled core
+        working-directory: apps/desktop
+        run: |
+          npm ci
+          npx tauri build --bundles nsis --config src-tauri/tauri.core.conf.json
+
+      - name: Size + sha256
+        id: info
+        run: |
+          f=$(ls apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe | head -1)
+          name=$(basename "$f")
+          mkdir -p dist
+          cp "$f" "dist/$name"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          size=$(stat -c %s "dist/$name")
+          echo "installer=$name" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Windows installer"
+            echo ""
+            echo "| file | size | sha256 |"
+            echo "|---|---|---|"
+            echo "| $name | $(awk "BEGIN{printf \"%.1f MiB\", $size/1048576}") | \`$(cut -d' ' -f1 "dist/$name.sha256")\` |"
+            echo ""
+            echo "core (onedir): $(du -sh apps/desktop/src-tauri/resources/core | cut -f1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "dist/$name.sha256"; ls -l dist
+
+      - name: Silent install + smoke the installed core
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist\*-setup.exe | Select-Object -First 1
+          $dir = "$env:RUNNER_TEMP\TriWitness"
+          Start-Process -FilePath $exe.FullName -ArgumentList '/S', "/D=$dir" -Wait
+          Get-ChildItem $dir | Format-Table Name, Length
+          if (-not (Test-Path "$dir\core\tw.exe")) { throw "bundled core missing in install dir" }
+          uv run --no-dev python packaging/core/smoke_core.py "$dir\core\tw.exe"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TriWitness-windows-installer
+          path: dist/
+          retention-days: 14
+          if-no-files-found: error

@@ -31,6 +31,10 @@ dev = [
     "jsonschema>=4.26.0",
     "types-jsonschema>=4.26.0.20261006",
 ]
+# 桌面安装包内置核心（packaging/core/build_core.py；CI 在 windows-latest 上构建 tw.exe）
+package = [
+    "pyinstaller>=6.10",
+]
 
 [build-system]
 requires = ["hatchling>=1.25"]

@@ -27,3 +27,5 @@ dist-ssr
 release/
 tools/node_modules/
 src-tauri/target/
+# PyInstaller 打包的核心（CI 在 Windows 上生成，经 tauri.core.conf.json 打进安装包）
+src-tauri/resources/core/

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -12,12 +13,19 @@ import yaml
 from triwitness.core.errors import ConfigError
 
 
+def resource_root() -> Path:
+    """只读资源根（含 configs/）：源码运行时是仓库根；PyInstaller 打包（桌面内置核心）时是解包目录 `_internal/`。"""
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    # src/triwitness/config.py → 仓库根
+    return Path(__file__).resolve().parents[2]
+
+
 def config_dir() -> Path:
     env = os.environ.get("TW_CONFIG_DIR")
     if env:
         return Path(env)
-    # src/triwitness/config.py → 仓库根/configs
-    return Path(__file__).resolve().parents[2] / "configs"
+    return resource_root() / "configs"
 
 
 def tw_home() -> Path:
