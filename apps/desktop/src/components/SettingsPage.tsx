@@ -34,6 +34,7 @@ import {
 } from '../data/budget'
 import { hitRate, useLedger, type LedgerState } from '../lib/ledger'
 import { RELEASES_URL, openUrl } from '../lib/open'
+import { GITHUB_TOKEN_URL } from '../lib/pr'
 import { APP_VERSION } from '../lib/version'
 import { type Backend } from '../bridge/choices'
 import {
@@ -50,7 +51,7 @@ import {
   type SavedMode,
   type Theme,
 } from '../lib/prefs'
-import { secretClear, secretSet, secretStatus, type SecretState } from '../lib/secrets'
+import { secretClear, secretSet, secretStatus, type SecretKind, type SecretState } from '../lib/secrets'
 import { notYet, toast } from '../lib/toast'
 import { parseRules, type RuleKind } from '../data/rules'
 import defaultRulesYaml from '../../../../configs/permissions.default.yaml?raw'
@@ -419,18 +420,31 @@ function ModelSection() {
   )
 }
 
-function ApiKeyRow() {
+/** 凭据库里的一把钥匙：DeepSeek 密钥（模型页）/ GitHub 令牌（连接器页，开 PR 用） */
+function ApiKeyRow({
+  kind = 'deepseek',
+  label = tr('DeepSeek API 密钥'),
+  placeholder = 'sk-…',
+  testId = 'api-key-row',
+  children,
+}: {
+  kind?: SecretKind
+  label?: string
+  placeholder?: string
+  testId?: string
+  children?: ReactNode
+}) {
   const [state, setState] = useState<SecretState | null>(null)
   const [editing, setEditing] = useState(false)
   const [v, setV] = useState('')
   const [busy, setBusy] = useState(false)
   useEffect(() => {
-    secretStatus().then(setState, () => setState('unsupported'))
-  }, [])
+    secretStatus(kind).then(setState, () => setState('unsupported'))
+  }, [kind])
   const save = async () => {
     setBusy(true)
     try {
-      await secretSet(v)
+      await secretSet(v, kind)
       setState('set')
       setEditing(false)
       toast(tr('已存入系统凭据库'))
@@ -442,11 +456,11 @@ function ApiKeyRow() {
     }
   }
   return (
-    <div data-testid="api-key-row" className="border-b border-border-soft/70 py-4">
+    <div data-testid={testId} className="border-b border-border-soft/70 py-4">
       <div className="flex items-center justify-between gap-4">
         <span className="flex items-center gap-2 text-[13.5px] text-ink">
           <KeyRound size={14} strokeWidth={1.6} className="text-sepia" />
-          {tr('DeepSeek API 密钥')}
+          {label}
         </span>
         <span className="flex items-center gap-2">
           {state === 'set' && (
@@ -468,7 +482,7 @@ function ApiKeyRow() {
           {state === 'set' && !editing && (
             <button
               type="button"
-              onClick={() => secretClear().then(() => (setState('unset'), toast(tr('已清除'))), (e) => toast(String(e)))}
+              onClick={() => secretClear(kind).then(() => (setState('unset'), toast(tr('已清除'))), (e) => toast(String(e)))}
               className="chip hover:text-rose-ink"
             >
               {tr('清除')}
@@ -476,6 +490,7 @@ function ApiKeyRow() {
           )}
         </span>
       </div>
+      {children}
       <AnimatePresence initial={false}>
         {editing && (
           <motion.div
@@ -494,7 +509,7 @@ function ApiKeyRow() {
                 value={v}
                 onChange={(e) => setV(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && v.trim() && void save()}
-                placeholder="sk-…"
+                placeholder={placeholder}
                 className={clsx(FIELD, 'font-mono')}
                 aria-label={tr('API 密钥')}
               />
@@ -805,8 +820,20 @@ function Connectors() {
   return (
     <>
       <Title>{tr('连接器')}</Title>
+      <Group title="GitHub">
+        <ApiKeyRow kind="github" label={tr('GitHub 令牌（开 PR 用）')} placeholder="github_pat_…" testId="github-token-row">
+          <p className="mt-2 text-[11.5px] leading-relaxed text-sepia-muted">
+            {tr(
+              '只在你确认开 PR 时用来推送分支和创建 PR。建议用细粒度令牌：只选要开 PR 的仓库，只给 Contents 与 Pull requests 读写权限，设过期时间。',
+            )}{' '}
+            <button type="button" className="underline decoration-dotted hover:text-amber-ink" onClick={() => void openUrl(GITHUB_TOKEN_URL)}>
+              {tr('去 GitHub 创建令牌')}
+            </button>
+          </p>
+        </ApiKeyRow>
+      </Group>
       <Group>
-        {['GitHub', 'GitLab', 'Gitee'].map((n) => (
+        {['GitLab', 'Gitee'].map((n) => (
           <Row key={n} label={n}>
             <button type="button" onClick={() => notYet(tr('连接 {0}', n))} className="chip hover:text-amber-ink">
               {tr('连接')}

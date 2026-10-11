@@ -44,6 +44,8 @@ export interface ResultMsg {
   risk_level: RiskLevel | null
   clean_env: 'verified' | 'failed' | 'unverified' | null
   pr_md: string | null
+  /** 本地仓库路径（开 PR 用；0.3.2 起） */
+  repo?: string | null
 }
 export interface ErrorMsg {
   bridge: 'error'

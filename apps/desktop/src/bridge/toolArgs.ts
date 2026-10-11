@@ -13,6 +13,35 @@ function pairs(rest: string[], allowed: string[]): Map<string, string> | null {
   return m
 }
 
+const RUN_ID = /^r_[0-9A-HJKMNP-TV-Z]{26}$/
+
+/** `tw pr plan|open`：--run 必须是合法 run_id；open 必须带 --yes（审批卡确认后才传） */
+function prArgsOk(rest: string[], open: boolean): boolean {
+  let run = false
+  let yes = false
+  for (let i = 0; i < rest.length; i++) {
+    const k = rest[i]
+    if (k === '--json') continue
+    if (open && k === '--yes') {
+      yes = true
+      continue
+    }
+    if (open && k === '--draft') continue
+    if (k === '--run' || k === '--repo' || k === '--base') {
+      const v = rest[i + 1]
+      if (v === undefined || v === '' || v.startsWith('--')) return false
+      if (k === '--run') {
+        if (!RUN_ID.test(v)) return false
+        run = true
+      }
+      i++
+      continue
+    }
+    return false
+  }
+  return run && (yes || !open)
+}
+
 export function toolArgsOk(a: unknown): a is string[] {
   if (!Array.isArray(a) || !a.every((x) => typeof x === 'string')) return false
   const s = a as string[]
@@ -21,6 +50,7 @@ export function toolArgsOk(a: unknown): a is string[] {
   if (s.length === 4 && s[0] === 'sandbox' && s[1] === 'install') {
     return ['docker', 'wsl'].includes(s[2]) && ['--plan', '--yes'].includes(s[3])
   }
+  if (s[0] === 'pr' && (s[1] === 'plan' || s[1] === 'open')) return prArgsOk(s.slice(2), s[1] === 'open')
   if (s[0] !== 'permissions') return false
   const rest = s.slice(2)
   switch (s[1]) {

@@ -154,12 +154,45 @@ fn opt_pairs<'a>(rest: &'a [String], allowed: &[&str]) -> Option<Vec<(&'a str, &
     Some(seen)
 }
 
+/// `tw pr plan|open` 的参数：--run 必须是合法 run_id；--repo / --base 是普通值；open 必须带 --yes
+fn pr_args_ok(rest: &[String], open: bool) -> bool {
+    let mut run_ok = false;
+    let mut yes = false;
+    let mut i = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--json" => {}
+            "--yes" if open => yes = true,
+            "--draft" if open => {}
+            k @ ("--run" | "--repo" | "--base") => {
+                let Some(v) = rest.get(i + 1) else { return false };
+                if v.starts_with("--") || v.is_empty() {
+                    return false;
+                }
+                if k == "--run" {
+                    if !crate::core::valid_run_id(v) {
+                        return false;
+                    }
+                    run_ok = true;
+                }
+                i += 1;
+            }
+            _ => return false,
+        }
+        i += 1;
+    }
+    run_ok && (yes || !open)
+}
+
 /// `core_tool` 白名单：只读自检、受控安装（--plan / --yes 由前端在用户确认后才传）、规则编辑
 pub fn tool_args_ok(a: &[String]) -> bool {
     let s: Vec<&str> = a.iter().map(String::as_str).collect();
     match s.as_slice() {
         ["doctor", "--json"] => true,
         ["usage", "--json"] => true, // 用量页：本地账本（只读）
+        // 开 PR：plan 不联网；open 只有用户在审批卡上确认后前端才带 --yes
+        ["pr", "plan", ..] => pr_args_ok(&a[2..], false),
+        ["pr", "open", ..] => pr_args_ok(&a[2..], true),
         ["sandbox", "install", "docker" | "wsl", "--plan" | "--yes"] => true,
         ["permissions", "list", ..] => opt_pairs(&a[2..], &["--repo"]).is_some(),
         ["permissions", "validate", ..] => opt_pairs(&a[2..], &["--kind", "--rule"]).is_some_and(|p| p.len() == 2),
@@ -205,6 +238,11 @@ pub fn core_tool(app: tauri::AppHandle, args: Vec<String>) -> Result<ToolOut, St
             .stdin(Stdio::null())
             .env("PYTHONUTF8", "1")
             .env("PYTHONIOENCODING", "utf-8");
+        if args.first().map(String::as_str) == Some("pr") {
+            if let Some(t) = crate::secrets::read_github_token() {
+                cmd.env("GITHUB_TOKEN", t); // 只进这个子进程环境，不写盘、不回传前端
+            }
+        }
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
@@ -268,6 +306,13 @@ mod tests {
     fn tool_whitelist() {
         assert!(tool_args_ok(&v(&["doctor", "--json"])));
         assert!(tool_args_ok(&v(&["usage", "--json"])));
+        let run = "r_01M4NANDBP5J50KF7ESFJ0M7E3";
+        assert!(tool_args_ok(&v(&["pr", "plan", "--run", run, "--repo", "C:/src/x", "--json"])));
+        assert!(tool_args_ok(&v(&["pr", "open", "--run", run, "--repo", "/r", "--yes", "--json"])));
+        assert!(!tool_args_ok(&v(&["pr", "open", "--run", run, "--repo", "/r", "--json"]))); // 没确认
+        assert!(!tool_args_ok(&v(&["pr", "plan", "--run", "r_; rm -rf", "--json"])));
+        assert!(!tool_args_ok(&v(&["pr", "plan", "--run", run, "--title", "x"])));
+        assert!(!tool_args_ok(&v(&["pr", "plan", "--repo", "/r"])));
         assert!(!tool_args_ok(&v(&["usage", "sync"])) && !tool_args_ok(&v(&["budget", "--json"])));
         assert!(tool_args_ok(&v(&["sandbox", "install", "wsl", "--yes"])));
         assert!(!tool_args_ok(&v(&["sandbox", "install", "kernel", "--yes"])));
