@@ -1,10 +1,10 @@
 /**
- * 界面偏好（UI-21）：模型、思考强度、外观、个人资料、运行设置（沙箱 / ¥ 上限 / 高峰 / 权限）、每个会话的草稿。
+ * 界面偏好（UI-21）：模型、思考强度、外观、个人资料、运行设置（沙箱 / 权限）、每个会话的草稿。
  * localStorage 持久化，可订阅。完全访问模式（full_access，原勇士模式）从不落盘：只在内存里为下一个任务“上膛”。
  * 模型只有 deepseek-flash 可选；deepseek-v4-pro 不出现在任何列表里（ADR-0002）。
  */
 import { useSyncExternalStore } from 'react'
-import { BACKENDS, MAX_COST_CAP, normalizeMode, type Backend, type PermissionMode } from '../bridge/choices'
+import { BACKENDS, normalizeMode, type Backend, type PermissionMode } from '../bridge/choices'
 import { t as tr } from './i18n'
 
 export type Thinking = 'off' | 'low' | 'medium' | 'high'
@@ -72,8 +72,6 @@ export interface Prefs {
   name: string
   about: string
   backend: Backend
-  maxCost: number
-  allowPeak: boolean
   permissionMode: SavedMode
   sidebarCollapsed: boolean
 }
@@ -94,15 +92,17 @@ export const DEFAULTS: Prefs = {
   name: '',
   about: '',
   backend: 'auto',
-  maxCost: MAX_COST_CAP,
-  allowPeak: false,
   permissionMode: 'auto_review',
   sidebarCollapsed: false,
 }
 
-/** 逐项校验：坏值回默认；v4-pro / 勇士模式 / 超上限一律不可能从存储里读出来 */
+/** 0.3.2 去掉的预算设置：读旧存储时丢弃，下次写盘就不再有 */
+const REMOVED_KEYS = ['maxCost', 'allowPeak'] as const
+
+/** 逐项校验：坏值回默认；v4-pro / 勇士模式一律不可能从存储里读出来；已废弃的键丢弃 */
 function sanitize(p: Prefs, fallback: Prefs = DEFAULTS): Prefs {
   const q = { ...p }
+  for (const k of REMOVED_KEYS) delete (q as Record<string, unknown>)[k]
   if (!isSelectableModel(q.model)) q.model = fallback.model
   if (!THINKING_LEVELS.some((t) => t.id === q.thinking)) q.thinking = fallback.thinking
   if (!['light', 'auto', 'dark'].includes(q.theme)) q.theme = fallback.theme
@@ -125,8 +125,6 @@ function sanitize(p: Prefs, fallback: Prefs = DEFAULTS): Prefs {
   q.name = q.name.slice(0, 40)
   q.about = q.about.slice(0, 2000)
   if (!(BACKENDS as readonly string[]).includes(q.backend)) q.backend = fallback.backend
-  if (typeof q.maxCost !== 'number' || !(q.maxCost > 0 && q.maxCost <= MAX_COST_CAP)) q.maxCost = fallback.maxCost
-  q.allowPeak = q.allowPeak === true
   // 0.2.0 的 auto_edit / auto 迁移为 auto_review；完全访问（含旧 unrestricted / full_access）永不从存储里读出
   const m = normalizeMode(q.permissionMode)
   q.permissionMode = m && m !== 'full_access' ? m : fallback.permissionMode

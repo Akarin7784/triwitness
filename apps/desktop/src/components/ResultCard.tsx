@@ -19,7 +19,7 @@ const STATUS: Record<string, string> = {
   done: t('已完成'),
   failed: t('未完成'),
   stuck: t('卡住'),
-  budget_exceeded: t('超预算'),
+  budget_exceeded: t('触及安全上限'),
   cancelled: t('已停止'),
   error: t('出错'),
 }

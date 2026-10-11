@@ -2,7 +2,7 @@ import { Check, Coins, Hourglass, X } from 'lucide-react'
 import clsx from 'clsx'
 import type { Phase } from '../data/mapEvent'
 
-/** 会话终态的小图形：完成 ✓ / 失败 ✕ / 预算耗尽 ¥ / 等待 ⧗ / 进行中呼吸点 */
+/** 会话终态的小图形：完成 ✓ / 失败 ✕ / 触及安全上限 ¥ / 等待 ⧗ / 进行中呼吸点 */
 export function StatusGlyph({ phase, className }: { phase: Phase; className?: string }) {
   const cls = clsx('shrink-0', className)
   switch (phase) {

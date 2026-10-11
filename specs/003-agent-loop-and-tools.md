@@ -58,15 +58,15 @@ class ToolRegistry:
     async def dispatch(self, call: ToolCallSpec, ctx: ToolContext) -> ToolResult: ...
 
 
-class Budget(BaseModel):  # ADR-0002（eval 模式默认值）
-    max_cost_cny: float = 0.8
+class Budget(BaseModel):  # ADR-0002（eval 模式默认值）；0.3.2 起是防失控的安全上限，不含金额
+    max_cost_cny: float | None = None  # 已废弃：只为兼容旧配置，读入后忽略
     max_input_tokens: int = 6_000_000  # 含缓存命中，兜底（W2-26：原 3M）
     max_uncached_input_tokens: int = 400_000  # 缓存未命中（W2-26）
     max_output_tokens: int = 100_000
     max_turns: int = 100
     max_wall_seconds: int = 1800
-    warn_ratio: float = 0.8
-    # `tw run` / dogfooding：max_cost_cny=1.0、max_wall_seconds=2700
+    warn_ratio: float = 0.8  # 任一上限用到该比例即提醒收尾
+    # `tw run` / dogfooding：max_wall_seconds=2700
 
 
 class LoopOutcome(BaseModel):
@@ -170,7 +170,7 @@ while True:
 - [x] AC3：参数类型错误时返回 `ok=False` 且 content 中包含字段名和期望类型。
 - [x] AC4：`edit_file` 在 0 次 / 2 次匹配时都返回可操作的错误提示。
 - [x] AC5：假模型连续 3 次相同 `bash` 调用 → 插入提醒；持续重复 → 最终 `stuck`。
-- [x] AC6：`Budget()` 默认值与 ADR-0002 一致；`max_cost_cny=0.01` 时，第一次模型调用后即 `budget_exhausted`。
+- [x] AC6：`Budget()` 默认值与 ADR-0002 一致；`max_turns=1` 时，第一次模型调用后即 `budget_exhausted`（0.3.2 起没有 ¥ 上限，`max_cost_cny` 被忽略）。
 - [x] AC7：`finish(tests_passed=True)` 而最近一次 `run_tests` 失败 → 被拒绝。
 - [x] AC8：（集成 + 真实模型）只在 DeepSeek 空闲时段，在 `evals/tasks/dev/001-*` 上用 deepseek-flash 跑通并通过隐藏测试（允许重试 3 次中至少 1 次成功）。
 
@@ -204,3 +204,4 @@ while True:
 - 2026-10-10（W1-34 真跑）：AC8 通过。仓库里没有 `001-*` 命名，dev 首个任务按字母序为 csv-blank-line；deepseek-flash 思考 high 3/3 解决，每次约 ¥0.008，结果见 evals/baselines/2026-10-10-w1/ac8。
 - 2026-10-10：W2-26：单任务预算总输入 3M→6M（兜底）+ 新增 `max_uncached_input_tokens=400K`（守卫按 cache_miss 计）；Executor 默认 harness 改为 repro-first（`HarnessConfig.default()`，`run_task` / `tw run` / eval LLMAgent 未指定时使用），基线 RunConfig 显式指定 baseline.yaml 不受影响。
 - 2026-10-10：UI-10 桌面端接入：`run_task` 捕获取消（CancelledError）→ 状态 cancelled + `task_finished(status=cancelled)`，正常返回（保留分支与产物）；`run_local(on_event=…)` 把事件同步推给桥接；`tw run --jsonl`（tw-bridge/1，见 src/triwitness/bridge/stdio.py）与 `--demo`（脚本化 Router + 演示仓库，¥0）；`python -m triwitness`。审批事件带 display（待批 · 工具 · 命令 / 已允许（一次 / 本次任务 / 总是）/ 已拒绝）。默认权限规则修正：`Read(~/.triwitness/**)` 误伤 none 后端工作树（`~/.triwitness/worktrees`），加例外 `Read(!~/.triwitness/worktrees/**)`。
+- 2026-10-11（0.3.2）：按 ADR-0002 修订“去掉预算控制”（Eva 19:14）：`TaskBudgetGuard` 不再检查花费，只检查轮数 / 墙钟 / token 兜底；`warn_ratio` 按这些上限提醒收尾；`Budget.max_cost_cny` 废弃（可选、忽略）。

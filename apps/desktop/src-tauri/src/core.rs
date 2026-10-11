@@ -45,10 +45,8 @@ pub struct Choices {
     pub model: Option<String>,
     pub thinking: Option<String>,
     pub backend: Option<String>,
-    pub max_cost: Option<f64>,
     pub permission_mode: Option<String>,
     pub confirm_unrestricted: Option<String>,
-    pub allow_peak: Option<bool>,
     /// `attach_save` 返回的路径（只接受 `<tw_home>/attachments/` 之内）
     pub attachments: Option<Vec<String>>,
     /// 个人偏好 + 风格 + 项目说明（纯文本，写成临时文件交给 --guidance-file）
@@ -56,8 +54,7 @@ pub struct Choices {
 }
 
 pub const UNRESTRICTED_PHRASE: &str = "我了解风险";
-/// 与 core `Budget.for_run()` 一致：设置页只能调低
-pub const MAX_COST_CAP: f64 = 1.0;
+// 0.3.2：去掉预算控制，不再传 --max-cost / --allow-peak（旧前端发来的 maxCost / allowPeak 被 serde 忽略）
 
 pub fn choice_args(c: &Choices) -> Vec<String> {
     let mut a: Vec<String> = Vec::new();
@@ -74,9 +71,6 @@ pub fn choice_args(c: &Choices) -> Vec<String> {
     if let Some(b) = c.backend.as_deref().filter(|b| matches!(*b, "auto" | "docker" | "none")) {
         push("--backend", b);
     }
-    if let Some(x) = c.max_cost.filter(|x| x.is_finite() && *x > 0.0 && *x <= MAX_COST_CAP) {
-        push("--max-cost", &format!("{x:.2}"));
-    }
     match c.permission_mode.as_deref() {
         // spec 006 v3：四种模式；0.2.0 的 auto_edit / auto → auto_review，unrestricted → full_access
         Some(m @ ("plan" | "ask" | "auto_review")) => push("--permission-mode", m),
@@ -86,9 +80,6 @@ pub fn choice_args(c: &Choices) -> Vec<String> {
             push("--confirm-full-access", UNRESTRICTED_PHRASE);
         }
         _ => {}
-    }
-    if c.allow_peak == Some(true) {
-        a.push("--allow-peak".to_string());
     }
     a
 }
@@ -385,15 +376,13 @@ mod tests {
     #[test]
     fn choices_are_whitelisted() {
         let s = |v: &str| Some(v.to_string());
-        let ok = Choices { model: s("deepseek-flash"), thinking: s("high"), backend: s("none"), max_cost: Some(0.5),
-                           permission_mode: s("ask"), allow_peak: Some(true), ..Default::default() };
+        let ok = Choices { model: s("deepseek-flash"), thinking: s("high"), backend: s("none"),
+                           permission_mode: s("ask"), ..Default::default() };
         assert_eq!(choice_args(&ok), ["--model", "deepseek-flash", "--thinking", "high", "--backend", "none",
-                                      "--max-cost", "0.50", "--permission-mode", "ask", "--allow-peak"]);
-        let bad = Choices { model: s("deepseek-v4-pro"), thinking: s("ultra"), backend: s("vm"), max_cost: Some(9.0),
-                            permission_mode: s("unrestricted"), confirm_unrestricted: s("ok"), allow_peak: Some(false),
-                            ..Default::default() };
+                                      "--permission-mode", "ask"]);
+        let bad = Choices { model: s("deepseek-v4-pro"), thinking: s("ultra"), backend: s("vm"),
+                            permission_mode: s("unrestricted"), confirm_unrestricted: s("ok"), ..Default::default() };
         assert!(choice_args(&bad).is_empty());
-        assert!(choice_args(&Choices { max_cost: Some(f64::NAN), ..Default::default() }).is_empty());
         for m in ["full_access", "unrestricted"] {
             let warrior = Choices { permission_mode: s(m), confirm_unrestricted: s(UNRESTRICTED_PHRASE), ..Default::default() };
             assert_eq!(choice_args(&warrior), ["--permission-mode", "full_access", "--confirm-full-access", UNRESTRICTED_PHRASE]);
@@ -402,8 +391,9 @@ mod tests {
         for m in ["auto_edit", "auto", "auto_review"] {
             assert_eq!(choice_args(&Choices { permission_mode: s(m), ..Default::default() }), ["--permission-mode", "auto_review"]);
         }
-        let parsed: Choices = serde_json::from_str(r#"{"maxCost":0.3,"permissionMode":"plan"}"#).unwrap();
-        assert_eq!(choice_args(&parsed), ["--max-cost", "0.30", "--permission-mode", "plan"]);
+        // 0.3.1 及更早的前端还会发 maxCost / allowPeak：忽略，不再变成参数
+        let parsed: Choices = serde_json::from_str(r#"{"maxCost":0.3,"allowPeak":true,"permissionMode":"plan"}"#).unwrap();
+        assert_eq!(choice_args(&parsed), ["--permission-mode", "plan"]);
     }
 
     #[test]

@@ -27,7 +27,6 @@ import { ClearHistoryDialog, LicensesDialog } from './settings/DataDialogs'
 import { clearHistory, collectLocalData, exportFileStamp } from '../lib/localData'
 import { saveText } from '../lib/download'
 import {
-  BUDGET_TOTAL,
   PEAK_WINDOWS,
   PRICE,
   beijingNow,
@@ -36,7 +35,7 @@ import {
 import { hitRate, useLedger, type LedgerState } from '../lib/ledger'
 import { RELEASES_URL, openUrl } from '../lib/open'
 import { APP_VERSION } from '../lib/version'
-import { MAX_COST_CAP, type Backend } from '../bridge/choices'
+import { type Backend } from '../bridge/choices'
 import {
   FONT_SCALES,
   MODELS,
@@ -63,7 +62,7 @@ export type SettingsSection =
   | 'general'
   | 'profile'
   | 'model'
-  | 'budget'
+  | 'usage'
   | 'permissions'
   | 'sandbox'
   | 'connectors'
@@ -74,7 +73,7 @@ const SETTINGS_SECTIONS: { id: SettingsSection; label: string; icon: typeof Info
   { id: 'general', label: tr('常规'), icon: SlidersHorizontal },
   { id: 'profile', label: tr('个人资料'), icon: UserRound },
   { id: 'model', label: tr('模型'), icon: Sparkles },
-  { id: 'budget', label: tr('预算'), icon: Wallet },
+  { id: 'usage', label: tr('用量'), icon: Wallet },
   { id: 'permissions', label: tr('权限'), icon: Shield },
   { id: 'sandbox', label: tr('沙箱'), icon: Box },
   { id: 'connectors', label: tr('连接器'), icon: Plug },
@@ -150,7 +149,7 @@ export function SettingsPage({
             {section === 'general' && <General />}
             {section === 'profile' && <Profile />}
             {section === 'model' && <ModelSection />}
-            {section === 'budget' && <Budget />}
+            {section === 'usage' && <Usage />}
             {section === 'permissions' && <Permissions />}
             {section === 'sandbox' && <Sandbox />}
             {section === 'connectors' && <Connectors />}
@@ -236,28 +235,6 @@ function Segmented<T extends string | number>({
         )
       })}
     </div>
-  )
-}
-
-function Toggle({ on, onChange, danger, testId }: { on: boolean; onChange: (v: boolean) => void; danger?: boolean; testId?: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      data-testid={testId}
-      onClick={() => onChange(!on)}
-      className={clsx(
-        'relative h-[22px] w-[38px] rounded-full transition-colors duration-300',
-        on ? (danger ? 'bg-rose-ink' : 'bg-sage') : 'bg-border',
-      )}
-    >
-      <motion.span
-        layout
-        transition={{ type: 'spring', stiffness: 700, damping: 34 }}
-        className={clsx('absolute top-[3px] h-4 w-4 rounded-full bg-cream shadow', on ? 'right-[3px]' : 'left-[3px]')}
-      />
-    </button>
   )
 }
 
@@ -535,52 +512,50 @@ function ApiKeyRow() {
   )
 }
 
-/* ---------------------------------------------------------------- 预算 */
+/* ---------------------------------------------------------------- 用量 */
 
-function Budget() {
-  const p = usePrefs()
+/** 0.3.2（去掉预算控制）：只读用量页——本机账本里的累计花费、按类别、最近调用；没有上限 / 开关 */
+function Usage() {
   const now = useNow()
   const bj = beijingNow(now)
   const gate = gateStatus(now)
   const led = useLedger()
   const data = led.status === 'ok' ? led.data : null
+  const pct = (x: number | null) => (x == null ? '—' : `${(x * 100).toFixed(0)}%`)
   const hhmm = `${String(bj.hh).padStart(2, '0')}:${String(bj.mm).padStart(2, '0')}`
+  const cats = data ? Object.entries(data.by_category).sort((x, y) => y[1] - x[1]) : []
   return (
     <>
-      <Title>{tr('预算')}</Title>
-      <Group title={tr('上限')}>
-        <Row label={tr('单任务上限')} hint={tr('最高 ¥{0}', MAX_COST_CAP.toFixed(2))} testId="max-cost-row">
-          <input
-            type="range"
-            min={0.1}
-            max={MAX_COST_CAP}
-            step={0.05}
-            value={p.maxCost}
-            onChange={(e) => setPrefs({ maxCost: Math.round(Number(e.target.value) * 100) / 100 })}
-            aria-label={tr('单任务上限')}
-            className="range-ink w-40"
-          />
-          <span className="w-14 text-right font-serif text-[16px] tabular-nums text-ink">¥{p.maxCost.toFixed(2)}</span>
-        </Row>
-        <Row label={tr('总预算')}>
-          <span className="font-serif text-[16px] tabular-nums text-ink">¥{data?.total_cny ?? BUDGET_TOTAL}</span>
-          <span className="text-[11.5px] text-sepia-muted" data-testid="budget-spent">
-            {data ? tr('已花 ¥{0}', data.spent.toFixed(2)) : tr('已花 —')}
+      <Title>{tr('用量')}</Title>
+      <Group title={tr('累计')}>
+        <Row label={tr('已花')} hint={data?.first_call ? tr('自 {0} 起 · 本机账本', data.first_call) : tr('本机账本')}>
+          <span className="font-serif text-[16px] tabular-nums text-ink" data-testid="usage-spent">
+            {data ? `¥${data.spent.toFixed(data.spent < 1 ? 4 : 2)}` : '¥—'}
           </span>
         </Row>
+        <Row label={tr('调用')}>
+          <span className="text-[12.5px] tabular-nums text-ink-soft" data-testid="usage-calls">
+            {data ? tr('{0} 次 · 缓存命中 {1} · 高峰价 {2} 次', String(data.calls), pct(data.cache_hit_rate), String(data.peak_calls)) : '—'}
+          </span>
+        </Row>
+        {cats.map(([k, v]) => (
+          <Row key={k} label={k}>
+            <span className="text-[12.5px] tabular-nums text-ink-soft">¥{v.toFixed(v < 0.01 ? 4 : 2)}</span>
+          </Row>
+        ))}
       </Group>
 
-      <Group title={tr('高峰闸门')}>
+      <Group title={tr('价格时段')}>
         <div className="py-5">
           <div className="flex flex-wrap items-center gap-3">
             <span
               className={clsx(
                 'inline-flex items-center gap-2 rounded-full px-3.5 py-1 font-serif text-[15px] font-medium',
-                gate.inPeak ? 'bg-rose-ink/12 text-rose-ink' : 'bg-sage/14 text-sage',
+                gate.inPeak ? 'bg-amber/14 text-amber-ink' : 'bg-sage/14 text-sage',
               )}
             >
-              <span className={clsx('pulse-dot h-2 w-2 rounded-full', gate.inPeak ? 'bg-rose-ink' : 'bg-sage')} />
-              {gate.inPeak ? tr('高峰') : tr('空闲')}
+              <span className={clsx('h-2 w-2 rounded-full', gate.inPeak ? 'bg-amber' : 'bg-sage')} />
+              {gate.inPeak ? tr('高峰价') : tr('空闲价')}
             </span>
             <Tip label={tr('北京时间')} side="bottom">
               <span className="font-mono text-[13px] tabular-nums text-ink-soft">
@@ -594,32 +569,30 @@ function Budget() {
               </span>
             </Tip>
           </div>
+          <p className="mt-2 text-[11.5px] text-sepia-muted">{tr('DeepSeek 高峰时段按 2× 计价；任何时段都可以正常使用，花费照实记账。')}</p>
           <DayBar minutes={bj.minutes} weekday={gate.weekday} />
           <WeekGrid today={bj.day} />
         </div>
-        <Row label={tr('高峰时段也允许真实调用')} hint={tr('2× 价 · 只影响真实模式')}>
-          <Toggle on={p.allowPeak} onChange={(allowPeak) => setPrefs({ allowPeak })} danger testId="allow-peak" />
-        </Row>
       </Group>
 
-      <LedgerCard led={led} maxCost={p.maxCost} />
+      <LedgerCard led={led} />
     </>
   )
 }
 
-function LedgerCard({ led, maxCost }: { led: LedgerState; maxCost: number }) {
+function LedgerCard({ led }: { led: LedgerState }) {
   const data = led.status === 'ok' ? led.data : null
   const pct = (x: number | null) => (x == null ? '—' : `${(x * 100).toFixed(0)}%`)
   return (
     <div className="paper-card overflow-hidden rounded-2xl" data-testid="ledger-card">
       <div className="flex flex-wrap items-center gap-2 px-5 py-3">
-        <p className="font-serif text-[14px] text-ink-soft">{tr('账本')}</p>
+        <p className="font-serif text-[14px] text-ink-soft">{tr('最近调用')}</p>
         <Tip label={tr('空闲价 · 命中 {0} / 未命中 {1} / 输出 {2} 元每百万 token', PRICE.idle.hit, PRICE.idle.miss, PRICE.idle.out)} side="right">
           <Info size={12} strokeWidth={1.6} className="text-sepia-muted" />
         </Tip>
         {data && (
           <span className="ml-auto text-[11px] tabular-nums text-sepia-muted" data-testid="ledger-summary">
-            {tr('{0} 次调用 · 缓存命中 {1} · 剩余 ¥{2}', String(data.calls), pct(data.cache_hit_rate), data.remaining.toFixed(2))}
+            {tr('{0} 次调用 · 缓存命中 {1} · 已花 ¥{2}', String(data.calls), pct(data.cache_hit_rate), data.spent.toFixed(4))}
           </span>
         )}
       </div>
@@ -656,12 +629,10 @@ function LedgerCard({ led, maxCost }: { led: LedgerState; maxCost: number }) {
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-sepia">
                   {r.model}
-                  {r.peak && <span className="ml-1.5 text-[10.5px] text-rose-ink">{tr('高峰')}</span>}
+                  {r.peak && <span className="ml-1.5 text-[10.5px] text-amber-ink">{tr('高峰价')}</span>}
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums">{pct(hitRate(r))}</td>
-                <td className={clsx('px-5 py-2.5 text-right tabular-nums', r.cost_cny > maxCost && 'text-rose-ink')}>
-                  ¥{r.cost_cny.toFixed(r.cost_cny < 0.01 ? 4 : 2)}
-                </td>
+                <td className="px-5 py-2.5 text-right tabular-nums">¥{r.cost_cny.toFixed(r.cost_cny < 0.01 ? 4 : 2)}</td>
               </tr>
             ))}
           </tbody>

@@ -14,7 +14,7 @@ export const demoSession: ActivitySession = {
     {
       id: 'l2',
       role: 'system',
-      text: '预算闸门 · 空闲窗口 · 单任务上限 ¥0.80 · 缓存命中优先',
+      text: '用量记录 · 缓存命中优先 · 轮数 / 时间兜底',
       pauseBefore: 400,
     },
     {

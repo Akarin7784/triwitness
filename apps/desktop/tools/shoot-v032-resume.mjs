@@ -7,7 +7,7 @@ const out = new URL(`../../../docs/images/${process.env.SHOTS ?? 'v0.3.2'}/`, im
 mkdirSync(out, { recursive: true })
 const REPO = process.env.REPO ?? ''
 const TASK = process.env.TASK ?? 'line_count 把空行也算进去了：「床前明月光\\n\\n疑是地上霜\\n」应为 2 行，实际返回 4。帮我修一下。'
-const EXTRA = { permissionMode: process.env.MODE ?? 'auto_review', allowPeak: process.env.ALLOW_PEAK === '1', maxCost: Number(process.env.MAX_COST ?? 0.5), backend: process.env.BACKEND ?? 'none' }
+const EXTRA = { permissionMode: process.env.MODE ?? 'auto_review', backend: process.env.BACKEND ?? 'none' }
 const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--hide-scrollbars'] })
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 const results = []

@@ -187,3 +187,4 @@ constraints:
 - 2026-10-10：W1-07/08/11/12 落地（types、ModelAdapter、DeepSeekAdapter、录制/回放、pricing + 节假日表、单任务守卫 + 全局账本）；记录实测字段名；调休上班的周末按官方字面视为空闲（`adjusted_workdays_are_peak: false` 可切换）。
 - 2026-10-10：W1-13 Router 落地（llm/router.py：角色路由、vendor_policy、eval 禁止回退、回退标注 degraded、漂移告警）；W1-14 批量层闸门（llm/gate.py：高峰拒绝启动、跨入高峰停止派发、allow_peak 报告标注、`tw eval estimate` 双价估算）。AC6（v4-pro 拒绝 + cross_vendor FakeClient）与 AC7（eval 模式 429 重试 2 次后抛出、不回退）单测通过。
 - 2026-10-11：UI-20 流式输出（llm/stream.py）：交互运行时 DeepSeek 走 `stream=true` + `stream_options.include_usage`，SSE 分块拼回非流式形状——回放缓存 key 与录制内容仍按非流式请求，不受影响；已收到分块后不再重试。回放命中时把缓存回复切片送出（¥0）。桌面端思考强度 off / low / medium / high → `thinking` 关 / `reasoning_effort` low / high / max（router.executor_override；模型只认 deepseek-flash，v4-pro 照旧拒绝）。只用合成 SSE 夹具与回放测试，未真调。
+- 2026-10-11（0.3.2）：按 ADR-0002 修订“去掉预算控制”（Eva 19:14）：LLMClient 去掉调用级高峰闸门（`PeakHourBlocked` 不再抛出）与全局账本预检；账本只记录（`tw usage`）。白名单（拒 v4-pro）不变。

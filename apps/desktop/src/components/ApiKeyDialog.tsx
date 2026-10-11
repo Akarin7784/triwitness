@@ -45,7 +45,7 @@ function Body({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }
   return (
     <>
       <p className="text-[13px] leading-relaxed text-ink-soft" data-allow-wrap>
-        {tr('三证用你自己的 DeepSeek 账户调用模型（只用 deepseek-flash）。粘贴一个 API 密钥就能开始；费用记在本机账本里，受预算上限约束。')}
+        {tr('三证用你自己的 DeepSeek 账户调用模型（只用 deepseek-flash）。粘贴一个 API 密钥就能开始；每次调用的费用记在本机账本里，随时可在「设置 → 用量」查看。')}
       </p>
       <button
         type="button"

@@ -408,7 +408,7 @@ async def run_agent(role: RoleSpec, task: Task, sandbox: Sandbox, budget: Budget
 | 模型协议错误 | 例：DeepSeek 带工具时没回传 `reasoning_content` 会返回 400（[DeepSeek 思考模式](https://api-docs.deepseek.com/guides/thinking_mode)） | 适配器层保证回传；有单测覆盖 |
 | 输出格式不稳定 | JSON 校验失败 | 修复重试 2 次（把校验错误回给模型）→ 从 content 提取 → 失败计入指标 |
 | 死循环 | ① 同一工具 + 同参数哈希在最近 10 步出现 ≥3 次；② 连续 K 步没有文件改动但反复跑同一失败测试；③ diff 状态哈希回到之前出现过的状态（来回改） | 第一次注入反思提示（列出重复的动作）；第二次换更强的模型档；第三次 `NEEDS_HUMAN` |
-| 预算耗尽 | Budget 检查 | 到 80% 时提醒模型收尾并压缩；到 100% 停止，保留当前 diff 和 NOTES.md，状态 `BUDGET_EXCEEDED` |
+| 触及安全上限 | Budget 检查（0.3.2 起只有轮数 / 时间 / token，无金额） | 到 80% 时提醒模型收尾并压缩；到 100% 停止，保留当前 diff 和 NOTES.md，状态 `BUDGET_EXCEEDED` |
 | 进程崩溃 / 机器重启 | — | 从检查点恢复：重放事件日志重建消息历史（**不重复执行有副作用的工具**），工作区从影子提交恢复 |
 | 外部副作用重复 | — | 开 PR、评论、推送都带幂等键（`task_id + 操作名 + 序号`），先查后做 |
 

@@ -274,37 +274,14 @@ export function ChatPanel({
 
 function CostChip({ run }: { run: RunView }) {
   const hit = cacheHitRate(run)
-  const ratio = run.budgetCny > 0 ? run.costCny / run.budgetCny : 0
-  const tip = [
-    hit !== null ? t('命中 {0}%', Math.round(hit * 100)) : null,
-    t('上限 ¥{0}', run.budgetCny.toFixed(2)),
-    run.peakCalls ? t('高峰 {0} 次', run.peakCalls) : null,
-  ]
+  const tip = [hit !== null ? t('命中 {0}%', Math.round(hit * 100)) : null, run.peakCalls ? t('高峰价 {0} 次', run.peakCalls) : null]
     .filter(Boolean)
     .join(' · ')
+  // 0.3.2：没有 ¥ 上限，也就没有进度条 / 超限变色；只显示本任务实付与缓存命中
   return (
-    <Tip label={tip} side="bottom">
-      <span
-        data-testid="cost-chip"
-        className={clsx(
-          'chip tabular-nums transition-colors duration-700',
-          ratio > 1 || run.phase === 'budget'
-            ? 'border-rose-ink/40 text-rose-ink'
-            : ratio > 0.8 || run.peakCalls > 0
-              ? 'border-amber/50 text-amber-ink'
-              : '',
-        )}
-      >
+    <Tip label={tip || t('本任务实付')} side="bottom">
+      <span data-testid="cost-chip" className={clsx('chip tabular-nums', run.peakCalls > 0 && 'border-amber/50 text-amber-ink')}>
         ¥{run.costCny.toFixed(3)}
-        <span className="relative h-1 w-8 overflow-hidden rounded-full bg-border-soft">
-          <span
-            className={clsx(
-              'absolute inset-y-0 left-0 rounded-full transition-[width] duration-700',
-              ratio > 1 ? 'bg-rose-ink/70' : 'bg-amber/70',
-            )}
-            style={{ width: `${Math.min(100, ratio * 100)}%` }}
-          />
-        </span>
       </span>
     </Tip>
   )

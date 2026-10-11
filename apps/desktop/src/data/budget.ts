@@ -6,9 +6,6 @@ export const PRICE = {
   peak: { hit: 0.04, miss: 2, out: 8 },
 } as const
 
-export const BUDGET_TOTAL = 100
-export const TASK_CAP = 0.8
-
 /** 北京时间工作日高峰（左闭右开，单位：小时） */
 export const PEAK_WINDOWS: [number, number][] = [
   [9, 12],

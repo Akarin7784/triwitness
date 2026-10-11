@@ -123,21 +123,24 @@ const LIVE_LABEL: Record<string, string> = {
   done: tr('已完成'),
   failed: tr('未完成'),
   stuck: tr('卡住'),
-  budget_exceeded: tr('超预算'),
+  budget_exceeded: tr('触及安全上限'),
   cancelled: tr('已停止'),
   error: tr('出错'),
 }
 
+/** 0.3.2：预算页改为只读的用量页，旧链接 section=budget 跳到 usage */
+function legacySection(s: string | null): SettingsSection | null {
+  return s === 'budget' ? 'usage' : (s as SettingsSection | null)
+}
+
 /** 设置 → 本次任务的选择；勇士模式“上膛”时只给这一个任务 */
-function runChoices(p: Prefs, mode: string, warrior: boolean): RunChoices {
+function runChoices(p: Prefs, warrior: boolean): RunChoices {
   return {
     model: p.model,
     thinking: p.thinking,
     backend: p.backend,
-    maxCost: p.maxCost,
     permissionMode: warrior ? 'full_access' : p.permissionMode,
     confirmUnrestricted: warrior ? UNRESTRICTED_PHRASE : undefined,
-    allowPeak: mode === 'live' && p.allowPeak,
   }
 }
 
@@ -195,7 +198,7 @@ export default function App() {
   /** 作品栏：打开的作品 id 与版本；diffs 按 run_dir 缓存 patch.diff */
   const [artifact, setArtifact] = useState<{ id: string; version: number | null } | null>(null)
   const [diffs, setDiffs] = useState<Record<string, string | null>>({})
-  const [section, setSection] = useState<SettingsSection>(() => (params.get('section') as SettingsSection) || 'general')
+  const [section, setSection] = useState<SettingsSection>(() => legacySection(params.get('section')) || 'general')
   const [palette, setPalette] = useState(false)
   const [shortcuts, setShortcuts] = useState(false)
   const [renaming, setRenaming] = useState<string | null>(null)
@@ -337,7 +340,7 @@ export default function App() {
       mode,
       parentRun,
       resume,
-      ...runChoices(p, mode, warrior),
+      ...runChoices(p, warrior),
       attachments: paths.length ? paths.slice(0, 20) : undefined,
       guidance: guidance || undefined,
       attachmentNames: files.map((f) => f.name),
@@ -495,7 +498,7 @@ export default function App() {
   }
 
   const openSettings = (s?: string) => {
-    if (s) setSection(s as SettingsSection)
+    if (s) setSection(legacySection(s) as SettingsSection)
     setView('settings')
   }
 

@@ -48,8 +48,8 @@ export interface ResultMsg {
 export interface ErrorMsg {
   bridge: 'error'
   message: string
-  /** peak_blocked：高峰时段被拒（去设置里允许）；budget：预算上限 */
-  code?: 'peak_blocked' | 'budget' | string
+  /** budget：触及非金钱安全上限（轮数 / 时间 / token 兜底）；0.3.2 起不再有 peak_blocked */
+  code?: 'budget' | string
 }
 export interface AckMsg {
   bridge: 'ack'

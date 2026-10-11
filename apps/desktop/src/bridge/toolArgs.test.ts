@@ -4,8 +4,9 @@ import { toolArgsOk } from './toolArgs'
 describe('toolArgsOk（与 Rust tool_args_ok 同表）', () => {
   it('放行固定子命令', () => {
     expect(toolArgsOk(['doctor', '--json'])).toBe(true)
-    expect(toolArgsOk(['budget', '--json'])).toBe(true)
-    expect(toolArgsOk(['budget', 'sync'])).toBe(false)
+    expect(toolArgsOk(['usage', '--json'])).toBe(true)
+    expect(toolArgsOk(['usage', 'sync'])).toBe(false)
+    expect(toolArgsOk(['budget', '--json'])).toBe(false)
     expect(toolArgsOk(['sandbox', 'install', 'wsl', '--yes'])).toBe(true)
     expect(toolArgsOk(['permissions', 'list', '--repo', 'C:/r'])).toBe(true)
     expect(toolArgsOk(['permissions', 'validate', '--kind', 'allow', '--rule', 'Bash(ls)'])).toBe(true)

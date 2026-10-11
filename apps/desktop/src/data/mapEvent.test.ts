@@ -93,12 +93,12 @@ describe('foldRun · golden fixtures', () => {
     expect(v.label).toBe('失败')
   })
 
-  it('budget_exceeded：预算态，预算取 cost_report 并超出', () => {
+  it('budget_exceeded：触及非金钱安全上限（0.3.2 起没有 ¥ 预算）', () => {
     const v = foldRun(parseJsonl(readFixture('budget_exceeded')))
     expect(v.phase).toBe('budget')
-    expect(v.budgetCny).toBe(0.05)
-    expect(v.costCny).toBeGreaterThan(v.budgetCny)
-    expect(v.messages.at(-1)?.content).toMatch(/预算耗尽/)
+    expect(v.costCny).toBeGreaterThan(0)
+    expect('budgetCny' in v).toBe(false)
+    expect(v.messages.at(-1)?.content).toMatch(/安全上限/)
   })
 
   it('recorded（core 真实写出）：完成、标题、费用、执行者消息与流水', () => {

@@ -4,15 +4,12 @@ import { choiceArgs, normalizeMode, UNRESTRICTED_PHRASE } from './choices'
 describe('choiceArgs（与 Rust choice_args 同一张白名单）', () => {
   it('放行合法值，顺序固定', () => {
     expect(
-      choiceArgs({ model: 'deepseek-flash', thinking: 'high', backend: 'none', maxCost: 0.5, permissionMode: 'ask', allowPeak: true }),
-    ).toEqual(['--model', 'deepseek-flash', '--thinking', 'high', '--backend', 'none', '--max-cost', '0.50', '--permission-mode', 'ask', '--allow-peak'])
+      choiceArgs({ model: 'deepseek-flash', thinking: 'high', backend: 'none', permissionMode: 'ask' }),
+    ).toEqual(['--model', 'deepseek-flash', '--thinking', 'high', '--backend', 'none', '--permission-mode', 'ask'])
   })
-  it('丢弃 v4-pro、越界上限、未知值', () => {
-    expect(
-      choiceArgs({ model: 'deepseek-v4-pro', thinking: 'ultra', backend: 'vm', maxCost: 9, permissionMode: 'root', allowPeak: false }),
-    ).toEqual([])
-    expect(choiceArgs({ maxCost: Number.NaN })).toEqual([])
-    expect(choiceArgs({ maxCost: 0 })).toEqual([])
+  it('丢弃 v4-pro、未知值；0.3.2 起旧的 maxCost / allowPeak 一律忽略', () => {
+    expect(choiceArgs({ model: 'deepseek-v4-pro', thinking: 'ultra', backend: 'vm', permissionMode: 'root' })).toEqual([])
+    expect(choiceArgs({ maxCost: 0.5, allowPeak: true })).toEqual([])
   })
   it('完全访问模式必须带确认短语（旧值 unrestricted 迁移）', () => {
     for (const m of ['full_access', 'unrestricted']) {

@@ -1,6 +1,6 @@
 /**
- * 真实账本（v0.3）：经白名单命令 `tw budget --json` 读 ~/.triwitness/ledger.sqlite（只读、不联网）。
- * 预算页和状态栏共用一份缓存；30 秒或窗口重新可见时刷新。没连上核心时返回 offline，界面显示“—”，不编数字。
+ * 真实账本（v0.3）：经白名单命令 `tw usage --json` 读 ~/.triwitness/ledger.sqlite（只读、不联网）。
+ * 0.3.2 起账本只是用量日志：没有总额 / 剩余 / 信封 / 熔断。用量页和状态栏共用一份缓存；30 秒或窗口重新可见时刷新。没连上核心时返回 offline，界面显示“—”，不编数字。
  */
 import { useSyncExternalStore } from 'react'
 import { coreTool } from './coreTool'
@@ -18,19 +18,15 @@ export interface LedgerCall {
   cost_cny: number
 }
 
-export interface BudgetData {
+export interface UsageData {
   now: string
-  total_cny: number
   spent: number
-  remaining: number
   calls: number
   peak_calls: number
   cache_hit_rate: number | null
-  warn: boolean
-  kill_switch: boolean
-  burn_per_day: number | null
-  exhaustion: string | null
-  envelopes: { category: string; spent: number; cap: number | null; remaining: number | null }[]
+  /** 第一笔调用的日期（北京时间 YYYY-MM-DD），空账本为 null */
+  first_call: string | null
+  by_category: Record<string, number>
   by_week: Record<string, number>
   by_model: Record<string, number>
   recent: LedgerCall[]
@@ -38,7 +34,7 @@ export interface BudgetData {
 
 export type LedgerState =
   | { status: 'loading' }
-  | { status: 'ok'; data: BudgetData }
+  | { status: 'ok'; data: UsageData }
   | { status: 'offline' }
   | { status: 'error'; error: string }
 
@@ -58,7 +54,7 @@ export async function refreshLedger() {
   if (inflight) return
   inflight = true
   try {
-    const r = await coreTool<BudgetData>(['budget', '--json'])
+    const r = await coreTool<UsageData>(['usage', '--json'])
     if (r.ok) setLedgerState({ status: 'ok', data: r.data })
     else setLedgerState(r.offline ? { status: 'offline' } : { status: 'error', error: r.error })
   } finally {

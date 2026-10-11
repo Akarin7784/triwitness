@@ -51,7 +51,7 @@ describe('偏好', () => {
 })
 
 describe('设置（UI-21）', () => {
-  it('坏值回默认；勇士模式与超上限不能从存储读出', async () => {
+  it('坏值回默认；勇士模式不能从存储读出；0.3.2 去掉的预算设置被丢弃', async () => {
     const p = await import('./prefs')
     localStorage.setItem(
       'tw.prefs',
@@ -60,15 +60,17 @@ describe('设置（UI-21）', () => {
     p.reloadPrefs()
     const s = p.getPrefs()
     expect(s.permissionMode).toBe('auto_review')
-    expect(s.maxCost).toBe(1)
+    expect('maxCost' in s).toBe(false)
     expect(s.backend).toBe('auto')
     expect(s.theme).toBe('light')
     expect(s.fontScale).toBe(1)
-    expect(s.allowPeak).toBe(false)
-    p.setPrefs({ permissionMode: 'unrestricted' as never, maxCost: 0.4, theme: 'dark' })
+    expect('allowPeak' in s).toBe(false)
+    p.setPrefs({ permissionMode: 'unrestricted' as never, theme: 'dark' })
     expect(p.getPrefs().permissionMode).toBe('auto_review')
-    expect(p.getPrefs().maxCost).toBe(0.4)
     expect(p.getPrefs().theme).toBe('dark')
+    const saved = localStorage.getItem('tw.prefs') ?? ''
+    expect(saved).not.toContain('maxCost')
+    expect(saved).not.toContain('allowPeak')
   })
 
   it('勇士模式只上膛一次、不落盘', async () => {

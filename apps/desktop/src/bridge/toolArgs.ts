@@ -17,7 +17,7 @@ export function toolArgsOk(a: unknown): a is string[] {
   if (!Array.isArray(a) || !a.every((x) => typeof x === 'string')) return false
   const s = a as string[]
   if (s.length === 2 && s[0] === 'doctor' && s[1] === '--json') return true
-  if (s.length === 2 && s[0] === 'budget' && s[1] === '--json') return true // 预算页：真实账本（只读）
+  if (s.length === 2 && s[0] === 'usage' && s[1] === '--json') return true // 用量页：本地账本（只读）
   if (s.length === 4 && s[0] === 'sandbox' && s[1] === 'install') {
     return ['docker', 'wsl'].includes(s[2]) && ['--plan', '--yes'].includes(s[3])
   }

@@ -5,7 +5,6 @@ import type { ChatMessage, RoleId, StreamLine, StreamTone } from '../types'
 import { isKnown, type AnyEvent, type TaskState, type TwEvent } from './events'
 import { t } from '../lib/i18n'
 
-export const TASK_CAP_DEFAULT = 0.8
 
 const STATE_LABEL: Record<TaskState, string> = {
   received: t('接收'),
@@ -22,7 +21,7 @@ const STATE_LABEL: Record<TaskState, string> = {
   ci_watch: t('盯 CI'),
   done: t('完成'),
   needs_human: t('待人工'),
-  budget_exceeded: t('预算耗尽'),
+  budget_exceeded: t('触及安全上限'),
   failed: t('失败'),
   cancelled: t('已取消'),
 }
@@ -179,7 +178,6 @@ export interface RunView {
   cacheHitTokens: number
   cacheMissTokens: number
   peakCalls: number
-  budgetCny: number
   messages: ChatMessage[]
   lastSeq: number
   /** 未结案的审批数（> 0 时状态签显示“待批”） */
@@ -199,7 +197,6 @@ export const EMPTY_RUN: RunView = {
   cacheHitTokens: 0,
   cacheMissTokens: 0,
   peakCalls: 0,
-  budgetCny: TASK_CAP_DEFAULT,
   messages: [],
   lastSeq: -1,
   approvalsPending: 0,
@@ -287,10 +284,7 @@ export function reduceRun(v: RunView, e: AnyEvent): RunView {
       next.label = STATE_LABEL[terminal]
       next.activeRole = null
       const cr = p.cost_report
-      if (cr) {
-        next.costCny = cr.total_cny
-        next.budgetCny = cr.budget_cny
-      }
+      if (cr) next.costCny = cr.total_cny
       const fr = p.finish_report
       const content = fr?.summary || (p.display ?? '').trim() || next.label
       const meta = [p.display, fr ? t('置信度 {0}', fr.confidence.toFixed(2)) : null].filter(Boolean).join(' · ')

@@ -11,8 +11,6 @@ const TASK = process.env.TASK ?? 'line_count 把空行也算进去了：「床�
 const MODE = process.env.MODE ?? 'ask'
 // 额外偏好（真实 key 跑时：ALLOW_PEAK=1 MAX_COST=0.5 BACKEND=none）；ONLY=chat|task 只跑一部分
 const EXTRA = {
-  ...(process.env.ALLOW_PEAK === '1' ? { allowPeak: true } : {}),
-  ...(process.env.MAX_COST ? { maxCost: Number(process.env.MAX_COST) } : {}),
   ...(process.env.BACKEND ? { backend: process.env.BACKEND } : {}),
 }
 const ONLY = process.env.ONLY ?? ''
