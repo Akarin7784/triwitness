@@ -34,6 +34,7 @@ import {
   gateStatus,
 } from '../data/budget'
 import { hitRate, useLedger, type LedgerState } from '../lib/ledger'
+import { RELEASES_URL, openUrl } from '../lib/open'
 import { coreMode, setCoreMode } from '../bridge/liveStore'
 import type { CoreMode } from '../bridge/protocol'
 import { MAX_COST_CAP, type Backend } from '../bridge/choices'
@@ -899,9 +900,14 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
             <Keyboard size={11} strokeWidth={1.7} /> Ctrl /
           </button>
         </Row>
-        <Row label={tr('检查更新')}>
-          <button type="button" onClick={() => notYet(tr('检查更新'))} className="chip hover:text-amber-ink">
-            {tr('检查')}
+        <Row label={tr('检查更新')} hint={tr('预览版不自动更新：打开 GitHub Releases 页面，自己下载新版')}>
+          <button
+            type="button"
+            data-testid="check-updates"
+            onClick={() => void openUrl(RELEASES_URL).then((ok) => ok || toast(tr('打不开浏览器：{0}', RELEASES_URL)))}
+            className="chip hover:text-amber-ink"
+          >
+            {tr('打开发布页')}
           </button>
         </Row>
         <Row label={tr('开源许可')}>
