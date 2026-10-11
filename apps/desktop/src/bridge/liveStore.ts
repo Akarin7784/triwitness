@@ -55,6 +55,36 @@ export function lastRepo(): string {
   return storage()?.getItem(REPO_KEY) ?? ''
 }
 
+const RECENT_KEY = 'tw.core.recentRepos'
+const MAX_RECENT = 8
+const repoKey = (p: string) => p.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()
+
+/** 最近用过的仓库（新 → 旧，最多 8 个；Windows 路径大小写 / 斜杠不敏感去重） */
+export function recentRepos(): string[] {
+  try {
+    const v = JSON.parse(storage()?.getItem(RECENT_KEY) ?? '[]')
+    const list = Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x.trim()) : []
+    const last = lastRepo()
+    return last && !list.some((x) => repoKey(x) === repoKey(last)) ? [last, ...list].slice(0, MAX_RECENT) : list.slice(0, MAX_RECENT)
+  } catch {
+    return []
+  }
+}
+
+export function rememberRepo(path: string) {
+  const p = path.trim()
+  if (!p) return
+  const next = [p, ...recentRepos().filter((x) => repoKey(x) !== repoKey(p))].slice(0, MAX_RECENT)
+  storage()?.setItem(RECENT_KEY, JSON.stringify(next))
+  storage()?.setItem(REPO_KEY, p)
+}
+
+export function forgetRecentRepo(path: string) {
+  const next = recentRepos().filter((x) => repoKey(x) !== repoKey(path))
+  storage()?.setItem(RECENT_KEY, JSON.stringify(next))
+  if (repoKey(lastRepo()) === repoKey(path)) storage()?.removeItem(REPO_KEY)
+}
+
 /** 演示模式下仓库可留空：核心在 ~/.triwitness/demo/verses 建一个示例仓库 */
 export function defaultDemoRepo(): string {
   return '~/.triwitness/demo/verses'
@@ -130,7 +160,7 @@ export async function startTask(
       attachmentPaths: userAttachments?.length ? userAttachments : undefined },
     ...metas,
   ])
-  if (opts.repo.trim()) storage()?.setItem(REPO_KEY, opts.repo.trim())
+  if (opts.repo.trim()) rememberRepo(opts.repo)
   await wire(t, transport, key, id)
   return id
 }

@@ -121,9 +121,9 @@ export function Btn({
       data-testid={testId}
       data-primary={primary || undefined}
       className={clsx(
-        'rounded-lg px-3.5 py-1.5 text-[13px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-45',
+        'shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-45',
         kind === 'solid' && 'bg-ink text-parchment hover:bg-espresso',
-        kind === 'danger' && 'bg-rose-ink text-cream hover:bg-[#8f6658]',
+        kind === 'danger' && 'bg-rose-ink text-cream hover:brightness-90',
         kind === 'ghost' && 'text-ink-soft hover:bg-panel-raised',
       )}
     >

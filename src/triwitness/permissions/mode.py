@@ -1,4 +1,6 @@
-"""会话 / 任务内的审批模式切换，含 unrestricted（勇士模式）的激活与自动回退（ADR-0005 §3.6、spec 006 §4.6）。
+"""会话 / 任务内的审批模式切换，含 full_access（完全访问，原勇士模式）的激活与回退。
+
+见 ADR-0005 §3.6、spec 006 §4.6。
 
 只在内存里：从不写任何配置文件；应用重启 = 新 ModeController = 回到配置里的模式。
 """
@@ -22,7 +24,7 @@ from triwitness.permissions.config import (
 
 @dataclass
 class ModeController:
-    base_mode: Mode  # 配置文件合并出来的模式（永远不是 unrestricted）
+    base_mode: Mode  # 配置文件合并出来的模式（永远不是 full_access）
     backend: str
     interactive: bool
     eval_mode: bool = False
@@ -61,17 +63,19 @@ class ModeController:
     ) -> ModeChangedPayload:
         """两步确认后调用。eval / CI / 非交互一律拒绝（硬底线）。"""
         if self.eval_mode or not self.interactive or os.environ.get("CI"):
-            raise ConfigError("unrestricted（勇士模式）在评测 / CI / 非交互运行中被禁止")
+            raise ConfigError("full_access（完全访问模式）在评测 / CI / 非交互运行中被禁止")
         if not activation.acknowledged:
             raise ConfigError("第一步未确认：需要勾选“我知道没有任何确认和默认拒绝”")
         if activation.typed.strip() != UNRESTRICTED_CONFIRM_PHRASE:
             raise ConfigError(f"第二步未通过：请输入“{UNRESTRICTED_CONFIRM_PHRASE}”")
         if activation.scope == "task" and not task_id:
             raise ConfigError("scope=task 需要 task_id")
-        p = self._emit("unrestricted", scope=activation.scope, by="user", reason="两步确认通过")
-        self._override, self._scope, self._task_id = "unrestricted", activation.scope, task_id
+        p = self._emit("full_access", scope=activation.scope, by="user", reason="两步确认通过")
+        self._override, self._scope, self._task_id = "full_access", activation.scope, task_id
         self.activation = activation
         return p
+
+    activate_full_access = activate_unrestricted
 
     def adopt(self, to: Mode, *, task_id: str, reason: str) -> ModeChangedPayload | None:
         """`tw run --permission-mode` 等任务级设置：load_policy 已校验过（含勇士模式两步确认），

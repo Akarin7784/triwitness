@@ -288,7 +288,7 @@ export function UnrestrictedDialog({
       title={
         <span className="flex items-center gap-2 text-rose-ink">
           <ShieldAlert size={16} strokeWidth={1.7} />
-          {tr('无限制（勇士模式）')}
+          {tr('完全访问模式')}
         </span>
       }
     >

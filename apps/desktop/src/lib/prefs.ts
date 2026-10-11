@@ -1,10 +1,10 @@
 /**
  * 界面偏好（UI-21）：模型、思考强度、外观、个人资料、运行设置（沙箱 / ¥ 上限 / 高峰 / 权限）、每个会话的草稿。
- * localStorage 持久化，可订阅。勇士模式（unrestricted）从不落盘：只在内存里为下一个任务“上膛”。
+ * localStorage 持久化，可订阅。完全访问模式（full_access，原勇士模式）从不落盘：只在内存里为下一个任务“上膛”。
  * 模型只有 deepseek-flash 可选；deepseek-v4-pro 不出现在任何列表里（ADR-0002）。
  */
 import { useSyncExternalStore } from 'react'
-import { BACKENDS, MAX_COST_CAP, PERMISSION_MODES, type Backend, type PermissionMode } from '../bridge/choices'
+import { BACKENDS, MAX_COST_CAP, normalizeMode, type Backend, type PermissionMode } from '../bridge/choices'
 import { t as tr } from './i18n'
 
 export type Thinking = 'off' | 'low' | 'medium' | 'high'
@@ -36,7 +36,7 @@ export function isSelectableModel(id: string): boolean {
 export type Theme = 'light' | 'auto' | 'dark'
 export type ChatFont = 'serif' | 'sans' | 'system'
 export const FONT_SCALES = [0.9, 1, 1.1, 1.2] as const
-export type SavedMode = Exclude<PermissionMode, 'unrestricted'>
+export type SavedMode = Exclude<PermissionMode, 'full_access'>
 
 export type Language = 'zh' | 'en'
 export interface CustomStyle {
@@ -96,7 +96,7 @@ export const DEFAULTS: Prefs = {
   backend: 'auto',
   maxCost: MAX_COST_CAP,
   allowPeak: false,
-  permissionMode: 'auto_edit',
+  permissionMode: 'auto_review',
   sidebarCollapsed: false,
 }
 
@@ -127,9 +127,9 @@ function sanitize(p: Prefs, fallback: Prefs = DEFAULTS): Prefs {
   if (!(BACKENDS as readonly string[]).includes(q.backend)) q.backend = fallback.backend
   if (typeof q.maxCost !== 'number' || !(q.maxCost > 0 && q.maxCost <= MAX_COST_CAP)) q.maxCost = fallback.maxCost
   q.allowPeak = q.allowPeak === true
-  if (!(PERMISSION_MODES as readonly string[]).includes(q.permissionMode) || q.permissionMode === ('unrestricted' as string)) {
-    q.permissionMode = fallback.permissionMode
-  }
+  // 0.2.0 的 auto_edit / auto 迁移为 auto_review；完全访问（含旧 unrestricted / full_access）永不从存储里读出
+  const m = normalizeMode(q.permissionMode)
+  q.permissionMode = m && m !== 'full_access' ? m : fallback.permissionMode
   q.sidebarCollapsed = q.sidebarCollapsed === true
   return q
 }

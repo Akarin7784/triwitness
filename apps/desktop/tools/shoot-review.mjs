@@ -1,15 +1,19 @@
 // UI 全面审查（2026-10-11）：浅色 / 深色每个页面和状态截图 + 自动检查
-//   溢出 / 出界、文字对比度、键盘焦点可见、中文字体与行高、动画帧间隔（卡顿）、减少动态效果
+//   溢出 / 出界、文字对比度、键盘焦点可见、中文字体与行高、动画帧间隔（卡顿）、减少动态效果、
+//   按钮 / chip / 菜单项标签换行（wrap；dpi 一遍在 100/125/150% 缩放 × 中英文下逐页检查，2026-10-11 BUG5）
 // 真实核心 · 演示适配器 · ¥0。用法：TW_DEV_BRIDGE=1 TW_DEMO_DELAY_S=0.3 npx vite --port 1431 后
 //   cd tools && URL=http://localhost:1431 node shoot-review.mjs [light|dark|en|motion ...]
 import { mkdirSync, writeFileSync } from 'node:fs'
 import puppeteer from 'puppeteer-core'
+import { wrapInPage } from './wrap-audit.mjs'
 const base = process.env.URL ?? 'http://localhost:1431'
 const out = new URL('../docs/review/', import.meta.url).pathname
 mkdirSync(out, { recursive: true })
-const passes = process.argv.slice(2).length ? process.argv.slice(2) : ['light', 'dark', 'en', 'motion']
+const passes = process.argv.slice(2).length ? process.argv.slice(2) : ['light', 'dark', 'en', 'motion', 'dpi']
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
-const report = { shots: [], audits: {}, frames: {}, motion: {}, typography: {}, errors: [] }
+const report = { shots: [], audits: {}, frames: {}, motion: {}, typography: {}, wrap: {}, errors: [] }
+
+
 
 // ── 页面内审计（在浏览器里跑）
 function auditInPage() {
@@ -89,6 +93,64 @@ function auditInPage() {
   return { overflow: [...new Set(overflow)], offscreen: [...new Set(offscreen)], contrast: [...new Set(contrast)] }
 }
 
+// ── dpi：Windows 100/125/150% 缩放（1280 宽窗口的 CSS 视口 1280 / 1024 / 853）× 中英文，逐页查标签换行
+async function runDpi() {
+  const browser = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--hide-scrollbars'] })
+  for (const [scale, width, dpr] of [['100', 1280, 1], ['125', 1024, 1.25], ['150', 853, 1.5]]) {
+    for (const language of ['zh', 'en']) {
+      const page = await browser.newPage()
+      page.on('pageerror', (e) => report.errors.push(`dpi: ${e}`))
+      await page.setViewport({ width, height: 720, deviceScaleFactor: dpr })
+      await page.evaluateOnNewDocument((language) => {
+        if (!sessionStorage.getItem('seeded')) {
+          localStorage.clear()
+          localStorage.setItem('tw.prefs', JSON.stringify({ language, name: 'Eva' }))
+          sessionStorage.setItem('seeded', '1')
+        }
+      }, language)
+      await page.goto(`${base}/?source=fixture:success&speed=40`, { waitUntil: 'networkidle0' })
+      await page.waitForSelector('[data-testid="composer"]', { timeout: 15000 })
+      await wait(500)
+      const res = {}
+      const check = async (id) => {
+        await wait(350)
+        const w = await page.evaluate(wrapInPage)
+        if (w.length) res[id] = w
+      }
+      await check('chat')
+      await page.click('[data-testid="plus-button"]')
+      await check('plus-menu')
+      await page.keyboard.press('Escape')
+      await page.click('[data-testid="model-picker"]')
+      await check('model-menu')
+      await page.keyboard.press('Escape')
+      await page.click('[data-testid="nav-new"]')
+      await check('home')
+      if (await page.$('[data-testid="repo-chip"]')) {
+        await page.click('[data-testid="repo-chip"]')
+        await check('repo-menu')
+        await page.keyboard.press('Escape')
+      }
+      for (const nav of ['nav-chats', 'nav-projects', 'nav-artifacts']) {
+        if (!(await page.$(`[data-testid="${nav}"]`))) continue
+        await page.click(`[data-testid="${nav}"]`)
+        await check(nav.slice(4))
+      }
+      await page.keyboard.down('Control')
+      await page.keyboard.press(',')
+      await page.keyboard.up('Control')
+      await page.waitForSelector('[data-testid="settings"]', { timeout: 5000 }).catch(() => {})
+      for (const s of ['general', 'profile', 'model', 'budget', 'permissions', 'sandbox', 'connectors', 'privacy', 'about']) {
+        await page.click(`[data-testid="settings-nav-${s}"]`).catch(() => {})
+        await check(`settings-${s}`)
+      }
+      report.wrap[`${language}-${scale}`] = res
+      await page.close()
+    }
+  }
+  await browser.close()
+}
+
 function typographyInPage() {
   const pick = (sel) => {
     const el = document.querySelector(sel)
@@ -161,7 +223,7 @@ async function run(passName) {
     await page.screenshot({ path: out + file, type: 'jpeg', quality: 82 })
     console.error('shot', file, new Date().toISOString().slice(11, 19))
     report.shots.push(file)
-    if (audit && passName !== 'motion') audits[id] = await page.evaluate(auditInPage)
+    if (audit && passName !== 'motion') audits[id] = { ...(await page.evaluate(auditInPage)), wrap: await page.evaluate(wrapInPage) }
   }
   // 帧间隔：动作期间记录 rAF
   const frames = async (id, action) => {
@@ -359,7 +421,7 @@ async function run(passName) {
   }
   await page.click('[data-testid="settings-nav-permissions"]')
   await wait(300)
-  await page.evaluate(() => document.querySelector('[data-testid="perm-unrestricted"]')?.click())
+  await page.evaluate(() => document.querySelector('[data-testid="perm-full_access"]')?.click())
   if (await until(() => has('[data-testid="unrestricted-dialog"]'), 2000)) await shot('40-unrestricted-dialog')
   await page.keyboard.press('Escape')
   await page.click('[data-testid="settings-nav-about"]')
@@ -384,7 +446,8 @@ async function run(passName) {
 
 for (const p of passes) {
   try {
-    await run(p)
+    if (p === 'dpi') await runDpi()
+    else await run(p)
   } catch (e) {
     report.errors.push(`${p}: script ${e?.stack ?? e}`)
   }
@@ -392,9 +455,12 @@ for (const p of passes) {
 writeFileSync('/tmp/review-report.json', JSON.stringify(report, null, 2))
 const sum = (k) => Object.entries(report.audits).filter(([n]) => !n.includes(':')).flatMap(([p, a]) => Object.entries(a).flatMap(([id, r]) => r[k].map((x) => `${p}/${id}: ${x}`)))
 console.log('shots', report.shots.length)
-for (const k of ['overflow', 'offscreen', 'contrast']) console.log(`\n## ${k} (${sum(k).length})\n` + sum(k).slice(0, 80).join('\n'))
+for (const k of ['overflow', 'offscreen', 'contrast', 'wrap']) console.log(`\n## ${k} (${sum(k).length})\n` + sum(k).slice(0, 80).join('\n'))
 console.log('\n## focus', JSON.stringify(Object.fromEntries(Object.entries(report.audits).filter(([n]) => n.includes(':')))))
 console.log('\n## frames', JSON.stringify(report.frames, null, 1))
 console.log('\n## motion', JSON.stringify(report.motion))
 console.log('\n## typography', JSON.stringify(report.typography, null, 1))
+const dpiWrap = Object.entries(report.wrap).flatMap(([k, pages]) => Object.entries(pages).flatMap(([id, list]) => list.map((x) => `${k}/${id}: ${x}`)))
+console.log(`\n## dpi wrap (${dpiWrap.length})\n` + dpiWrap.join('\n'))
 console.log('\n## errors', report.errors.join('\n'))
+if (process.env.STRICT_WRAP && (dpiWrap.length || sum('wrap').length)) process.exitCode = 1

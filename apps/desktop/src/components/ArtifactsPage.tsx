@@ -18,7 +18,7 @@ export function ArtifactsPage({ entries, onOpen }: { entries: ArtifactEntry[]; o
   return (
     <main data-testid="artifacts-page" className="min-w-0 flex-1 overflow-y-auto scroll-soft">
       <div className="mx-auto max-w-[860px] px-12 py-10">
-        <h1 className="font-serif text-[26px] text-ink">{t('作品')}</h1>
+        <h1 className="chapter-title font-serif text-[26px] text-ink">{t('作品')}</h1>
         {entries.length === 0 ? (
           <div className="mt-16 flex flex-col items-center text-center">
             <Boxes size={28} strokeWidth={1.3} className="text-sepia-muted" />

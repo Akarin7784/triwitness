@@ -14,6 +14,10 @@ const check = (name, ok) => results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}`)
 const page = await browser.newPage()
 rmSync(join(home, 'permissions.yaml'), { force: true })
 rmSync(join(process.env.HOME, '.triwitness/demo/verses/.triwitness/permissions.local.yaml'), { force: true }) // 演示仓库在 ~ 下（不随 TW_HOME）
+// 0.2.1 起默认“模型自动审批”（演示里是规则审核）；这里要测审批卡的“总是”，先切到询问模式
+await page.evaluateOnNewDocument(() => {
+  if (!localStorage.getItem('tw.prefs')) localStorage.setItem('tw.prefs', JSON.stringify({ permissionMode: 'ask' }))
+})
 // 记下出现过的提示（提示几秒后会消失）
 await page.evaluateOnNewDocument(() => {
   window.__toasts = []
@@ -281,7 +285,7 @@ await page.click('[data-testid="settings-nav-permissions"]')
 check('此仓库规则里有“总是”写入的那条', await until(async () => (await text('[data-testid="rules-local"]')).includes('submit_repro') || (await count('[data-testid="rules-local"] [data-testid="rule-row"]')) > 0, 20_000))
 
 // ── 10) 勇士模式横幅（核心 mode_changed 驱动）
-await page.click('[data-testid="perm-unrestricted"]')
+await page.click('[data-testid="perm-full_access"]')
 await until(() => has('[data-testid="unrestricted-dialog"]'), 3000)
 await page.click('[data-testid="unrestricted-ack"]')
 await page.type('[data-testid="unrestricted-phrase"]', '我了解风险')

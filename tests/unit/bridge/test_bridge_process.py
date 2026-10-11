@@ -39,12 +39,23 @@ def test_subprocess_bridge_round_trip(tmp_path: Path, extra: list[str]) -> None:
     res = seen[-1]
     assert res["bridge"] == "result" and res["status"] == "done" and res["verdict"] == "pass", res
     resolved = next(x for x in seen if x.get("kind") == "approval_resolved")["payload"]
-    assert resolved["scope"] == "session" and resolved["display"] == "已允许（本次任务）"
+    if extra:  # ask 模式：用户在审批卡上批准
+        assert resolved["scope"] == "session" and resolved["display"] == "已允许（本次任务）"
+    else:  # 默认 auto_review：演示用假审核者自动批准跑测试命令（¥0）
+        assert resolved["by"] == "reviewer" and resolved["decision"] == "allow", resolved
+        assert resolved["display"].startswith("自动批准")
     assert Path(res["run_dir"]).is_relative_to(home)
 
 
-def test_subprocess_unrestricted_attachments_mode_events(tmp_path: Path) -> None:
-    """勇士模式 + 附件 + 用户说明：mode_changed（risk=high）→ 任务结束 auto_revert；附件留档。"""
+@pytest.mark.parametrize(
+    "mode_args",
+    [
+        ["--permission-mode", "full_access", "--confirm-full-access", "我了解风险"],
+        ["--permission-mode", "unrestricted", "--confirm-unrestricted", "我了解风险"],
+    ],  # 旧值迁移到 full_access
+)
+def test_subprocess_unrestricted_attachments_mode_events(tmp_path: Path, mode_args: list[str]) -> None:
+    """完全访问模式 + 附件 + 用户说明：mode_changed（risk=high）→ 任务结束 auto_revert；附件留档。"""
     home = tmp_path / "home"
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home), "TW_DEMO_DELAY_S": "0",
            "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}  # fmt: skip
@@ -54,8 +65,7 @@ def test_subprocess_unrestricted_attachments_mode_events(tmp_path: Path) -> None
     note.write_text("附件内容", encoding="utf-8")
     guide = tmp_path / "guide.md"
     guide.write_text("回答简洁", encoding="utf-8")
-    args = ["--permission-mode", "unrestricted", "--confirm-unrestricted", "我了解风险", "--attach", str(note),
-            "--guidance-file", str(guide)]  # fmt: skip
+    args = [*mode_args, "--attach", str(note), "--guidance-file", str(guide)]
     p = subprocess.run(
         [sys.executable, "-m", "triwitness", "run", "--repo", str(tmp_path / "verses"), "--demo", "--jsonl", *args],
         input="", capture_output=True, env=env, text=True, encoding="utf-8", timeout=60,
@@ -63,7 +73,7 @@ def test_subprocess_unrestricted_attachments_mode_events(tmp_path: Path) -> None
     assert p.returncode == 0, p.stderr
     seen = [json.loads(x) for x in p.stdout.splitlines() if x.strip()]
     modes = [x["payload"] for x in seen if x.get("kind") == "mode_changed"]
-    assert [m["to_mode"] for m in modes][-1] != "unrestricted" and modes[0]["to_mode"] == "unrestricted"
+    assert [m["to_mode"] for m in modes][-1] != "full_access" and modes[0]["to_mode"] == "full_access"
     assert modes[0]["risk"] == "high" and modes[-1]["by"] == "auto_revert"
     assert not any(x.get("kind") == "approval_requested" for x in seen)
     res = seen[-1]

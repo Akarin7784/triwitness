@@ -10,7 +10,7 @@
 ## 2. 目标
 
 1. 规则语法 `Tool` / `Tool(specifier)`，三类 allow / ask / deny。
-2. 五种审批模式 + `interactive` 开关（ADR-0005 §3.1）。
+2. 四种审批模式（v3，2026-10-11：`plan` / `ask` / `auto_review` / `full_access`）+ `interactive` 开关；沙箱后端与模式正交（ADR-0005 §3.1、§3.7）。
 3. 配置分层与合并；项目规则需工作区信任。
 4. 默认规则集（破坏性命令、网络、工作区外路径、密钥文件、`git push`）。
 5. 审批事件 `approval_requested` / `approval_resolved` 与 UI 审批卡片。
@@ -19,7 +19,7 @@
 ## 3. 非目标
 
 - 不做 OS 级强制（那是沙箱后端的职责，spec 002）。
-- 不做模型分类器式“自动审查”（预算原因，推迟）。
+- ~~不做模型分类器式“自动审查”~~ → v3 起做（`auto_review`，§6.0）：审核模型用最便宜的 DeepSeek Flash（不思考），费用计账，没把握就问用户。
 - 不做企业托管策略下发（只预留 `managed` 层的文件位置）。
 
 ## 4. 规则语法
@@ -92,6 +92,24 @@ allow 规则命中 或 模式默认放行 → allow
 随后：`interactive = false` 时 ask → deny（`approval_resolved.by = "policy"`）。
 
 ## 6. 模式默认行为
+
+### 6.0 v3：四种模式（2026-10-11，Eva 0.2.0 真机反馈 SUGG1；替代下表的六种）
+
+| 模式 ID | UI 标签 | 行为 | 内部语义 |
+|---|---|---|---|
+| `plan` | 只读模式 | 只读文件、只读命令；不改 | 同旧 `plan` |
+| `ask` | 询问模式 | 改文件、非只读命令都问用户；规则照常 | 同旧 `ask` |
+| `auto_review`（**默认**） | 模型自动审批模式 | 规则先求值：allow / deny 直接生效；**结果为 ask 的操作先交审核模型**：`allow` → 自动批准，`deny` → 自动拒绝（理由回传执行方），`uncertain` / 超时 / 出错 → 照常问用户（审批卡附审核意见） | 规则表按旧 `auto_edit`（与沙箱后端无关） |
+| `full_access` | 完全访问模式（红色） | 不问、不拒（内置默认规则与受保护路径解除，用户 / 管理员 deny 仍生效）；每个任务两步确认，任务结束自动回退；常驻红色横幅 | 旧 `unrestricted`（合并了旧 `full_access`） |
+
+- **审核模型**：`permissions/reviewer.py`。`ModelReviewer` 走路由的 `classifier` 角色，`thinking=False`、`temperature=0`、`max_output_tokens=200`、20 s 超时；输出 `ALLOW|DENY|UNCERTAIN: 理由`，解析失败按 `uncertain`。费用（`cost_cny`）写进 `approval_resolved.comment` 并照常计入账单 / 审计。演示模式与测试用 `FakeReviewer`（规则审核，¥0，不调模型）。
+- **事件**：自动裁决时仍成对写 `approval_requested` + `approval_resolved(by="reviewer")`，`comment` = `审核模型（<model>，¥x）：<理由>`。`by` 新增取值 `reviewer`（schema 只增不改）。
+- **沙箱正交**：后端（none / docker / wsl2）只决定“在哪儿跑”，不再改变模式；`auto_review` 在任何后端下规则表相同。
+- **迁移**（配置层、会话覆盖、规则的 `modes` / `disable_modes`、桌面端设置、CLI、桥白名单 TS + Rust 同一张表）：`auto_edit`、`auto` → `auto_review`；`unrestricted` → `full_access`（仍需两步确认，配置文件里写了照旧忽略并告警）。加载时告警“已更名”。旧轨迹里的旧模式值仍能读（`ApprovalMode` 保留旧值）。
+- **CLI**：`--permission-mode plan|ask|auto_review|full_access`（旧值自动迁移）；`full_access` 需要 `--confirm-full-access 我了解风险`（`--confirm-unrestricted` 保留为别名）。
+
+以下 §6 表格与 §6.1 为 v2 记录，模式名按上面的迁移表对应。
+
 
 | 操作 | plan | ask | auto_edit（none 默认） | auto（docker 默认） | full_access | unrestricted |
 |---|---|---|---|---|---|---|
@@ -267,4 +285,5 @@ def parse_rule(raw: str, kind: Decision, source: str) -> Rule: ...  # 语法错�
 - 2026-10-10：初稿（ADR-0005）。`tw-events/1` 已加入 `approval_requested` / `approval_resolved` 与可选字段（schema 桩，引擎未实现）。
 - 2026-10-10：记录已采纳默认值（装依赖 ask、英文模式 ID + 中文标签、审批不超时）；W1-39/W1-40 实现。
 - 2026-10-10：新增 `unrestricted`（勇士模式，§6.1、AC12）与 `mode_changed` 事件；实现 `permissions/{shell,paths,rules,config,engine,audit,mode}.py`。AC1–AC12 单测覆盖（AC6 的轨迹事件部分待 W1-41 接入工具层）。
+- 2026-10-11（v3）：Eva 0.2.0 真机反馈 SUGG1——六种模式合并为四种（§6.0）：`plan` / `ask` / `auto_review`（新默认，审核模型 DeepSeek Flash 不思考 + 计费 + 没把握问人，演示用 FakeReviewer）/ `full_access`（合并旧 `full_access` + `unrestricted`，两步确认 + 红色横幅）；沙箱后端与模式正交；旧值迁移（Python / TS / Rust 同一张表）；`approval_resolved.by` 增加 `reviewer`；ADR-0005 §3.7。
 - 2026-10-10：W1-42 接线：工具执行前经 `PermissionGate`；非交互 ask→deny 写 `approval_resolved(by="policy")`，交互 ask 写 `approval_requested` / `approval_resolved(by="user")`，拒绝附言回传模型，本次任务 / 总是允许分别加会话规则 / 写 permissions.local.yaml，无审批通道时任务进入 needs_human。AC6 已完整覆盖。

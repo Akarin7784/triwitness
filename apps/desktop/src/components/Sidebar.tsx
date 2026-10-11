@@ -37,9 +37,11 @@ export interface SidebarItem {
   starred?: boolean
   /** 所属项目 id */
   projectId?: string | null
+  /** 最近活动时间（毫秒）：会话页按它排序 */
+  at?: number
 }
 
-export type SidebarView = 'chat' | 'settings' | 'projects' | 'artifacts'
+export type SidebarView = 'chat' | 'settings' | 'projects' | 'artifacts' | 'chats'
 
 interface SidebarProps {
   items: SidebarItem[]
@@ -49,6 +51,8 @@ interface SidebarProps {
   onSelect: (id: string) => void
   onNew: () => void
   onSearch: () => void
+  /** 会话页（Claude 式完整列表）；搜索按钮打开 Ctrl+K 面板，两者不再是同一个入口（BUG4） */
+  onChats: () => void
   onSettings: (section?: string) => void
   onShortcuts: () => void
   onRename: (id: string) => void
@@ -88,7 +92,7 @@ export function Sidebar(p: SidebarProps) {
       <div className={clsx('space-y-px pb-2 pt-3', p.collapsed ? 'px-2' : 'px-3')}>
         <NavButton collapsed={p.collapsed} icon={<PenLine size={15} strokeWidth={1.6} className="text-amber-ink" />} label={t('新会话')} kbd="Ctrl Shift O" onClick={p.onNew} testId="nav-new" />
         <NavButton collapsed={p.collapsed} icon={<Search size={15} strokeWidth={1.6} />} label={t('搜索')} kbd="Ctrl K" onClick={p.onSearch} testId="nav-search" />
-        <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label={t('会话')} onClick={p.onSearch} />
+        <NavButton collapsed={p.collapsed} icon={<MessagesSquare size={15} strokeWidth={1.6} />} label={t('会话')} onClick={p.onChats} testId="nav-chats" active={p.view === 'chats'} />
         <NavButton collapsed={p.collapsed} icon={<FolderClosed size={15} strokeWidth={1.6} />} label={t('项目')} onClick={p.onProjects} testId="nav-projects" active={p.view === 'projects'} />
         <NavButton collapsed={p.collapsed} icon={<Boxes size={15} strokeWidth={1.6} />} label={t('作品')} onClick={p.onArtifacts} testId="nav-artifacts" active={p.view === 'artifacts'} />
       </div>
@@ -105,11 +109,11 @@ export function Sidebar(p: SidebarProps) {
             {starred.length > 0 && (
               <>
                 <SectionLabel>{t('星标')}</SectionLabel>
-                <motion.div layout className="space-y-px">
+                <div className="space-y-px">
                   {starred.map((c) => (
                     <ChatRow key={c.id} c={c} {...p} />
                   ))}
-                </motion.div>
+                </div>
               </>
             )}
             {groups.length > 0 && (
@@ -125,13 +129,14 @@ export function Sidebar(p: SidebarProps) {
               </>
             )}
             <SectionLabel>{t('近期')}</SectionLabel>
-            <motion.div layout className="space-y-px">
+            {/* 不用 framer layout：长列表里只动 transform / opacity（SUGG2：悬停不再抖） */}
+            <div className="space-y-px">
               <AnimatePresence initial={false}>
                 {recents.map((c) => (
                   <ChatRow key={c.id} c={c} {...p} />
                 ))}
               </AnimatePresence>
-            </motion.div>
+            </div>
           </motion.nav>
         )}
       </AnimatePresence>
@@ -256,10 +261,9 @@ function ChatRow({
   const active = !settingsActive && view === 'chat' && c.id === activeId
   return (
     <motion.div
-      layout="position"
       initial={{ opacity: 0, x: -6 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, pointerEvents: 'none', height: 0, transition: { duration: 0.18 } }}
+      exit={{ opacity: 0, x: -6, pointerEvents: 'none', transition: { duration: 0.16 } }}
       transition={SPRING}
       className="relative"
     >
@@ -272,8 +276,9 @@ function ChatRow({
         onKeyDown={(e) => e.key === 'Enter' && onSelect(c.id)}
         className={clsx(
           nested ? 'pl-8' : 'pl-4',
-          'group flex w-full cursor-default items-center gap-2 rounded-lg py-2 pr-1.5 text-left outline-none transition-colors duration-300 focus-visible:ring-1 focus-visible:ring-amber/40',
-          active || menu ? 'bg-panel-raised shadow-[0_1px_0_rgb(212_196_168/0.6)]' : 'hover:bg-panel-raised/60',
+          // SUGG2：固定行高；悬停只改背景，时间与 ⋯ 共用一个固定宽度的槽位（交叉淡入，不改布局）
+          'group flex h-8 w-full cursor-default items-center gap-2 rounded-lg pr-1 text-left outline-none transition-colors duration-300 focus-visible:ring-1 focus-visible:ring-amber/40',
+          active || menu ? 'bg-panel-raised shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_60%,transparent)]' : 'hover:bg-panel-raised/60',
         )}
       >
         {c.phase && (
@@ -286,27 +291,36 @@ function ChatRow({
         <span className={clsx('min-w-0 flex-1 truncate font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
           {c.title}
         </span>
-        {c.time && (
-          <span className={clsx('shrink-0 font-mono text-[10px] tabular-nums text-sepia-muted transition-opacity duration-200 group-hover:hidden', menu && 'hidden')}>
-            {c.time}
-          </span>
-        )}
-        <button
-          type="button"
-          aria-label={t('更多')}
-          data-testid="chat-more"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (menu) closeMenu()
-            else setMenu(true)
-          }}
-          className={clsx(
-            'h-6 w-6 shrink-0 items-center justify-center rounded-md text-sepia transition-colors duration-200 hover:bg-parchment-deep hover:text-ink',
-            menu ? 'inline-flex' : 'hidden group-hover:inline-flex',
+        <span data-testid="chat-row-slot" className="relative flex h-6 w-[38px] shrink-0 items-center justify-end">
+          {c.time && (
+            <span
+              className={clsx(
+                'pointer-events-none whitespace-nowrap pr-1 font-mono text-[10px] tabular-nums text-sepia-muted transition-opacity duration-200 group-hover:opacity-0 group-focus-visible:opacity-0 group-has-[:focus-visible]:opacity-0',
+                menu && 'opacity-0',
+              )}
+            >
+              {c.time}
+            </span>
           )}
-        >
-          <MoreHorizontal size={14} strokeWidth={1.7} />
-        </button>
+          <button
+            type="button"
+            aria-label={t('更多')}
+            data-testid="chat-more"
+            aria-haspopup="menu"
+            aria-expanded={menu}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (menu) closeMenu()
+              else setMenu(true)
+            }}
+            className={clsx(
+              'absolute right-0 top-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-sepia transition-[opacity,background-color,color] duration-200 hover:bg-parchment-deep hover:text-ink focus-visible:opacity-100',
+              menu ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-visible:opacity-100 group-has-[:focus-visible]:opacity-100',
+            )}
+          >
+            <MoreHorizontal size={14} strokeWidth={1.7} />
+          </button>
+        </span>
       </div>
       <Popover open={menu} onClose={closeMenu} side="down" align="right" className="w-[196px]" testId="chat-menu">
         {page === 'main' ? (
@@ -337,6 +351,8 @@ function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive
       <button
         type="button"
         data-testid="user-menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
         aria-label={t('用户菜单')}
         onClick={() => setOpen((o) => !o)}
         className={clsx(

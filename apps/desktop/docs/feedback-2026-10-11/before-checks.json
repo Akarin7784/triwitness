@@ -1,0 +1,109 @@
+{
+  "bug1": {
+    "tipVisible": true,
+    "overlapsMenu": true
+  },
+  "bug2": {
+    "modelPicker": {
+      "height": 32,
+      "lines": 2
+    },
+    "chip": {
+      "height": 25.25,
+      "truncated": true
+    },
+    "picker": false,
+    "recent": false
+  },
+  "bug3": {
+    "rowsBefore": 4,
+    "rowsAfter3Clicks": 7,
+    "created": 3
+  },
+  "bug4": {
+    "searchOpensPalette": true,
+    "chatsPage": false,
+    "chatsOpensSameAsSearch": true
+  },
+  "bug5": {
+    "zh-100": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "en-100": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "zh-125": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "en-125": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [
+        "button「Deny 54」",
+        "button「Ask 38」",
+        "button「Allow 0」"
+      ],
+      "sandbox": []
+    },
+    "zh-150": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [
+        "button「拒绝 54」",
+        "button「询问 38」",
+        "button「允许 0」"
+      ],
+      "sandbox": []
+    },
+    "en-150": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [
+        "button「Deny 54」",
+        "button「Ask 38」",
+        "button「Allow 0」"
+      ],
+      "sandbox": []
+    }
+  },
+  "sugg1": {
+    "modes": [
+      "perm-plan",
+      "perm-ask",
+      "perm-auto_edit",
+      "perm-auto",
+      "perm-full_access",
+      "perm-unrestricted"
+    ]
+  },
+  "sugg2": {
+    "rowHeights": [
+      35.5,
+      35.5,
+      35.5,
+      35.5
+    ],
+    "hoverHeights": [
+      35.5,
+      35.5,
+      35.5,
+      35.5
+    ],
+    "changed": false
+  }
+}

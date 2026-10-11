@@ -30,7 +30,7 @@ export function ModelPicker({
     onOpenChange(false)
   }
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <button
         type="button"
         data-testid="model-picker"
@@ -38,13 +38,14 @@ export function ModelPicker({
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
         className={clsx(
-          'inline-flex h-8 items-center gap-1 rounded-lg px-2 text-[12.5px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised',
+          'inline-flex h-8 min-w-0 max-w-full items-center gap-1 whitespace-nowrap rounded-lg px-2 text-[12.5px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised',
           open && 'bg-panel-raised',
         )}
       >
-        <span>{model.name}</span>
-        {prefs.thinking !== 'off' && <span className="text-sepia-muted">{tr('· 思考 {0}', level.label)}</span>}
-        <ChevronDown size={13} strokeWidth={1.7} className={clsx('text-sepia-muted transition-transform duration-300', open && 'rotate-180')} />
+        <span className="min-w-[4.5em] truncate">{model.name}</span>
+        {/* 输入框太窄时先藏“思考 中”，保证模型名和仓库签都看得见（不换行） */}
+        {prefs.thinking !== 'off' && <span className="hidden shrink-0 text-sepia-muted @[400px]:inline">{tr('· 思考 {0}', level.label)}</span>}
+        <ChevronDown size={13} strokeWidth={1.7} className={clsx('shrink-0 text-sepia-muted transition-transform duration-300', open && 'rotate-180')} />
       </button>
       <Popover open={open} onClose={close} align="right" className="w-[264px]" testId="model-menu">
         {MODELS.map((m) => (

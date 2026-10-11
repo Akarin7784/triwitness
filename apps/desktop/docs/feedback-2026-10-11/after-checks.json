@@ -1,0 +1,95 @@
+{
+  "bug1": {
+    "tipVisible": false,
+    "overlapsMenu": false
+  },
+  "bug2": {
+    "modelPicker": {
+      "height": 32,
+      "lines": 1
+    },
+    "chip": {
+      "height": 25.25,
+      "truncated": true
+    },
+    "picker": true,
+    "recent": true
+  },
+  "bug3": {
+    "rowsBefore": 4,
+    "rowsAfter3Clicks": 5,
+    "created": 1
+  },
+  "bug4": {
+    "searchOpensPalette": true,
+    "chatsPage": true,
+    "chatsOpensSameAsSearch": false
+  },
+  "bug5": {
+    "zh-100": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "en-100": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "zh-125": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "en-125": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "zh-150": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    },
+    "en-150": {
+      "home": [],
+      "general": [],
+      "model": [],
+      "permissions": [],
+      "sandbox": []
+    }
+  },
+  "sugg1": {
+    "modes": [
+      "perm-plan",
+      "perm-ask",
+      "perm-auto_review",
+      "perm-full_access"
+    ]
+  },
+  "sugg2": {
+    "rowHeights": [
+      32,
+      32,
+      32,
+      32
+    ],
+    "hoverHeights": [
+      32,
+      32,
+      32,
+      32
+    ],
+    "changed": false
+  }
+}

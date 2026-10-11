@@ -1,11 +1,14 @@
 """权限配置加载与分层合并（spec 006 §8）。
 
 层（高 → 低）：managed > session > local > project > user > default。
-- 标量 `mode`：取最高层设置的值（project / local 不能设 full_access / unrestricted；user 不能设 unrestricted）；
+- 标量 `mode`：取最高层设置的值（任何配置文件都不能设 full_access，只能 session 层两步确认）；
+- 四种模式（spec 006 v3，2026-10-11）：plan / ask / auto_review / full_access；
+  旧值 auto_edit、auto → auto_review，unrestricted → full_access（读到时迁移并给出警告）；
 - 列表 allow / ask / deny / additional_directories：各层合并；
 - 项目层（及被 git 跟踪的 local 文件）的 allow 与 additional_directories 需工作区信任后才生效；
 - eval：只用 default + session 层，强制非交互；
-- unrestricted（勇士模式）只能由 session 层 + 交互式两步确认激活，绝不落盘（ADR-0005 §3.6）。
+- full_access（完全访问，原 full_access + unrestricted 合并）只能由 session 层 + 交互式两步确认激活，
+  绝不落盘（ADR-0005 §3.6）；沙箱后端与模式正交（backend 单独选）。
 """
 
 from __future__ import annotations
@@ -21,24 +24,38 @@ from pathlib import Path
 from typing import Any, Literal, cast, get_args
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from triwitness.config import config_dir, tw_home
 from triwitness.core.errors import ConfigError
 from triwitness.permissions.rules import Decision, Rule, Source, parse_rule
 
-Mode = Literal["plan", "ask", "auto_edit", "auto", "full_access", "unrestricted"]
+Mode = Literal["plan", "ask", "auto_review", "full_access"]
 MODES: tuple[str, ...] = get_args(Mode)
 MODE_LABELS: dict[str, str] = {
-    "plan": "只读规划",
-    "ask": "逐项确认",
-    "auto_edit": "自动改文件",
-    "auto": "沙箱自动",
-    "full_access": "完全放行",
-    "unrestricted": "无限制（勇士模式）",
+    "plan": "只读模式",
+    "ask": "询问模式",
+    "auto_review": "模型自动审批模式",
+    "full_access": "完全访问模式",
+    # 旧值（只用于显示历史事件）
+    "auto_edit": "模型自动审批模式",
+    "auto": "模型自动审批模式",
+    "unrestricted": "完全访问模式",
 }
-HIGH_RISK_MODES = frozenset({"full_access", "unrestricted"})
+LEGACY_MODES: dict[str, Mode] = {"auto_edit": "auto_review", "auto": "auto_review", "unrestricted": "full_access"}
+HIGH_RISK_MODES = frozenset({"full_access"})
 UNRESTRICTED_CONFIRM_PHRASE = "我了解风险"
+FULL_ACCESS_CONFIRM_PHRASE = UNRESTRICTED_CONFIRM_PHRASE
+
+
+def normalize_mode(mode: str) -> Mode:
+    """接受新旧模式名，返回四种模式之一；未知值抛 ConfigError。"""
+    m = LEGACY_MODES.get(mode, mode)
+    if m not in MODES:
+        raise ConfigError(f"未知模式 {mode!r}（可用：{', '.join(MODES)}）")
+    return cast(Mode, m)
+
+
 PROJECT_DIR = ".triwitness"
 PROJECT_FILE = "permissions.yaml"
 LOCAL_FILE = "permissions.local.yaml"
@@ -60,11 +77,16 @@ class UnrestrictedActivation(BaseModel):
 
 
 class SessionOverrides(BaseModel):
-    mode: Mode | None = None
+    mode: Mode | None = None  # 旧值（auto_edit / auto / unrestricted）在校验前迁移
     allow: list[str] = Field(default_factory=list)
     ask: list[str] = Field(default_factory=list)
     deny: list[str] = Field(default_factory=list)
-    unrestricted: UnrestrictedActivation | None = None
+    unrestricted: UnrestrictedActivation | None = None  # full_access 的两步确认凭据（字段名沿用旧名）
+
+    @field_validator("mode", mode="before")
+    @classmethod
+    def _migrate(cls, v: object) -> object:
+        return LEGACY_MODES.get(v, v) if isinstance(v, str) else v
 
 
 @dataclass
@@ -186,9 +208,12 @@ def _parse_layer(data: dict[str, Any], *, source: Source, origin: str, source_ro
             warnings.append(f"{origin}：未知键 {k!r} 已忽略")
     mode = data.get("mode")
     if mode is not None:
-        if mode not in MODES:
-            raise ConfigError(f"{origin}：未知模式 {mode!r}（可用：{', '.join(MODES)}）")
-        layer.mode = mode
+        try:
+            layer.mode = normalize_mode(str(mode))
+        except ConfigError as e:
+            raise ConfigError(f"{origin}：{e}") from None
+        if layer.mode != mode:
+            warnings.append(f"{origin}：模式 {mode!r} 已更名为 {layer.mode!r}（spec 006 v3），请更新配置")
     for kind in _LIST_KEYS:
         items = data.get(kind) or []
         if not isinstance(items, list):
@@ -200,7 +225,7 @@ def _parse_layer(data: dict[str, Any], *, source: Source, origin: str, source_ro
                 if "backends" in item:
                     backends = frozenset(item["backends"])
                 if "modes" in item:
-                    modes = frozenset(item["modes"])
+                    modes = frozenset(str(LEGACY_MODES.get(str(m), m)) for m in item["modes"])
             else:
                 raw = item
             if not isinstance(raw, str):
@@ -220,7 +245,7 @@ def _parse_layer(data: dict[str, Any], *, source: Source, origin: str, source_ro
                 warnings.append(f"{origin}：{rule.warning}")
             layer.rules.append(rule)
     layer.dirs = [str(d) for d in (data.get("additional_directories") or [])]
-    layer.disable_modes = [str(m) for m in (data.get("disable_modes") or [])]
+    layer.disable_modes = [LEGACY_MODES.get(str(m), str(m)) for m in (data.get("disable_modes") or [])]
     t = data.get("approval_timeout_s")
     layer.approval_timeout_s = int(t) if t is not None else None
     return layer
@@ -296,7 +321,9 @@ def load_policy(
                 layer.source = "project"
             layers.append(layer)
 
-    s_layer = _Layer(source="session", path="session", mode=session.mode)
+    s_layer = _Layer(
+        source="session", path="session", mode=LEGACY_MODES.get(session.mode, session.mode) if session.mode else None
+    )
     for kind in _LIST_KEYS:
         for raw in getattr(session, kind):
             s_layer.rules.append(parse_rule(raw, cast(Decision, kind), "session", source_root=_posix(repo)))
@@ -325,19 +352,16 @@ def load_policy(
     # 模式：从高到低找第一个合法设置
     disabled = {mm for layer in layers if layer.source == "managed" for mm in layer.disable_modes}
     order = ["managed", "session", "local", "project", "user", "default"]
-    mode: str = "auto_edit"
+    mode: str = "auto_review"
     mode_source: str = "default"
     for src in order:
         for layer in layers:
             if layer.source != src or layer.mode is None:
                 continue
             cand = layer.mode
-            if src in ("project", "local") and cand in HIGH_RISK_MODES:
-                warnings.append(f"{layer.path}：{cand} 不能由项目 / 本地配置设置，已忽略")
-                continue
-            if src in ("user", "managed", "default") and cand == "unrestricted":
+            if src != "session" and cand in HIGH_RISK_MODES:
                 warnings.append(
-                    f"{layer.path}：unrestricted 只能在本次会话 / 任务中经两步确认开启，配置文件里的设置已忽略"
+                    f"{layer.path}：full_access 只能在本次会话 / 任务中经两步确认开启，配置文件里的设置已忽略"
                 )
                 continue
             mode, mode_source = cand, src
@@ -348,17 +372,8 @@ def load_policy(
 
     if mode in disabled:
         raise ConfigError(f"模式 {mode} 已被管理员禁用")
-    if mode == "unrestricted":
+    if mode == "full_access":
         _check_unrestricted(session, interactive=interactive, eval_mode=eval_mode)
-    if mode == "full_access" and backend == "none":
-        raise ConfigError(
-            "full_access 只能用于沙箱后端（docker / wsl2 / remote）；无沙箱时请用 unrestricted（勇士模式）"
-        )
-    if mode == "auto" and backend == "none":
-        warnings.append("无沙箱后端下 auto 降级为 auto_edit")
-        mode = "auto_edit"
-    if eval_mode and mode in HIGH_RISK_MODES and mode == "unrestricted":
-        raise ConfigError("评测不允许 unrestricted")
 
     timeout = next((ly.approval_timeout_s for ly in reversed(layers) if ly.approval_timeout_s is not None), None)
     return EffectivePolicy(
@@ -380,10 +395,10 @@ def load_policy(
 def _check_unrestricted(session: SessionOverrides, *, interactive: bool, eval_mode: bool) -> None:
     """硬底线：eval / CI / 非交互一律拒绝；必须有有效的两步确认。"""
     if eval_mode or not interactive or os.environ.get("CI"):
-        raise ConfigError("unrestricted（勇士模式）在评测 / CI / 非交互运行中被禁止")
+        raise ConfigError("full_access（完全访问模式）在评测 / CI / 非交互运行中被禁止")
     act = session.unrestricted
     if act is None or not act.valid():
-        raise ConfigError(f"unrestricted 需要两步确认：勾选确认并输入“{UNRESTRICTED_CONFIRM_PHRASE}”")
+        raise ConfigError(f"full_access 需要两步确认：勾选确认并输入“{UNRESTRICTED_CONFIRM_PHRASE}”")
 
 
 def save_local_rules(repo: Path, rules: list[str], kind: Decision = "allow") -> Path:

@@ -70,10 +70,16 @@ def run_cmd(
     ] = None,
     max_cost: Annotated[float | None, typer.Option(help="本任务 ¥ 上限（只能调低，不超过默认 ¥1.00）")] = None,
     permission_mode: Annotated[
-        str | None, typer.Option(help="本次任务的权限模式 plan / ask / auto_edit / auto / full_access / unrestricted")
+        str | None,
+        typer.Option(help="本次任务的权限模式 plan / ask / auto_review / full_access（旧值自动迁移）"),
     ] = None,
     confirm_unrestricted: Annotated[
-        str | None, typer.Option(help="unrestricted（勇士模式）的确认短语；只在 --jsonl 交互运行中有效")
+        str | None,
+        typer.Option(
+            "--confirm-full-access",
+            "--confirm-unrestricted",
+            help="full_access（完全访问模式）的确认短语；只在 --jsonl 交互运行中有效",
+        ),
     ] = None,
     attach: Annotated[
         list[Path] | None, typer.Option(help="附件（可多次）：文本内联进任务描述，图片 / 二进制只列文件名")
@@ -103,6 +109,7 @@ def run_cmd(
         raise typer.BadParameter(str(e)) from None
     budget, session = _run_overrides(max_cost, permission_mode, confirm_unrestricted, interactive=jsonl)
     files, guidance = _run_inputs(attach, guidance_file)
+    reviewer = None
     if demo:
         from triwitness.bridge import demo as demo_mod
 
@@ -114,6 +121,9 @@ def run_cmd(
         delay = float(os.environ.get("TW_DEMO_DELAY_S", "0.9"))
         router = demo_mod.DemoRouter(delay_s=delay, thinking=override.get("thinking", True),
                                      effort=override.get("effort"))  # fmt: skip
+        from triwitness.permissions.reviewer import FakeReviewer
+
+        reviewer = FakeReviewer()  # 演示：规则审核，¥0
         if verify == "model":
             verify = "deterministic"  # 演示不调 Verifier 模型
     else:
@@ -126,6 +136,10 @@ def run_cmd(
         elif os.environ.get("TW_LLM_MODE", "replay").strip().lower() != "replay":
             raise typer.BadParameter("TW_LLM_MODE 不是 replay：真实调用请显式加 --live")
         router = Router.deepseek_default(allow_peak=allow_peak, executor=override or None)
+        if jsonl:  # auto_review：deepseek-flash 非思考审核；失败 / 不确定退回问用户（只在交互运行中才会用到）
+            from triwitness.permissions.reviewer import ModelReviewer
+
+            reviewer = ModelReviewer(router)
     mode = "demo" if demo else "live" if live else "replay"
 
     if jsonl:
@@ -137,7 +151,7 @@ def run_cmd(
             return run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
                              home=home, budget=budget, session=session, attachments=files,
-                             guidance=guidance)  # fmt: skip
+                             guidance=guidance, reviewer=reviewer)  # fmt: skip
 
         async def main() -> int:
             bridge = Bridge(stdout_writer(), mode=mode, home=home)
@@ -148,7 +162,8 @@ def run_cmd(
     try:
         out = asyncio.run(run_local(repo, issue, router=router, title=title, backend=backend,  # type: ignore[arg-type]
                                     test_command=test_cmd, verify=verify, budget=budget,  # type: ignore[arg-type]
-                                    session=session, attachments=files, guidance=guidance))  # fmt: skip
+                                    session=session, attachments=files, guidance=guidance,
+                                    reviewer=reviewer))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None
@@ -188,8 +203,9 @@ def _run_overrides(
     max_cost: float | None, permission_mode: str | None, confirm: str | None, *, interactive: bool
 ) -> "tuple[Budget | None, SessionOverrides | None]":
     """桌面端设置 → 本次任务：¥ 上限只能调低；权限模式走 session 层，勇士模式需要确认短语且只在交互运行中。"""
+    from triwitness.core.errors import ConfigError
     from triwitness.core.models import Budget
-    from triwitness.permissions.config import MODES, SessionOverrides, UnrestrictedActivation
+    from triwitness.permissions.config import MODES, SessionOverrides, UnrestrictedActivation, normalize_mode
 
     budget = None
     if max_cost is not None:
@@ -199,16 +215,18 @@ def _run_overrides(
         budget = Budget.for_run().model_copy(update={"max_cost_cny": max_cost})
     session = None
     if permission_mode is not None:
-        if permission_mode not in MODES:
-            raise typer.BadParameter(f"--permission-mode 只能是 {' / '.join(MODES)}")
+        try:
+            permission_mode = normalize_mode(permission_mode)
+        except ConfigError:
+            raise typer.BadParameter(f"--permission-mode 只能是 {' / '.join(MODES)}") from None
         act = None
-        if permission_mode == "unrestricted":
+        if permission_mode == "full_access":
             if not interactive or confirm is None:
-                raise typer.BadParameter("unrestricted 只能在桌面端交互运行（--jsonl）中、带确认短语开启")
+                raise typer.BadParameter("full_access 只能在桌面端交互运行（--jsonl）中、带确认短语开启")
             act = UnrestrictedActivation(acknowledged=True, typed=confirm, scope="task")
         session = SessionOverrides(mode=permission_mode, unrestricted=act)  # type: ignore[arg-type]
     elif confirm is not None:
-        raise typer.BadParameter("--confirm-unrestricted 需与 --permission-mode unrestricted 一起用")
+        raise typer.BadParameter("--confirm-full-access 需与 --permission-mode full_access 一起用")
     return budget, session
 
 

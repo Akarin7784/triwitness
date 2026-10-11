@@ -18,7 +18,8 @@ import { createStressSource } from './data/sources/stress'
 import { EMPTY_RUN, reduceRun } from './data/mapEvent'
 import { IncrementalFold } from './lib/incrementalFold'
 import { EMPTY_TURN, foldTurn, reduceTurn } from './data/turns'
-import { getPrefs, setPrefs, takeUnrestricted, usePrefs, type Prefs } from './lib/prefs'
+import { getDraft, getPrefs, setPrefs, takeUnrestricted, usePrefs, type Prefs } from './lib/prefs'
+import { findEmptyChat } from './lib/emptyChat'
 import {
   addVersion,
   currentVersion,
@@ -71,6 +72,7 @@ const loadProjects = () => import('./components/ProjectsPage')
 const loadArtifacts = () => import('./components/ArtifactsPage')
 const SettingsPage = lazy(() => loadSettings().then((m) => ({ default: m.SettingsPage })))
 const ProjectsPage = lazy(() => loadProjects().then((m) => ({ default: m.ProjectsPage })))
+const ChatsPage = lazy(() => import('./components/ChatsPage').then((m) => ({ default: m.ChatsPage })))
 const ArtifactsPage = lazy(() => loadArtifacts().then((m) => ({ default: m.ArtifactsPage })))
 function prefetchPages() {
   void loadSettings()
@@ -119,7 +121,7 @@ function runChoices(p: Prefs, mode: string, warrior: boolean): RunChoices {
     thinking: p.thinking,
     backend: p.backend,
     maxCost: p.maxCost,
-    permissionMode: warrior ? 'unrestricted' : p.permissionMode,
+    permissionMode: warrior ? 'full_access' : p.permissionMode,
     confirmUnrestricted: warrior ? UNRESTRICTED_PHRASE : undefined,
     allowPeak: mode === 'live' && p.allowPeak,
   }
@@ -216,13 +218,14 @@ export default function App() {
 
   const items: SidebarItem[] = useMemo(() => {
     const all: SidebarItem[] = [
-      ...locals.map((l) => ({ id: l.id, title: l.title })),
+      ...locals.map((l) => ({ id: l.id, title: l.title, at: Number(l.id.slice('local:'.length)) || 0 })),
       ...metas.map((m) => ({
         id: `live:${m.id}` as SourceKey,
         title: m.title,
         phase: livePhase(m),
         label: m.status ? (LIVE_LABEL[m.status] ?? m.status) : tr('进行中'),
         time: new Date(m.startedAt).toTimeString().slice(0, 5),
+        at: m.startedAt,
       })),
       ...(source === 'mock' ? [{ id: 'mock' as SourceKey, title: tr('演示') }] : []),
       ...(source === 'stress' ? [{ id: 'stress' as SourceKey, title: tr('压测') }] : []),
@@ -232,6 +235,7 @@ export default function App() {
         phase: c.phase,
         label: c.label,
         time: c.startedAt,
+        at: c.at,
       })),
     ]
     return all
@@ -336,15 +340,40 @@ export default function App() {
     },
   }
 
+  /** 新会话（BUG3，Claude 式）：已经有一个空的新会话（没有消息、草稿为空、同一项目）就聚焦它，不再新建 */
   const onNew = (projectId?: string) => {
-    const id = `local:${Date.now()}` as SourceKey
-    setLocals((prev) => [{ id, title: tr('新会话') }, ...prev])
-    if (projectId) setChatProject(id, projectId)
+    const empty = findEmptyChat(locals, {
+      messages: localMessages,
+      draft: getDraft,
+      project: (id) => projectOf(id)?.id ?? null,
+      want: projectId ?? null,
+    })
+    const id = empty ?? (`local:${Date.now()}` as SourceKey)
+    if (!empty) {
+      setLocals((prev) => [{ id, title: tr('新会话') }, ...prev])
+      if (projectId) setChatProject(id, projectId)
+    }
     select(id)
     window.setTimeout(() => window.dispatchEvent(new Event('tw:focus-composer')), 60)
   }
 
-  const doDelete = (id: string) => {
+  /** 会话页批量删除：留在会话页；删到当前会话就把“当前”挪到剩下最近的一个 */
+  const doDeleteMany = (ids: string[]) => {
+    const gone = new Set(ids)
+    for (const id of ids) for (const k of deleteChat(id)) if (k.startsWith('live:')) void forgetTask(k.slice('live:'.length))
+    setLocals((prev) => prev.filter((l) => !gone.has(l.id)))
+    if (gone.has(source)) {
+      const next = items.find((i) => !gone.has(i.id))
+      const key = (next?.id ?? `local:${Date.now()}`) as SourceKey
+      if (!next) setLocals((prev) => [{ id: key, title: tr('新会话') }, ...prev])
+      setArtifact(null)
+      setSource(key)
+      writeSourceParam(key)
+    }
+    toast(tr('已删除 {0} 个会话', ids.length))
+  }
+
+  const doDelete = (id: string, opts: { quiet?: boolean } = {}) => {
     const keys = deleteChat(id)
     for (const k of keys) if (k.startsWith('live:')) void forgetTask(k.slice('live:'.length))
     setLocals((prev) => prev.filter((l) => l.id !== id))
@@ -353,7 +382,7 @@ export default function App() {
       if (next) select(next.id as SourceKey)
       else onNew()
     }
-    toast(tr('已删除'))
+    if (!opts.quiet) toast(tr('已删除'))
   }
 
   const openSettings = (s?: string) => {
@@ -503,7 +532,8 @@ export default function App() {
           userName={prefs.name}
           onSelect={(id) => select(id as SourceKey)}
           onNew={() => onNew()}
-          onSearch={() => setPalette(true)}
+          onSearch={() => (setShortcuts(false), setPalette(true))}
+          onChats={() => setView('chats')}
           onSettings={openSettings}
           onShortcuts={() => setShortcuts(true)}
           onRename={setRenaming}
@@ -530,6 +560,14 @@ export default function App() {
             chatsOf={(pid) => items.filter((i) => i.projectId === pid).map((i) => ({ id: i.id, title: i.title, time: i.time }))}
             onOpenChat={(id) => select(id as SourceKey)}
             onNewChat={(pid) => onNew(pid)}
+          />
+        ) : view === 'chats' ? (
+          <ChatsPage
+            items={items}
+            projects={projects.projects.map((x) => ({ id: x.id, name: x.name }))}
+            onOpen={(id) => select(id as SourceKey)}
+            onNew={() => onNew()}
+            onDelete={doDeleteMany}
           />
         ) : view === 'artifacts' ? (
           <ArtifactsPage

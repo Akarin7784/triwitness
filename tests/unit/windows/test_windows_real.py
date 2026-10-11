@@ -137,7 +137,7 @@ def test_engine_on_real_windows_paths(tmp_path: Path, monkeypatch: pytest.Monkey
     repo = tmp_path / "Repo Dir"
     (repo / ".git").mkdir(parents=True)
     (repo / "src").mkdir()
-    pol = load_policy(repo, backend="none", interactive=True, session=SessionOverrides(mode="auto_edit"),
+    pol = load_policy(repo, backend="none", interactive=True, session=SessionOverrides(mode="auto_review"),
                       home=tmp_path / "twhome", managed_path=tmp_path / "managed.yaml")  # fmt: skip
     # 用短名形式给工作区（TEMP 在 GitHub runner 上就是 RUNNER~1 形式），引擎应展开后照常判断
     e = PermissionEngine(pol, workspace=_short(repo))

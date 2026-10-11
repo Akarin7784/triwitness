@@ -6,6 +6,8 @@ mod secrets;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        // 原生“选择文件夹”（仓库路径，BUG2）；前端只用 open({ directory: true })
+        .plugin(tauri_plugin_dialog::init())
         .manage(core::CoreState::default())
         .invoke_handler(tauri::generate_handler![
             core::core_start,

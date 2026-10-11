@@ -135,6 +135,19 @@ class PermissionEngine:
     def mode(self) -> str:
         return self.controller.mode if self.controller is not None else self.policy.mode
 
+    @property
+    def _emode(self) -> str:
+        """引擎内部判定用的细分模式（spec 006 v3 把六种合并成四种，判定逻辑沿用细分语义）：
+        auto_review = 按原 auto_edit 先判（工作区内改文件放行；命令等需要确认的动作交给审核模型，见 PermissionGate），
+        与沙箱后端无关（沙箱是正交设置）；
+        full_access = 原 unrestricted（解除内置默认规则，硬底线与用户 deny 仍生效）。"""
+        m = self.mode
+        if m == "auto_review":
+            return "auto_edit"
+        if m == "full_access":
+            return "unrestricted"
+        return m
+
     def check(self, action: Action) -> Verdict:
         v = self._check(action)
         if self.mode == "full_access" and v.decision == "ask":
@@ -199,7 +212,7 @@ class PermissionEngine:
 
     # ------------------------------------------------------------ 规则检索
     def _rules(self, kind: Decision, category: str) -> list[Rule]:
-        unrestricted = self.mode == "unrestricted"
+        unrestricted = self._emode == "unrestricted"
         out = []
         for r in [*self.policy.rules, *self.session_rules]:
             if r.kind != kind or r.category != category:
@@ -239,7 +252,7 @@ class PermissionEngine:
         return self._mode_default(action.category, outside=True)
 
     def _mode_default(self, what: str, *, outside: bool = False) -> Verdict:
-        m = self.mode
+        m = self._emode
         if m in ("unrestricted", "full_access"):
             return Verdict("allow", f"{m} 模式")
         if m == "plan":
@@ -314,7 +327,7 @@ class PermissionEngine:
 
     def _check_path(self, category: str, raw: str, cwd: str, *, tool: str = "", derived: bool = False) -> Verdict:
         np = self._norm(raw, cwd)
-        if self.mode == "unrestricted":
+        if self._emode == "unrestricted":
             r = self._path_rule_match("deny", category, [np, self._resolved(np)], all_forms=False)
             if r:
                 return Verdict("deny", f"命中 deny 规则（{category} {np.path}）", r)
@@ -346,18 +359,18 @@ class PermissionEngine:
         if category == "Read":
             if inside:
                 return Verdict("allow", "工作区内读取")
-            if self.mode in ("full_access",):
+            if self._emode in ("full_access",):
                 return Verdict("allow", "full_access 模式")
             where = "经符号链接指向工作区外" if self._inside(np) else "工作区外"
             return Verdict("ask", f"读取{where}的文件：{real.path}")
         # Edit
-        if self.mode == "plan":
+        if self._emode == "plan":
             return Verdict("deny", "plan 模式不修改文件")
         if inside:
-            if self.mode == "ask":
+            if self._emode == "ask":
                 return Verdict("ask", f"修改文件：{np.path}")
             return Verdict("allow", "工作区内修改")
-        if self.mode == "full_access":
+        if self._emode == "full_access":
             return Verdict("allow", "full_access 模式")
         return Verdict("ask", f"修改工作区外的文件：{real.path}")
 
@@ -378,7 +391,7 @@ class PermissionEngine:
             r = self._first_command_match("deny", cat, [action.value])
             if r:
                 return Verdict("deny", "命中 deny 规则", r)
-            if self.mode == "unrestricted":
+            if self._emode == "unrestricted":
                 return Verdict("allow", "unrestricted 模式")
             return Verdict("ask", f"无法解析命令（{e}）")
         # 整条命令也过一遍 deny（如 `Bash(* | sh)` 这类跨子命令的模式）
@@ -498,7 +511,7 @@ class PermissionEngine:
         if r:
             return Verdict("deny", f"命中 deny 规则：{sub.value_text}", r)
         reads, edits, args_all = self._path_args(sub)
-        unrestricted = self.mode == "unrestricted"
+        unrestricted = self._emode == "unrestricted"
         # 所有像路径的参数都过一遍 Read/Edit 的 deny（如 `cp .env /tmp/x`）
         for a in args_all:
             if a.startswith(("http://", "https://")):
@@ -527,12 +540,12 @@ class PermissionEngine:
             return Verdict("allow", "命中 allow 规则", allow_rule)
         if self._is_read_only(sub) and not exec_str:
             return Verdict("allow", "只读命令")
-        if action.tool == "run_tests" and self.mode in ("auto_edit", "auto", "full_access"):
+        if action.tool == "run_tests" and self._emode in ("auto_edit", "auto", "full_access"):
             return Verdict("allow", "任务配置的测试命令")
-        if exec_str and self.mode not in ("auto", "full_access"):
-            return Verdict("ask" if self.mode != "plan" else "deny", f"执行字符串形式的命令：{sub.value_text}")
-        if self.mode in ("auto", "full_access"):
-            return Verdict("allow", f"{self.mode} 模式")
-        if self.mode == "plan":
+        if exec_str and self._emode not in ("auto", "full_access"):
+            return Verdict("ask" if self._emode != "plan" else "deny", f"执行字符串形式的命令：{sub.value_text}")
+        if self._emode in ("auto", "full_access"):
+            return Verdict("allow", f"{self._emode} 模式")
+        if self._emode == "plan":
             return Verdict("deny", "plan 模式只允许只读命令")
         return Verdict("ask", f"运行命令：{sub.value_text}")

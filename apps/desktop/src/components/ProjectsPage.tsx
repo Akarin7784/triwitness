@@ -66,7 +66,7 @@ function ProjectList({ projects, chatsOf, onSelect }: { projects: Project[]; cha
   return (
     <div className="mx-auto max-w-[860px] px-12 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="font-serif text-[26px] text-ink">{tr('项目')}</h1>
+        <h1 className="chapter-title font-serif text-[26px] text-ink">{tr('项目')}</h1>
         <Btn kind="solid" onClick={() => setCreating(true)} testId="project-new">
           <span className="inline-flex items-center gap-1.5">
             <Plus size={14} /> {tr('新建项目')}

@@ -343,7 +343,8 @@
             "user",
             "policy",
             "timeout",
-            "cancelled"
+            "cancelled",
+            "reviewer"
           ],
           "title": "By",
           "type": "string"
@@ -1982,7 +1983,7 @@
     },
     "ModeChangedPayload": {
       "additionalProperties": true,
-      "description": "审批模式切换（spec 006 §4.6）。risk=high（full_access / unrestricted）时 UI 显示常驻红色横幅，直到切回。",
+      "description": "审批模式切换（spec 006 §4.6）。risk=high（full_access）时 UI 显示常驻红色横幅，直到切回。",
       "properties": {
         "backend": {
           "default": "none",
@@ -2022,9 +2023,10 @@
           "enum": [
             "plan",
             "ask",
+            "auto_review",
+            "full_access",
             "auto_edit",
             "auto",
-            "full_access",
             "unrestricted"
           ],
           "title": "From Mode",
@@ -2083,9 +2085,10 @@
           "enum": [
             "plan",
             "ask",
+            "auto_review",
+            "full_access",
             "auto_edit",
             "auto",
-            "full_access",
             "unrestricted"
           ],
           "title": "To Mode",

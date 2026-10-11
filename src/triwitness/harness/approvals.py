@@ -7,6 +7,8 @@
   写 `approval_resolved(by="user")`；
   “本次任务内允许”加会话规则，“总是允许”写 permissions.local.yaml；拒绝附言回传模型；
   没有审批通道时抛 NeedsHuman（任务进入 needs_human）。
+- auto_review 模式：ask 先交给审核者（`permissions.reviewer`），allow / deny 直接生效并写
+  `approval_resolved(by="reviewer")`；uncertain / 失败才问用户。
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from triwitness.harness.events import EventEmitter
 from triwitness.llm.types import ToolCallSpec
 from triwitness.permissions.config import save_local_rules
 from triwitness.permissions.engine import Action, PermissionEngine, Verdict
+from triwitness.permissions.reviewer import Reviewer
 from triwitness.tools.base import GateOutcome, Tool, ToolContext, ToolResult
 from triwitness.tools.shell import RunTests
 
@@ -118,7 +121,9 @@ class PermissionGate:
         approver: Approver | None = None,
         repo_for_always: Path | None = None,
         shell_category: str = "Bash",
+        reviewer: Reviewer | None = None,
     ) -> None:
+        self.reviewer = reviewer
         self.engine = engine
         self.emitter = emitter
         self.approver = approver
@@ -158,6 +163,20 @@ class PermissionGate:
             timeout_s=self.engine.policy.approval_timeout_s,
             display=f"待批 · {action.tool or action.category} · {action.value[:160]}",
         )
+        if self.reviewer is not None and self.engine.mode == "auto_review":
+            rv = await self.reviewer.review(req)
+            if rv.decision in ("allow", "deny"):
+                self.emitter.emit(req)
+                fee = f"，¥{rv.cost_cny:.4f}" if rv.cost_cny else ""
+                note = f"审核模型（{rv.model}{fee}）：{rv.reason}"
+                self.emitter.emit(ApprovalResolvedPayload(request_id=req.request_id, decision=rv.decision,
+                                                          by="reviewer", comment=note,
+                                                          display=("自动批准" if rv.decision == "allow" else "自动拒绝")
+                                                          + f" · {rv.reason}"))  # fmt: skip
+                if rv.decision == "deny":
+                    return self._denied(v, f"审核模型拒绝：{rv.reason}")
+                return GateOutcome(allowed=True, permission="ask", rule=v.rule_raw)
+            req = req.model_copy(update={"reason": f"{v.reason}（审核模型：{rv.reason}）"})
         self.emitter.emit(req)
         decision = await self.approver(req) if self.approver is not None else None
         if decision is None:

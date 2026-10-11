@@ -78,10 +78,12 @@ pub fn choice_args(c: &Choices) -> Vec<String> {
         push("--max-cost", &format!("{x:.2}"));
     }
     match c.permission_mode.as_deref() {
-        Some(m @ ("plan" | "ask" | "auto_edit" | "auto" | "full_access")) => push("--permission-mode", m),
-        Some("unrestricted") if c.confirm_unrestricted.as_deref() == Some(UNRESTRICTED_PHRASE) => {
-            push("--permission-mode", "unrestricted");
-            push("--confirm-unrestricted", UNRESTRICTED_PHRASE);
+        // spec 006 v3：四种模式；0.2.0 的 auto_edit / auto → auto_review，unrestricted → full_access
+        Some(m @ ("plan" | "ask" | "auto_review")) => push("--permission-mode", m),
+        Some("auto_edit" | "auto") => push("--permission-mode", "auto_review"),
+        Some("full_access" | "unrestricted") if c.confirm_unrestricted.as_deref() == Some(UNRESTRICTED_PHRASE) => {
+            push("--permission-mode", "full_access");
+            push("--confirm-full-access", UNRESTRICTED_PHRASE);
         }
         _ => {}
     }
@@ -335,8 +337,14 @@ mod tests {
                             ..Default::default() };
         assert!(choice_args(&bad).is_empty());
         assert!(choice_args(&Choices { max_cost: Some(f64::NAN), ..Default::default() }).is_empty());
-        let warrior = Choices { permission_mode: s("unrestricted"), confirm_unrestricted: s(UNRESTRICTED_PHRASE), ..Default::default() };
-        assert_eq!(choice_args(&warrior), ["--permission-mode", "unrestricted", "--confirm-unrestricted", UNRESTRICTED_PHRASE]);
+        for m in ["full_access", "unrestricted"] {
+            let warrior = Choices { permission_mode: s(m), confirm_unrestricted: s(UNRESTRICTED_PHRASE), ..Default::default() };
+            assert_eq!(choice_args(&warrior), ["--permission-mode", "full_access", "--confirm-full-access", UNRESTRICTED_PHRASE]);
+            assert!(choice_args(&Choices { permission_mode: s(m), ..Default::default() }).is_empty());
+        }
+        for m in ["auto_edit", "auto", "auto_review"] {
+            assert_eq!(choice_args(&Choices { permission_mode: s(m), ..Default::default() }), ["--permission-mode", "auto_review"]);
+        }
         let parsed: Choices = serde_json::from_str(r#"{"maxCost":0.3,"permissionMode":"plan"}"#).unwrap();
         assert_eq!(choice_args(&parsed), ["--max-cost", "0.30", "--permission-mode", "plan"]);
     }

@@ -130,7 +130,7 @@ export function SettingsPage({
             {section === s.id && (
               <motion.span
                 layoutId="settings-nav-active"
-                className="absolute inset-0 rounded-lg bg-panel-raised shadow-[0_1px_0_rgb(212_196_168/0.6)]"
+                className="absolute inset-0 rounded-lg bg-panel-raised shadow-[0_1px_0_color-mix(in_srgb,var(--color-border)_60%,transparent)]"
                 transition={{ type: 'spring', stiffness: 460, damping: 38 }}
               />
             )}
@@ -168,7 +168,7 @@ export function SettingsPage({
 /* ---------------------------------------------------------------- 通用小件 */
 
 function Title({ children }: { children: ReactNode }) {
-  return <h2 className="mb-6 font-serif text-[22px] font-medium tracking-wide text-ink">{children}</h2>
+  return <h2 className="chapter-title mb-6 font-serif text-[22px] font-medium tracking-wide text-ink">{children}</h2>
 }
 
 function Row({ label, hint, children, testId }: { label: string; hint?: string; children: ReactNode; testId?: string }) {
@@ -205,7 +205,7 @@ function Segmented<T extends string | number>({
 }) {
   const group = useId()
   return (
-    <div data-testid={testId} className="relative inline-flex rounded-full bg-parchment-deep/70 p-1">
+    <div data-testid={testId} className="relative inline-flex shrink-0 rounded-full bg-parchment-deep/70 p-1">
       {options.map((o) => {
         const btn = (
           <button
@@ -215,7 +215,7 @@ function Segmented<T extends string | number>({
             aria-pressed={value === o.id}
             onClick={() => (o.disabled ? undefined : onChange(o.id))}
             className={clsx(
-              'relative rounded-full px-3.5 py-1 text-[12.5px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40',
+              'relative whitespace-nowrap rounded-full px-3.5 py-1 text-[12.5px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40',
               value === o.id ? 'text-parchment' : 'text-ink-soft hover:text-amber-ink',
             )}
           >
@@ -276,17 +276,17 @@ const THEMES: { id: Theme; label: string }[] = [
 
 function ThemeSwatch({ id, active, onClick }: { id: Theme; active: boolean; onClick: () => void }) {
   const light = (
-    <span className="flex h-full w-full flex-col gap-1 bg-[#f7f0e4] p-2">
-      <span className="h-1.5 w-8 rounded-full bg-[#2a1c14]/70" />
-      <span className="h-1.5 w-12 rounded-full bg-[#c4843a]/60" />
-      <span className="mt-auto h-3 rounded-md bg-[#faf6ee] ring-1 ring-[#e4d7c0]" />
+    <span className="flex h-full w-full flex-col gap-1 bg-[#f1e6d0] p-2">
+      <span className="h-1.5 w-8 rounded-full bg-[#221812]/70" />
+      <span className="h-1.5 w-12 rounded-full bg-[#2f4a72]/60" />
+      <span className="mt-auto h-3 rounded-md bg-[#f8f0df] ring-1 ring-[#dccdb0]" />
     </span>
   )
   const dark = (
-    <span className="flex h-full w-full flex-col gap-1 bg-[#1f1813] p-2">
-      <span className="h-1.5 w-8 rounded-full bg-[#efe3cf]/70" />
-      <span className="h-1.5 w-12 rounded-full bg-[#d79a52]/60" />
-      <span className="mt-auto h-3 rounded-md bg-[#2a211a] ring-1 ring-[#3d3127]" />
+    <span className="flex h-full w-full flex-col gap-1 bg-[#211913] p-2">
+      <span className="h-1.5 w-8 rounded-full bg-[#ecdfca]/70" />
+      <span className="h-1.5 w-12 rounded-full bg-[#93acd6]/60" />
+      <span className="mt-auto h-3 rounded-md bg-[#2b2119] ring-1 ring-[#3b3027]" />
     </span>
   )
   return (
@@ -644,12 +644,11 @@ function Budget() {
 
 /* ---------------------------------------------------------------- 权限 */
 
+/** spec 006 v3（0.2.1）：四种模式；沙箱后端是单独的设置（见“沙箱”分区），与模式正交 */
 const PERMISSION_OPTIONS: { id: SavedMode; label: string; note: string }[] = [
-  { id: 'plan', label: tr('只读规划'), note: tr('只看不改') },
-  { id: 'ask', label: tr('逐项确认'), note: tr('每次改动和命令都问') },
-  { id: 'auto_edit', label: tr('自动改文件'), note: tr('改文件不问，命令按规则') },
-  { id: 'auto', label: tr('沙箱自动'), note: tr('沙箱里放手做，无沙箱降为自动改文件') },
-  { id: 'full_access', label: tr('完全放行'), note: tr('只在沙箱后端可用') },
+  { id: 'plan', label: tr('只读模式'), note: tr('只看不改，先出方案') },
+  { id: 'ask', label: tr('询问模式'), note: tr('改文件、跑命令前都问你；规则照常生效') },
+  { id: 'auto_review', label: tr('模型自动审批模式'), note: tr('有风险的操作由审核模型按策略批准或拒绝，没把握再问你') },
 ]
 
 const RULES = parseRules(defaultRulesYaml)
@@ -666,7 +665,6 @@ function Permissions() {
       <Group title={tr('模式')}>
         <div role="radiogroup" className="py-2">
           {PERMISSION_OPTIONS.map((o) => {
-            const disabled = o.id === 'full_access' && p.backend === 'none'
             const active = p.permissionMode === o.id && !armed
             return (
               <button
@@ -674,14 +672,15 @@ function Permissions() {
                 type="button"
                 role="radio"
                 aria-checked={active}
-                disabled={disabled}
                 data-testid={`perm-${o.id}`}
                 onClick={() => (disarmUnrestricted(), setPrefs({ permissionMode: o.id }))}
-                className="flex w-full items-center gap-3 rounded-lg px-1 py-2.5 text-left transition-colors duration-300 hover:bg-parchment/50 disabled:cursor-not-allowed disabled:opacity-45"
+                className="flex w-full items-start gap-3 rounded-lg px-1 py-2.5 text-left transition-colors duration-300 hover:bg-parchment/50"
               >
-                <Radio on={active} />
-                <span className="text-[13.5px] text-ink">{o.label}</span>
-                <span className="text-[11.5px] text-sepia-muted">{o.note}</span>
+                <span className="pt-0.5"><Radio on={active} /></span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[13.5px] text-ink">{o.label}</span>
+                  <span className="text-[11.5px] leading-relaxed text-sepia-muted" data-allow-wrap>{o.note}</span>
+                </span>
               </button>
             )
           })}
@@ -689,15 +688,28 @@ function Permissions() {
             type="button"
             role="radio"
             aria-checked={armed}
-            data-testid="perm-unrestricted"
+            data-testid="perm-full_access"
             onClick={() => (armed ? disarmUnrestricted() : setDlg(true))}
-            className="mt-1 flex w-full items-center gap-3 rounded-lg border border-rose-ink/30 bg-rose-ink/[0.05] px-2 py-2.5 text-left transition-colors duration-300 hover:bg-rose-ink/[0.09]"
+            className="mt-1 flex w-full items-start gap-3 rounded-lg border border-rose-ink/30 bg-rose-ink/[0.05] px-2 py-2.5 text-left transition-colors duration-300 hover:bg-rose-ink/[0.09]"
           >
-            <Radio on={armed} danger />
-            <ShieldAlert size={14} strokeWidth={1.7} className="text-rose-ink" />
-            <span className="text-[13.5px] font-medium text-rose-ink">{tr('无限制（勇士模式）')}</span>
-            <span className="text-[11.5px] text-rose-ink/80">{armed ? tr('已就绪 · 只用于下一个任务') : tr('不确认、不拒绝')}</span>
+            <span className="pt-0.5"><Radio on={armed} danger /></span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="flex items-center gap-1.5 text-[13.5px] font-medium text-rose-ink">
+                <ShieldAlert size={14} strokeWidth={1.7} className="shrink-0" />
+                {tr('完全访问模式')}
+              </span>
+              <span className="text-[11.5px] leading-relaxed text-rose-ink/85" data-allow-wrap>
+                {armed ? tr('已就绪 · 只用于下一个任务') : tr('不询问、不拒绝；每个任务两步确认，结束自动恢复')}
+              </span>
+            </span>
           </button>
+          {p.permissionMode === 'auto_review' && !armed && (
+            <p data-testid="auto-review-note" data-allow-wrap className="mt-2 rounded-lg bg-parchment/60 px-3 py-2 text-[11.5px] leading-relaxed text-sepia">
+              {coreMode() === 'demo'
+                ? tr('演示模式用规则审核代替模型（¥0）。')
+                : tr('审核模型：DeepSeek Flash（不思考），每次约 ¥0.0003，计入账单并写审计日志。')}
+            </p>
+          )}
         </div>
       </Group>
       <UnrestrictedDialog open={dlg} onClose={() => setDlg(false)} onArm={armUnrestricted} />
@@ -714,7 +726,7 @@ function Permissions() {
             options={(['deny', 'ask', 'allow'] as RuleKind[]).map((k) => ({ id: k, label: `${RULE_LABEL[k]} ${RULES[k].length}` }))}
             testId="rule-kind"
           />
-          <span className="text-[11.5px] text-sepia-muted">{tr('只读 · 自定义规则优先')}</span>
+          <span className="min-w-0 truncate text-[11.5px] text-sepia-muted">{tr('只读 · 自定义规则优先')}</span>
         </div>
         <ul data-testid="rule-list" className="selectable max-h-[300px] overflow-y-auto scroll-soft py-2">
           {RULES[kind].map((r) => (
@@ -762,6 +774,7 @@ function Sandbox() {
   return (
     <>
       <Title>{tr('沙箱')}</Title>
+      <p className="-mt-2 mb-4 text-[12px] leading-relaxed text-sepia-muted" data-allow-wrap>{tr('沙箱后端与权限模式相互独立：模式决定“问不问”，沙箱决定“在哪儿跑”。')}</p>
       <Group title={tr('后端')}>
         <div role="radiogroup" className="py-2">
           {BACKEND_OPTIONS.map((o) => (
@@ -771,14 +784,12 @@ function Sandbox() {
               role="radio"
               aria-checked={p.backend === o.id}
               data-testid={`backend-${o.id}`}
-              onClick={() =>
-                setPrefs({ backend: o.id, ...(o.id === 'none' && p.permissionMode === 'full_access' ? { permissionMode: 'auto_edit' as const } : {}) })
-              }
+              onClick={() => setPrefs({ backend: o.id })}
               className="flex w-full items-center gap-3 rounded-lg px-1 py-2.5 text-left transition-colors duration-300 hover:bg-parchment/50"
             >
               <Radio on={p.backend === o.id} />
-              <span className="text-[13.5px] text-ink">{o.label}</span>
-              <span className="text-[11.5px] text-sepia-muted">{o.note}</span>
+              <span className="shrink-0 whitespace-nowrap text-[13.5px] text-ink">{o.label}</span>
+              <span className="min-w-0 truncate text-[11.5px] text-sepia-muted" title={o.note}>{o.note}</span>
             </button>
           ))}
         </div>

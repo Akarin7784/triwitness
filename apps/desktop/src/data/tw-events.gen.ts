@@ -223,7 +223,7 @@ export type TraceId9 = string | null
 export type Ts9 = string
 export type V9 = 1
 export type Kind10 = 'approval_resolved'
-export type By1 = 'user' | 'policy' | 'timeout' | 'cancelled'
+export type By1 = 'user' | 'policy' | 'timeout' | 'cancelled' | 'reviewer'
 export type Comment = string | null
 export type Decision = 'allow' | 'deny'
 export type Display10 = string | null
@@ -243,12 +243,12 @@ export type Kind11 = 'mode_changed'
 export type Backend1 = 'none' | 'docker' | 'wsl2' | 'remote'
 export type By2 = 'user' | 'system' | 'auto_revert'
 export type Display11 = string | null
-export type FromMode = 'plan' | 'ask' | 'auto_edit' | 'auto' | 'full_access' | 'unrestricted'
+export type FromMode = 'plan' | 'ask' | 'auto_review' | 'full_access' | 'auto_edit' | 'auto' | 'unrestricted'
 export type Reason1 = string | null
 export type Risk1 = 'normal' | 'high'
 export type RoleHint11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Scope1 = 'task' | 'session'
-export type ToMode = 'plan' | 'ask' | 'auto_edit' | 'auto' | 'full_access' | 'unrestricted'
+export type ToMode = 'plan' | 'ask' | 'auto_review' | 'full_access' | 'auto_edit' | 'auto' | 'unrestricted'
 export type Role11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
 export type RunId11 = string
 export type Seq11 = number
@@ -681,7 +681,7 @@ export interface ModeChangedEvent {
   v?: V11
 }
 /**
- * 审批模式切换（spec 006 §4.6）。risk=high（full_access / unrestricted）时 UI 显示常驻红色横幅，直到切回。
+ * 审批模式切换（spec 006 §4.6）。risk=high（full_access）时 UI 显示常驻红色横幅，直到切回。
  */
 export interface ModeChangedPayload {
   backend?: Backend1

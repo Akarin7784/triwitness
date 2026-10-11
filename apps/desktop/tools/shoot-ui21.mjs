@@ -90,7 +90,7 @@ await page.click('[data-testid="settings-nav-permissions"]')
 await wait(300)
 await page.click('[data-testid="perm-ask"]')
 check('权限模式持久化 ask', (await page.evaluate(() => JSON.parse(localStorage.getItem('tw.prefs') ?? '{}').permissionMode)) === 'ask')
-await page.click('[data-testid="perm-unrestricted"]')
+await page.click('[data-testid="perm-full_access"]')
 await until(() => has('[data-testid="unrestricted-dialog"]'), 3000)
 const armDisabled = () => page.$eval('[data-testid="unrestricted-arm"]', (b) => b.disabled)
 check('勇士模式：未勾选不能开启', await armDisabled())
@@ -103,8 +103,8 @@ await page.screenshot({ path: out + 'settings-unrestricted-dialog.png' })
 check('勇士模式：两步齐了可以开启', !(await armDisabled()))
 await page.click('[data-testid="unrestricted-arm"]')
 await wait(400)
-check('勇士模式从不落盘', !(await page.evaluate(() => localStorage.getItem('tw.prefs') ?? '')).includes('unrestricted'))
-await page.click('[data-testid="perm-unrestricted"]') // 取消上膛
+check('勇士模式从不落盘', !(await page.evaluate(() => localStorage.getItem('tw.prefs') ?? '')).includes('full_access'))
+await page.click('[data-testid="perm-full_access"]') // 取消上膛
 await wait(200)
 
 // 常规：深色主题

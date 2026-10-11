@@ -21,6 +21,7 @@ base64 = "0.22"
 dirs = "6"
 # API 密钥存系统凭据库（Windows 凭据管理器 / macOS 钥匙串 / Linux 内核密钥环）
 keyring = { version = "3", features = ["windows-native", "apple-native", "linux-native"] }
+tauri-plugin-dialog = "2"
 
 [profile.release]
 panic = "abort"

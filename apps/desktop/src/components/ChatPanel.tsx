@@ -163,9 +163,9 @@ export function ChatPanel({
           <>
             {run.repo && (
               <Tip label={t('仓库')} side="bottom">
-                <span className="chip">
-                  <FolderGit2 size={11} strokeWidth={1.7} />
-                  {run.repo}
+                <span className="chip max-w-[180px]">
+                  <FolderGit2 size={11} strokeWidth={1.7} className="shrink-0" />
+                  <span className="truncate">{run.repo}</span>
                 </span>
               </Tip>
             )}
@@ -198,7 +198,7 @@ export function ChatPanel({
           >
             <div className="mx-8 mb-2 flex items-center gap-2 rounded-xl border border-rose-ink/40 bg-rose-ink/10 px-3.5 py-2 text-[12.5px] text-rose-ink">
               <ShieldAlert size={14} strokeWidth={1.7} />
-              <span className="font-medium">{t('无限制（勇士模式）')}</span>
+              <span className="font-medium">{t('完全访问模式')}</span>
               <span className="text-rose-ink/80">{t('本任务不确认、不拒绝')}</span>
               {running && onStop && (
                 <button type="button" onClick={onStop} className="ml-auto rounded-md px-2 py-0.5 hover:bg-rose-ink/15">
@@ -313,9 +313,11 @@ function TitleButton({ title, menu }: { title: string; menu?: TitleMenu }) {
       <button
         type="button"
         data-testid="title-menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={clsx(
-          '-ml-2 flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-0.5 transition-colors duration-300 hover:bg-panel-raised',
+          '-ml-2 flex min-w-0 max-w-[calc(100%+0.5rem)] items-center gap-1.5 rounded-lg px-2 py-0.5 transition-colors duration-300 hover:bg-panel-raised',
           open && 'bg-panel-raised',
         )}
       >
@@ -348,6 +350,8 @@ function ShareButton({ actions }: { actions: ShareActions }) {
       <button
         type="button"
         data-testid="share"
+        aria-haspopup="menu"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={clsx('chip transition-colors duration-300 hover:text-amber-ink', open && 'text-amber-ink')}
       >

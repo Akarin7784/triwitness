@@ -45,6 +45,8 @@ export function PlusMenu({
           type="button"
           aria-label={t('添加')}
           data-testid="plus-button"
+          aria-haspopup="menu"
+          aria-expanded={open}
           onClick={() => (open ? close() : onOpenChange(true))}
           className={clsx(
             'inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-soft text-sepia transition-all duration-300 hover:border-border hover:text-amber-ink',

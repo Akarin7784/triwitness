@@ -92,6 +92,21 @@ Eva 的决定：
 - **范围**：只在内存里，`scope=task`（任务结束自动回退）或 `scope=session`（应用重启即回退）。**从不写入任何配置文件**；user / project / local / managed 里写 `mode: unrestricted` 一律忽略并告警；管理员可用 `disable_modes` 禁用。
 - **可见性**：切换时发 `mode_changed` 事件（`risk=high`），UI 显示红色模式徽标和常驻红色顶部横幅，直到回退（UI-20）。
 
+### 3.7 修订（2026-10-11，Eva 0.2.0 真机反馈 SUGG1）：四种模式 + 沙箱正交
+
+六种模式对用户太多、`auto_edit` / `auto` / `full_access` 的区别要懂沙箱才分得清。改为四种，沙箱后端变成独立设置（只管“在哪儿跑”，不改模式）：
+
+| 新模式 | UI | 取代 |
+|---|---|---|
+| `plan` | 只读模式 | `plan` |
+| `ask` | 询问模式 | `ask` |
+| `auto_review`（默认） | 模型自动审批模式 | `auto_edit`、`auto` |
+| `full_access` | 完全访问模式（红色，两步确认 + 横幅） | `full_access`、`unrestricted` |
+
+- `auto_review`：规则结果为 ask 的操作先交**审核模型**（DeepSeek Flash，不思考，单次约 ¥0.0003，计账并写审计）；批准 / 拒绝自动生效，`uncertain`、超时、出错一律回落到问用户。演示模式用规则审核（FakeReviewer，¥0）。这推翻了 §4 里“分类器式自动审查推迟”的结论：Flash 不思考的单价足够低，且每次裁决都有事件和理由可审计；审核模型只能在规则判 ask 的范围内放行，deny 规则仍是硬底线，不受提示注入影响。
+- `full_access` = 原 §3.6 的 `unrestricted` 语义（硬底线不变：密钥不进子进程、CI / eval / 非交互拒绝、审计照记、只在内存、任务结束回退）。原“仅沙箱可用的 full_access”取消。
+- 旧值自动迁移并告警；默认组合改为：终端用户 `none` + `auto_review`，装好沙箱后 `docker` + `auto_review`；CI / 评测仍是非交互（ask → deny，不调审核模型）。
+
 ## 4. 备选与不选的理由
 
 - **强制装 Docker**：门槛高，劝退大部分 Windows 用户。不选。
@@ -110,8 +125,13 @@ Eva 的决定：
 | # | 问题 | 默认 |
 |---|---|---|
 | 1 | `auto_edit` 下 `npm install` / `pip install` 等装依赖 | **ask**（供应链风险优先于便利） |
-| 2 | 模式命名 | 配置与代码里的模式 ID 保持英文（`plan` / `ask` / `auto_edit` / `auto` / `full_access`），UI 显示中文标签（只读规划 / 逐项确认 / 自动改文件 / 沙箱自动 / 完全放行 / 无限制（勇士模式）） |
+| 2 | 模式命名 | 配置与代码里的模式 ID 保持英文；**2026-10-11 起四种**：`plan` / `ask` / `auto_review` / `full_access`，UI：只读模式 / 询问模式 / 模型自动审批模式 / 完全访问模式（旧 ID 自动迁移，见 §3.7） |
 | 3 | 后台任务审批超时 | **不超时**：任务停在 `needs_human`，直到用户处理或取消 |
 | 4 | 一键安装的容器运行时 | 目前**只提供 Docker Desktop**；Rancher Desktop / Podman 分支推迟（probe 仍接受兼容 Docker API 的运行时） |
 | 5 | 国内 winget 慢 | 内置下载地址作为 winget 失败 / 超时后的后备（`configs/sandbox_install.yaml`，带检查日期；校验签名发布者，拒绝过期镜像）。2026-10-10 检查：阿里云镜像停更于 2021 年，默认禁用；目前只有官方 CDN 可用 |
 | 6 | 本 ADR 状态 | 保持“方向已定”，Eva 审阅（W1-43）后再改为“已采纳” |
+
+## 7. 变更记录
+
+- 2026-10-10：初稿，方向由 Eva 拍板；新增 `unrestricted`（§3.6）。
+- 2026-10-11：§3.7 四种模式（`plan` / `ask` / `auto_review` / `full_access`），审核模型自动审批，沙箱与模式正交，旧值迁移（SUGG1）。

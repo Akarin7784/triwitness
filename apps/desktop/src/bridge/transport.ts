@@ -45,7 +45,7 @@ export interface CoreTransport {
   saveDownload(name: string, dataB64: string): Promise<string | null>
 }
 
-function inTauri(): boolean {
+export function inTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
 

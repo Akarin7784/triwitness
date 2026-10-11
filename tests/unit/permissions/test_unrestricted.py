@@ -1,4 +1,4 @@
-"""unrestricted（勇士模式）：激活、硬底线、规则解除、自动回退、不落盘、mode_changed 事件。"""
+"""full_access（原 unrestricted / 勇士模式）：激活、硬底线、规则解除、自动回退、不落盘、mode_changed 事件。"""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ OK = UnrestrictedActivation(acknowledged=True, typed=UNRESTRICTED_CONFIRM_PHRASE
 
 
 def warrior(make_engine: MakeEngine, **kw: object) -> PermissionEngine:
-    return make_engine(session=SessionOverrides(mode="unrestricted", unrestricted=OK), **kw)
+    return make_engine(session=SessionOverrides(mode="full_access", unrestricted=OK), **kw)
 
 
 def test_needs_double_confirmation(make_engine: MakeEngine) -> None:
@@ -33,8 +33,12 @@ def test_needs_double_confirmation(make_engine: MakeEngine) -> None:
         UnrestrictedActivation(acknowledged=True, typed="yes"),
     ]:
         with pytest.raises(ConfigError):
-            make_engine(session=SessionOverrides(mode="unrestricted", unrestricted=bad))
-    assert warrior(make_engine).mode == "unrestricted"
+            make_engine(session=SessionOverrides(mode="unrestricted", unrestricted=bad))  # type: ignore[arg-type]
+    assert warrior(make_engine).mode == "full_access"
+    # 旧值 unrestricted 迁移到 full_access，同样需要两步确认
+    assert make_engine(session=SessionOverrides(mode="unrestricted", unrestricted=OK)).mode  # type: ignore[arg-type] == "full_access"
+    with pytest.raises(ConfigError):
+        make_engine(mode="full_access")
 
 
 @pytest.mark.parametrize("kw", [{"interactive": False}, {"eval_mode": True, "backend": "docker"}])
@@ -51,12 +55,17 @@ def test_refused_in_ci(make_engine: MakeEngine, monkeypatch: pytest.MonkeyPatch)
 
 @pytest.mark.parametrize(
     ("src", "data"),
-    [("user", {"mode": "unrestricted"}), ("project", {"mode": "unrestricted"})],
+    [
+        ("user", {"mode": "unrestricted"}),
+        ("project", {"mode": "unrestricted"}),
+        ("user", {"mode": "full_access"}),
+        ("project", {"mode": "full_access"}),
+    ],
 )
 def test_never_from_config_files(make_engine: MakeEngine, src: str, data: dict[str, str]) -> None:
     e = make_engine(**{src: data})
-    assert e.mode == "auto_edit"
-    assert any("unrestricted" in w for w in e.policy.warnings)
+    assert e.mode == "auto_review"
+    assert any("full_access" in w for w in e.policy.warnings)
 
 
 def test_usable_without_sandbox_and_lifts_defaults(make_engine: MakeEngine) -> None:
@@ -98,7 +107,7 @@ def test_audit_still_records(make_engine: MakeEngine, env: dict[str, Path]) -> N
     e = warrior(make_engine, audit=True)
     e.check(Action("Bash", "rm -rf build"))
     text = next((env["home"] / "audit").glob("*.jsonl")).read_text(encoding="utf-8")
-    assert '"mode": "unrestricted"' in text
+    assert '"mode": "full_access"' in text
     assert "rm -rf build" in text
 
 
@@ -108,12 +117,12 @@ def test_not_persisted(make_engine: MakeEngine, env: dict[str, Path]) -> None:
     after = sorted(p.relative_to(env["tmp"]) for p in env["tmp"].rglob("*"))
     assert before == after
     # “重启”= 新会话没有激活凭据 → 回到配置模式
-    assert make_engine().mode == "auto_edit"
+    assert make_engine().mode == "auto_review"
 
 
 # ------------------------------------------------------------------ ModeController
 def ctl(**kw: object) -> ModeController:
-    base = {"base_mode": "auto_edit", "backend": "none", "interactive": True}
+    base = {"base_mode": "auto_review", "backend": "none", "interactive": True}
     base.update(kw)
     return ModeController(**base)  # type: ignore[arg-type]
 
@@ -124,13 +133,13 @@ def test_controller_activate_and_auto_revert(monkeypatch: pytest.MonkeyPatch) ->
     act = UnrestrictedActivation(acknowledged=True, typed=UNRESTRICTED_CONFIRM_PHRASE, scope="task")
     p = c.activate_unrestricted(act, task_id="t1")
     assert isinstance(p, ModeChangedPayload)
-    assert (p.from_mode, p.to_mode, p.risk, p.by, p.scope) == ("auto_edit", "unrestricted", "high", "user", "task")
-    assert c.mode == "unrestricted" and c.high_risk
+    assert (p.from_mode, p.to_mode, p.risk, p.by, p.scope) == ("auto_review", "full_access", "high", "user", "task")
+    assert c.mode == "full_access" and c.high_risk
     assert c.on_task_finished("other") is None
     r = c.on_task_finished("t1")
     assert r is not None
-    assert (r.to_mode, r.risk, r.by) == ("auto_edit", "normal", "auto_revert")
-    assert c.mode == "auto_edit"
+    assert (r.to_mode, r.risk, r.by) == ("auto_review", "normal", "auto_revert")
+    assert c.mode == "auto_review"
     assert len(c.history) == 2
 
 
@@ -139,7 +148,7 @@ def test_controller_session_scope_survives_task(monkeypatch: pytest.MonkeyPatch)
     c = ctl()
     c.activate_unrestricted(OK)
     assert c.on_task_finished("t1") is None
-    assert c.mode == "unrestricted"
+    assert c.mode == "full_access"
     assert c.revert() is not None
     assert c.revert() is None
 
@@ -161,7 +170,7 @@ def test_controller_refusals(
     c = ctl(**kw)
     with pytest.raises(ConfigError):
         c.activate_unrestricted(act)
-    assert c.mode == "auto_edit"
+    assert c.mode == "auto_review"
     assert c.history == []
 
 
@@ -180,5 +189,7 @@ def test_mode_changed_event_roundtrip() -> None:
     from triwitness.core.events import PAYLOADS
 
     assert PAYLOADS["mode_changed"] is ModeChangedPayload
-    p = ModeChangedPayload(from_mode="auto_edit", to_mode="unrestricted", risk="high")
+    p = ModeChangedPayload(from_mode="auto_review", to_mode="full_access", risk="high")
+    # 0.2.0 及更早的轨迹里的旧值仍可读
+    assert ModeChangedPayload(from_mode="auto_edit", to_mode="unrestricted", risk="high").to_mode == "unrestricted"
     assert ModeChangedPayload.model_validate(p.model_dump()).risk == "high"

@@ -104,6 +104,7 @@ function fallbackText(e: TwEvent): string {
     case 'approval_requested':
       return `? ${e.payload.tool} ${e.payload.action}`
     case 'approval_resolved':
+      if (e.payload.by === 'reviewer') return e.payload.decision === 'allow' ? t('审核模型已批准') : t('审核模型已拒绝')
       return e.payload.decision === 'allow' ? t('已允许') : t('已拒绝')
     case 'mode_changed':
       return t('模式 {0} → {1}', e.payload.from_mode, e.payload.to_mode)
