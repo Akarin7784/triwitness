@@ -161,3 +161,14 @@ def test_cli_plan_json_and_open_requires_yes(setup: tuple[Path, Path, Path], mon
     assert r.exit_code == 2 and "--yes" in r.output
     r = CliRunner().invoke(app, ["pr", "plan", "--run", "r_bad", "--repo", str(repo)])
     assert r.exit_code == 2 and json.loads(r.output)["ok"] is False
+
+
+def test_title_is_first_clause_and_short(tmp_path: Path) -> None:
+    from triwitness.github.pr import _title
+
+    long = "修复 line_count：原来用 len(text.split()) 把空行也算进去，导致返回 4。已加复现测试。"
+    (tmp_path / "finish.json").write_text(json.dumps({"summary": long}, ensure_ascii=False), encoding="utf-8")
+    assert _title(tmp_path) == "[TriWitness] 修复 line_count：原来用 len(text.split()) 把空行也算进去"
+    (tmp_path / "finish.json").write_text(json.dumps({"summary": "x" * 200}), encoding="utf-8")
+    t = _title(tmp_path)
+    assert len(t) == len("[TriWitness] ") + 72 and t.endswith("…")

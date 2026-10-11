@@ -166,9 +166,9 @@ def _title(run_dir: Path) -> str:
                 s = str(json.loads(f.read_text(encoding="utf-8")).get(key) or "")
             except (OSError, ValueError):
                 s = ""
-            s = re.split(r"[。；;\n]|\. ", s.strip())[0].strip()
+            s = re.split(r"[。；;，\n]|\. ", s.strip())[0].strip()
             if s:
-                return ("[TriWitness] " + s)[:120]
+                return "[TriWitness] " + (s if len(s) <= 72 else s[:71] + "…")
     turn = run_dir / "turn.json"
     if turn.is_file():
         try:
