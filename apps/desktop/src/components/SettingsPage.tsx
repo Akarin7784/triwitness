@@ -647,19 +647,19 @@ function LedgerCard({ led, maxCost }: { led: LedgerState; maxCost: number }) {
               <th className="px-5 py-2 font-normal">{tr('时间')}</th>
               <th className="px-2 py-2 font-normal">{tr('任务')}</th>
               <th className="px-2 py-2 font-normal">{tr('模型')}</th>
-              <th className="px-2 py-2 text-right font-normal">{tr('命中率')}</th>
+              <th className="whitespace-nowrap px-2 py-2 text-right font-normal">{tr('命中率')}</th>
               <th className="px-5 py-2 text-right font-normal">{tr('花费')}</th>
             </tr>
           </thead>
           <tbody className="selectable text-ink-soft">
             {data.recent.map((r, i) => (
               <tr key={`${r.ts}-${i}`} className="border-b border-border-soft/70 last:border-0">
-                <td className="px-5 py-2.5 font-mono text-[11px] text-sepia">{r.ts}</td>
+                <td className="whitespace-nowrap px-5 py-2.5 font-mono text-[11px] text-sepia">{r.ts}</td>
                 <td className="px-2 py-2.5">
                   {r.task_id ?? '—'}
                   <span className="ml-1.5 text-[10.5px] text-sepia-muted">{r.category}</span>
                 </td>
-                <td className="px-2 py-2.5 text-sepia">
+                <td className="whitespace-nowrap px-2 py-2.5 text-sepia">
                   {r.model}
                   {r.peak && <span className="ml-1.5 text-[10.5px] text-rose-ink">{tr('高峰')}</span>}
                 </td>
