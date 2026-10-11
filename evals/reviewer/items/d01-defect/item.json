@@ -1,0 +1,12 @@
+{
+ "task": "csv-blank-line",
+ "kind": "defect",
+ "truth": {
+  "file": "csvkit_lite/parse.py",
+  "line": 4,
+  "category": "missing_edge_case",
+  "severity": "blocker",
+  "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+  "in_changed_lines": true
+ }
+}

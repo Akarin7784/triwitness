@@ -1,0 +1,12 @@
+diff --git a/pynmea2/types/proprietary/ash.py b/pynmea2/types/proprietary/ash.py
+--- a/pynmea2/types/proprietary/ash.py
++++ b/pynmea2/types/proprietary/ash.py
+@@ -34,7 +34,7 @@
+     '''
+     @staticmethod
+     def match(data):
+-        return re.match(r'^\d{6}\.\d{3}$', data[1])
++        return re.match(r'^\d{6}\.\d{2,3}', data[1])
+ 
+     def __init__(self, *args, **kwargs):
+         self.subtype = 'ATT'

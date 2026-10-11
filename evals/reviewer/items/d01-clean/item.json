@@ -1,0 +1,5 @@
+{
+ "task": "csv-blank-line",
+ "kind": "clean",
+ "truth": null
+}

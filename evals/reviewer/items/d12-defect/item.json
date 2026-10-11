@@ -1,0 +1,12 @@
+{
+ "task": "swe-ro-crate-py-193",
+ "kind": "defect",
+ "truth": {
+  "file": "rocrate/model/entity.py",
+  "line": 106,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+  "in_changed_lines": true
+ }
+}

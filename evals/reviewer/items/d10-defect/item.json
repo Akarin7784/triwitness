@@ -1,0 +1,12 @@
+{
+ "task": "swe-django-components-489",
+ "kind": "defect",
+ "truth": {
+  "file": "src/django_components/template_loader.py",
+  "line": 41,
+  "category": "wrong_index",
+  "severity": "blocker",
+  "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+  "in_changed_lines": true
+ }
+}

@@ -1,0 +1,12 @@
+{
+ "task": "duration-minutes",
+ "kind": "defect",
+ "truth": {
+  "file": "timefmt/duration.py",
+  "line": 3,
+  "category": "wrong_constant",
+  "severity": "blocker",
+  "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+  "in_changed_lines": true
+ }
+}

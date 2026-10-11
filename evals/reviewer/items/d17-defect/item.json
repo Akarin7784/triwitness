@@ -1,0 +1,12 @@
+{
+ "task": "swe-openhands-resolver-123",
+ "kind": "defect",
+ "truth": {
+  "file": "openhands_resolver/send_pull_request.py",
+  "line": 145,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+  "in_changed_lines": true
+ }
+}

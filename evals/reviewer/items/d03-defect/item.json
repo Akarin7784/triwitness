@@ -1,0 +1,12 @@
+{
+ "task": "lru-get-refresh",
+ "kind": "defect",
+ "truth": {
+  "file": "minicache/lru.py",
+  "line": 15,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+  "in_changed_lines": true
+ }
+}

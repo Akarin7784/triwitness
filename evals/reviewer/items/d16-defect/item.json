@@ -1,0 +1,12 @@
+{
+ "task": "swe-loguru-1451",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_handler.py",
+  "line": 253,
+  "category": "exception_handling",
+  "severity": "blocker",
+  "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+  "in_changed_lines": true
+ }
+}

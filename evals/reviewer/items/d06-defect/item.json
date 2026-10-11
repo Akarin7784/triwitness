@@ -1,0 +1,12 @@
+{
+ "task": "swe-crosstl-257",
+ "kind": "defect",
+ "truth": {
+  "file": "crosstl/translator/lexer.py",
+  "line": 24,
+  "category": "wrong_regex",
+  "severity": "blocker",
+  "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+  "in_changed_lines": true
+ }
+}

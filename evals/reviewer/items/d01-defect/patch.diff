@@ -1,0 +1,12 @@
+diff --git a/csvkit_lite/parse.py b/csvkit_lite/parse.py
+--- a/csvkit_lite/parse.py
++++ b/csvkit_lite/parse.py
+@@ -1,6 +1,8 @@
+ def parse_rows(text: str) -> list[tuple[str, int]]:
+     rows = []
+     for line in text.splitlines():
++        if not line:
++            continue
+         parts = line.split(",")
+         rows.append((parts[0].strip(), int(parts[1])))
+     return rows

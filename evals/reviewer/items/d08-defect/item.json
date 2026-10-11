@@ -1,0 +1,12 @@
+{
+ "task": "swe-cfn-python-lint-4368",
+ "kind": "defect",
+ "truth": {
+  "file": "src/cfnlint/jsonschema/_utils.py",
+  "line": 52,
+  "category": "wrong_condition",
+  "severity": "blocker",
+  "description": "and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。",
+  "in_changed_lines": true
+ }
+}

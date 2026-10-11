@@ -1,0 +1,12 @@
+{
+ "task": "swe-slpp-32",
+ "kind": "defect",
+ "truth": {
+  "file": "slpp.py",
+  "line": 104,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+  "in_changed_lines": true
+ }
+}

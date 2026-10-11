@@ -1,0 +1,9 @@
+diff --git a/textkit/slug.py b/textkit/slug.py
+--- a/textkit/slug.py
++++ b/textkit/slug.py
+@@ -4,4 +4,4 @@
+ 
+ 
+ def slugify(text: str) -> str:
+-    return _NON_WORD.sub("-", text.lower())
++    return _NON_WORD.sub("-", text.lower()).strip("-")

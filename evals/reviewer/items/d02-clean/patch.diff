@@ -1,0 +1,11 @@
+diff --git a/timefmt/duration.py b/timefmt/duration.py
+--- a/timefmt/duration.py
++++ b/timefmt/duration.py
+@@ -1,6 +1,6 @@
+ import re
+ 
+-_UNITS = {"h": 3600, "m": 1, "s": 1}
++_UNITS = {"h": 3600, "m": 60, "s": 1}
+ _PART = re.compile(r"(\d+)([hms])")
+ 
+ 

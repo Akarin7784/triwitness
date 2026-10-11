@@ -1,0 +1,12 @@
+{
+ "task": "slugify-edges",
+ "kind": "defect",
+ "truth": {
+  "file": "textkit/slug.py",
+  "line": 7,
+  "category": "incomplete_fix",
+  "severity": "blocker",
+  "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+  "in_changed_lines": true
+ }
+}

@@ -1,0 +1,167 @@
+# W4-13 Reviewer 注入缺陷集（04 §6.2 Reviewer 有效发现率）。由 scripts/build_reviewer_defects.py build 生成 items/。
+# 每条：在 task 的 gold 修复后文件里把 find（恰好出现一次）换成 replace，缺陷必须落在 diff 的改动行里（评审看得到）。
+# 同一任务同时产出 <id>-clean（gold 原样，对照）与 <id>-defect（注入后）：20 缺陷 + 20 对照，配对设计。
+# severity：blocker = 让 Issue 的修复失效或引入崩溃；major = 行为错误但主路径可用。
+# 真值由人工标注（AI 起草、按 04 §6.2 定义），类别用于分层统计检出率。
+version: 1
+items:
+  - id: d01
+    task: csv-blank-line
+    file: csvkit_lite/parse.py
+    find: "        if not line.strip():\n"
+    replace: "        if not line:\n"
+    category: missing_edge_case
+    severity: blocker
+    description: '只跳过完全空的行，只含空白的行（"   "）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。'
+  - id: d02
+    task: duration-minutes
+    file: timefmt/duration.py
+    find: '_UNITS = {"h": 3600, "m": 60, "s": 1}'
+    replace: '_UNITS = {"h": 3600, "m": 60, "s": 60}'
+    category: wrong_constant
+    severity: blocker
+    description: '修分钟时把秒的倍数也改成了 60，"30s" 会被算成 1800 秒。'
+  - id: d03
+    task: lru-get-refresh
+    file: minicache/lru.py
+    find: "            return default\n        self._data.move_to_end(key)\n"
+    replace: "            return default\n        self._data.move_to_end(key, last=False)\n"
+    category: wrong_argument
+    severity: blocker
+    description: 'last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。'
+  - id: d04
+    task: paginate-last-page
+    file: pager/core.py
+    find: "    return -(-count // per_page)\n"
+    replace: "    return (count + per_page) // per_page\n"
+    category: off_by_one
+    severity: blocker
+    description: '向上取整写错：count 能被 per_page 整除时多算一页（10 条每页 5 条 → 3 页），count=0 时返回 1。'
+  - id: d05
+    task: slugify-edges
+    file: textkit/slug.py
+    find: '.strip("-")'
+    replace: '.lstrip("-")'
+    category: incomplete_fix
+    severity: blocker
+    description: '只去掉开头的连字符，结尾的仍保留（"Hello!" → "hello-"）。'
+  - id: d06
+    task: swe-crosstl-257
+    file: crosstl/translator/lexer.py
+    find: '("UNSIGNED_INT", r"\bunsigned int\b"),'
+    replace: '("UNSIGNED_INT", r"\bunsigned\b"),'
+    category: wrong_regex
+    severity: blocker
+    description: '只匹配 "unsigned"，"unsigned int" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。'
+  - id: d07
+    task: swe-pynmea2-124
+    file: pynmea2/types/proprietary/ash.py
+    find: "r'^\\d{6}\\.\\d{2,3}$'"
+    replace: "r'^\\d{6}\\.\\d{2,3}'"
+    category: wrong_regex
+    severity: major
+    description: '去掉了结尾锚点 $，"123456.1234" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。'
+  - id: d08
+    task: swe-cfn-python-lint-4368
+    file: src/cfnlint/jsonschema/_utils.py
+    find: "            and FUNCTION_TRANSFORM in validator.context.functions\n"
+    replace: "            or FUNCTION_TRANSFORM in validator.context.functions\n"
+    category: wrong_condition
+    severity: blocker
+    description: 'and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。'
+  - id: d09
+    task: swe-cyclopts-701
+    file: cyclopts/command_spec.py
+    find: "for flag in chain(self._resolved.help_flags, self._resolved.version_flags):"
+    replace: "for flag in chain(self._resolved.help_flags):"
+    category: incomplete_fix
+    severity: major
+    description: '只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。'
+  - id: d10
+    task: swe-django-components-489
+    file: src/django_components/template_loader.py
+    find: "                component_dir = component_dir[1]\n"
+    replace: "                component_dir = component_dir[0]\n"
+    category: wrong_index
+    severity: blocker
+    description: 'STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。'
+  - id: d11
+    task: swe-loguru-1306
+    file: loguru/_colorama.py
+    find: '    if os.getenv("FORCE_COLOR"):'
+    replace: '    if "FORCE_COLOR" in os.environ:'
+    category: spec_violation
+    severity: major
+    description: '与紧挨着的注释矛盾：force-color.org 要求非空才生效，FORCE_COLOR="" 仍会强制彩色（正是本 Issue 对 NO_COLOR 修的同类问题）。'
+  - id: d12
+    task: swe-ro-crate-py-193
+    file: rocrate/model/entity.py
+    find: '            if isinstance(v, dict) and "@id" not in v:'
+    replace: '            if isinstance(v, dict) and "@id" in v:'
+    category: wrong_condition
+    severity: blocker
+    description: '条件反了：合法的 {"@id": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。'
+  - id: d13
+    task: swe-slpp-32
+    file: slpp.py
+    find: "        if self.ch == '-' and self.text[self.at] == '-':"
+    replace: "        if self.ch == '-' and self.text[self.at + 1] == '-':"
+    category: off_by_one
+    severity: blocker
+    description: 'self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。'
+  - id: d14
+    task: swe-marimo-8401
+    file: marimo/_ast/cell_id.py
+    find: "    if len(cell_id_str) <= 36:\n"
+    replace: "    if len(cell_id_str) < 36:\n"
+    category: off_by_one
+    severity: blocker
+    description: '边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。'
+  - id: d15
+    task: swe-faststream-2701
+    file: faststream/_internal/application.py
+    find: "        broker._update_fd_config(self.config)\n"
+    replace: "        broker._update_fd_config(FastDependsConfig())\n"
+    category: wrong_argument
+    severity: blocker
+    description: '给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global("app")）传不到 broker。'
+  - id: d16
+    task: swe-loguru-1451
+    file: loguru/_handler.py
+    find: '        key = original.args[0] if original.args else "?"'
+    replace: '        key = original.args[1] if original.args else "?"'
+    category: exception_handling
+    severity: blocker
+    description: 'KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。'
+  - id: d17
+    task: swe-openhands-resolver-123
+    file: openhands_resolver/send_pull_request.py
+    find: "    return response.status_code == 200\n"
+    replace: "    return response.status_code != 404\n"
+    category: wrong_condition
+    severity: blocker
+    description: '401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。'
+  - id: d18
+    task: swe-conan-19750
+    file: conan/internal/api/profile/profile_loader.py
+    find: '            errors = [r for r in result if str(r.version).startswith("[")]'
+    replace: '            errors = [r for r in result if str(r).startswith("[")]'
+    category: wrong_variable
+    severity: blocker
+    description: '检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。'
+  - id: d19
+    task: swe-cyclopts-633
+    file: cyclopts/parameter.py
+    find: "sorted_args = sorted(union_args, key=lambda x: (is_nonetype(x) or x is None))"
+    replace: "sorted_args = sorted(union_args, key=lambda x: not (is_nonetype(x) or x is None))"
+    category: wrong_condition
+    severity: major
+    description: '排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。'
+  - id: d20
+    task: swe-llm-sandbox-101
+    file: llm_sandbox/session.py
+    find: "            timeout=int(effective_timeout),\n"
+    replace: "            timeout=int(timeout or 60),\n"
+    category: wrong_variable
+    severity: blocker
+    description: '算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。'

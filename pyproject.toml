@@ -46,7 +46,7 @@ packages = ["src/triwitness"]
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-extend-exclude = ["apps", "evals/tasks", "evals/results"]
+extend-exclude = ["apps", "evals/tasks", "evals/results", "evals/reviewer/items"]  # items 是任务原文与补丁，保持原样
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

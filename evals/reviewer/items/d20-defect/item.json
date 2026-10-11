@@ -1,0 +1,12 @@
+{
+ "task": "swe-llm-sandbox-101",
+ "kind": "defect",
+ "truth": {
+  "file": "llm_sandbox/session.py",
+  "line": 533,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+  "in_changed_lines": true
+ }
+}

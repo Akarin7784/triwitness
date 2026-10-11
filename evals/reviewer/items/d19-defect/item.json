@@ -1,0 +1,12 @@
+{
+ "task": "swe-cyclopts-633",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/parameter.py",
+  "line": 279,
+  "category": "wrong_condition",
+  "severity": "major",
+  "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+  "in_changed_lines": true
+ }
+}

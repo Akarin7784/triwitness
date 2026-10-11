@@ -1,0 +1,12 @@
+{
+ "task": "swe-marimo-8401",
+ "kind": "defect",
+ "truth": {
+  "file": "marimo/_ast/cell_id.py",
+  "line": 67,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+  "in_changed_lines": true
+ }
+}

@@ -1,0 +1,14 @@
+# 只影响以仓库根为上下文的构建（evals/reviewer/Dockerfile）；任务镜像以各自 environment/ 为上下文，不受影响。
+# 白名单：只送镜像需要的文件。
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src
+!configs
+!scripts
+!evals/reviewer
+!evals/tasks
+**/.env
+**/.env.*
+**/__pycache__

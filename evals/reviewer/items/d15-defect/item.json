@@ -1,0 +1,12 @@
+{
+ "task": "swe-faststream-2701",
+ "kind": "defect",
+ "truth": {
+  "file": "faststream/_internal/application.py",
+  "line": 120,
+  "category": "wrong_argument",
+  "severity": "blocker",
+  "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+  "in_changed_lines": true
+ }
+}

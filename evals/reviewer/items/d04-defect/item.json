@@ -1,0 +1,12 @@
+{
+ "task": "paginate-last-page",
+ "kind": "defect",
+ "truth": {
+  "file": "pager/core.py",
+  "line": 10,
+  "category": "off_by_one",
+  "severity": "blocker",
+  "description": "向上取整写错：count 能被 per_page 整除时多算一页（10 条每页 5 条 → 3 页），count=0 时返回 1。",
+  "in_changed_lines": true
+ }
+}

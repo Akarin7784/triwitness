@@ -28,6 +28,11 @@
   - **计划确认续跑点（Q6）**：停在计划确认时保存续跑点，`--resume` 沿用原计划重新请求确认，不再重跑 Planner。
   - **人工确认点（W4-10，默认开，待 Eva 审）**：改依赖声明（pyproject / requirements / package.json / lock，或 `uv add` / `pip install` 等）与改 CI / 构建配置（.github/workflows、Makefile、Dockerfile …）在交互运行里必须由人确认，不交给自动审核模型；非交互拒绝；评测不经过。开关 `orchestration.hitl`。
   - **ask_human 工具**：Executor 可以问人（阻塞 / 非阻塞）；没有审批通道时任务停在 needs_human 并可续跑；评测里不问人、按最佳判断继续。orchestrated-1m 默认启用。
+- **W4-09 事件日志重放续跑 + 幂等键（b482cdd）**：每个 Executor 步骤结束都是检查点（resume.json 记 `event_seq`）；`--resume` 从轨迹重放到检查点的模型上下文（命中前缀缓存），检查点之后的调用不重放、不重跑，执行中被打断的工具调用补成“未执行”；有副作用的工具先写 `runs/<id>/tool-journal.jsonl` 预写日志，续跑说明里列出“已回滚的工作区操作”和“已经发起过、需先确认的对外操作”。对外副作用用幂等键（`<run_id>:open_pr:0`，`TW_HOME/tw.db` 表 `side_effects`）：`tw pr open` 重复执行返回同一个 PR（`reused`）。开关 `orchestration.replay_on_resume`（默认开）。进程 SIGKILL 崩溃续跑有子进程测试。
+- **spec 011 检查点与人工确认（W4-02，初稿待 Eva 审）**：`specs/011-checkpoints-and-hitl.md`，AC1–AC6 已验收，AC7 待 Eva；§10 列 Q1–Q4 待定问题。
+- **W4-13 评审者注入缺陷集**：`evals/reviewer/`，20 个任务的金标准补丁 × {原样, 注入一个缺陷} = 40 题（11 类缺陷，blocker / major），标准答案含文件 / 行号 / 类别；`scripts/build_reviewer_defects.py gold|build|check` 重建与校验（40 题全部能 apply 到基线）。
+- **W4-14 评审者消融（脚本已备好，全量待 Eva 本机跑）**：`scripts/reviewer_ablation.py prepare|run|score|bundle`，臂 = none / same（新提示 `reviewer-plain`，思考 high）/ adversarial（思考 max）/ checklist 非思考 t=0.3 / t=1.0，事后算共识；检出率 / 误报率带 Wilson 95% 区间、按类别拆分。Windows 一键脚本 `scripts/windows/run-reviewer-ablation.ps1`（克隆 / 更新 → `evals/reviewer/Dockerfile` 构建 → 容器内并发 4 → 结果 + 账本打成一个 zip；密钥只从本机环境变量透传）。只用 deepseek-flash，账本类别 `reviewer-ablation`。
+- 默认权限模式仍是 `auto_review`（未改，等 Eva 决定）。
   - **跨厂商评审（W4-08，只用假模型测）**：`vendor_policy: cross_vendor` 时 Reviewer 路由排除 Executor 的厂商；开工前预检，凑不出异厂商直接失败（不花钱）。
 - **Agent 循环（借鉴 Claude Code 核心循环）**：同一轮里连续的只读工具（read_file / list_files / grep / repo_map / git）并发执行，结果顺序不变；中途结束 / 中断时给没执行的工具调用补“未执行”结果，续写请求始终合法；API 重试默认 10 次指数退避（1 s 起、32 s 封顶、带抖动），`TW_LLM_PERSISTENT_RETRY=1` 时 429 / 503 一直重试（单次 ≤ 60 s、总计 ≤ 6 h）。
 - **上下文保护**：请求前估算超过窗口硬上限时先强制清理 / 压缩，仍超就体面结束（`context_overflow`）；厂商报上下文超限时压缩后重试一次；连续 2 次压完仍超压缩线就停下（`context_thrash`），不再无限压缩；压缩后重读最近修改的 5 个文件。

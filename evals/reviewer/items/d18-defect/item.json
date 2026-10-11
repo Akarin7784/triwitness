@@ -1,0 +1,12 @@
+{
+ "task": "swe-conan-19750",
+ "kind": "defect",
+ "truth": {
+  "file": "conan/internal/api/profile/profile_loader.py",
+  "line": 251,
+  "category": "wrong_variable",
+  "severity": "blocker",
+  "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+  "in_changed_lines": true
+ }
+}

@@ -1,0 +1,389 @@
+{
+ "name": "reviewer-defects",
+ "version": 1,
+ "digest": "eaded2ce65d1d155",
+ "n_defect": 20,
+ "n_clean": 20,
+ "items": [
+  {
+   "id": "d01-clean",
+   "task": "csv-blank-line",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d01-defect",
+   "task": "csv-blank-line",
+   "kind": "defect",
+   "defect": {
+    "file": "csvkit_lite/parse.py",
+    "line": 4,
+    "category": "missing_edge_case",
+    "severity": "blocker",
+    "description": "只跳过完全空的行，只含空白的行（\"   \"）仍会进入 split 并在 int(parts[1]) 处 IndexError，Issue 的场景没修全。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d02-clean",
+   "task": "duration-minutes",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d02-defect",
+   "task": "duration-minutes",
+   "kind": "defect",
+   "defect": {
+    "file": "timefmt/duration.py",
+    "line": 3,
+    "category": "wrong_constant",
+    "severity": "blocker",
+    "description": "修分钟时把秒的倍数也改成了 60，\"30s\" 会被算成 1800 秒。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d03-clean",
+   "task": "lru-get-refresh",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d03-defect",
+   "task": "lru-get-refresh",
+   "kind": "defect",
+   "defect": {
+    "file": "minicache/lru.py",
+    "line": 15,
+    "category": "wrong_argument",
+    "severity": "blocker",
+    "description": "last=False 把刚访问的键移到最旧的一端，get 之后它反而最先被淘汰（与 LRU 语义相反）。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d04-clean",
+   "task": "paginate-last-page",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d04-defect",
+   "task": "paginate-last-page",
+   "kind": "defect",
+   "defect": {
+    "file": "pager/core.py",
+    "line": 10,
+    "category": "off_by_one",
+    "severity": "blocker",
+    "description": "向上取整写错：count 能被 per_page 整除时多算一页（10 条每页 5 条 → 3 页），count=0 时返回 1。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d05-clean",
+   "task": "slugify-edges",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d05-defect",
+   "task": "slugify-edges",
+   "kind": "defect",
+   "defect": {
+    "file": "textkit/slug.py",
+    "line": 7,
+    "category": "incomplete_fix",
+    "severity": "blocker",
+    "description": "只去掉开头的连字符，结尾的仍保留（\"Hello!\" → \"hello-\"）。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d06-clean",
+   "task": "swe-crosstl-257",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d06-defect",
+   "task": "swe-crosstl-257",
+   "kind": "defect",
+   "defect": {
+    "file": "crosstl/translator/lexer.py",
+    "line": 24,
+    "category": "wrong_regex",
+    "severity": "blocker",
+    "description": "只匹配 \"unsigned\"，\"unsigned int\" 会被切成 UNSIGNED_INT + INT 两个 token，解析器拿到多余的 INT。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d07-clean",
+   "task": "swe-pynmea2-124",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d07-defect",
+   "task": "swe-pynmea2-124",
+   "kind": "defect",
+   "defect": {
+    "file": "pynmea2/types/proprietary/ash.py",
+    "line": 37,
+    "category": "wrong_regex",
+    "severity": "major",
+    "description": "去掉了结尾锚点 $，\"123456.1234\" 这类小数位过多的时间戳也会被当成 ATT 句子匹配。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d08-clean",
+   "task": "swe-cfn-python-lint-4368",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d08-defect",
+   "task": "swe-cfn-python-lint-4368",
+   "kind": "defect",
+   "defect": {
+    "file": "src/cfnlint/jsonschema/_utils.py",
+    "line": 52,
+    "category": "wrong_condition",
+    "severity": "blocker",
+    "description": "and 写成 or：只要上下文允许 Fn::Transform，所有属性都会被跳过，additionalProperties 校验整体失效。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d09-clean",
+   "task": "swe-cyclopts-701",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d09-defect",
+   "task": "swe-cyclopts-701",
+   "kind": "defect",
+   "defect": {
+    "file": "cyclopts/command_spec.py",
+    "line": 143,
+    "category": "incomplete_fix",
+    "severity": "major",
+    "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d10-clean",
+   "task": "swe-django-components-489",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d10-defect",
+   "task": "swe-django-components-489",
+   "kind": "defect",
+   "defect": {
+    "file": "src/django_components/template_loader.py",
+    "line": 41,
+    "category": "wrong_index",
+    "severity": "blocker",
+    "description": "STATICFILES_DIRS 的 (prefix, path) 元组取了 prefix 而不是 path，带前缀的目录会被当成一个不存在的相对路径。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d11-clean",
+   "task": "swe-loguru-1306",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d11-defect",
+   "task": "swe-loguru-1306",
+   "kind": "defect",
+   "defect": {
+    "file": "loguru/_colorama.py",
+    "line": 17,
+    "category": "spec_violation",
+    "severity": "major",
+    "description": "与紧挨着的注释矛盾：force-color.org 要求非空才生效，FORCE_COLOR=\"\" 仍会强制彩色（正是本 Issue 对 NO_COLOR 修的同类问题）。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d12-clean",
+   "task": "swe-ro-crate-py-193",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d12-defect",
+   "task": "swe-ro-crate-py-193",
+   "kind": "defect",
+   "defect": {
+    "file": "rocrate/model/entity.py",
+    "line": 106,
+    "category": "wrong_condition",
+    "severity": "blocker",
+    "description": "条件反了：合法的 {\"@id\": ...} 引用会抛 ValueError，缺 @id 的字典反而放行。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d13-clean",
+   "task": "swe-slpp-32",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d13-defect",
+   "task": "swe-slpp-32",
+   "kind": "defect",
+   "defect": {
+    "file": "slpp.py",
+    "line": 104,
+    "category": "off_by_one",
+    "severity": "blocker",
+    "description": "self.at 已经指向下一个字符，+1 看的是再后一个：`--` 注释识别不到（`-` 后跟任意字符再跟 `-` 才算），文本末尾还可能 IndexError。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d14-clean",
+   "task": "swe-marimo-8401",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d14-defect",
+   "task": "swe-marimo-8401",
+   "kind": "defect",
+   "defect": {
+    "file": "marimo/_ast/cell_id.py",
+    "line": 67,
+    "category": "off_by_one",
+    "severity": "blocker",
+    "description": "边界写错：长度正好 36 的裸 UUID（VSCode 单元格）仍被判为外部单元格，正是 Issue 要修的情况，也与 docstring 的例子矛盾。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d15-clean",
+   "task": "swe-faststream-2701",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d15-defect",
+   "task": "swe-faststream-2701",
+   "kind": "defect",
+   "defect": {
+    "file": "faststream/_internal/application.py",
+    "line": 120,
+    "category": "wrong_argument",
+    "severity": "blocker",
+    "description": "给 broker 的是一份新的空配置而不是应用自己的 self.config，应用级依赖 / 上下文（含 set_global(\"app\")）传不到 broker。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d16-clean",
+   "task": "swe-loguru-1451",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d16-defect",
+   "task": "swe-loguru-1451",
+   "kind": "defect",
+   "defect": {
+    "file": "loguru/_handler.py",
+    "line": 253,
+    "category": "exception_handling",
+    "severity": "blocker",
+    "description": "KeyError 只有一个参数，args[1] 会在错误处理路径里再抛 IndexError，用户看到的是另一个异常而不是友好的提示。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d17-clean",
+   "task": "swe-openhands-resolver-123",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d17-defect",
+   "task": "swe-openhands-resolver-123",
+   "kind": "defect",
+   "defect": {
+    "file": "openhands_resolver/send_pull_request.py",
+    "line": 145,
+    "category": "wrong_condition",
+    "severity": "blocker",
+    "description": "401 / 403 / 5xx 都被当成“分支已存在”，令牌无效或 API 出错时 while 循环永远不会结束（每轮还发一次请求）。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d18-clean",
+   "task": "swe-conan-19750",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d18-defect",
+   "task": "swe-conan-19750",
+   "kind": "defect",
+   "defect": {
+    "file": "conan/internal/api/profile/profile_loader.py",
+    "line": 251,
+    "category": "wrong_variable",
+    "severity": "blocker",
+    "description": "检查的是整个引用（以包名开头）而不是版本，版本范围永远检测不到，新加的校验形同虚设。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d19-clean",
+   "task": "swe-cyclopts-633",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d19-defect",
+   "task": "swe-cyclopts-633",
+   "kind": "defect",
+   "defect": {
+    "file": "cyclopts/parameter.py",
+    "line": 279,
+    "category": "wrong_condition",
+    "severity": "major",
+    "description": "排序键取反：None 排到了前面，与注释“非 None 类型优先”相反，bool | None 时负标志的来源 / 顺序会变。",
+    "in_changed_lines": true
+   }
+  },
+  {
+   "id": "d20-clean",
+   "task": "swe-llm-sandbox-101",
+   "kind": "clean",
+   "defect": null
+  },
+  {
+   "id": "d20-defect",
+   "task": "swe-llm-sandbox-101",
+   "kind": "defect",
+   "defect": {
+    "file": "llm_sandbox/session.py",
+    "line": 533,
+    "category": "wrong_variable",
+    "severity": "blocker",
+    "description": "算好的 effective_timeout 没用上，配置里的 execution_timeout 被忽略（timeout=None 时总是 60），上面新增的逻辑成了死代码。",
+    "in_changed_lines": true
+   }
+  }
+ ]
+}

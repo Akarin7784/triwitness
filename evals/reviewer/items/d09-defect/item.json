@@ -1,0 +1,12 @@
+{
+ "task": "swe-cyclopts-701",
+ "kind": "defect",
+ "truth": {
+  "file": "cyclopts/command_spec.py",
+  "line": 143,
+  "category": "incomplete_fix",
+  "severity": "major",
+  "description": "只隐藏了 help 标志，--version 仍出现在懒加载子命令的帮助里，与 core.py 的直接注册行为不一致（注释声称一致）。",
+  "in_changed_lines": true
+ }
+}

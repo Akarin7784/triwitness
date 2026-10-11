@@ -1,0 +1,12 @@
+{
+ "task": "swe-loguru-1306",
+ "kind": "defect",
+ "truth": {
+  "file": "loguru/_colorama.py",
+  "line": 17,
+  "category": "spec_violation",
+  "severity": "major",
+  "description": "与紧挨着的注释矛盾：force-color.org 要求非空才生效，FORCE_COLOR=\"\" 仍会强制彩色（正是本 Issue 对 NO_COLOR 修的同类问题）。",
+  "in_changed_lines": true
+ }
+}
