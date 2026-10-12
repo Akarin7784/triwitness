@@ -396,8 +396,8 @@ html {
 .tone-error { color: var(--color-rose-ink); }
 .tone-warn { color: var(--color-ochre); }
 .tone-final {
-  font-family: var(--font-serif);
-  font-size: 16px;
+  font-family: var(--font-mono);
+  font-size: inherit;
   color: var(--color-ink);
 }
 .stream-rule {
@@ -418,9 +418,9 @@ html {
   text-overflow: ellipsis;
 }
 .stream-chapter .stream-rule-text {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-size: 13px;
-  letter-spacing: 0.24em;
+  letter-spacing: normal;
   color: var(--color-sepia);
 }
 .stream-divider .stream-rule-line {
@@ -550,7 +550,7 @@ html {
   --color-sage: #95ba9b;
   --color-teal: #8db0ae;
   --color-plum: #c09cae;
-  --color-rose-ink: #e48c7c;
+  --color-rose-ink: #c98273;
   --color-ochre: #d9a75e;
   --color-panel: #262019;
   --color-panel-raised: #2d261e;
@@ -676,3 +676,11 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
 :root:not([data-motion='standard']) .think-shimmer { animation: none; background: none; color: var(--color-amber); }
 :focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
 .user-bubble { background: var(--color-panel-raised); color: var(--color-ink); border: 1px solid var(--color-border-soft); box-shadow: none; }
+
+/* 走查修复（阿验 2026-10-13）：content-visibility 会裁掉外扩 outline → 内缩焦点环 */
+.cv-auto :focus-visible, .cv-line :focus-visible, .v-item :focus-visible { outline-offset: -2px; border-radius: 8px; }
+[data-testid='tool-row'] > button:focus-visible { outline: 2px solid var(--color-amber); outline-offset: -2px; border-radius: 8px; }
+/* 输入框：焦点环画在圆角卡片上，不在内部 textarea 上画方框 */
+.composer-card textarea:focus-visible { outline: none; }
+.composer-card:has(textarea:focus-visible) { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+.diff-stat { white-space: nowrap; flex-shrink: 0; }

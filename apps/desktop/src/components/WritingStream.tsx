@@ -167,14 +167,14 @@ export function WritingStream({
             const isLast = li === grouped.length - 1
             const meta = lineById.get(line.lineId)
             // 最后两行逐字（墨迹还在沉淀）；更早的行墨已干，整行一个文本节点 + memo，长任务里 DOM 不再按字膨胀
-            const live = li >= grouped.length - 2
+            const live = !reduced && li >= grouped.length - 2
             const glyphs = live
               ? chars.slice(line.start, Math.min(line.end, visibleCount)).map((c) => (
                   <span key={c.key} className="ink-char">
                     {c.ch}
                   </span>
                 ))
-              : (meta?.text ?? chars.slice(line.start, line.end).map((c) => c.ch).join(''))
+              : keepStatsTogether(meta?.text ?? chars.slice(line.start, line.end).map((c) => c.ch).join(''))
             return (
               <StreamLineView
                 key={line.lineId}
@@ -240,7 +240,7 @@ const StreamLineView = memo(function StreamLineView({
         <span className="ink-bloom" style={{ background: `radial-gradient(circle, ${roleColor[role]}55, transparent 70%)` }} />
         <span className="role-dot" style={{ background: roleColor[role] }} />
       </span>
-      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+      <p className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">
         <span
           className="mr-2 inline-block select-none font-sans text-[13px] font-medium tracking-[0.12em]"
           style={{ color: roleColor[role] }}
@@ -253,3 +253,10 @@ const StreamLineView = memo(function StreamLineView({
     </div>
   )
 })
+
+/** 「(+18 −4)」这类增删统计不拆行（走查 P2-5）：整体包进 nowrap */
+function keepStatsTogether(text: string): ReactNode {
+  const parts = text.split(/(\(\+\d+ [−-]\d+\))/)
+  if (parts.length === 1) return text
+  return parts.map((p, i) => (i % 2 ? <span key={i} className="whitespace-nowrap">{p}</span> : p))
+}

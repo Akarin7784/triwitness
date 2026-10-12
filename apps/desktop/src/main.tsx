@@ -17,11 +17,23 @@ import { preloadMarkdown } from './lib/markdownLoader'
 installDesktopGuards()
 installVisibilityPause()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+const root = createRoot(document.getElementById('root')!)
+// 仅开发版：?gallery=1 打开 UI 走查样例页（正式版整段被裁掉）
+if (import.meta.env.DEV && new URLSearchParams(location.search).has('gallery')) {
+  void import('./dev/__fixtures__/UiGallery').then(({ default: UiGallery }) =>
+    root.render(
+      <StrictMode>
+        <UiGallery />
+      </StrictMode>,
+    ),
+  )
+} else {
+  root.render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+}
 
 // 首帧之后空闲时预取 Markdown 渲染器 chunk
 const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 200))

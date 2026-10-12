@@ -705,7 +705,7 @@ export default function App() {
             />
             <ChatPanel
               title={title || tr('三证')}
-              run={isLocal ? null : live}
+              run={isLocal ? null : liveTask && !snap?.result && (live.phase === 'done' || live.phase === 'failed') ? { ...live, phase: 'active', label: tr('进行中') } : live}
               turn={isLocal ? null : turn}
               draftKey={display}
               messages={messages}

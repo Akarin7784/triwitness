@@ -59,7 +59,7 @@ export function schedule(
   const out: WrittenChar[] = []
   let t = startAt
   for (const line of lines) {
-    t += reduced ? 120 : (line.pauseBefore ?? 0)
+    t += reduced ? 0 : (line.pauseBefore ?? 0)
     const glyphs = Array.from(line.text)
     glyphs.forEach((ch, i) => {
       out.push({ key: `${line.id}-${i}`, ch, at: t, lineId: line.id, role: line.role })

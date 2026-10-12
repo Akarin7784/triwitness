@@ -288,8 +288,8 @@ function ChatRow({
             </span>
           </Tip>
         )}
-        <span className={clsx('min-w-0 flex-1 truncate font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
-          {c.title}
+        <span title={c.title} className={clsx('min-w-0 flex-1 truncate font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
+          {middleEllipsis(c.title)}
         </span>
         <span data-testid="chat-row-slot" className="relative flex h-6 w-[38px] shrink-0 items-center justify-end">
           {c.time && (
@@ -375,4 +375,12 @@ function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive
       </Popover>
     </div>
   )
+}
+
+/** 窄侧栏里同前缀的会话标题会被截成一样：长标题保留首尾，中间省略（完整标题在 title 悬停提示里） */
+function middleEllipsis(s: string, max = 22): string {
+  const a = Array.from(s)
+  if (a.length <= max) return s
+  const tail = Math.floor((max - 1) / 3)
+  return a.slice(0, max - 1 - tail).join('') + '…' + a.slice(a.length - tail).join('')
 }

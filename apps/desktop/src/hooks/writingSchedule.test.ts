@@ -26,12 +26,10 @@ describe('schedule（书写时序）', () => {
     expect(chars[i + 1].at - chars[i].at).toBeGreaterThan(chars[1].at - chars[0].at)
   })
 
-  it('reduced motion：整行同时出现，行间 120ms', () => {
-    const { chars } = schedule(lines, 0, true)
-    const a = chars.filter((c) => c.lineId === 'a').map((c) => c.at)
-    const b = chars.filter((c) => c.lineId === 'b').map((c) => c.at)
-    expect(new Set(a)).toEqual(new Set([120]))
-    expect(new Set(b)).toEqual(new Set([240]))
+  it('reduced motion（默认）：全部即时出现，不打字、切会话不重放', () => {
+    const { chars, endAt } = schedule(lines, 0, true)
+    expect(new Set(chars.map((c) => c.at))).toEqual(new Set([0]))
+    expect(endAt).toBe(0)
   })
 
   it('追加：从给定起点继续排', () => {

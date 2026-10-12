@@ -117,7 +117,7 @@ export function Composer({ onSend, repo, running, onStop, allowEmpty, draftKey =
     <div className="px-8 pb-6 pt-2">
       <div
         data-testid="composer"
-        className="paper-card mx-auto max-w-[760px] rounded-[22px] px-3 pb-2.5 pt-3 transition-shadow duration-500 focus-within:shadow-[0_6px_28px_-10px_color-mix(in_srgb,var(--color-sepia)_35%,transparent)]"
+        className="paper-card composer-card mx-auto max-w-[760px] rounded-[22px] px-3 pb-2.5 pt-3 transition-shadow duration-500 focus-within:shadow-[0_6px_28px_-10px_color-mix(in_srgb,var(--color-sepia)_35%,transparent)]"
       >
         {atts.length > 0 && <AttachmentChips items={atts} onRemove={removeAtt} />}
         <input

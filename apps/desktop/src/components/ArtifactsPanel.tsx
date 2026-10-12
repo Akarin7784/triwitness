@@ -102,7 +102,7 @@ export function ArtifactsPanel({
           {artifact.title}
         </h3>
         {stats && (
-          <span className="shrink-0 font-mono text-[11px]">
+          <span className="diff-stat shrink-0 whitespace-nowrap font-mono text-[13px]">
             <span className="text-sage">+{stats.add}</span> <span className="text-rose-ink">−{stats.del}</span>
           </span>
         )}

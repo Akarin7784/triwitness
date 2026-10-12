@@ -17,6 +17,8 @@ const MARKERS = [
   '"tw_events_fixture"',
   'stress-', // 压测源
   'Issue #87 · 演示',
+  'tw-ui-gallery', // 开发版 UI 走查样例页
+  'UI 走查样例',
 ]
 
 const files = []
