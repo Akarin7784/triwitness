@@ -1,0 +1,27 @@
+# 面试材料（W8-08 草稿）
+
+- [pitch.md](pitch.md)：30 秒 / 2 分钟 / 5 分钟三版讲稿
+- [qa.md](qa.md)：按 04 §11（8 个主题）逐题作答
+
+**规则**：只用已入库的实测数字，每个数字后面都写出处；终测（W8-01）还没跑，相关位置一律写 **【待终测】**，跑完后用 `out/final/summary.json` 回填。没做的事直说没做，不说“计划中”的东西已经有了。
+
+如果队友写了 `docs/interview-book/`，以那里的口径为准，本目录只补数字与出处，不覆盖。
+
+## 数字速查（全部可在仓库里核对）
+
+| 主题 | 数字 | 出处 |
+|---|---|---|
+| W2 基线 · test 35（flash 思考 high） | 16/33 解决 = **48%**（bootstrap 95% 33%–67%），¥0.233/题，¥0.510/解决，虚假成功 6，infra 2 不计分母，缓存命中 97.2%，平均 53 步 / 520 s | `evals/baselines/2026-10-10-w2/analysis.md` §1 |
+| W2 基线 · dev 15（非思考） | 12/15 = **80%**，¥0.054/题 | 同上 |
+| W2 污染检查 | 新题 45%（10/22）vs 旧题 55%（6/11），差在 CI 内，看不出污染效应 | 同上 |
+| W2 失败模式 | test 11 个失败是先撞 3M 输入 token 上限（探索太久，有题 70 步一次没改代码） | 同上 §4 |
+| W3 验证器三档（48 个补丁，真值 28 解决 / 8 假成功） | 判 pass 精确率：不验证 72% → 确定性 85% → +模型 89%；召回 75% → 61% → 57%；8 个假成功拦下 0 → 5 → 6；模型档 ¥2.94 | `evals/baselines/2026-10-10-w3-verifier/analysis.md` §1 |
+| W3 模型判读稳定性 | 3 次判读全票一致 44/46，Fleiss κ = 0.95，0 次解析失败 | 同上 §4 |
+| W3 关键发现 | 8 个假成功里 7 个的自写复现测试“基线失败、补丁后通过”——复现复跑一个都没拦下；真正起作用的是声明审计 4、防作弊 1、模型 1 | 同上 §2 |
+| W3 规则复核（¥0） | 精确率 85% → 88%，假成功放过 3 → 2，错判 L3 3 → 0 | `evals/baselines/2026-10-10-w3-rules/analysis.md` |
+| 评审者消融（40 题注入缺陷集，每臂 120 次） | checklist(t=1.0) − adversarial：检出 +0%（按题聚类 95% −18%～+18%），没下结论 20% → 7%，¥0.030 vs ¥0.097/次，耗时中位 27 s vs 95 s；Holm p 全部 1.000 → 默认改 checklist（ADR-0007） | `evals/baselines/2026-10-12-reviewer-ablation/`（`report.md`、`posthoc.md`）；`docs/adr/0007-default-reviewer-checklist.md` |
+| OFAT 消融（dev 15 × 10 配置） | 10 个配置逐题结果完全相同（都是 12/15）——dev 已饱和；唯一可信差异是成本：thinking=high ¥0.138/题、Planner ¥0.143/题，约基线 ¥0.042 的 3.3–3.4 倍，解决率无收益 | `evals/baselines/2026-10-12-ofat-w5/report.md` |
+| Terminal-Bench 2.0 子集（10 题，Harbor） | r1 9/10；r2 26/30 = 86.7%（Wilson 70%–95%）；r3（加超时守卫）28/30 = 93.3%（79%–98%），缓存命中 98.1%，每次中位 ¥0.053；r2→r3 差在噪声内 | `evals/baselines/2026-10-12-harbor-tb2{,-r2,-r3}/README.md` |
+| 红队 39 条（¥0，确定性） | 开网关 39/39 挡住（deny 16 / intercepted 17 / ask 5 / revocable 1）；关网关 35/39 攻击得逞；开臂额外延迟 p50 ≈ 9 ms | `evals/baselines/2026-10-12-redteam-gateway/README.md` |
+| 长上下文探针 | 约 900K token 针召回全对；冷请求首字约 19 s，热请求约 5 s | `evals/baselines/2026-10-11-long-context-probe/` |
+| **终测（test 35 × 基线 / 完整流水线）** | **【待终测】** | `scripts/windows/run-final-eval.ps1` → `out/final/summary.json` |
