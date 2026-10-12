@@ -7,7 +7,7 @@
 判定（只看 loaded 的 run，最近 window 条）：样本 ≥ min_n 且成功率 < 门禁时 A 臂（无 Skill）成功率 − drop
 → 自动回滚到上一个通过门禁的版本（没有就移除），写进 pool.json 历史并 git 提交。人工审核合入的 repo 级 Skill
 用同仓库“注入但没读”的 run 成功率作基线（≥ min_n 条才判）；两者都没有的不自动回滚。
-注意：门禁是在 held-out 评测任务上测的，日常任务的成功率不完全可比；drop = −15pp（spec 013 §10 Q5，Eva 2026-10-12 已决定）。
+注意：门禁在 held-out 评测上测，日常成功率不完全可比；drop=−15pp（spec 013 §10 Q5，Eva 2026-10-12 已决定）。
 """
 
 from __future__ import annotations

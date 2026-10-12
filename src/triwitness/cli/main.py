@@ -793,7 +793,10 @@ app.add_typer(traj_app, name="traj")
 
 @traj_app.command("export")
 def traj_export(
-    run_dir: Annotated[Path, typer.Argument(help="含 trajectory.jsonl 的运行目录（evals/results/... 或 ~/.triwitness/runs/<id>）")],
+    run_dir: Annotated[
+        Path,
+        typer.Argument(help="含 trajectory.jsonl 的运行目录（evals/results 或 ~/.triwitness/runs）"),
+    ],
     format: Annotated[
         str,
         typer.Option("--format", "-f", help="openai / rlvr / harbor / html / all（默认 all）"),
@@ -803,7 +806,7 @@ def traj_export(
 ) -> None:
     """从已有轨迹导出 OpenAI messages / 轨迹+奖励 / Harbor trial / 单文件 HTML（¥0，不调模型）。"""
     from triwitness.core.errors import ConfigError
-    from triwitness.eval.traj_export import FORMATS, export_run
+    from triwitness.eval.traj_export import export_run
 
     del as_json
     fmts = [f.strip() for f in format.split(",") if f.strip()]

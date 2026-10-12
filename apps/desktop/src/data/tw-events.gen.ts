@@ -34,6 +34,9 @@ export type Harness = string | null
 export type HarnessHash = string | null
 export type IssueNumber = number | null
 export type IssueTitle = string
+export type Memory = {
+  [k: string]: unknown
+} | null
 export type Mode = 'background' | 'interactive' | 'eval'
 export type PromptVersions = {
   [k: string]: string
@@ -469,6 +472,7 @@ export interface TaskStartedPayload {
   harness_hash?: HarnessHash
   issue_number?: IssueNumber
   issue_title: IssueTitle
+  memory?: Memory
   mode?: Mode
   prompt_versions?: PromptVersions
   repo: Repo

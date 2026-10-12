@@ -270,6 +270,8 @@ def export_html(run_dir: Path) -> str:
         )
     resolved = "resolved" if reward >= 1.0 else "failed"
     title = f"TriWitness replay · {task_id} · {resolved}"
+    rid_esc = html_mod.escape(str(run_id))
+    src_esc = html_mod.escape(str(run_dir))
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -293,7 +295,7 @@ footer {{ margin-top: 1.5rem; color: #888; font-size: .75rem; }}
 </head>
 <body>
 <h1>{html_mod.escape(str(task_id))} <span class="badge">{resolved} · reward={reward}</span></h1>
-<p class="meta">run_id={html_mod.escape(str(run_id))} · events={len(events)} · source={html_mod.escape(str(run_dir))}</p>
+<p class="meta">run_id={rid_esc} · events={len(events)} · source={src_esc}</p>
 <table>
 <thead><tr><th>#</th><th>时间 (UTC)</th><th>kind</th><th>role</th><th>display</th><th>细节</th></tr></thead>
 <tbody>
