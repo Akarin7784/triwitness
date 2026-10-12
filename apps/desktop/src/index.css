@@ -703,3 +703,22 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
 }
 :root:not([data-motion='standard']) .stream-caret > .md:last-child *::after { animation: none; opacity: 0.7; }
 .stream-caret { overflow-anchor: none; }
+
+/* 代码高亮（降饱和，日夜各一套；各色对代码底对比度 ≥4.5:1，见 docs/ebook-ui-plan.md） */
+:root {
+  --hl-keyword: #7a4a6e; --hl-string: #4f6b3a; --hl-number: #8a5a2b; --hl-comment: #6b645e;
+  --hl-title: #3d5a80; --hl-builtin: #2f6a68; --hl-meta: #7a6648; --hl-del: #9a3f36; --hl-add: #4f6b3a;
+}
+:root[data-theme='dark'] {
+  --hl-keyword: #c9a3bc; --hl-string: #a9c18f; --hl-number: #d9ae7e; --hl-comment: #a39682;
+  --hl-title: #9db5d6; --hl-builtin: #8fbcb8; --hl-meta: #c2ad8c; --hl-del: #d99a8c; --hl-add: #a9c18f;
+}
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag { color: var(--hl-keyword); }
+.hljs-string, .hljs-regexp, .hljs-symbol, .hljs-char.escape_ { color: var(--hl-string); }
+.hljs-number, .hljs-variable.constant_, .hljs-attr, .hljs-attribute { color: var(--hl-number); }
+.hljs-comment, .hljs-quote { color: var(--hl-comment); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-section, .hljs-name { color: var(--hl-title); }
+.hljs-built_in, .hljs-type, .hljs-params .hljs-type { color: var(--hl-builtin); }
+.hljs-meta, .hljs-tag, .hljs-subst, .hljs-variable.language_ { color: var(--hl-meta); }
+.hljs-deletion { color: var(--hl-del); }
+.hljs-addition { color: var(--hl-add); }

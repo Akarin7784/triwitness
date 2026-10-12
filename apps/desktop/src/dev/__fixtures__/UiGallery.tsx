@@ -12,6 +12,21 @@ import type { ResultMsg } from '../../bridge/protocol'
 import type { PendingApproval } from '../../bridge/liveTask'
 
 const MD = `# 一级标题：修复登录超时
+
+\`\`\`python
+# 刷新 token：并发时复用同一个请求
+async def refresh(self, key: str) -> Token:
+    async with self._lock:
+        if (t := self._cache.get(key)) and not t.expired:
+            return t
+        return await self._fetch("POST", timeout=30)
+\`\`\`
+
+\`\`\`diff
+- return len(text.split("\\n"))
++ return sum(1 for line in text.splitlines() if line.strip())
+\`\`\`
+
 ## 二级标题
 ### 三级标题
 
@@ -70,7 +85,7 @@ const result = (verdict: string, status = 'done'): ResultMsg =>
     repo: 'C:/Users/demo/projects/very/long/path/to/repository/name',
   }) as unknown as ResultMsg
 
-const STREAM = '我先读一下 `src/auth/login.ts`，确认超时是在哪里没有生效。\n\n看起来 `fetch` 没有传 `signal`，所以网络慢时会一直等。下一步我会加一个 AbortController，并补测试。'
+const STREAM = '我先读一下 `src/auth/login.ts`，确认超时是在哪里没有生效。\n\n看起来 `fetch` 没有传 `signal`，所以网络慢时会一直等。下一步我会加一个 AbortController，并补测试。\n\n```ts\nconst ctrl = new AbortController()\nconst res = await fetch(url, { signal: ctrl.signal })\n// 30 秒超时\nsetTimeout(() => ctrl.abort(), 30_000)\n```'
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (

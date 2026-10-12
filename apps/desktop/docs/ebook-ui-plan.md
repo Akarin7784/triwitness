@@ -164,3 +164,19 @@
 ## 8. 开放项（已关闭）
 
 原 §6 四问均已拍板，见 §0。无新的阻塞拍板项。
+
+## 代码高亮色板（批次 1 合并前补，2026-10-13）
+
+highlight.js core（本地打包，随 Markdown 懒加载 chunk；python/ts/js/bash/json/diff/yaml/ini(toml)/rust/xml/css），未知语言不猜、按纯文本。代码底 = `--color-panel`（日 `#efeee9` / 夜 `#262019`），对比度按 WCAG 相对亮度计算：
+
+| token | 日间 | 对比 | 夜间 | 对比 |
+|---|---|---|---|---|
+| 正文 | `#3a3632` | 10.31 | `#c4b59c` | 8.01 |
+| keyword | `#7a4a6e` | 5.96 | `#c9a3bc` | 7.25 |
+| string / addition | `#4f6b3a` | 5.17 | `#a9c18f` | 8.22 |
+| number / attr | `#8a5a2b` | 5.05 | `#d9ae7e` | 7.91 |
+| comment（斜体） | `#6b645e` | 5.01 | `#a39682` | 5.56 |
+| title / function | `#3d5a80` | 6.08 | `#9db5d6` | 7.69 |
+| built_in / type | `#2f6a68` | 5.34 | `#8fbcb8` | 7.72 |
+| meta / tag | `#7a6648` | 4.73 | `#c2ad8c` | 7.41 |
+| deletion | `#9a3f36` | 5.76 | `#d99a8c` | 6.87 |

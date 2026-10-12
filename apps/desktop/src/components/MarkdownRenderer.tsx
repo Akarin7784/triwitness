@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm'
 import { PanelRight } from 'lucide-react'
 import { CopyButton } from './CopyButton'
 import { t } from '../lib/i18n'
+import { highlightCode } from '../lib/highlight'
 
 function textOf(node: ReactNode): string {
   if (typeof node === 'string' || typeof node === 'number') return String(node)
@@ -23,6 +24,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   const cls = (child as { props?: { className?: string } } | undefined)?.props?.className ?? ''
   const lang = /language-([\w+-]+)/.exec(cls)?.[1] ?? ''
   const code = textOf(child).replace(/\n$/, '')
+  const html = highlightCode(code, lang.toLowerCase())
   return (
     <div className="md-code group/code my-3 overflow-hidden rounded-xl border border-border-soft">
       <div className="flex h-7 items-center justify-between bg-parchment-deep/60 pl-3 pr-1">
@@ -43,7 +45,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         </span>
       </div>
       <pre className="selectable overflow-x-auto scroll-soft bg-cream/80 px-3.5 py-2.5 font-mono text-[13px] leading-relaxed text-ink">
-        <code>{code}</code>
+        {html !== null ? <code className="hljs" dangerouslySetInnerHTML={{ __html: html }} /> : <code>{code}</code>}
       </pre>
     </div>
   )
