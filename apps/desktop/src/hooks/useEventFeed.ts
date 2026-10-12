@@ -65,6 +65,9 @@ class LineFold {
   }
 }
 
+/** 每个 key 已收到的事件（进程内）：切走再切回时直接铺出，源重放的旧事件按 seq 去重丢弃，不再从头重播（走查 r2-5） */
+const feedCache = new Map<string, AnyEvent[]>()
+
 /**
  * 订阅一个 EventSource：收集事件，派生推流行。
  * 事件先进缓冲，按帧批量提交（一帧最多一次 setState），长回合 / 高速增量下不会每个 token 都重渲染。
@@ -86,8 +89,9 @@ export function useEventFeed<K extends string>(key: K, factory: (key: K) => Even
       const batch = buf
       buf = []
       setState((prev) => {
-        const base = prev.tag === tag ? prev.events : []
+        const base = prev.tag === tag ? prev.events : (feedCache.get(tag) ?? [])
         const events = mergeEvents(base, batch)
+        feedCache.set(tag, events)
         return events === base && prev.tag === tag ? prev : { tag, events }
       })
     }
@@ -110,7 +114,7 @@ export function useEventFeed<K extends string>(key: K, factory: (key: K) => Even
     }
   }, [key, tag, factory])
 
-  const events = useMemo(() => (state.tag === tag ? state.events : []), [state, tag])
+  const events = useMemo(() => (state.tag === tag ? state.events : (feedCache.get(tag) ?? [])), [state, tag])
   const [lineFold] = useState(() => new LineFold())
   const lines = useMemo(() => lineFold.map(events), [lineFold, events])
   const restart = useCallback(() => setEpoch((n) => n + 1), [])

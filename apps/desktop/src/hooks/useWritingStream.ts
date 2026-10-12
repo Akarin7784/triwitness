@@ -76,6 +76,8 @@ export interface UseWritingStreamOptions {
   reducedMotion?: boolean
   /** 播放速度倍率，1 = 默认 */
   speed?: number
+  /** 挂载时前 N 行已经看过（切回会话）：直接显示，不重播（走查 r2-5） */
+  skipLines?: number
 }
 
 export function useWritingStream({
@@ -83,7 +85,9 @@ export function useWritingStream({
   autoStart = true,
   reducedMotion = false,
   speed = 1,
+  skipLines = 0,
 }: UseWritingStreamOptions) {
+  const skipRef = useRef(skipLines)
   const [visibleCount, setVisibleCount] = useState(0)
   const [playing, setPlaying] = useState(autoStart)
   // 渲染只读 state；ref 只在 effect / 回调 / rAF 里读写（react(refs) 规则）
@@ -122,6 +126,15 @@ export function useWritingStream({
     const next = charsRef.current.concat(added)
     charsRef.current = next
     endAtRef.current = endAt
+    if (skipRef.current > 0 && seen.length === 0) {
+      const skipIds = new Set(fresh.slice(0, skipRef.current).map((l) => l.id))
+      skipRef.current = 0
+      let n = 0
+      while (n < next.length && skipIds.has(next[n].lineId)) n++
+      clockRef.current = n < next.length ? next[n].at : endAt
+      visibleRef.current = n
+      setVisibleCount(n)
+    }
     linesSeenRef.current = lines.slice()
     setChars(next)
   }, [lines, reducedMotion, reset])

@@ -1,7 +1,8 @@
+import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { Markdown } from './Markdown'
-import { nextShown, settledBoundary } from '../lib/streamText'
+import { closeOpenMarkdown, nextShown, settledBoundary } from '../lib/streamText'
 
 const SEG = 6 // 尾段按 6 字一段淡入
 
@@ -38,20 +39,19 @@ export function StreamingText({ text, streaming }: { text: string; streaming: bo
   const cut = writing ? settledBoundary(visible) : text.length
   const head = writing ? visible.slice(0, cut) : text
   const tail = writing ? visible.slice(cut) : ''
-  // 尾段里有 Markdown 标记（代码块 / 列表 / 行内代码 / 粗体）就直接按 Markdown 渲染，避免露出原始符号
+  // 尾段里有 Markdown 标记（代码块 / 列表 / 行内代码 / 粗体）就按 Markdown 渲染；
+  // 未闭合的反引号 / 粗体 / 代码围栏先临时补齐（走查 r2-1：不再露出「看起来 `fetch」这样的原始符号）
   const openFence = /```|`|\*\*|^\s*([-*]|\d+\.)\s|^#{1,3}\s/m.test(tail)
   const segs: { start: number; text: string }[] = []
   if (writing && !openFence) for (let i = 0; i < tail.length; i += SEG) segs.push({ start: cut + i, text: tail.slice(i, i + SEG) })
 
+  // 光标：纯文本尾段直接跟在字后；Markdown 尾段 / 尾段为空时由 .stream-caret 伪元素贴在最后一段末尾，不单独占行
   return (
-    <div data-testid={writing ? 'streaming-text' : undefined}>
+    <div data-testid={writing ? 'streaming-text' : undefined} className={clsx(writing && (openFence || !tail) && 'stream-caret')}>
       {head && <Markdown text={head} />}
-      {writing &&
+      {writing && tail &&
         (openFence ? (
-          <div className="relative">
-            <Markdown text={tail} />
-            <span className="caret-ink" />
-          </div>
+          <Markdown text={closeOpenMarkdown(tail)} />
         ) : (
           <p className="md-tail selectable whitespace-pre-wrap">
             {segs.map((s) => (
@@ -62,6 +62,8 @@ export function StreamingText({ text, streaming }: { text: string; streaming: bo
             <span className="caret-ink" />
           </p>
         ))}
+      {writing && !head && !tail && <span className="caret-ink" />}
     </div>
   )
 }
+

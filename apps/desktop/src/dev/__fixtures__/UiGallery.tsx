@@ -114,7 +114,11 @@ export default function UiGallery() {
           </div>
         </Section>
         <Section id="streaming" title="流式输出">
-          <StreamingText text={STREAM.slice(0, n)} streaming={n < STREAM.length} />
+          {/* 预留整段高度：流式过程中下方内容不被推着跳（走查 r2-1） */}
+          <div className="grid">
+            <div aria-hidden className="invisible col-start-1 row-start-1"><StreamingText text={STREAM} streaming={false} /></div>
+            <div className="col-start-1 row-start-1"><StreamingText text={STREAM.slice(0, n)} streaming={n < STREAM.length} /></div>
+          </div>
         </Section>
         <Section id="empty" title="空状态 / API Key 提示">
           <div className="paper-card rounded-2xl px-6 py-8 text-center">

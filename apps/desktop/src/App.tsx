@@ -756,6 +756,7 @@ export default function App() {
               ) : (
                 <ActivityPanel
                   key={`activity:${display}`}
+                  sessionKey={`activity:${display}`}
                   title={isLocal ? '' : run.title.replace(/^(#\d+).*/, '$1') || 'SSH'}
                   lines={feed.lines}
                   activeRole={isLocal ? null : run.activeRole}

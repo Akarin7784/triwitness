@@ -418,10 +418,12 @@ html {
   text-overflow: ellipsis;
 }
 .stream-chapter .stream-rule-text {
+  /* 走查 r2-2：不小于日志字号（日志 13px 等宽，无衬线视觉偏小 → 14px 中等字重），夜间用正文浅色 */
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   letter-spacing: normal;
-  color: var(--color-sepia);
+  color: var(--color-ink-soft);
 }
 .stream-divider .stream-rule-line {
   background: none;
@@ -684,3 +686,20 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
 .composer-card textarea:focus-visible { outline: none; }
 .composer-card:has(textarea:focus-visible) { outline: 2px solid var(--color-amber); outline-offset: 2px; }
 .diff-stat { white-space: nowrap; flex-shrink: 0; }
+
+/* 走查 r2-1：流式正文光标贴在最后一段文字末尾（Markdown 尾块用伪元素画光标，不另起一行） */
+.stream-caret > .md:last-child > p:last-child::after,
+.stream-caret > .md:last-child > :is(ul, ol):last-child > li:last-child::after,
+.stream-caret > .md:last-child > :is(h1, h2, h3, blockquote):last-child::after {
+  content: '';
+  display: inline-block;
+  width: 1.5px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--color-amber);
+  border-radius: 1px;
+  animation: caretBreath 1.8s ease-in-out infinite;
+}
+:root:not([data-motion='standard']) .stream-caret > .md:last-child *::after { animation: none; opacity: 0.7; }
+.stream-caret { overflow-anchor: none; }

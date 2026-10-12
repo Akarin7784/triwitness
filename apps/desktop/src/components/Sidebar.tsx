@@ -77,6 +77,10 @@ export function Sidebar(p: SidebarProps) {
   const starred = p.items.filter((c) => c.starred)
   const inProject = (c: SidebarItem) => !!c.projectId && p.projects.some((x) => x.id === c.projectId)
   const recents = p.items.filter((c) => !c.starred && !inProject(c))
+  // 同名会话（如三条「#87 并发刷新 token …」）：额外显示短 id 区分（走查 r2-4）
+  const titleCount = new Map<string, number>()
+  for (const c of p.items) titleCount.set(c.title, (titleCount.get(c.title) ?? 0) + 1)
+  const dupHint = (c: SidebarItem) => ((titleCount.get(c.title) ?? 0) > 1 ? shortId(c.id) : undefined)
   const groups = p.projects
     .map((pr) => ({ ...pr, chats: p.items.filter((c) => !c.starred && c.projectId === pr.id) }))
     .filter((g) => g.chats.length > 0)
@@ -111,7 +115,7 @@ export function Sidebar(p: SidebarProps) {
                 <SectionLabel>{t('星标')}</SectionLabel>
                 <div className="space-y-px">
                   {starred.map((c) => (
-                    <ChatRow key={c.id} c={c} {...p} />
+                    <ChatRow key={c.id} c={c} {...p} hint={dupHint(c)} />
                   ))}
                 </div>
               </>
@@ -122,7 +126,7 @@ export function Sidebar(p: SidebarProps) {
                 {groups.map((g) => (
                   <ProjectGroup key={g.id} name={g.name} onOpen={() => p.onOpenProject(g.id)} defaultOpen={g.chats.some((c) => c.id === p.activeId)}>
                     {g.chats.map((c) => (
-                      <ChatRow key={c.id} c={c} {...p} nested />
+                      <ChatRow key={c.id} c={c} {...p} hint={dupHint(c)} nested />
                     ))}
                   </ProjectGroup>
                 ))}
@@ -133,7 +137,7 @@ export function Sidebar(p: SidebarProps) {
             <div className="space-y-px">
               <AnimatePresence initial={false}>
                 {recents.map((c) => (
-                  <ChatRow key={c.id} c={c} {...p} />
+                  <ChatRow key={c.id} c={c} {...p} hint={dupHint(c)} />
                 ))}
               </AnimatePresence>
             </div>
@@ -251,7 +255,8 @@ function ChatRow({
   projects,
   onProject,
   nested,
-}: { c: SidebarItem; nested?: boolean } & SidebarProps) {
+  hint,
+}: { c: SidebarItem; nested?: boolean; hint?: string } & SidebarProps) {
   const [menu, setMenu] = useState(false)
   const [page, setPage] = useState<'main' | 'project'>('main')
   const closeMenu = () => {
@@ -288,8 +293,9 @@ function ChatRow({
             </span>
           </Tip>
         )}
-        <span title={c.title} className={clsx('min-w-0 flex-1 truncate font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
-          {middleEllipsis(c.title)}
+        <span title={hint ? `${c.title} ${hint}` : c.title} className={clsx('flex min-w-0 flex-1 items-baseline gap-1.5 font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
+          <span data-testid="chat-row-title" className="min-w-0 truncate">{middleEllipsis(c.title, hint ? 11 : 14)}</span>
+          {hint && <span data-testid="chat-row-hint" className="shrink-0 font-mono text-[12px] text-sepia-muted">{hint}</span>}
         </span>
         <span data-testid="chat-row-slot" className="relative flex h-6 w-[38px] shrink-0 items-center justify-end">
           {c.time && (
@@ -378,9 +384,15 @@ function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive
 }
 
 /** 窄侧栏里同前缀的会话标题会被截成一样：长标题保留首尾，中间省略（完整标题在 title 悬停提示里） */
-function middleEllipsis(s: string, max = 22): string {
+function middleEllipsis(s: string, max = 14): string {
   const a = Array.from(s)
   if (a.length <= max) return s
   const tail = Math.floor((max - 1) / 3)
   return a.slice(0, max - 1 - tail).join('') + '…' + a.slice(a.length - tail).join('')
+}
+
+/** 短 id：取 id 最后一段的前 6 位（如 fixture:success → succes，uuid → 末段前 6 位） */
+function shortId(id: string): string {
+  const seg = id.split(/[:/_-]/).filter(Boolean).pop() ?? id
+  return '·' + seg.slice(0, 6)
 }

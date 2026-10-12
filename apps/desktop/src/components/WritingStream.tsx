@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import clsx from 'clsx'
 import type { StreamLine } from '../types'
@@ -7,6 +7,7 @@ import { useWritingStream } from '../hooks/useWritingStream'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { Tip } from './Tip'
 import { t } from '../lib/i18n'
+import { middlePath } from '../lib/streamText'
 
 interface WritingStreamProps {
   lines: StreamLine[]
@@ -19,7 +20,12 @@ interface WritingStreamProps {
   onReveal?: (line: StreamLine | null) => void
   /** 外部给定的当前角色（事件驱动时由 RunView 提供） */
   activeRole?: StreamLine['role'] | null
+  /** 会话标识：切走再切回时恢复已显示行数与滚动位置，不从头重播（走查 r2-5） */
+  sessionKey?: string
 }
+
+/** 每个会话看到哪一行、滚到哪里（进程内记忆，切会话不丢） */
+const sessionMemo = new Map<string, { lines: number; scrollTop: number; pinned: boolean }>()
 
 export function WritingStream({
   lines,
@@ -29,21 +35,33 @@ export function WritingStream({
   onRestart,
   onReveal,
   activeRole: roleOverride,
+  sessionKey,
 }: WritingStreamProps) {
   const reduced = useReducedMotion()
+  const [memo0] = useState(() => (sessionKey ? sessionMemo.get(sessionKey) : undefined))
   const { chars, visibleCount, playing, done, toggle, restart, progress } = useWritingStream({
     lines,
     autoStart,
     reducedMotion: reduced,
+    skipLines: memo0?.lines ?? 0,
   })
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const pinnedRef = useRef(true)
+  const pinnedRef = useRef(memo0?.pinned ?? true)
+  const restoredRef = useRef(!memo0)
+
+  // 切回会话：首次把已看过的行铺出来后，恢复上次的滚动位置
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (restoredRef.current || !el || !memo0 || visibleCount === 0) return
+    restoredRef.current = true
+    el.scrollTop = memo0.pinned ? el.scrollHeight : memo0.scrollTop
+  }, [visibleCount, memo0])
 
   // 只有用户停在底部时才跟随，往上翻看历史时不打扰
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || !pinnedRef.current) return
+    if (!el || !pinnedRef.current || !restoredRef.current) return
     el.scrollTo({ top: el.scrollHeight, behavior: reduced ? 'auto' : 'smooth' })
   }, [visibleCount, reduced])
 
@@ -79,6 +97,13 @@ export function WritingStream({
     else hi = mid
   }
   const grouped = ranges.slice(0, shownLines)
+
+  // 记下本会话已显示到第几行（只增不减；重播时会被清零后重新累计）
+  useEffect(() => {
+    if (!sessionKey) return
+    const prev = sessionMemo.get(sessionKey)
+    sessionMemo.set(sessionKey, { lines: shownLines, scrollTop: prev?.scrollTop ?? 0, pinned: prev?.pinned ?? true })
+  }, [sessionKey, shownLines])
 
   const lastRole = grouped[grouped.length - 1]?.role
   const activeRole =
@@ -159,6 +184,10 @@ export function WritingStream({
         onScroll={(e) => {
           const el = e.currentTarget
           pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+          if (sessionKey && restoredRef.current) {
+            const prev = sessionMemo.get(sessionKey)
+            sessionMemo.set(sessionKey, { lines: prev?.lines ?? 0, scrollTop: el.scrollTop, pinned: pinnedRef.current })
+          }
         }}
         className="stream-paper relative min-h-0 flex-1 overflow-y-auto scroll-soft px-5 py-5"
       >
@@ -174,7 +203,7 @@ export function WritingStream({
                     {c.ch}
                   </span>
                 ))
-              : keepStatsTogether(meta?.text ?? chars.slice(line.start, line.end).map((c) => c.ch).join(''))
+              : keepTokensTogether(meta?.text ?? chars.slice(line.start, line.end).map((c) => c.ch).join(''))
             return (
               <StreamLineView
                 key={line.lineId}
@@ -240,7 +269,7 @@ const StreamLineView = memo(function StreamLineView({
         <span className="ink-bloom" style={{ background: `radial-gradient(circle, ${roleColor[role]}55, transparent 70%)` }} />
         <span className="role-dot" style={{ background: roleColor[role] }} />
       </span>
-      <p className="min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]">
+      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
         <span
           className="mr-2 inline-block select-none font-sans text-[13px] font-medium tracking-[0.12em]"
           style={{ color: roleColor[role] }}
@@ -254,9 +283,38 @@ const StreamLineView = memo(function StreamLineView({
   )
 })
 
-/** 「(+18 −4)」这类增删统计不拆行（走查 P2-5）：整体包进 nowrap */
-function keepStatsTogether(text: string): ReactNode {
-  const parts = text.split(/(\(\+\d+ [−-]\d+\))/)
+/**
+ * 右栏断行（走查 r2-3）：这些片段整体不拆行
+ * - 「(+18 −4)」增删统计
+ * - 「test_issue_87.py → 1 failed」结果
+ * - 「$ write_file <路径>」：路径不单独掉行，过长时中间省略，悬停看全路径
+ */
+const TOKEN_RE = /([(（]\+\d+ [−-]\d+[)）]|\S+ → \d+ [A-Za-z]+|\$ write_file \S+)/
+function keepTokensTogether(text: string): ReactNode {
+  const parts = text.split(TOKEN_RE)
   if (parts.length === 1) return text
-  return parts.map((p, i) => (i % 2 ? <span key={i} className="whitespace-nowrap">{p}</span> : p))
+  return parts.map((p, i) => {
+    if (!(i % 2)) return p
+    const m = /^(\$ write_file )(\S+)$/.exec(p) ?? /^(\S+)( → \d+ [A-Za-z]+)$/.exec(p)
+    if (m) {
+      const isWrite = m[1].startsWith('$')
+      const path = isWrite ? m[2] : m[1]
+      const pathEl = (
+        <span key="p" title={path} data-testid="stream-path">
+          {middlePath(path, 24)}
+        </span>
+      )
+      return (
+        <span key={i} className="whitespace-nowrap">
+          {isWrite ? ['$ write_file\u00a0', pathEl] : [pathEl, m[2].replace(/ /g, '\u00a0')]}
+        </span>
+      )
+    }
+    return (
+      <span key={i} className="whitespace-nowrap">
+        {p}
+      </span>
+    )
+  })
 }
+
