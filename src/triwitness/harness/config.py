@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from triwitness.config import load_config
 from triwitness.core.errors import ConfigError
+from triwitness.harness.timeouts import TimeoutGuardConfig
 from triwitness.llm.limits import auto_working_budget
 from triwitness.prompts import load_prompt
 
@@ -174,7 +175,7 @@ DEFAULT_HARNESS = "harness/long-context-1m.yaml"
 # 这些字段在 1M 档时新增：等于默认值时不进 config_hash，旧配置的哈希保持不变
 _HASH_COMPAT_CONTEXT = ("tail_max_tokens", "summary_input_tokens", "max_ineffective_compactions", "reread_recent_files")
 # W4 新增的顶层字段：同样等于默认值时不进 config_hash
-_HASH_COMPAT_TOP = ("parallel_read_tools", "orchestration", "github")
+_HASH_COMPAT_TOP = ("parallel_read_tools", "orchestration", "github", "timeout_guard")
 
 
 class HarnessConfig(BaseModel):
@@ -194,6 +195,8 @@ class HarnessConfig(BaseModel):
     parallel_read_tools: bool = True  # 同一轮连续的只读工具并发执行（spec 010 §7；只影响耗时）
     orchestration: OrchestrationConfig = Field(default_factory=OrchestrationConfig)
     github: GithubConfig = Field(default_factory=GithubConfig)  # W5：开 PR 决策与 CI 回流（默认不开 PR）
+    # W5-13 第三轮：超时循环守卫 + 墙钟提示（harness/timeouts.py）。默认关：仓库模式行为与 harness_hash 不变
+    timeout_guard: TimeoutGuardConfig = Field(default_factory=TimeoutGuardConfig)
     reminders: dict[str, str] = Field(default_factory=dict)
     context: ContextConfig = Field(default_factory=ContextConfig)
     tools: list[str] = Field(default_factory=lambda: list(DEFAULT_TOOLS))
@@ -222,12 +225,13 @@ class HarnessConfig(BaseModel):
             "name",
             "extends",
             "orchestration",
+            "timeout_guard",
         }
         unknown = set(raw) - known
         if unknown:
             raise ConfigError(f"harness 配置有未知字段：{', '.join(sorted(unknown))}")
         kw: dict[str, Any] = {**(raw.get("loop") or {}), **(raw.get("loop_detection") or {})}
-        for k in ("reminders", "context", "tools", "prompts", "orchestration"):
+        for k in ("reminders", "context", "tools", "prompts", "orchestration", "timeout_guard"):
             if raw.get(k) is not None:
                 kw[k] = raw[k]
         try:

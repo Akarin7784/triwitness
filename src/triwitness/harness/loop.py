@@ -20,10 +20,16 @@ from triwitness.harness.config import HarnessConfig
 from triwitness.harness.context import ContextManager
 from triwitness.harness.deltas import DeltaWriter
 from triwitness.harness.replay import journal_write
+from triwitness.harness.timeouts import (
+    TimeoutGuard,
+    blocked_message,
+    timeout_reminder,
+    wall_reminder,
+)
 from triwitness.llm.stream import streaming
 from triwitness.llm.types import LLMRequest, LLMResponse, Message, effective_thinking
 from triwitness.telemetry.trajectory import TrajectoryRecorder
-from triwitness.tools.base import ToolContext, ToolRegistry
+from triwitness.tools.base import ToolContext, ToolRegistry, ToolResult
 
 
 class RouterLike(Protocol):
@@ -149,6 +155,21 @@ class AgentLoop:
         self.context: ContextManager | None = None
         # 交互运行（tw run --jsonl）：写流式增量与工具行预览；eval / 批量运行不写，轨迹保持精简
         self.stream = stream
+        # 超时循环守卫 + 墙钟提示（W5-13 第三轮；默认关，外部任务打开）
+        from triwitness.tools.shell import DEFAULT_TIMEOUT
+
+        self.tguard = TimeoutGuard(self.config.timeout_guard, default_timeout_s=DEFAULT_TIMEOUT)
+        self._timeout_notes: list[str] = []
+        self._step_no = 0
+
+    def _wall(self) -> tuple[float, float | None]:
+        """（已用秒数, 墙钟预算秒数）；守卫关闭时预算为 None。"""
+        elapsed = self.guard.clock() - self.guard.started
+        return elapsed, float(self.guard.budget.max_wall_seconds) if self.tguard.cfg.enabled else None
+
+    def _remaining(self) -> float | None:
+        elapsed, budget = self._wall()
+        return None if budget is None else max(0.0, budget - elapsed)
 
     async def _summarize(self, req: LLMRequest, task_id: str) -> LLMResponse:
         """压缩用的 summarizer 调用：同一个预算守卫与类别信封，并照常写 model_call 事件（role=summarizer）。"""
@@ -267,6 +288,30 @@ class AgentLoop:
         return tool is not None and tool.side_effects == "none" and not tool.terminal
 
     async def _timed_dispatch(self, call: Any, ctx: ToolContext) -> tuple[Any, Any, int]:
+        if not self.tguard.cfg.enabled:
+            return await self._dispatch(call, ctx)
+        remaining = self._remaining()
+        action, hit = self.tguard.check(call.name, call.arguments, remaining_s=remaining)
+        if action == "block" and hit is not None:
+            self.tguard.blocked += 1
+            return ToolResult(ok=False, content=blocked_message(hit, "block"), error_code="repeat_timeout"), None, 0
+        args, capped = self.tguard.capped_arguments(call.name, call.arguments, remaining)
+        # 只改实际执行的参数；历史里 assistant 的原始参数不动（缓存前缀）
+        run_call = call.model_copy(update={"arguments": args}) if capped is not None else call
+        result, outcome, ms = await self._dispatch(run_call, ctx)
+        extra: list[str] = []
+        if capped is not None:
+            extra.append(f"（timeout_s 已按剩余时间压到 {capped} 秒）")
+        if action == "warn" and hit is not None:
+            extra.append(blocked_message(hit, "warn"))
+        if extra:
+            result = result.model_copy(update={"content": (result.content or "") + "\n" + "\n".join(extra)})
+        t = self.tguard.record(call.name, run_call.arguments, result, self._step_no)
+        if t is not None and self.tguard.cfg.remind:
+            self._timeout_notes.append(timeout_reminder(t, self._remaining()))
+        return result, outcome, ms
+
+    async def _dispatch(self, call: Any, ctx: ToolContext) -> tuple[Any, Any, int]:
         t0 = self.emitter.monotonic()
         tool = self.registry.get(call.name)
         effects = getattr(tool, "side_effects", "none") if tool is not None else "none"
@@ -412,6 +457,7 @@ class AgentLoop:
                     writer.flush()
             overflow_retried = False
             steps += 1
+            self._step_no = steps
             cm.observe(len(req.messages), resp.usage)
             self._record_call(req, resp, call_id, tool_names)
             self.messages.append(resp.message)
@@ -522,6 +568,13 @@ class AgentLoop:
                         return LoopOutcome(status="stuck", steps=steps, reason=f"死循环：{signal.detail}")
                     pending.append(Message(role="user", content=cfg.reminder(signal.reminder,
                                                                              detail=signal.detail)))  # fmt: skip
+            if self._timeout_notes:  # 超时提醒：同一轮多次超时只提醒一次（最后一条）
+                pending.append(Message(role="user", content=self._timeout_notes[-1]))
+                self._timeout_notes.clear()
+            elapsed, wall_budget = self._wall()
+            frac = self.tguard.wall_note(elapsed, wall_budget)
+            if frac is not None and wall_budget:
+                pending.append(Message(role="user", content=wall_reminder(frac, elapsed, wall_budget)))
             self.messages.extend(pending)
             after_step: Any = ctx.state.get("after_step")
             if after_step is not None:  # 每步结束 = 一个检查点（spec 011 §3.1）；有工作区改动时才存文件快照
