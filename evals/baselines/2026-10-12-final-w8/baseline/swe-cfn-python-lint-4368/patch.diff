@@ -1,0 +1,267 @@
+diff --git a/src/cfnlint/data/schemas/other/resources/cfn_init.json b/src/cfnlint/data/schemas/other/resources/cfn_init.json
+index 0871b8c..131f2d3 100644
+--- a/src/cfnlint/data/schemas/other/resources/cfn_init.json
++++ b/src/cfnlint/data/schemas/other/resources/cfn_init.json
+@@ -6,6 +6,11 @@
+    "patternProperties": {
+     "^.+$": {
+      "additionalProperties": false,
++     "patternProperties": {
++      "^Fn::Transform$": {
++       "$ref": "#/definitions/transform"
++      }
++     },
+      "properties": {
+       "command": {
+        "type": "string"
+@@ -39,6 +44,11 @@
+    "patternProperties": {
+     "^.+$": {
+      "additionalProperties": false,
++     "patternProperties": {
++      "^Fn::Transform$": {
++       "$ref": "#/definitions/transform"
++      }
++     },
+      "properties": {
+       "authentication": true,
+       "content": {
+@@ -80,6 +90,11 @@
+    "patternProperties": {
+     "^.+$": {
+      "additionalProperties": false,
++     "patternProperties": {
++      "^Fn::Transform$": {
++       "$ref": "#/definitions/transform"
++      }
++     },
+      "properties": {
+       "gid": {
+        "type": "string"
+@@ -106,6 +121,11 @@
+   },
+   "packages": {
+    "additionalProperties": false,
++   "patternProperties": {
++    "^Fn::Transform$": {
++     "$ref": "#/definitions/transform"
++    }
++   },
+    "properties": {
+     "apt": {
+      "$ref": "#/definitions/package"
+@@ -136,6 +156,11 @@
+    "patternProperties": {
+     "^.+$": {
+      "additionalProperties": false,
++     "patternProperties": {
++      "^Fn::Transform$": {
++       "$ref": "#/definitions/transform"
++      }
++     },
+      "properties": {
+       "commands": {
+        "items": {
+@@ -200,11 +225,31 @@
+    },
+    "type": "object"
+   },
++  "transform": {
++   "additionalProperties": false,
++   "properties": {
++    "Name": {
++     "type": "string"
++    },
++    "Parameters": {
++     "type": "object"
++    }
++   },
++   "required": [
++    "Name"
++   ],
++   "type": "object"
++  },
+   "users": {
+    "additionalProperties": false,
+    "patternProperties": {
+     "^.+$": {
+      "additionalProperties": false,
++     "patternProperties": {
++      "^Fn::Transform$": {
++       "$ref": "#/definitions/transform"
++      }
++     },
+      "properties": {
+       "groups": {
+        "items": {
+diff --git a/tests/tw_repro/test_issue_3009.py b/tests/tw_repro/test_issue_3009.py
+new file mode 100644
+index 0000000..ee5ef61
+--- /dev/null
++++ b/tests/tw_repro/test_issue_3009.py
+@@ -0,0 +1,165 @@
++"""
++Reproduction for issue: E3009 Additional properties are not allowed
++('Fn::Transform' was unexpected)
++
++A template using ``Fn::Transform`` inside ``AWS::CloudFormation::Init`` (e.g.
++under ``files``) is deployed by CloudFormation without complaining, but
++cfn-lint raises E3009. The template should be parsed without error.
++"""
++
++from __future__ import annotations
++
++import pytest
++
++from cfnlint import api
++
++TEMPLATE = """
++AWSTemplateFormatVersion: 2010-09-09
++Resources:
++  ApplicationInstance:
++    Type: AWS::EC2::Instance
++    Metadata:
++      "AWS::CloudFormation::Init":
++        configSets:
++          installAndConfigure:
++            - installCoreDependencies
++            - configureHttpd
++        installCoreDependencies:
++          packages:
++            yum:
++              httpd: []
++        configureHttpd:
++          files:
++            /etc/httpd/conf.d/www.conf:
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://unique-bucket-name/includes/www.conf.yaml"
++              mode: "000644"
++              owner: "root"
++              group: "root"
++    Properties:
++      ImageId: ami-0a9f08a6603f3338e
++      InstanceType: t4g.micro
++      SecurityGroupIds:
++        - sg-0b4c66acea364af1
++      SubnetId: subnet-0f10a6f6d7cec2aef
++      UserData:
++        Fn::Base64: !Sub |
++          #!/bin/bash -xe
++
++          /opt/aws/bin/cfn-init \\
++            --stack ${AWS::StackName} \\
++            --resource ApplicationInstance \\
++            --configsets installAndConfigure \\
++            --region ${AWS::Region} \\
++            --verbose
++"""
++
++
++def test_cfn_init_fn_transform_is_allowed():
++    matches = api.lint(TEMPLATE)
++    e3009 = [match for match in matches if match.rule.id == "E3009"]
++    assert e3009 == [], f"Got E3009 matches: {e3009!r}"
++
++
++@pytest.mark.parametrize(
++    "name,snippet",
++    [
++        (
++            "files with sibling keys",
++            """
++        config:
++          files:
++            /etc/httpd/conf.d/www.conf:
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://bucket/x.yaml"
++              mode: "000644"
++""",
++        ),
++        (
++            "files with content",
++            """
++        config:
++          files:
++            /etc/x:
++              content: hi
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://bucket/x.yaml"
++""",
++        ),
++        (
++            "commands",
++            """
++        config:
++          commands:
++            cmd:
++              command: echo hi
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://bucket/x.yaml"
++""",
++        ),
++        (
++            "users",
++            """
++        config:
++          users:
++            user1:
++              groups:
++                - wheel
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://bucket/x.yaml"
++""",
++        ),
++        (
++            "groups",
++            """
++        config:
++          groups:
++            group1:
++              gid: "1000"
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://bucket/x.yaml"
++""",
++        ),
++        (
++            "services",
++            """
++        config:
++          services:
++            sysvinit:
++              httpd:
++                enabled: true
++                Fn::Transform:
++                  Name: AWS::Include
++                  Parameters:
++                    Location: "s3://bucket/x.yaml"
++""",
++        ),
++    ],
++)
++def test_cfn_init_fn_transform_variants(name, snippet):
++    template = f"""\
++Resources:
++  ApplicationInstance:
++    Type: AWS::EC2::Instance
++    Metadata:
++      "AWS::CloudFormation::Init":
++{snippet}
++    Properties:
++      ImageId: ami-0a9f08a6603f3338e
++      InstanceType: t4g.micro
++"""
++    matches = api.lint(template)
++    e3009 = [match for match in matches if match.rule.id == "E3009"]
++    assert e3009 == [], f"Test {name!r} got E3009 matches: {e3009!r}"

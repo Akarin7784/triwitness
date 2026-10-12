@@ -1,0 +1,242 @@
+diff --git a/llm_sandbox/language_handlers/base.py b/llm_sandbox/language_handlers/base.py
+index ae78663..80cb471 100644
+--- a/llm_sandbox/language_handlers/base.py
++++ b/llm_sandbox/language_handlers/base.py
+@@ -24,7 +24,7 @@ if TYPE_CHECKING:
+             """Get archive of files from container."""
+             ...
+ 
+-        def run(self, code: str, libraries: list | None = None, timeout: int = 30) -> Any:
++        def run(self, code: str, libraries: list | None = None, timeout: float | None = None) -> Any:
+             """Run code in the container."""
+             ...
+ 
+@@ -219,7 +219,7 @@ class AbstractLanguageHandler(ABC):
+         libraries: list | None = None,
+         enable_plotting: bool = True,
+         output_dir: str = "/tmp/sandbox_plots",
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run code and extract artifacts (plots) in a language-specific manner.
+ 
+diff --git a/llm_sandbox/language_handlers/cpp_handler.py b/llm_sandbox/language_handlers/cpp_handler.py
+index 6185998..12edb62 100644
+--- a/llm_sandbox/language_handlers/cpp_handler.py
++++ b/llm_sandbox/language_handlers/cpp_handler.py
+@@ -41,7 +41,7 @@ class CppHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run C++ code without artifact extraction.
+ 
+diff --git a/llm_sandbox/language_handlers/go_handler.py b/llm_sandbox/language_handlers/go_handler.py
+index e56ce16..e75c52d 100644
+--- a/llm_sandbox/language_handlers/go_handler.py
++++ b/llm_sandbox/language_handlers/go_handler.py
+@@ -33,7 +33,7 @@ class GoHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run Go code without artifact extraction.
+ 
+diff --git a/llm_sandbox/language_handlers/java_handler.py b/llm_sandbox/language_handlers/java_handler.py
+index 8efea3b..a49a9a2 100644
+--- a/llm_sandbox/language_handlers/java_handler.py
++++ b/llm_sandbox/language_handlers/java_handler.py
+@@ -38,7 +38,7 @@ class JavaHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run Java code without artifact extraction.
+ 
+diff --git a/llm_sandbox/language_handlers/javascript_handler.py b/llm_sandbox/language_handlers/javascript_handler.py
+index a3e523c..49292b7 100644
+--- a/llm_sandbox/language_handlers/javascript_handler.py
++++ b/llm_sandbox/language_handlers/javascript_handler.py
+@@ -40,7 +40,7 @@ class JavaScriptHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run JavaScript code without artifact extraction.
+ 
+diff --git a/llm_sandbox/language_handlers/ruby_handler.py b/llm_sandbox/language_handlers/ruby_handler.py
+index c43eb34..ae0694d 100644
+--- a/llm_sandbox/language_handlers/ruby_handler.py
++++ b/llm_sandbox/language_handlers/ruby_handler.py
+@@ -32,7 +32,7 @@ class RubyHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run Ruby code without artifact extraction.
+ 
+diff --git a/llm_sandbox/session.py b/llm_sandbox/session.py
+index 292fa38..984cbee 100644
+--- a/llm_sandbox/session.py
++++ b/llm_sandbox/session.py
+@@ -409,7 +409,7 @@ class ArtifactSandboxSession:
+         self,
+         code: str,
+         libraries: list | None = None,
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> ExecutionResult:
+         """Run code in the sandbox session and extract any generated artifacts.
+ 
+@@ -423,7 +423,9 @@ class ArtifactSandboxSession:
+                         seaborn, plotly, or other visualization libraries.
+             libraries (list | None, optional): Additional libraries to install before running
+                                                 the code. Defaults to None.
+-            timeout (int, optional): Timeout in seconds for the code execution. Defaults to 30.
++            timeout (float | None, optional): Timeout in seconds for the code execution.
++                If None, the session's configured ``execution_timeout`` (falling back to
++                ``default_timeout``) is used, matching ``SandboxSession`` behavior.
+ 
+         Returns:
+             ExecutionResult: An object containing:
+diff --git a/tests/test_session.py b/tests/test_session.py
+index 9b64ee9..8df14ba 100644
+--- a/tests/test_session.py
++++ b/tests/test_session.py
+@@ -224,7 +224,7 @@ class TestArtifactSandboxSession:
+             libraries=["numpy"],
+             enable_plotting=False,
+             output_dir="/tmp/sandbox_plots",
+-            timeout=30,
++            timeout=None,
+         )
+ 
+     @patch("llm_sandbox.session.create_session")
+@@ -258,7 +258,7 @@ class TestArtifactSandboxSession:
+             libraries=None,
+             enable_plotting=True,
+             output_dir="/tmp/sandbox_plots",
+-            timeout=30,
++            timeout=None,
+         )
+ 
+     @patch("llm_sandbox.session.create_session")
+diff --git a/tests/tw_repro/test_issue_40.py b/tests/tw_repro/test_issue_40.py
+new file mode 100644
+index 0000000..c1b0e52
+--- /dev/null
++++ b/tests/tw_repro/test_issue_40.py
+@@ -0,0 +1,103 @@
++"""Reproduction test: ArtifactSandboxSession does not allow timeouts greater than 30 seconds.
++
++Issue: ArtifactSandboxSession does not allow timeouts greater than 30 seconds.
++SandboxSession works as expected.
++
++Root cause: ArtifactSandboxSession.run() declares a hard-coded default of
++``timeout: int = 30`` and always forwards it to the language handler, which in
++turn passes it to ``BaseSession.run(timeout=...)``.  Because
++``BaseSession.run`` computes ``actual_timeout = timeout or config.get_execution_timeout()``,
++the always-present ``30`` overrides the session-level ``execution_timeout`` /
++``default_timeout`` configuration, effectively capping every artifact run at 30s.
++
++These tests lock the behavior described in the issue:
++  * the default timeout forwarded to the language handler must come from the
++    session config (not a hard-coded 30),
++  * a session configured with an execution_timeout > 30 must forward that value,
++  * an explicit ``timeout`` argument must still take precedence.
++"""
++
++from unittest.mock import MagicMock, patch
++
++from llm_sandbox.core.config import SessionConfig
++from llm_sandbox.session import ArtifactSandboxSession
++
++CONFIGURED_TIMEOUT = 120.0
++
++
++def _make_artifact_session(config: SessionConfig) -> tuple[ArtifactSandboxSession, MagicMock]:
++    """Build an ArtifactSandboxSession whose underlying session is a mock.
++
++    ``config`` is a real ``SessionConfig`` so that ``get_execution_timeout()``
++    resolves exactly as it does in production. Returns the artifact session and
++    the language-handler mock so callers can inspect the forwarded timeout.
++    """
++    mock_language_handler = MagicMock()
++    mock_language_handler.is_support_plot_detection = True
++    mock_language_handler.run_with_artifacts.return_value = (
++        MagicMock(exit_code=0, stdout="output", stderr=""),
++        [],
++    )
++
++    mock_base_session = MagicMock()
++    mock_base_session.language_handler = mock_language_handler
++    mock_base_session.config = config
++
++    with patch("llm_sandbox.session.create_session", return_value=mock_base_session):
++        artifact_session = ArtifactSandboxSession(enable_plotting=True)
++
++    return artifact_session, mock_language_handler
++
++
++def test_artifact_session_default_timeout_is_not_capped_at_30() -> None:
++    """With ``execution_timeout`` > 30, the configured timeout must apply.
++
++    Before the fix this fails because a hard-coded ``timeout=30`` was forwarded
++    regardless of the configured ``execution_timeout``.
++    """
++    config = SessionConfig(execution_timeout=CONFIGURED_TIMEOUT)
++    assert config.get_execution_timeout() == CONFIGURED_TIMEOUT
++
++    artifact_session, language_handler = _make_artifact_session(config)
++
++    artifact_session.run("print('hello')")
++
++    _, kwargs = language_handler.run_with_artifacts.call_args
++    forwarded = kwargs["timeout"]
++    assert forwarded != 30, (
++        "ArtifactSandboxSession.run() forwarded the hard-coded 30s default and "
++        "ignored the configured execution_timeout"
++    )
++    # The forwarded value feeds ``BaseSession.run``, which resolves
++    # ``timeout or config.get_execution_timeout()``; None means "use the config".
++    effective_timeout = forwarded or config.get_execution_timeout()
++    assert effective_timeout == CONFIGURED_TIMEOUT
++
++
++def test_artifact_session_default_timeout_defers_to_base_session() -> None:
++    """The default (None) means 'use the session config', matching SandboxSession.
++
++    ``BaseSession.run`` resolves ``timeout or config.get_execution_timeout()``,
++    so forwarding ``None`` lets a configured timeout > 30s actually apply.
++    """
++    config = SessionConfig(execution_timeout=CONFIGURED_TIMEOUT)
++    artifact_session, language_handler = _make_artifact_session(config)
++
++    artifact_session.run("print('hello')")
++
++    _, kwargs = language_handler.run_with_artifacts.call_args
++    assert kwargs["timeout"] is None, (
++        "Expected ArtifactSandboxSession.run() to forward timeout=None when the "
++        "caller did not specify one, so that the session config timeout applies"
++    )
++
++
++def test_artifact_session_explicit_timeout_still_wins() -> None:
++    """An explicit per-call timeout must still override the session config."""
++    config = SessionConfig(execution_timeout=CONFIGURED_TIMEOUT)
++    artifact_session, language_handler = _make_artifact_session(config)
++
++    artifact_session.run("print('hello')", timeout=5.0)
++
++    _, kwargs = language_handler.run_with_artifacts.call_args
++    assert kwargs["timeout"] == 5.0

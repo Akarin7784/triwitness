@@ -1,0 +1,228 @@
+diff --git a/marimo/_ast/cell.py b/marimo/_ast/cell.py
+index c7c3cdd..cae000e 100644
+--- a/marimo/_ast/cell.py
++++ b/marimo/_ast/cell.py
+@@ -176,6 +176,13 @@ class CellImpl:
+     # Markdown content of the cell if it exists
+     markdown: Optional[str] = None
+ 
++    # Offset applied to the cell's AST line numbers at compile time (0 when the
++    # cell is compiled with cell-relative line numbers). When non-zero, runtime
++    # line numbers (e.g. from a traceback) correspond to the original source
++    # file; subtracting this offset gives the cell-relative line number.
++    # Populated by `compile_cell` from `SourcePosition.lineno`.
++    lineno_offset: int = 0
++
+     # Mutable fields
+     # explicit configuration of cell
+     config: CellConfig = dataclasses.field(default_factory=CellConfig)
+diff --git a/marimo/_ast/compiler.py b/marimo/_ast/compiler.py
+index cb18137..eea24ca 100644
+--- a/marimo/_ast/compiler.py
++++ b/marimo/_ast/compiler.py
+@@ -264,6 +264,7 @@ def compile_cell(
+             body=None,
+             last_expr=None,
+             cell_id=cell_id,
++            lineno_offset=source_position.lineno if source_position else 0,
+         )
+ 
+     is_test = contains_only_tests(module)
+@@ -375,6 +376,7 @@ def compile_cell(
+         cell_id=cell_id,
+         markdown=maybe_md,
+         _test=is_test,
++        lineno_offset=source_position.lineno if source_position else 0,
+     )
+ 
+ 
+diff --git a/marimo/_save/save.py b/marimo/_save/save.py
+index bd6e979..f5d194e 100644
+--- a/marimo/_save/save.py
++++ b/marimo/_save/save.py
+@@ -608,10 +608,17 @@ class _cache_context(SkipContext, CacheContext):
+                     )
+                 graph = ctx.graph
+                 cell_id = ctx.cell_id or ctx.execution_context.cell_id
++                cell = graph.cells[cell_id]
++                # Runtime line numbers are relative to the original source file
++                # when the cell was compiled with a source position (e.g. script
++                # mode). `CellImpl.code` however is cell-relative, so normalize
++                # the traced line number back to that frame of reference before
++                # extracting the block.
++                cell_lineno = lineno - getattr(cell, "lineno_offset", 0)
+                 pre_module, save_module = CacheExtractWithBlock(
+-                    lineno - 1
++                    cell_lineno - 1
+                 ).visit(
+-                    ast.parse(graph.cells[cell_id].code).body  # type: ignore[arg-type]
++                    ast.parse(cell.code).body  # type: ignore[arg-type]
+                 )
+ 
+                 self._cache = cache_attempt_from_hash(
+@@ -634,7 +641,7 @@ class _cache_context(SkipContext, CacheContext):
+                 self._start_time = time.time()
+ 
+                 if self._cache and self._cache.hit:
+-                    if lineno >= self._body_start:
++                    if cell_lineno >= self._body_start:
+                         self.skip()
+                 return
+             # <module> -> _trace_wrapper -> _trace
+diff --git a/tests/_ast/test_compiler.py b/tests/_ast/test_compiler.py
+index ba3cb88..def6046 100644
+--- a/tests/_ast/test_compiler.py
++++ b/tests/_ast/test_compiler.py
+@@ -502,6 +502,25 @@ class TestCompileCellFilename:
+         # Verify the cell was compiled successfully
+         assert cell.code == code
+         assert cell.defs == {"x"}
++        # Without a source position, line numbers are cell-relative.
++        assert cell.lineno_offset == 0
++
++    @staticmethod
++    def test_compile_cell_records_lineno_offset() -> None:
++        """compile_cell records the source position linenos as an offset."""
++        cell = compiler.compile_cell(
++            "x = 1",
++            cell_id="test",
++            source_position=compiler.SourcePosition(
++                filename="f.py", lineno=5, col_offset=0
++            ),
++        )
++
++        # runtime line number - lineno_offset == cell-relative line number.
++        assert cell.lineno_offset == 5
++        # The compiled body uses file-absolute line numbers (1 + offset).
++        assert cell.body.co_firstlineno == 1
++        assert list(cell.body.co_lines())[-1][2] == 6
+ 
+     @staticmethod
+     def test_solve_source_position_function() -> None:
+diff --git a/tests/_save/test_cache.py b/tests/_save/test_cache.py
+index 23062fc..79be4a4 100644
+--- a/tests/_save/test_cache.py
++++ b/tests/_save/test_cache.py
+@@ -296,6 +296,36 @@ class TestScriptCache:
+                 reason="Coverage conflict with cache introspection"
+             )
+ 
++    @staticmethod
++    def test_cache_with_trailing_code() -> None:
++        """Cache block with other code after it in the same cell.
++
++        Regression test for script mode: the compiled cell uses file-absolute
++        line numbers, while the block extraction operates on cell-relative
++        line numbers. If the offset is not corrected, the trailing code causes
++        a misleading `BlockException` (see issue: "running script with
++        persistent cache raises BlockException if there is other code in the
++        cell").
++        """
++        app = App()
++        # NOTE: intentionally *not* anonymous, to exercise the script
++        # (SourcePosition) code path.
++
++        @app.cell
++        def one() -> tuple[int]:
++            from marimo._save.save import persistent_cache
++            from tests._save.loaders.mocks import MockLoader
++
++            with persistent_cache(name="one", _loader=MockLoader()) as cache:
++                Y = 9
++
++            # trailing code in the same cell as the cache block
++            X = 7
++            assert X == 7
++            return X, Y, cache, persistent_cache
++
++        app.run()
++
+     @staticmethod
+     def test_cache_hit(app) -> None:
+         @app.cell
+diff --git a/tests/tw_repro/test_issue_script_persistent_cache.py b/tests/tw_repro/test_issue_script_persistent_cache.py
+new file mode 100644
+index 0000000..4b36d82
+--- /dev/null
++++ b/tests/tw_repro/test_issue_script_persistent_cache.py
+@@ -0,0 +1,80 @@
++# Copyright 2024 Marimo. All rights reserved.
++
++"""Repro for: running script with persistent cache raises BlockException if
++there is other code in the cell.
++
++See https://github.com/marimo-team/marimo/issues (script mode + persistent_cache
+++ trailing code in the same cell).
++
++The bug: in script mode (SourcePosition present) compiled cells use *file
++absolute* line numbers at runtime, while `_save` located the `with` block using
++*cell relative* line numbers. The mismatch made the transformer pick the wrong
++statement and raise a misleading `BlockException`.
++"""
++
++from __future__ import annotations
++
++import marimo
++from marimo._ast.transformers import BlockException
++
++
++def test_script_mode_cache_with_trailing_code() -> None:
++    """In script mode a persistent_cache block followed by other code in the
++    same cell must not raise BlockException."""
++    app = marimo.App()
++    # NOTE: not anonymous; this exercises the SourcePosition (script) path.
++    assert app._anonymous_file is False
++
++    @app.cell
++    def __() -> tuple[object]:
++        import marimo as mo
++        return (mo,)
++
++    @app.function
++    def compute(x, y):
++        return x + y
++
++    @app.cell
++    def _(mo) -> tuple[int, int]:
++        from tests._save.loaders.mocks import MockLoader
++
++        _loader = MockLoader()
++        with mo.persistent_cache("random", _loader=_loader):
++            Y = compute(1, 2)
++
++        # trailing code in the same cell as the cache block
++        X = 7
++        assert X == 7
++        return X, Y
++
++    try:
++        app.run()
++    except BlockException as e:  # pragma: no cover - this is the bug
++        raise AssertionError(
++            "persistent_cache with trailing code in the same cell raised "
++            f"BlockException: {e}"
++        ) from None
++
++
++def test_script_mode_cache_hit_with_trailing_code() -> None:
++    """On a cache *hit*, trailing code in the same cell must still execute
++    (the `_body_start` comparison must use cell-relative line numbers)."""
++    app = marimo.App()
++    assert app._anonymous_file is False
++
++    @app.cell
++    def _() -> tuple[int]:
++        from marimo._save.save import persistent_cache
++        from tests._save.loaders.mocks import MockLoader
++
++        with persistent_cache(
++            name="one", _loader=MockLoader(data={"Y": 9})
++        ) as cache:
++            Y = 100
++
++        # trailing code must run, not be skipped by the cache hit
++        X = 7
++        assert X == 7, "trailing code after a cache hit was skipped!"
++        return X, Y, cache
++
++    app.run()

@@ -1,0 +1,136 @@
+diff --git a/tests/tw_repro/test_issue_legend_outside_ticklabels.py b/tests/tw_repro/test_issue_legend_outside_ticklabels.py
+new file mode 100644
+index 0000000..6842a08
+--- /dev/null
++++ b/tests/tw_repro/test_issue_legend_outside_ticklabels.py
+@@ -0,0 +1,50 @@
++"""
++Reproduction for the issue "Adding a legend to right of plot can remove
++y-axis tick labels".
++
++When a legend is placed *outside* the axes (``loc='r'``), UltraPlot creates a
++new panel for it.  With a figure-level sharing level of 1 (``sharey='labs'``)
++interior subplots must still show their y tick labels, but the (later hidden)
++legend panel promotes the interior axes to sharing level 3 and the figure
++border masking then switches the interior tick labels off.
++
++These tests use the snippets from the issue verbatim.
++"""
++
++import ultraplot as uplt
++
++
++def test_legend_outside_keeps_interior_ticklabels_share_labels():
++    """Legend on the right of the middle axes must not hide its y labels."""
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    axs[-2].legend(loc="r")
++    fig.canvas.draw()
++    assert axs[0]._is_ticklabel_on("labelleft")
++    assert axs[-2]._is_ticklabel_on("labelleft")
++
++
++def test_legend_outside_keeps_interior_ticklabels_share_labels_transposed():
++    """Transposed (row) variant of the same scenario."""
++    fig, axs = uplt.subplots(nrows=3, sharex="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    axs[-2].legend(loc="b")
++    fig.canvas.draw()
++    assert axs[0]._is_ticklabel_on("labelbottom")
++    assert axs[-2]._is_ticklabel_on("labelbottom")
++
++
++def test_legend_inside_keeps_interior_ticklabels_control():
++    """Control case: inside legend creates no panel, labels stay on."""
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    axs[-2].legend(loc="lr")
++    fig.canvas.draw()
++    assert axs[0]._is_ticklabel_on("labelleft")
++    assert axs[-2]._is_ticklabel_on("labelleft")
+diff --git a/ultraplot/figure.py b/ultraplot/figure.py
+index 1c0e47c..507b264 100644
+--- a/ultraplot/figure.py
++++ b/ultraplot/figure.py
+@@ -1487,10 +1487,18 @@ class Figure(mfigure.Figure):
+         if getattr(axi, "_panel_side", None) and getattr(axi, f"_share{axis}", None):
+             return 3
+ 
+-        # Adjacent panels on any relevant side
++        # Adjacent panels on any relevant side. Hidden/filled guide panels such
++        # as outside legends and colorbars must not promote the sharing level:
++        # `_add_guide_panel` sets `_panel_hidden = True` only *after*
++        # `_add_axes_panel` already ran auto sharing, so these panels keep a
++        # stale `_share{axis}` attribute.
+         panel_dict = getattr(axi, "_panel_dict", {})
+         for side in sides:
+-            side_panels = panel_dict.get(side) or []
++            side_panels = [
++                panel
++                for panel in (panel_dict.get(side) or [])
++                if not getattr(panel, "_panel_hidden", False)
++            ]
+             if side_panels and getattr(side_panels[0], f"_share{axis}", False):
+                 return 3
+ 
+diff --git a/ultraplot/tests/test_subplots.py b/ultraplot/tests/test_subplots.py
+index ee61616..e69fa19 100644
+--- a/ultraplot/tests/test_subplots.py
++++ b/ultraplot/tests/test_subplots.py
+@@ -948,3 +948,50 @@ def test_grid_geo_and_cartesian():
+     assert axs[2] in outer_axes["right"]
+     assert axs[3] in outer_axes["right"]
+     return fig
++
++
++def test_legend_outside_keeps_interior_ticklabels_share_labels():
++    """
++    An outside legend on an interior subplot must not hide that subplot's y tick
++    labels when only labels are shared (figure-level ``sharey='labs'``). The
++    filled legend panel is created before it is marked hidden, so it must not
++    promote the effective sharing level of the axes it sits next to.
++    """
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    axs[-2].legend(loc="r")
++    fig.canvas.draw()
++    assert axs[0]._is_ticklabel_on("labelleft")
++    assert axs[-2]._is_ticklabel_on("labelleft")
++
++
++def test_legend_outside_keeps_interior_ticklabels_share_labels_transposed():
++    """
++    Transposed (row) variant: an outside legend on an interior subplot must not
++    hide that subplot's x tick labels when only labels are shared.
++    """
++    fig, axs = uplt.subplots(nrows=3, sharex="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    axs[-2].legend(loc="b")
++    fig.canvas.draw()
++    assert axs[0]._is_ticklabel_on("labelbottom")
++    assert axs[-2]._is_ticklabel_on("labelbottom")
++
++
++def test_legend_inside_keeps_interior_ticklabels_control():
++    """
++    Control case: an inside legend creates no panel, so the interior subplot
++    keeps its y tick labels.
++    """
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++    axs[-2].legend(loc="lr")
++    fig.canvas.draw()
++    assert axs[0]._is_ticklabel_on("labelleft")
++    assert axs[-2]._is_ticklabel_on("labelleft")

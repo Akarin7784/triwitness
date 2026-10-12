@@ -1,0 +1,171 @@
+diff --git a/ccflow/callable.py b/ccflow/callable.py
+index 24c84d4..69475c2 100644
+--- a/ccflow/callable.py
++++ b/ccflow/callable.py
+@@ -234,7 +234,7 @@ class FlowOptions(BaseModel):
+         return self._get_evaluator_from_options(options)
+ 
+     def __call__(self, fn):
+-        def wrapper(model, context=Signature.empty):
++        def wrapper(model, context=Signature.empty, **kwargs):
+             # TODO: Let ModelEvaluationContext handle this type checking
+             if not isinstance(model, CallableModel):
+                 raise TypeError("Can only decorate methods on CallableModels with the flow decorator")
+@@ -242,7 +242,13 @@ class FlowOptions(BaseModel):
+                 raise TypeError(f"Context type {model.context_type} must be a subclass of ContextBase")
+             if not isclass(model.result_type) or not issubclass(model.result_type, ResultBase):
+                 raise TypeError(f"Result type {model.result_type} must be a subclass of ResultBase")
+-            if context is Signature.empty:
++            if kwargs:
++                # The kwargs of the context can be passed directly, in which case the context will be
++                # validated from them. This is ambiguous if a positional context was also provided.
++                if context is not Signature.empty:
++                    raise TypeError(f"{fn.__name__}() got both a positional 'context' argument and context keyword arguments")
++                context = model.context_type.model_validate(kwargs)
++            elif context is Signature.empty:
+                 context = _cached_signature(fn).parameters["context"].default
+                 if context is Signature.empty:
+                     raise TypeError(f"{fn.__name__}() missing 1 required positional argument: 'context'")
+diff --git a/ccflow/tests/test_callable.py b/ccflow/tests/test_callable.py
+index 56e1f55..edb0b09 100644
+--- a/ccflow/tests/test_callable.py
++++ b/ccflow/tests/test_callable.py
+@@ -50,6 +50,18 @@ class MyCallableChild(MyCallable):
+     pass
+ 
+ 
++class MyCallableWithMethod(CallableModel):
++    i: int = 1
++
++    @Flow.call
++    def foo(self, context: MyContext) -> MyResult:
++        return MyResult(x=self.i, y=context.a)
++
++    @Flow.call
++    def __call__(self, context: MyContext) -> MyResult:
++        return self.foo(context)
++
++
+ class MyCallableParent(CallableModel):
+     my_callable: MyCallable
+ 
+@@ -245,6 +257,27 @@ class TestCallableModel(TestCase):
+         error = "__call__ method must take a single argument, named 'context'"
+         self.assertRaisesRegex(ValueError, error, BadModel5)
+ 
++    def test_call_with_kwargs(self):
++        # The kwargs of the context can be passed directly to the call, and the context
++        # will be validated from them
++        m = MyCallable(i=5)
++        self.assertEqual(m(a="foo"), MyResult(x=5, y="foo"))
++        self.assertEqual(m(a="foo"), m(MyContext(a="foo")))
++        self.assertEqual(m({"a": "foo"}), m(a="foo"))
++
++        # Also works for non-__call__ decorated methods
++        p = MyCallableWithMethod(i=5)
++        self.assertEqual(p.foo(a="foo"), MyResult(x=5, y="foo"))
++        self.assertEqual(p(a="foo"), MyResult(x=5, y="foo"))
++
++        # Invalid kwargs raise a validation error, just like an invalid dict
++        with self.assertRaises(ValidationError):
++            m(nonexistent="foo")
++
++        # Passing both a positional context and kwargs is ambiguous
++        with self.assertRaises(TypeError):
++            m(MyContext(a="foo"), a="bar")
++
+     def test_identity(self):
+         # Make sure that an "identity" mapping works
+         ident = IdentityCallable()
+diff --git a/tests/tw_repro/test_issue_14.py b/tests/tw_repro/test_issue_14.py
+new file mode 100644
+index 0000000..39957a0
+--- /dev/null
++++ b/tests/tw_repro/test_issue_14.py
+@@ -0,0 +1,86 @@
++"""Reproduction for issue: Ability to pass kwargs to CallableModel.
++
++The feature request is that one should be able to pass the kwargs of the context
++directly to the call method, and have it validate the context from them (instead
++of having to explicitly construct a Context instance or pass a dict).
++"""
++
++from typing import List
++
++import pytest
++
++from ccflow import CallableModel, ContextBase, Flow, ResultBase
++
++
++class MyContext(ContextBase):
++    a: str
++
++
++class MyExtendedContext(MyContext):
++    b: float = 0.0
++    c: bool = False
++
++
++class ListContext(ContextBase):
++    ll: List[str] = []
++
++
++class MyResult(ResultBase):
++    x: int
++    y: str
++
++
++class MyCallable(CallableModel):
++    i: int
++    ll: List[int] = []
++
++    @Flow.call
++    def __call__(self, context: MyContext) -> MyResult:
++        return MyResult(x=self.i, y=context.a)
++
++
++def test_call_with_kwargs():
++    m = MyCallable(i=5)
++    # Passing the context kwargs directly should validate a context from them
++    assert m(a="foo") == MyResult(x=5, y="foo")
++
++
++def test_call_with_kwargs_matches_context():
++    m = MyCallable(i=5)
++    assert m(a="foo") == m(MyContext(a="foo"))
++
++
++def test_call_with_kwargs_defaults():
++    m = MyCallable(i=5)
++    assert m(a="foo") == m({"a": "foo"})
++
++
++def test_non_default_call_with_kwargs():
++    class MyModel(CallableModel):
++        @Flow.call
++        def foo(self, context: MyContext) -> MyResult:
++            return MyResult(x=1, y=context.a)
++
++        @Flow.call
++        def __call__(self, context: MyContext) -> MyResult:
++            return self.foo(context)
++
++    m = MyModel()
++    assert m.foo(a="foo") == MyResult(x=1, y="foo")
++    assert m(a="foo") == MyResult(x=1, y="foo")
++
++
++def test_kwargs_validation_error():
++    """Invalid kwargs should raise a validation error (like passing a bad dict)."""
++    from pydantic import ValidationError
++
++    m = MyCallable(i=5)
++    with pytest.raises(ValidationError):
++        m(nonexistent_field="foo")
++
++
++def test_kwargs_and_positional_conflict():
++    """Providing both a positional context and kwargs is ambiguous and should error."""
++    m = MyCallable(i=5)
++    with pytest.raises(TypeError):
++        m(MyContext(a="foo"), a="bar")

@@ -1,0 +1,139 @@
+{
+ "arms": {
+  "baseline": {
+   "graded": 35,
+   "solved": 16,
+   "resolved_at_1": 0.4571,
+   "ci95": [
+    0.3047,
+    0.6181
+   ],
+   "total_cost_cny": 7.3819,
+   "cost_per_task": 0.2109,
+   "cost_per_resolved": 0.4614,
+   "cache_hit_rate": 0.9814,
+   "false_success": 9,
+   "avg_steps": 54.8,
+   "avg_wall_s": 1056.6,
+   "peak_calls": 1478,
+   "infra_errors": {},
+   "served_models": {
+    "deepseek-flash": 1917
+   },
+   "per_task": {
+    "swe-bedrock-agentcore-sdk-python-279_interface": true,
+    "swe-canvasapi-716": true,
+    "swe-ccflow-24": true,
+    "swe-cfn-python-lint-4368": false,
+    "swe-conan-19750": false,
+    "swe-copier-2646": true,
+    "swe-crosstl-98": false,
+    "swe-cyclopts-633": true,
+    "swe-cyclopts-701": true,
+    "swe-django-components-489": false,
+    "swe-faststream-2701": true,
+    "swe-fromager-1106": true,
+    "swe-huggingface_hub-4056": false,
+    "swe-icontract-297": true,
+    "swe-isort-2491": false,
+    "swe-leanclient-24": true,
+    "swe-llm-sandbox-101": false,
+    "swe-loguru-1306": false,
+    "swe-loguru-1451": false,
+    "swe-marimo-6819": false,
+    "swe-marimo-8401": false,
+    "swe-microsoft-authentication-library-for-python-730": false,
+    "swe-openhands-resolver-123": false,
+    "swe-opensandbox-816": false,
+    "swe-param-1117": true,
+    "swe-ro-crate-py-193": false,
+    "swe-scrapy-7351_interface": false,
+    "swe-spikeinterface-3047": true,
+    "swe-spikeinterface-3778": true,
+    "swe-sqlfluff-7615": false,
+    "swe-sqlglot-7457": true,
+    "swe-sqlglot-7479": false,
+    "swe-stumpy-1015": true,
+    "swe-ultraplot-696": true,
+    "swe-xcp_d-1433": false
+   }
+  },
+  "orchestrated": {
+   "graded": 35,
+   "solved": 19,
+   "resolved_at_1": 0.5429,
+   "ci95": [
+    0.3819,
+    0.6953
+   ],
+   "total_cost_cny": 8.4901,
+   "cost_per_task": 0.2426,
+   "cost_per_resolved": 0.4468,
+   "cache_hit_rate": 0.9608,
+   "false_success": 8,
+   "avg_steps": 42.0,
+   "avg_wall_s": 1283.9,
+   "peak_calls": 0,
+   "infra_errors": {},
+   "served_models": {
+    "deepseek-flash": 2611
+   },
+   "per_task": {
+    "swe-bedrock-agentcore-sdk-python-279_interface": true,
+    "swe-canvasapi-716": true,
+    "swe-ccflow-24": true,
+    "swe-cfn-python-lint-4368": false,
+    "swe-conan-19750": false,
+    "swe-copier-2646": true,
+    "swe-crosstl-98": false,
+    "swe-cyclopts-633": true,
+    "swe-cyclopts-701": true,
+    "swe-django-components-489": false,
+    "swe-faststream-2701": true,
+    "swe-fromager-1106": true,
+    "swe-huggingface_hub-4056": false,
+    "swe-icontract-297": true,
+    "swe-isort-2491": false,
+    "swe-leanclient-24": true,
+    "swe-llm-sandbox-101": false,
+    "swe-loguru-1306": false,
+    "swe-loguru-1451": true,
+    "swe-marimo-6819": false,
+    "swe-marimo-8401": false,
+    "swe-microsoft-authentication-library-for-python-730": false,
+    "swe-openhands-resolver-123": false,
+    "swe-opensandbox-816": false,
+    "swe-param-1117": true,
+    "swe-ro-crate-py-193": false,
+    "swe-scrapy-7351_interface": true,
+    "swe-spikeinterface-3047": true,
+    "swe-spikeinterface-3778": true,
+    "swe-sqlfluff-7615": false,
+    "swe-sqlglot-7457": true,
+    "swe-sqlglot-7479": true,
+    "swe-stumpy-1015": true,
+    "swe-ultraplot-696": true,
+    "swe-xcp_d-1433": false
+   }
+  }
+ },
+ "paired": {
+  "n": 35,
+  "orch_only": 3,
+  "base_only": 0,
+  "mcnemar_p": 0.25
+ },
+ "total_cny": 15.872,
+ "pricing": {
+  "verified_at": "2026-10-10",
+  "sha256": "22338c4f7b258690"
+ },
+ "env": {
+  "python": "3.12.15",
+  "git_sha": "86b5975",
+  "docker": "29.8.2",
+  "os": "linux",
+  "kernel": "6.18.40.1-microsoft-standard-WSL2",
+  "llm_mode": "live"
+ }
+}

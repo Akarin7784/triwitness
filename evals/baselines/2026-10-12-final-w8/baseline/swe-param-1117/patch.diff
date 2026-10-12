@@ -1,0 +1,139 @@
+diff --git a/param/reactive.py b/param/reactive.py
+index e11ef41..4523975 100644
+--- a/param/reactive.py
++++ b/param/reactive.py
+@@ -1744,10 +1744,15 @@ class rx:
+         except Exception:
+             return sorted(set(dir(type(self))) | set(self.__dict__) | extras)
+ 
+-    def _resolve_accessor(self):
++    def _resolve_accessor(self, copy=True):
+         if not self._method:
+-            # No method is yet set, as in `dfi.A`, so return a copied clone.
+-            return self._clone(copy=True)
++            # No method is yet set, as in `dfi.A`. When ``copy=True`` (the
++            # default, used for attribute access) a copied clone is returned so
++            # that setting ``_method`` on the result does not mutate this node.
++            # Operators pass ``copy=False`` so downstream nodes reference this
++            # node directly and can share its cached evaluation instead of each
++            # re-evaluating an expensive shared operation.
++            return self._clone(copy=True) if copy else self
+         # This is executed when one runs e.g. `dfi.A > 1`, in which case after
+         # dfi.A the _method 'A' is set (in __getattribute__) which allows
+         # _resolve_accessor to record the attribute access as an operation.
+@@ -1813,7 +1818,7 @@ class rx:
+     #----------------------------------------------------------------
+ 
+     def __array_ufunc__(self, ufunc, method, *args, **kwargs):
+-        new = self._resolve_accessor()
++        new = self._resolve_accessor(copy=False)
+         operation = {
+             'fn': getattr(ufunc, method),
+             'args': args[1:],
+@@ -1823,7 +1828,7 @@ class rx:
+         return new._clone(operation)
+ 
+     def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> 'rx':
+-        new = self._resolve_accessor()
++        new = self._resolve_accessor(copy=False)
+         operation = {
+             'fn': operator,
+             'args': args,
+diff --git a/tests/tw_repro/test_issue_shared_rx_reuse.py b/tests/tw_repro/test_issue_shared_rx_reuse.py
+new file mode 100644
+index 0000000..b214b17
+--- /dev/null
++++ b/tests/tw_repro/test_issue_shared_rx_reuse.py
+@@ -0,0 +1,92 @@
++"""
++Reproduction for: "Shared rx inputs are not reused".
++
++An expensive reactive expression shared by N downstream ``.rx.pipe()``
++consumers should only be evaluated once per input change, with each consumer
++receiving the cached result.
++
++Before the fix ``expensive_compute`` was called N times (once per pipe).
++"""
++import param
++
++
++def test_shared_rx_pipe_evaluates_once():
++    calls = []
++
++    class Model(param.Parameterized):
++        a = param.Number(default=1.0)
++        b = param.Number(default=2.0)
++        c = param.Number(default=3.0)
++
++    model = Model()
++
++    def expensive_compute(_a, _b, _c):
++        calls.append((_a, _b, _c))
++        return {
++            "x": _a + _b + _c,
++            "y": _a * _b * _c,
++            "z": _a - _b - _c,
++            "w": (_a + _b) / max(_c, 0.01),
++        }
++
++    shared_rx = param.rx(expensive_compute)(
++        model.param.a, model.param.b, model.param.c
++    )
++    x_rx = shared_rx.rx.pipe(lambda d: f"x = {d['x']:.2f}")
++    y_rx = shared_rx.rx.pipe(lambda d: f"y = {d['y']:.2f}")
++    z_rx = shared_rx.rx.pipe(lambda d: f"z = {d['z']:.2f}")
++    w_rx = shared_rx.rx.pipe(lambda d: f"w = {d['w']:.2f}")
++
++    # Initial evaluation of every consumer.
++    assert (x_rx.rx.value, y_rx.rx.value, z_rx.rx.value, w_rx.rx.value) == (
++        "x = 6.00",
++        "y = 6.00",
++        "z = -4.00",
++        "w = 1.00",
++    )
++
++    # Changing a single input must trigger the shared expression once,
++    # not once per downstream pipe.
++    calls.clear()
++    model.a = 5.0
++
++    assert (x_rx.rx.value, y_rx.rx.value, z_rx.rx.value, w_rx.rx.value) == (
++        "x = 10.00",
++        "y = 30.00",
++        "z = 0.00",
++        "w = 2.33",
++    )
++    assert len(calls) == 1, f"expensive_compute was called {len(calls)} times"
++
++
++def test_shared_rx_pipe_evaluates_once_after_each_input_change():
++    calls = []
++
++    class Model(param.Parameterized):
++        a = param.Number(default=1.0)
++        b = param.Number(default=2.0)
++
++    model = Model()
++
++    def expensive(_a, _b):
++        calls.append((_a, _b))
++        return {"sum": _a + _b, "prod": _a * _b}
++
++    shared = param.rx(expensive)(model.param.a, model.param.b)
++    sum_rx = shared.rx.pipe(lambda d: d["sum"])
++    prod_rx = shared.rx.pipe(lambda d: d["prod"])
++
++    assert sum_rx.rx.value == 3.0
++    assert prod_rx.rx.value == 2.0
++
++    calls.clear()
++    model.a = 4.0
++    assert sum_rx.rx.value == 6.0
++    assert prod_rx.rx.value == 8.0
++    assert len(calls) == 1
++
++    calls.clear()
++    model.b = 10.0
++    assert sum_rx.rx.value == 14.0
++    assert prod_rx.rx.value == 40.0
++    assert len(calls) == 1

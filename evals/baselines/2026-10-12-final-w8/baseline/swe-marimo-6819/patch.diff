@@ -1,0 +1,122 @@
+diff --git a/marimo/_ast/transformers.py b/marimo/_ast/transformers.py
+index d15f118..fa5f149 100644
+--- a/marimo/_ast/transformers.py
++++ b/marimo/_ast/transformers.py
+@@ -266,6 +266,15 @@ class ExtractWithBlock(ast.NodeTransformer):
+         # things map to the same line number, it's best to throw an error.
+         on_line = []
+         previous = None
++        # Tracks the last node preceding the target line that could act as a
++        # container (i.e. is one of the allowed types). This is distinct from
++        # `previous`, which also tracks trailing statements that come before
++        # the (file) target line but cannot contain the block. This matters
++        # when running as a script, where the target line is a file line number
++        # while the cell code is dedented (and thus offset); in that situation
++        # the target line falls beyond every cell-level node and the block must
++        # be located by falling back to the enclosing container.
++        container = None
+ 
+         assert isinstance(node, list), "Unexpected block structure."
+         parent = None
+diff --git a/tests/tw_repro/test_issue_script_cache_cell.py b/tests/tw_repro/test_issue_script_cache_cell.py
+new file mode 100644
+index 0000000..703b659
+--- /dev/null
++++ b/tests/tw_repro/test_issue_script_cache_cell.py
+@@ -0,0 +1,96 @@
++# Copyright 2024 Marimo. All rights reserved.
++
++"""Reproduction for: running script with persistent cache raises
++BlockException if there is other code in the cell.
++
++When a script (an `App` run with `app.run()` where the app is *not*
++anonymous, i.e. a real `.py` file on disk) contains a `persistent_cache`
++block together with other code in the same cell, cache introspection used
++to raise:
++
++    marimo._ast.transformers.BlockException:
++        cache cannot be invoked within a <class 'ast.Expr'> block
++        (try moving the block within the cache scope).
++
++The expected behavior is that the cache block resolves correctly and the
++rest of the cell runs normally.
++
++The non-anonymous path matters: it uses `source_position` so that the
++compiled cell's line numbers are shifted to match the file, while the
++cache introspection re-parses the dedented cell code (whose line numbers
++are relative). The target line therefore falls past every node in the
++cell, and previously the trailing statements masked the enclosing cache
++block.
++"""
++
++from __future__ import annotations
++
++import os
++import subprocess
++import sys
++import textwrap
++import uuid
++
++SCRIPT = textwrap.dedent(
++    """
++    import marimo
++
++
++    __generated_with = "0.14.17"
++    app = marimo.App(width="medium")
++
++
++    @app.cell
++    def _():
++        import marimo as mo
++        return (mo,)
++
++
++    @app.function
++    def compute(x, y):
++        return x + y
++
++
++    @app.cell
++    def _(mo):
++        with mo.persistent_cache("CACHE_NAME"):
++            print(compute(1, 2))
++
++        [1, 2, 3]
++        return
++
++
++    if __name__ == "__main__":
++        app.run()
++    """
++)
++
++
++def test_script_persistent_cache_with_other_code_in_cell(tmp_path) -> None:
++    # Unique cache name so the block is always a cache *miss* and the block
++    # body (including the ``print``) actually executes.
++    cache_name = f"repro_{uuid.uuid4().hex}"
++    script = tmp_path / "cache_stuff.py"
++    script.write_text(
++        SCRIPT.replace("CACHE_NAME", cache_name), encoding="utf-8"
++    )
++
++    env = dict(os.environ)
++    env["PYTHONPATH"] = os.pathsep.join(
++        [os.getcwd(), env.get("PYTHONPATH", "")]
++    )
++
++    result = subprocess.run(
++        [sys.executable, str(script)],
++        capture_output=True,
++        text=True,
++        env=env,
++        # Run with cwd=tmp_path so the persistent cache is written there and
++        # does not pollute the repository.
++        cwd=str(tmp_path),
++    )
++
++    assert "BlockException" not in result.stderr, result.stderr
++    assert result.returncode == 0, result.stderr
++    # The cached block body (including ``print(compute(1, 2))``) executed.
++    assert "3" in result.stdout, result.stdout

@@ -1,0 +1,210 @@
+diff --git a/CHANGELOG.rst b/CHANGELOG.rst
+index 342d0b0..d80b306 100644
+--- a/CHANGELOG.rst
++++ b/CHANGELOG.rst
+@@ -1,6 +1,7 @@
+ `Unreleased`_
+ =============
+ 
++- Improve feedback when a format string passed to ``logger.add()`` references an invalid key, by naming the missing key, listing the available record keys, and suggesting the use of ``logger.bind()`` with ``{extra[key]}``.
+ - Change the default log format to include the timezone offset since it produces less ambiguous logs (`#856 <https://github.com/Delgan/loguru/pull/856>`_, thanks `@tim-x-y-z <https://github.com/tim-x-y-z>`_).
+ - Add new ``logger.reinstall()`` method to automatically set up the ``logger`` in spawned child processes (`#818 <https://github.com/Delgan/loguru/issues/818>`_, thanks `@monchin <https://github.com/monchin>`_).
+ - Fix incorrect microsecond value when formatting the log timestamp using ``{time:x}`` (`#1440 <https://github.com/Delgan/loguru/issues/1440>`_).
+diff --git a/loguru/_colorizer.py b/loguru/_colorizer.py
+index 7cffe4d..99b1fa9 100644
+--- a/loguru/_colorizer.py
++++ b/loguru/_colorizer.py
+@@ -23,6 +23,47 @@ def try_formatting(*exceptions):
+         ) from e
+ 
+ 
++def make_missing_key_error(key, record):
++    try:
++        available = ", ".join(repr(k) for k in sorted(record))
++    except Exception:
++        available = "<unknown>"
++    return KeyError(
++        "Invalid format key: %r was not found in the record.\n"
++        "Available keys are: %s.\n"
++        "To reference a custom value in the format string, add it with "
++        "`logger.bind(%s=value)` and use `{extra[%s]}` (or a patcher).\n"
++        % (key, available, key, key)
++    )
++
++
++def make_missing_extra_key_error(key, extra):
++    try:
++        available = ", ".join(repr(k) for k in sorted(extra))
++    except Exception:
++        available = "<unknown>"
++    return KeyError(
++        "Invalid format key: 'extra[%s]' was not found in the record.\n"
++        "Available extra keys are: %s.\n"
++        "To add a custom value, use `logger.bind(%s=value)` and reference it as "
++        "`{extra[%s]}` (or a patcher).\n" % (key, available, key, key)
++    )
++
++
++class RecordMapping(dict):
++    """A mapping used to format records, raising an explicit error on missing keys."""
++
++    def __missing__(self, key):
++        raise make_missing_key_error(key, dict(self)) from None
++
++
++class ExtraMapping(dict):
++    """A mapping wrapping the record "extra" dict, with an explicit error on missing keys."""
++
++    def __missing__(self, key):
++        raise make_missing_extra_key_error(key, dict(self)) from None
++
++
+ class Style:
+     RESET_ALL = 0
+     BOLD = 1
+diff --git a/loguru/_handler.py b/loguru/_handler.py
+index d5ef46a..59476c8 100644
+--- a/loguru/_handler.py
++++ b/loguru/_handler.py
+@@ -6,7 +6,7 @@ import threading
+ from contextlib import contextmanager
+ from threading import Thread
+ 
+-from ._colorizer import Colorizer
++from ._colorizer import Colorizer, ExtraMapping, RecordMapping
+ from ._locks_machinery import create_handler_lock
+ 
+ 
+@@ -149,6 +149,9 @@ class Handler:
+             if colored_message is not None and colored_message.stripped != record["message"]:
+                 colored_message = None
+ 
++            formatter_record = RecordMapping(formatter_record)
++            formatter_record["extra"] = ExtraMapping(formatter_record["extra"])
++
+             if is_raw:
+                 if colored_message is None or not self._colorize:
+                     formatted = record["message"]
+diff --git a/tests/test_formatting.py b/tests/test_formatting.py
+index 4f7fc44..24854a1 100644
+--- a/tests/test_formatting.py
++++ b/tests/test_formatting.py
+@@ -246,3 +246,50 @@ def test_invalid_color_markup(writer):
+         ValueError, match=r"^Invalid format, color markups could not be parsed correctly$"
+     ):
+         logger.add(writer, format="<red>Not closed tag", colorize=True)
++
++
++def test_missing_format_key_error_message(writer):
++    logger.add(writer, format="{nonexistent}", catch=False)
++
++    with pytest.raises(KeyError) as excinfo:
++        logger.info("Hello world")
++
++    message = str(excinfo.value)
++    assert "Invalid format key: 'nonexistent'" in message
++    assert "logger.bind(" in message
++    assert "extra[" in message
++
++    for key in ("elapsed", "exception", "extra", "file", "level", "message"):
++        assert repr(key) in message
++
++
++def test_missing_extra_format_key_error_message(writer):
++    logger.add(writer, format="{extra[nonexistent]}", catch=False)
++
++    with pytest.raises(KeyError) as excinfo:
++        logger.info("Hello world")
++
++    message = str(excinfo.value)
++    assert "Invalid format key" in message
++    assert "nonexistent" in message
++    assert "logger.bind(" in message
++
++
++def test_missing_format_key_caught(writer, capsys):
++    logger.add(writer, format="{nonexistent}", catch=True)
++
++    logger.info("Hello world")
++
++    out, err = capsys.readouterr()
++    assert out == ""
++    assert "Invalid format key: 'nonexistent'" in err
++    assert "logger.bind(" in err
++
++
++def test_format_key_added_by_patcher(writer):
++    logger.configure(patcher=lambda record: record.update(custom="X"))
++    logger.add(writer, format="{custom} {message}", catch=False)
++
++    logger.info("Hello world")
++
++    assert writer.read() == "X Hello world\n"
+diff --git a/tests/tw_repro/test_issue_missing_format_key.py b/tests/tw_repro/test_issue_missing_format_key.py
+new file mode 100644
+index 0000000..5dfe841
+--- /dev/null
++++ b/tests/tw_repro/test_issue_missing_format_key.py
+@@ -0,0 +1,62 @@
++import pytest
++
++from loguru import logger
++
++
++def test_catch_true_reports_missing_key(writer, capsys):
++    logger.remove()
++    logger.add(writer, format="{nonexistent}", catch=True)
++
++    logger.info("Hello world")
++
++    out, err = capsys.readouterr()
++    assert out == ""
++    assert err != ""
++
++    # The diagnostic must clearly name the missing key.
++    assert "nonexistent" in err
++    assert "Invalid format key" in err
++
++    # The diagnostic must be actionable: mention "logger.bind()" and "extra[key]".
++    assert "logger.bind(" in err
++    assert "extra[" in err
++
++    # The diagnostic must list the available record keys.
++    for key in ("elapsed", "exception", "extra", "file", "level", "message"):
++        assert key in err
++
++
++def test_catch_true_does_not_crash(writer, capsys):
++    logger.remove()
++    logger.add(writer, format="{nonexistent}", catch=True)
++
++    # Multiple calls must not raise and the logger must keep working.
++    logger.info("first")
++    logger.info("second")
++
++    out, err = capsys.readouterr()
++    assert out == ""
++    assert err.count("nonexistent") >= 2
++
++
++def test_catch_false_raises_keyerror_with_key_and_guidance(writer):
++    logger.remove()
++    logger.add(writer, format="{nonexistent}", catch=False)
++
++    with pytest.raises(KeyError) as excinfo:
++        logger.info("Hello world")
++
++    message = str(excinfo.value)
++    assert "nonexistent" in message
++    assert "logger.bind(" in message
++    assert "extra[" in message
++
++
++def test_patcher_keys_still_supported(writer):
++    logger.remove()
++    logger.configure(patcher=lambda record: record.update(custom_key="patched"))
++    logger.add(writer, format="{custom_key} {message}", catch=False)
++
++    logger.info("Hello world")
++
++    assert writer.read() == "patched Hello world\n"

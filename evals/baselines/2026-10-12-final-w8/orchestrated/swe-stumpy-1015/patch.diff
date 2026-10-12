@@ -1,0 +1,262 @@
+diff --git a/stumpy/aamp_motifs.py b/stumpy/aamp_motifs.py
+index 0d5f67d..7e96250 100644
+--- a/stumpy/aamp_motifs.py
++++ b/stumpy/aamp_motifs.py
+@@ -65,10 +65,11 @@ def _aamp_motifs(
+         The largest matrix profile value (distance) that a candidate motif is allowed
+         to have.
+ 
+-    max_matches : int
++    max_matches : int or None
+         The maximum number of similar matches to be returned. The resulting
+         matches are sorted by distance (starting with the most similar). Note that the
+         first match is always the self-match/trivial-match for each motif.
++        If `None`, all matches are returned.
+ 
+     max_motifs : int
+         The maximum number of motifs to return.
+@@ -126,8 +127,12 @@ def _aamp_motifs(
+         )
+ 
+         if len(query_matches) > min_neighbors:
+-            motif_distances.append(query_matches[:max_matches, 0])
+-            motif_indices.append(query_matches[:max_matches, 1])
++            if max_matches is None:
++                motif_distances.append(query_matches[:, 0])
++                motif_indices.append(query_matches[:, 1])
++            else:
++                motif_distances.append(query_matches[:max_matches, 0])
++                motif_indices.append(query_matches[:max_matches, 1])
+ 
+         if len(query_matches) == 0:  # pragma: no cover
+             query_matches = np.array([[np.nan, candidate_idx]])
+@@ -267,8 +272,6 @@ def aamp_motifs(
+ 
+     m = T.shape[-1] - P.shape[-1] + 1
+     excl_zone = int(np.ceil(m / config.STUMPY_EXCL_ZONE_DENOM))
+-    if max_matches is None:  # pragma: no cover
+-        max_matches = np.inf
+     if cutoff is None:  # pragma: no cover
+         P_copy = P.copy().astype(np.float64)
+         P_copy[np.isinf(P_copy)] = np.nan
+diff --git a/stumpy/motifs.py b/stumpy/motifs.py
+index eaad4cf..a3ed4d8 100644
+--- a/stumpy/motifs.py
++++ b/stumpy/motifs.py
+@@ -66,10 +66,11 @@ def _motifs(
+         The largest matrix profile value (distance) that a candidate motif is allowed
+         to have.
+ 
+-    max_matches : int
++    max_matches : int or None
+         The maximum number of similar matches to be returned. The resulting
+         matches are sorted by distance (starting with the most similar). Note that
+         the first match is always the self-match/trivial-match for each motif.
++        If `None`, all matches are returned.
+ 
+     max_motifs : int
+         The maximum number of motifs to return.
+@@ -131,8 +132,12 @@ def _motifs(
+         )
+ 
+         if len(query_matches) > min_neighbors:
+-            motif_distances.append(query_matches[:max_matches, 0])
+-            motif_indices.append(query_matches[:max_matches, 1])
++            if max_matches is None:
++                motif_distances.append(query_matches[:, 0])
++                motif_indices.append(query_matches[:, 1])
++            else:
++                motif_distances.append(query_matches[:max_matches, 0])
++                motif_indices.append(query_matches[:max_matches, 1])
+ 
+         if len(query_matches) == 0:  # pragma: no cover
+             query_matches = np.array([[np.nan, candidate_idx]])
+@@ -333,8 +338,6 @@ def motifs(
+ 
+     m = T.shape[-1] - P.shape[-1] + 1
+     excl_zone = int(np.ceil(m / config.STUMPY_EXCL_ZONE_DENOM))
+-    if max_matches is None:  # pragma: no cover
+-        max_matches = np.inf
+     if cutoff is None:  # pragma: no cover
+         P_copy = P.copy().astype(np.float64)
+         P_copy[np.isinf(P_copy)] = np.nan
+diff --git a/tests/test_aamp_motifs.py b/tests/test_aamp_motifs.py
+index bf419d6..6ae70dc 100644
+--- a/tests/test_aamp_motifs.py
++++ b/tests/test_aamp_motifs.py
+@@ -238,3 +238,41 @@ def test_aamp_match_T_subseq_isfinite(Q, T):
+         )
+ 
+         npt.assert_almost_equal(left, right)
++
++
++def test_aamp_motifs_max_matches_none():
++    # When `max_matches=None`, all matches should be returned (and, previously,
++    # this raised `TypeError: slice indices must be integers or None or have an
++    # __index__ method`).
++    T = np.array([0.0, 1, 2, 2, 0, 1, 2, 2, 0, 0, 0, 0])
++    m = 3
++
++    mp = naive.aamp(T, m, row_wise=True)
++
++    max_distance = np.inf
++    cutoff = np.inf
++
++    ref_distances, ref_indices = aamp_motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_distance=max_distance,
++        cutoff=cutoff,
++        max_matches=T.shape[0],
++    )
++
++    comp_distances, comp_indices = aamp_motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_distance=max_distance,
++        cutoff=cutoff,
++        max_matches=None,
++    )
++
++    npt.assert_almost_equal(ref_distances, comp_distances)
++    npt.assert_almost_equal(ref_indices, comp_indices)
++
++    # At least one motif with at least one match should be returned
++    assert comp_distances.shape[0] >= 1
++    assert comp_indices.shape[0] >= 1
++    assert comp_distances.shape[1] >= 1
++    assert comp_indices.shape[1] >= 1
+diff --git a/tests/test_motifs.py b/tests/test_motifs.py
+index e7d571f..274cf44 100644
+--- a/tests/test_motifs.py
++++ b/tests/test_motifs.py
+@@ -656,3 +656,41 @@ def test_motifs_with_isconstant():
+ 
+     npt.assert_almost_equal(ref_distances, comp_distance)
+     npt.assert_almost_equal(ref_indices, comp_indices)
++
++
++def test_motifs_max_matches_none():
++    # When `max_matches=None`, all matches should be returned (and, previously,
++    # this raised `TypeError: slice indices must be integers or None or have an
++    # __index__ method`).
++    T = np.array([0.0, 1, 2, 2, 0, 1, 2, 2, 0, 0, 0, 0])
++    m = 3
++
++    mp = naive.stump(T, m, row_wise=True)
++
++    max_distance = np.inf
++    cutoff = np.inf
++
++    ref_distances, ref_indices = motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_distance=max_distance,
++        cutoff=cutoff,
++        max_matches=T.shape[0],
++    )
++
++    comp_distances, comp_indices = motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_distance=max_distance,
++        cutoff=cutoff,
++        max_matches=None,
++    )
++
++    npt.assert_almost_equal(ref_distances, comp_distances)
++    npt.assert_almost_equal(ref_indices, comp_indices)
++
++    # At least one motif with at least one match should be returned
++    assert comp_distances.shape[0] >= 1
++    assert comp_indices.shape[0] >= 1
++    assert comp_distances.shape[1] >= 1
++    assert comp_indices.shape[1] >= 1
+diff --git a/tests/tw_repro/test_issue_motifs_max_matches_none.py b/tests/tw_repro/test_issue_motifs_max_matches_none.py
+new file mode 100644
+index 0000000..29f5028
+--- /dev/null
++++ b/tests/tw_repro/test_issue_motifs_max_matches_none.py
+@@ -0,0 +1,82 @@
++"""Repro for issue: `_motifs` max_matches=None bug.
++
++`stumpy.motifs(..., max_matches=None)` (and its non-normalized counterpart
++`stumpy.aamp_motifs(..., max_matches=None)`) should return *all* matches and
++must not raise ``TypeError: slice indices must be integers or None or have an
++__index__ method``.
++
++Before the fix, ``motifs()``/``aamp_motifs()`` prematurely converted
++``max_matches=None`` into ``np.inf`` which was then used as a slice index
++inside ``_motifs()``/``_aamp_motifs()``.
++"""
++
++import os
++import sys
++
++sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
++
++import naive
++import numpy as np
++import numpy.testing as npt
++
++import stumpy
++
++
++T = np.array([0.0, 1, 2, 2, 0, 1, 2, 2, 0, 0, 0, 0])
++M = 3
++
++
++def test_motifs_max_matches_none():
++    mp = naive.stump(T, M, row_wise=True)
++
++    ref_distances, ref_indices = stumpy.motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_matches=T.shape[0],
++        max_distance=np.inf,
++        cutoff=np.inf,
++    )
++
++    distances, indices = stumpy.motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_matches=None,
++        max_distance=np.inf,
++        cutoff=np.inf,
++    )
++
++    npt.assert_almost_equal(distances, ref_distances)
++    npt.assert_almost_equal(indices, ref_indices)
++
++    assert distances.shape[0] >= 1
++    assert indices.shape[0] >= 1
++    assert distances.shape[1] >= 1
++    assert indices.shape[1] >= 1
++
++
++def test_aamp_motifs_max_matches_none():
++    mp = naive.aamp(T, M, row_wise=True)
++
++    ref_distances, ref_indices = stumpy.aamp_motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_matches=T.shape[0],
++        max_distance=np.inf,
++        cutoff=np.inf,
++    )
++
++    distances, indices = stumpy.aamp_motifs(
++        T,
++        mp[:, 0].astype(np.float64),
++        max_matches=None,
++        max_distance=np.inf,
++        cutoff=np.inf,
++    )
++
++    npt.assert_almost_equal(distances, ref_distances)
++    npt.assert_almost_equal(indices, ref_indices)
++
++    assert distances.shape[0] >= 1
++    assert indices.shape[0] >= 1
++    assert distances.shape[1] >= 1
++    assert indices.shape[1] >= 1

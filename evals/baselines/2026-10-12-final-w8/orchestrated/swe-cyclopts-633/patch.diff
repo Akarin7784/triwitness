@@ -1,0 +1,143 @@
+diff --git a/cyclopts/parameter.py b/cyclopts/parameter.py
+index 8bb86f2..2165ab4 100644
+--- a/cyclopts/parameter.py
++++ b/cyclopts/parameter.py
+@@ -272,9 +272,11 @@ class Parameter:
+ 
+         type_ = resolve_annotated(type_)
+         if is_union(type_):
+-            out = []
++            out: list[str] = []
+             for x in get_args(type_):
+-                out.extend(self.get_negatives(x))
++                for negative in self.get_negatives(x):
++                    if negative not in out:
++                        out.append(negative)
+             return tuple(out)
+ 
+         origin = get_origin(type_)
+diff --git a/tests/test_help.py b/tests/test_help.py
+index cc67dc5..d122f06 100644
+--- a/tests/test_help.py
++++ b/tests/test_help.py
+@@ -687,6 +687,25 @@ def test_help_format_group_parameters_bool_flag_custom_negative(capture_format_g
+     assert actual == expected
+ 
+ 
++def test_help_format_group_parameters_bool_none_custom_negative(capture_format_group_parameters):
++    def cmd(
++        *,
++        foo: Annotated[bool | None, Parameter(negative="--yesnt-foo", help="Docstring for foo.")] = None,
++    ):
++        pass
++
++    actual = capture_format_group_parameters(cmd)
++    expected = dedent(
++        """\
++        ╭─ Parameters ───────────────────────────────────────────────────────╮
++        │ --foo --yesnt-foo  Docstring for foo.                              │
++        ╰────────────────────────────────────────────────────────────────────╯
++        """
++    )
++    assert actual.count("--yesnt-foo") == 1
++    assert actual == expected
++
++
+ def test_help_format_group_parameters_list_flag(capture_format_group_parameters):
+     def cmd(
+         foo: Annotated[list[int] | None, Parameter(help="Docstring for foo.")] = None,
+diff --git a/tests/test_parameter.py b/tests/test_parameter.py
+index 70d92bf..21f8ce5 100644
+--- a/tests/test_parameter.py
++++ b/tests/test_parameter.py
+@@ -153,3 +153,17 @@ def test_parameter_attributes_are_kw_only():
+         elif field.init:  # Only check fields that are part of __init__
+             # All other init fields should be keyword-only
+             assert field.kw_only, f"Field '{field.name}' should be keyword-only"
++
++
++@pytest.mark.parametrize("type_", [bool | None, Optional[bool], list[str] | None, Optional[list[str]]])
++def test_parameter_get_negatives_union_none_custom_negative(type_):
++    """Union members must not contribute duplicate negatives."""
++    p = Parameter(negative="--yesnt-foo", name=("--foo", "--bar"))
++    assert ("--yesnt-foo",) == p.get_negatives(type_)
++
++
++def test_parameter_get_negatives_union_none_prefix_collision():
++    """bool and None negatives colliding on the same prefix must be deduplicated."""
++    p = Parameter(name="--foo", negative_none="no-")
++    assert ("--no-foo",) == p.get_negatives(bool | None)
++
+diff --git a/tests/tw_repro/test_issue_382.py b/tests/tw_repro/test_issue_382.py
+new file mode 100644
+index 0000000..cf78622
+--- /dev/null
++++ b/tests/tw_repro/test_issue_382.py
+@@ -0,0 +1,67 @@
++"""Reproduction for: duplicate negative shown in help for a ``bool | None`` parameter.
++
++Issue: ``Parameter.get_negatives`` concatenated the negatives of each union member
++without de-duplicating, so ``Annotated[bool | None, Parameter(negative="--negative")]``
++produced ``("--negative", "--negative")`` and the help panel displayed the negative twice.
++"""
++
++from textwrap import dedent
++from typing import Annotated, Optional
++
++import pytest
++
++from cyclopts import Parameter
++from cyclopts.argument import ArgumentCollection
++from cyclopts.help import DefaultFormatter, create_parameter_help_panel
++
++pytestmark = pytest.mark.usefixtures("console")
++
++
++@pytest.mark.parametrize("type_", [bool | None, Optional[bool], list[str] | None, Optional[list[str]]])
++def test_parameter_get_negatives_union_none_custom_negative(type_):
++    p = Parameter(negative="--yesnt-foo", name=("--foo", "--bar"))
++    assert ("--yesnt-foo",) == p.get_negatives(type_)
++
++
++def test_parameter_get_negatives_union_none_prefix_collision():
++    # bool -> negative_bool ("no-" default), None -> negative_none ("no-") => duplicate.
++    p = Parameter(name="--foo", negative_none="no-")
++    assert ("--no-foo",) == p.get_negatives(bool | None)
++
++
++def test_help_format_group_parameters_bool_none_custom_negative(console, default_function_groups):
++    def cmd(
++        *,
++        foo: Annotated[bool | None, Parameter(negative="--yesnt-foo", help="Docstring for foo.")] = None,
++    ):
++        pass
++
++    argument_collection = ArgumentCollection._from_callable(cmd, None, parse_docstring=True)
++
++    with console.capture() as capture:
++        group = argument_collection.groups[0]
++        group_argument_collection = argument_collection.filter_by(group=group)
++        panel = create_parameter_help_panel(group, group_argument_collection, "restructuredtext")
++        formatter = DefaultFormatter()
++        rendered = formatter._render_panel(panel, console, console.options)
++        console.print(rendered)
++
++    actual = capture.get()
++    expected = dedent(
++        """\
++        ╭─ Parameters ───────────────────────────────────────────────────────╮
++        │ --foo --yesnt-foo  Docstring for foo.                              │
++        ╰────────────────────────────────────────────────────────────────────╯
++        """
++    )
++    assert actual.count("--yesnt-foo") == 1
++    assert actual == expected
++
++
++def test_parameter_union_none_negative_parse(app, assert_parse_args):
++    @app.default
++    def f(param: Annotated[bool | None, Parameter(negative="--negative")] = None):
++        pass
++
++    assert_parse_args(f, "--negative", False)
++    assert_parse_args(f, "--param", True)

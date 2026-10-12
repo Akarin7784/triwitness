@@ -1,0 +1,267 @@
+diff --git a/sqlglot/expressions/functions.py b/sqlglot/expressions/functions.py
+index 757ecba..a8a9ae0 100644
+--- a/sqlglot/expressions/functions.py
++++ b/sqlglot/expressions/functions.py
+@@ -321,10 +321,42 @@ class AIClassify(Expression, Func):
+     _sql_names = ["AI_CLASSIFY"]
+ 
+ 
++class AIEmbed(Expression, Func):
++    arg_types = {
++        "this": True,
++        "connection_id": False,
++        "endpoint_id": False,
++        "model_params": False,
++        "expressions": False,
++    }
++
++
+ class FeaturesAtTime(Expression, Func):
+     arg_types = {"this": True, "time": False, "num_rows": False, "ignore_feature_nulls": False}
+ 
+ 
++class AISimilarity(Expression, Func):
++    arg_types = {
++        "this": True,
++        "expression": True,
++        "connection_id": False,
++        "endpoint_id": False,
++        "model_params": False,
++        "expressions": False,
++    }
++
++
++class AIGenerate(Expression, Func):
++    arg_types = {
++        "this": True,
++        "connection_id": False,
++        "endpoint_id": False,
++        "request_type": False,
++        "model_params": False,
++        "expressions": False,
++    }
++
++
+ class GenerateEmbedding(Expression, Func):
+     arg_types = {"this": True, "expression": True, "params_struct": False, "is_text": False}
+ 
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 9ba486b..381ef2d 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -4713,6 +4713,36 @@ class Generator:
+             expression.args.get("context_window"),
+         )
+ 
++    def _ai_scalar_sql(self, expression: exp.Func, name: str) -> str:
++        # The "AI." prefix is supplied by the surrounding exp.Dot wrapper, so emit the
++        # bare function name. Positional arguments come first, then named arguments
++        # (stored as raw exp.Kwarg values) in a deterministic order.
++        positional = []
++        for key in ("this", "expression"):
++            if key in expression.arg_types:
++                positional.append(expression.args.get(key))
++
++        named = [
++            expression.args.get(key)
++            for key in expression.arg_types
++            if key not in ("this", "expression", "expressions")
++        ]
++
++        # Any named arguments not covered by the canonical keys are preserved as-is so
++        # valid input previously handled by the generic node is never dropped.
++        extra = expression.args.get("expressions") or []
++
++        return self.func(name, *positional, *named, *extra)
++
++    def aiembed_sql(self, expression: exp.AIEmbed) -> str:
++        return self._ai_scalar_sql(expression, "EMBED")
++
++    def aisimilarity_sql(self, expression: exp.AISimilarity) -> str:
++        return self._ai_scalar_sql(expression, "SIMILARITY")
++
++    def aigenerate_sql(self, expression: exp.AIGenerate) -> str:
++        return self._ai_scalar_sql(expression, "GENERATE")
++
+     def featuresattime_sql(self, expression: exp.FeaturesAtTime) -> str:
+         this_sql = self.sql(expression, "this")
+         if isinstance(expression.this, exp.Table):
+diff --git a/sqlglot/parsers/bigquery.py b/sqlglot/parsers/bigquery.py
+index 64b6042..a3cba8a 100644
+--- a/sqlglot/parsers/bigquery.py
++++ b/sqlglot/parsers/bigquery.py
+@@ -82,6 +82,45 @@ def _build_json_strip_nulls(args: list) -> exp.JSONStripNulls:
+     return expression
+ 
+ 
++def _build_ai_scalar(
++    expr_type: type[E],
++    positional_keys: t.Sequence[str],
++    named_aliases: t.Mapping[str, str] | None = None,
++) -> t.Callable:
++    aliases = {k.upper(): v for k, v in (named_aliases or {}).items()}
++
++    def _builder(args: list) -> E:
++        positional = iter(positional_keys)
++        kwargs: t.Dict[str, exp.Expression] = {}
++        extra: t.List[exp.Expression] = []
++
++        for arg in args:
++            if isinstance(arg, exp.Kwarg):
++                # Named arguments are stored as the raw exp.Kwarg, mirroring exp.AIForecast,
++                # so that generation can re-emit "name => value". Documented named forms of the
++                # leading positional argument (e.g. "prompt") are mapped onto the canonical key
++                # so the expression validates, while the raw Kwarg is kept for round tripping.
++                name = arg.this.name
++                key = aliases.get(name.upper(), name)
++                if key in expr_type.arg_types:
++                    kwargs[key] = arg
++                else:
++                    # Unknown named arguments are collected so they're neither dropped nor
++                    # rejected, keeping the previous (generic) round trip behavior intact.
++                    extra.append(arg)
++            else:
++                key = next(positional, None)
++                if key:
++                    kwargs[key] = arg
++
++        if extra:
++            kwargs["expressions"] = extra
++
++        return expr_type(**kwargs)
++
++    return _builder
++
++
+ def _build_levenshtein(args: list) -> exp.Levenshtein:
+     max_dist = seq_get(args, 2)
+     return exp.Levenshtein(
+@@ -201,6 +240,11 @@ class BigQueryParser(parser.Parser):
+         "EDIT_DISTANCE": _build_levenshtein,
+         "FORMAT_DATE": _build_format_time(exp.TsOrDsToDate),
+         "GENERATE_ARRAY": exp.GenerateSeries.from_arg_list,
++        "EMBED": _build_ai_scalar(exp.AIEmbed, ("this",), {"content": "this"}),
++        "SIMILARITY": _build_ai_scalar(
++            exp.AISimilarity, ("this", "expression"), {"content": "this", "target": "expression"}
++        ),
++        "GENERATE": _build_ai_scalar(exp.AIGenerate, ("this",), {"prompt": "this"}),
+         "JSON_EXTRACT_SCALAR": _build_extract_json_with_default_path(exp.JSONExtractScalar),
+         "JSON_EXTRACT_ARRAY": _build_extract_json_with_default_path(exp.JSONExtractArray),
+         "JSON_EXTRACT_STRING_ARRAY": _build_extract_json_with_default_path(exp.JSONValueArray),
+diff --git a/tests/dialects/test_bigquery.py b/tests/dialects/test_bigquery.py
+index 03f55e1..1fad90f 100644
+--- a/tests/dialects/test_bigquery.py
++++ b/tests/dialects/test_bigquery.py
+@@ -2445,6 +2445,30 @@ OPTIONS (
+             "SELECT AI.GENERATE_BOOL(MODEL `mydataset.gemini_model`, 'Is sky blue?')"
+         )
+ 
++        for sql, klass in (
++            ("SELECT AI.EMBED('hello')", exp.AIEmbed),
++            ("SELECT AI.SIMILARITY('a', 'b')", exp.AISimilarity),
++            ("SELECT AI.GENERATE('Write a haiku')", exp.AIGenerate),
++        ):
++            with self.subTest(f"Testing BigQuery's AI scalar function {sql}"):
++                ast = self.validate_identity(sql)
++                assert ast.find(klass)
++                assert ast.find(exp.Anonymous) is None
++
++        ast = self.validate_identity(
++            "SELECT AI.GENERATE(prompt => 'Write a haiku', connection_id => 'us.conn', endpoint_id => 'gemini-2.5-flash', request_type => 'SHARED', model_params => PARSE_JSON('{\"temperature\": 0.5}'))"
++        )
++        assert ast.find(exp.AIGenerate)
++        assert ast.find(exp.Anonymous) is None
++        self.validate_identity(
++            "SELECT AI.EMBED('hello', connection_id => 'us.conn', endpoint_id => 'text-embedding-005')"
++        )
++        self.validate_identity(
++            "SELECT AI.SIMILARITY('a', 'b', connection_id => 'us.conn', endpoint_id => 'text-embedding-005')"
++        )
++        # Unknown named arguments must not be dropped from output
++        self.validate_identity("SELECT AI.EMBED('x', distance_type => 'COSINE')")
++
+     def test_merge(self):
+         self.validate_all(
+             """
+diff --git a/tests/tw_repro/test_issue_ai_scalars.py b/tests/tw_repro/test_issue_ai_scalars.py
+new file mode 100644
+index 0000000..691a645
+--- /dev/null
++++ b/tests/tw_repro/test_issue_ai_scalars.py
+@@ -0,0 +1,76 @@
++"""Repro for: richer typed handling for BigQuery AI.* scalar functions.
++
++Locks the behavior named in the Issue:
++  - AI.EMBED / AI.SIMILARITY / AI.GENERATE parse into richer typed AST nodes
++    (exp.AIEmbed / exp.AISimilarity / exp.AIGenerate) instead of the generic
++    Dot(Anonymous) representation.
++  - Round trip is preserved for the documented scalar forms.
++"""
++
++from sqlglot import expressions as exp
++from sqlglot import parse_one
++
++CASES = (
++    ("SELECT AI.EMBED('hello')", exp.AIEmbed),
++    ("SELECT AI.SIMILARITY('a', 'b')", exp.AISimilarity),
++    ("SELECT AI.GENERATE('Write a haiku')", exp.AIGenerate),
++)
++
++
++def _inner_func(sql: str) -> exp.Expr | None:
++    node = parse_one(sql, dialect="bigquery").expressions[0]
++    return node.expression if isinstance(node, exp.Dot) else None
++
++
++def test_typed_nodes_are_produced():
++    for sql, klass in CASES:
++        fn = _inner_func(sql)
++        assert isinstance(fn, klass), f"{sql} -> expected {klass.__name__}, got {type(fn).__name__}"
++
++
++def test_no_anonymous_fallback():
++    for sql, klass in CASES:
++        ast = parse_one(sql, dialect="bigquery")
++        assert ast.find(exp.Anonymous) is None, f"{sql} still contains exp.Anonymous"
++        assert ast.find(klass) is not None
++
++
++def test_roundtrip_preserved():
++    for sql, _ in CASES:
++        assert parse_one(sql, dialect="bigquery").sql(dialect="bigquery") == sql
++
++
++def test_named_arguments_roundtrip():
++    sql = (
++        "SELECT AI.GENERATE(prompt => 'Write a haiku', connection_id => 'us.conn', "
++        "endpoint_id => 'gemini-2.5-flash', request_type => 'SHARED', "
++        "model_params => PARSE_JSON('{\"temperature\": 0.5}'))"
++    )
++    ast = parse_one(sql, dialect="bigquery")
++    assert ast.find(exp.AIGenerate) is not None
++    assert ast.find(exp.Anonymous) is None
++    assert ast.sql(dialect="bigquery") == sql
++
++    sql = "SELECT AI.EMBED('hello', connection_id => 'us.conn', endpoint_id => 'text-embedding-005')"
++    ast = parse_one(sql, dialect="bigquery")
++    assert ast.find(exp.AIEmbed) is not None
++    assert ast.sql(dialect="bigquery") == sql
++
++    sql = "SELECT AI.SIMILARITY('a', 'b', connection_id => 'us.conn', endpoint_id => 'text-embedding-005')"
++    ast = parse_one(sql, dialect="bigquery")
++    assert ast.find(exp.AISimilarity) is not None
++    assert ast.sql(dialect="bigquery") == sql
++
++
++def test_unknown_named_arguments_are_not_dropped():
++    # Valid SQL that round-tripped via the generic node before the patch must not lose
++    # arguments now that typed nodes are used.
++    sql = "SELECT AI.EMBED('x', distance_type => 'COSINE')"
++    ast = parse_one(sql, dialect="bigquery")
++    assert ast.find(exp.AIEmbed) is not None
++    assert ast.sql(dialect="bigquery") == sql
++
++    sql = "SELECT AI.GENERATE('p', connection_id => 'c', foo => 1)"
++    ast = parse_one(sql, dialect="bigquery")
++    assert ast.find(exp.AIGenerate) is not None
++    assert "foo => 1" in ast.sql(dialect="bigquery")

@@ -1,0 +1,161 @@
+diff --git a/src/django_components/component.py b/src/django_components/component.py
+index 5e4abaf..53e7275 100644
+--- a/src/django_components/component.py
++++ b/src/django_components/component.py
+@@ -31,6 +31,7 @@ from django_components.context import (
+ from django_components.logger import logger, trace_msg
+ from django_components.middleware import is_dependency_middleware_active
+ from django_components.slots import DEFAULT_SLOT_KEY, FillContent, FillNode, SlotName, resolve_slots
++from django_components.template_loader import _resolve_component_dir
+ from django_components.utils import gen_id, search
+ 
+ RENDERED_COMMENT_TEMPLATE = "<!-- _RENDERED {name} -->"
+@@ -150,7 +151,7 @@ def _get_dir_path_from_component_path(
+     # to the component file.
+     root_dir_abs = None
+     for candidate_dir in candidate_dirs:
+-        candidate_dir_abs = os.path.abspath(candidate_dir)
++        candidate_dir_abs = os.path.abspath(_resolve_component_dir(candidate_dir))
+         if comp_dir_path_abs.startswith(candidate_dir_abs):
+             root_dir_abs = candidate_dir_abs
+             break
+diff --git a/src/django_components/template_loader.py b/src/django_components/template_loader.py
+index ea897b8..8238286 100644
+--- a/src/django_components/template_loader.py
++++ b/src/django_components/template_loader.py
+@@ -4,7 +4,7 @@ Template loader that loads templates from each Django app's "components" directo
+ 
+ import os
+ from pathlib import Path
+-from typing import List, Set
++from typing import Any, List, Set
+ 
+ from django.apps import apps
+ from django.conf import settings
+@@ -15,20 +15,51 @@ from django_components.logger import logger
+ 
+ # Same as `Path.is_relative_to`, defined as standalone function because `Path.is_relative_to`
+ # is marked for deprecation.
+-def path_is_relative_to(child_path: str, parent_path: str) -> bool:
++def path_is_relative_to(child_path: Any, parent_path: Any) -> bool:
+     # If the relative path doesn't start with `..`, then child is descendant of parent
+     # See https://stackoverflow.com/a/7288073/9788634
+     rel_path = os.path.relpath(child_path, parent_path)
+     return not rel_path.startswith("..")
+ 
+ 
++# Notes on `get_component_dirs()` and `_resolve_component_dir()` below:
++#
++# Django allows `STATICFILES_DIRS` entries to be either a plain path (str / PathLike),
++# or a `(prefix, path)` tuple, where the path is the one that matters for us.
++# See https://docs.djangoproject.com/en/3.2/ref/settings/#std-setting-STATICFILES_DIRS
++#
++# To keep the two supported forms in sync, we expose `get_component_dirs()` for the
++# `STATICFILES_DIRS` setting, and `_resolve_component_dir()` for turning a single
++# entry (of either form) into a Path.
++def get_component_dirs() -> List[Path]:
++    """Return the dirs from `settings.STATICFILES_DIRS` as a list of paths.
++
++    Handles both plain path entries and `(prefix, path)` tuples.
++    When `STATICFILES_DIRS` is not set, defaults to a single `"components"` dir,
++    so `Component.get_template()` reports the invalid component name.
++    """
++    if hasattr(settings, "STATICFILES_DIRS") and len(settings.STATICFILES_DIRS):
++        component_dirs = settings.STATICFILES_DIRS
++    else:
++        component_dirs = ["components"]
++
++    return [_resolve_component_dir(entry) for entry in component_dirs]
++
++
++def _resolve_component_dir(entry: Any) -> Path:
++    """Normalize a single `STATICFILES_DIRS` entry into a Path.
++
++    `(prefix, path)` tuples are supported (as in Django), and the second item is used.
++    """
++    if isinstance(entry, (tuple, list)) and len(entry) == 2:
++        entry = entry[1]
++    return Path(entry)
++
++
+ class Loader(FilesystemLoader):
+     def get_dirs(self) -> List[Path]:
+         # Allow to configure from settings which dirs should be checked for components
+-        if hasattr(settings, "STATICFILES_DIRS") and len(settings.STATICFILES_DIRS):
+-            component_dirs = settings.STATICFILES_DIRS
+-        else:
+-            component_dirs = ["components"]
++        component_dirs = get_component_dirs()
+ 
+         logger.debug(
+             "Template loader will search for valid template dirs from following options:\n"
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_885.py b/tests/tw_repro/test_issue_885.py
+new file mode 100644
+index 0000000..4bd6ec0
+--- /dev/null
++++ b/tests/tw_repro/test_issue_885.py
+@@ -0,0 +1,61 @@
++"""
++Repro for: template_loader blocks on STATICFILES_DIRS if there are tuples.
++
++Django allows STATICFILES_DIRS entries to be either a path or a
++`(prefix, path)` tuple. `django_components.template_loader.Loader.get_dirs`
++must support both, and consider the second item of the tuple.
++
++https://docs.djangoproject.com/en/3.2/ref/settings/#std-setting-STATICFILES_DIRS
++"""
++
++from pathlib import Path
++
++from django.template.engine import Engine
++from django.test import override_settings
++
++# isort: off
++from ..django_test_setup import *  # NOQA
++from ..testutils import BaseTestCase
++
++# isort: on
++
++from django_components.template_loader import Loader
++
++TESTS_DIR = Path(__file__).parent.parent.resolve()
++COMPONENTS_DIR = TESTS_DIR / "components"
++
++
++class StaticfilesDirsTupleTests(BaseTestCase):
++    """`Loader.get_dirs` must not choke on `(prefix, path)` tuples in STATICFILES_DIRS"""
++
++    def test_get_dirs_with_tuple_entry(self):
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[("downloads", COMPONENTS_DIR)],
++        ):
++            current_engine = Engine.get_default()
++            loader = Loader(current_engine)
++            dirs = loader.get_dirs()
++
++        self.assertEqual(dirs, [COMPONENTS_DIR.resolve()])
++
++    def test_get_dirs_with_mixed_entries(self):
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[COMPONENTS_DIR, ("downloads", COMPONENTS_DIR)],
++        ):
++            current_engine = Engine.get_default()
++            loader = Loader(current_engine)
++            dirs = loader.get_dirs()
++
++        self.assertEqual(dirs, [COMPONENTS_DIR.resolve()])
++
++    def test_tuple_entry_does_not_raise_type_error(self):
++        # The original bug was a `TypeError: expected str, bytes or os.PathLike object, not tuple`
++        with override_settings(
++            BASE_DIR=TESTS_DIR,
++            STATICFILES_DIRS=[("downloads", "/opt/webfiles/stats")],
++        ):
++            current_engine = Engine.get_default()
++            loader = Loader(current_engine)
++            loader.get_dirs()  # Must not raise

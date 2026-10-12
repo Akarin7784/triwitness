@@ -1,0 +1,88 @@
+diff --git a/tests/tw_repro/test_issue_legend_border_labels.py b/tests/tw_repro/test_issue_legend_border_labels.py
+new file mode 100644
+index 0000000..3226e1d
+--- /dev/null
++++ b/tests/tw_repro/test_issue_legend_border_labels.py
+@@ -0,0 +1,59 @@
++"""
++Reproduction for: adding an outer legend (loc='r') to a non-border axis
++removes its y-axis tick labels when the figure uses sharey='labs' and one
++of the axes has been hidden.
++
++The outer legend creates a hidden ("filled") panel on the right side of the
++axis. That filled panel used to promote the main axes to full tick-label
++sharing (level 3), after which the figure-level tick-label sharing logic
++stripped the left tick labels from the middle axes because it is not on the
++left figure border.
++"""
++
++import matplotlib
++
++matplotlib.use("Agg")
++
++import ultraplot as uplt  # noqa: E402
++
++
++def _labelleft(ax):
++    params = ax.yaxis.get_tick_params()
++    # "labelleft" is stable across the supported matplotlib versions
++    return params.get("labelleft")
++
++
++def test_outer_legend_border_labels_with_hidden_axis():
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    axs[-1].set_visible(False)
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++
++    fig.canvas.draw()
++    before = [_labelleft(ax) for ax in axs]
++
++    # Adding an outer legend must not hide the y-axis tick labels of the
++    # middle (non-border) axes.
++    axs[-2].legend(loc="r")
++    fig.canvas.draw()
++    after = [_labelleft(ax) for ax in axs]
++
++    assert before == [True, True, True]
++    assert after == [True, True, True], (
++        f"outer legend changed y tick label visibility: before={before} after={after}"
++    )
++
++
++def test_outer_legend_border_labels_without_hidden_axis():
++    # Same situation but with all three axes visible.
++    fig, axs = uplt.subplots(ncols=3, sharey="labs")
++    for ax in axs[:-1]:
++        ax.plot([0, 1], [0, 1], label="line")
++
++    fig.canvas.draw()
++    axs[-2].legend(loc="r")
++    fig.canvas.draw()
++
++    # sharey='labs' only shares axis *labels* (level 1), so every axis keeps
++    # its own tick labels -- the legend must not change that.
++    assert [_labelleft(ax) for ax in axs] == [True, True, True]
+diff --git a/ultraplot/figure.py b/ultraplot/figure.py
+index 1c0e47c..8bd5703 100644
+--- a/ultraplot/figure.py
++++ b/ultraplot/figure.py
+@@ -1488,9 +1488,17 @@ class Figure(mfigure.Figure):
+             return 3
+ 
+         # Adjacent panels on any relevant side
++        # NOTE: Hidden ("filled") panels such as outer legends and colorbars are
++        # excluded here. They occupy a panel slot but have no tick labels of their
++        # own, so they must not promote the main axes to full tick-label sharing
++        # (which would strip its border tick labels -- see issue #XXX).
+         panel_dict = getattr(axi, "_panel_dict", {})
+         for side in sides:
+-            side_panels = panel_dict.get(side) or []
++            side_panels = [
++                pax
++                for pax in panel_dict.get(side) or []
++                if not getattr(pax, "_panel_hidden", False)
++            ]
+             if side_panels and getattr(side_panels[0], f"_share{axis}", False):
+                 return 3
+ 

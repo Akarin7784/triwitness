@@ -1,0 +1,141 @@
+diff --git a/src/huggingface_hub/_snapshot_download.py b/src/huggingface_hub/_snapshot_download.py
+index ed72652..e74a8ba 100644
+--- a/src/huggingface_hub/_snapshot_download.py
++++ b/src/huggingface_hub/_snapshot_download.py
+@@ -380,14 +380,18 @@ def snapshot_download(
+     results: list[str | DryRunFileInfo] = []
+ 
+     # User can use its own tqdm class or the default one from `huggingface_hub.utils`
++    tqdm_is_custom = tqdm_class is not None
+     tqdm_class = tqdm_class or hf_tqdm
+ 
+     # Create a progress bar for the bytes downloaded
+     # This progress bar is shared across threads/files and gets updated each time we fetch
+     # metadata for a file.
++    # If the user provided a custom `tqdm_class`, do not let tqdm auto-disable the bar based on
++    # TTY detection (`disable=None`): that would silently break progress tracking in non-TTY
++    # environments (web servers, Docker, background threads, ...).
+     bytes_progress = tqdm_class(
+         desc="Downloading (incomplete total...)",
+-        disable=is_tqdm_disabled(log_level=logger.getEffectiveLevel()),
++        disable=(False if tqdm_is_custom else is_tqdm_disabled(log_level=logger.getEffectiveLevel())),
+         total=0,
+         initial=0,
+         unit="B",
+diff --git a/src/huggingface_hub/utils/tqdm.py b/src/huggingface_hub/utils/tqdm.py
+index 50e8a49..20af5c2 100644
+--- a/src/huggingface_hub/utils/tqdm.py
++++ b/src/huggingface_hub/utils/tqdm.py
+@@ -297,12 +297,18 @@ def _get_progress_bar_context(
+         #   Makes it easier to use the same code path for both cases but in the later
+         #   case, the progress bar is not closed when exiting the context manager.
+ 
++    # If a custom `tqdm_class` is provided, the user explicitly asked to track progress their own
++    # way: do not let tqdm auto-disable the bar based on TTY detection (`disable=None`), which would
++    # silently break progress tracking in non-TTY environments (web servers, Docker, background
++    # threads, ...).
++    disable = False if tqdm_class is not None else is_tqdm_disabled(log_level=log_level)
++
+     return (tqdm_class or tqdm)(  # type: ignore
+         unit=unit,
+         unit_scale=unit_scale,
+         total=total,
+         initial=initial,
+         desc=desc,
+-        disable=is_tqdm_disabled(log_level=log_level),
++        disable=disable,
+         name=name,
+     )
+diff --git a/tests/tw_repro/test_issue_2000.py b/tests/tw_repro/test_issue_2000.py
+new file mode 100644
+index 0000000..6fd5942
+--- /dev/null
++++ b/tests/tw_repro/test_issue_2000.py
+@@ -0,0 +1,87 @@
++"""Reproduction for: custom `tqdm_class` silently broken in non-TTY environments.
++
++Passing a custom `tqdm_class` to `hf_hub_download()` (and friends) must keep progress
++tracking working even when `sys.stderr.isatty()` is False (web servers, run_in_executor,
++Docker, subprocess, ...). Before the fix, `_get_progress_bar_context` passed
++`disable=is_tqdm_disabled(...)` (i.e. `None` in the common case) which lets tqdm
++auto-detect the TTY and set `disable=True`, making `update()` a no-op (`self.n` stays 0).
++"""
++
++import io
++import logging
++import sys
++from unittest.mock import Mock, patch
++
++import pytest
++from tqdm.auto import tqdm as base_tqdm
++
++from huggingface_hub.file_download import http_get
++from huggingface_hub.utils.tqdm import _get_progress_bar_context
++
++
++@pytest.fixture(autouse=True)
++def _force_non_tty_stderr():
++    """Simulate a non-TTY environment (web server / Docker / background thread)."""
++    fake_stderr = io.StringIO()
++    with patch.object(sys, "stderr", fake_stderr):
++        assert not sys.stderr.isatty()
++        yield fake_stderr
++
++
++class _CustomProgress(base_tqdm):
++    """Custom progress class used by users to track progress their own way."""
++
++    instances: "list[_CustomProgress]" = []
++
++    def __init__(self, *args, **kwargs):
++        kwargs.pop("name", None)  # `name` is an hf-specific kwarg not accepted by tqdm
++        super().__init__(*args, **kwargs)
++        self.updates: list[int] = []
++        _CustomProgress.instances.append(self)
++
++    def update(self, n=1):
++        super().update(n)
++        self.updates.append(n)
++
++
++def test_custom_tqdm_class_not_disabled_in_non_tty():
++    """A custom `tqdm_class` must not be auto-disabled based on TTY detection."""
++    context = _get_progress_bar_context(
++        desc="fake-file.bin",
++        log_level=logging.WARNING,  # -> `is_tqdm_disabled()` returns None (auto-detection)
++        total=100,
++        tqdm_class=_CustomProgress,
++    )
++    with context as progress:
++        assert progress.disable is False, "custom tqdm_class got disabled by TTY auto-detection"
++        progress.update(10)
++        progress.update(30)
++        assert progress.n == 40, f"progress bar total count not tracked: n={progress.n}"
++
++
++def test_http_get_custom_tqdm_class_progress_in_non_tty():
++    """End-to-end: `http_get(..., tqdm_class=...)` tracks progress in non-TTY env."""
++    _CustomProgress.instances = []
++
++    def _iter_content() -> "list[bytes]":
++        yield b"0" * 10
++        yield b"0" * 10
++
++    with patch("huggingface_hub.file_download.http_stream_backoff") as mock_stream_backoff:
++        mock_response = Mock()
++        mock_response.headers = {"Content-Length": "20"}
++        mock_response.iter_bytes.side_effect = [_iter_content()]
++        mock_stream_backoff.return_value.__enter__.return_value = mock_response
++        mock_stream_backoff.return_value.__exit__.return_value = None
++
++        temp_file = io.BytesIO()
++        http_get("fake_url", temp_file=temp_file, tqdm_class=_CustomProgress)
++
++    assert temp_file.getvalue() == b"0" * 20
++
++    # The custom progress bar created inside `http_get` must have tracked the download.
++    assert len(_CustomProgress.instances) == 1, "custom tqdm class was not instantiated"
++    bar = _CustomProgress.instances[0]
++    assert bar.total == 20
++    assert bar.updates, "update() never called on custom tqdm class"
++    assert bar.n == 20, f"custom tqdm class never tracked progress (n={bar.n}, disable={bar.disable})"

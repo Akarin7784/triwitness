@@ -1,0 +1,114 @@
+diff --git a/src/sqlfluff/rules/references/RF03.py b/src/sqlfluff/rules/references/RF03.py
+index d61336c..94a9f21 100644
+--- a/src/sqlfluff/rules/references/RF03.py
++++ b/src/sqlfluff/rules/references/RF03.py
+@@ -307,8 +307,14 @@ def _validate_one_reference(
+             ),
+         )
+ 
++    # If the reference itself is templated (e.g. a placeholder param, or a
++    # templated identifier), we cannot safely insert a qualifier in front of
++    # it. Doing so would splice the alias into a templated region of the
++    # source, corrupting it. See:
++    # https://github.com/sqlfluff/sqlfluff/issues/7469
++    # Report the violation, but don't offer a fix.
+     fixes = None
+-    if fixable:
++    if fixable and not ref.is_templated:
+         fixes = [
+             LintFix.create_before(
+                 ref.segments[0] if len(ref.segments) else ref,
+diff --git a/test/fixtures/rules/std_rule_cases/RF03.yml b/test/fixtures/rules/std_rule_cases/RF03.yml
+index 37e36c3..a32d239 100644
+--- a/test/fixtures/rules/std_rule_cases/RF03.yml
++++ b/test/fixtures/rules/std_rule_cases/RF03.yml
+@@ -574,3 +574,21 @@ test_pass_tsql_collate_clause:
+   configs:
+     core:
+       dialect: tsql
++
++fail_but_dont_fix_templated_placeholder_reference:
++  # A placeholder parameter is templated. We should never insert an alias
++  # qualifier before it (which would corrupt the source), but we can still
++  # report the inconsistency.
++  # https://github.com/sqlfluff/sqlfluff/issues/7469
++  fail_str: |
++    with mysel as (select * from mytable mt
++    where mt.colname = :colname :: text
++    )
++    select * from mysel ms;
++  configs:
++    core:
++      dialect: postgres
++      templater: placeholder
++    templater:
++      placeholder:
++        param_style: colon
+diff --git a/tests/tw_repro/test_issue_7469.py b/tests/tw_repro/test_issue_7469.py
+new file mode 100644
+index 0000000..44fffa2
+--- /dev/null
++++ b/tests/tw_repro/test_issue_7469.py
+@@ -0,0 +1,62 @@
++"""Reproduction test for the placeholder-templater / RF03 fix corruption.
++
++Issue: "Table alias is prefixed to placeholder param".
++
++When using the ``placeholder`` templater with ``param_style = colon`` on a
++postgres statement containing a postgres cast (``::``), running ``fix`` with
++the default rule set corrupts the source by prefixing the table alias onto the
++placeholder, e.g. ``:colname`` becomes ``mt.:colname``::
++
++    with mysel as (select * from mytable mt
++    where mt.colname = :colname :: text
++    )
++    select * from mysel ms;
++
++The placeholder represents a *value* (a bind parameter), not a column, so the
++alias must never be prefixed to it.
++"""
++
++from sqlfluff.core import FluffConfig, Linter
++
++SQL = """with mysel as (select * from mytable mt
++where mt.colname = :colname :: text
++)
++select * from mysel ms;
++"""
++
++CORRUPT = "mt.:colname"
++
++
++def _fix(sql: str) -> str:
++    config = FluffConfig(
++        overrides={
++            "dialect": "postgres",
++            "templater": "placeholder",
++        },
++        configs={"templater": {"placeholder": {"param_style": "colon"}}},
++    )
++    linter = Linter(config=config)
++    result = linter.lint_string(sql, fix=True)
++    fixed, _ = result.fix_string()
++    return fixed
++
++
++def test_placeholder_not_qualified_by_alias():
++    """The alias must not be prefixed to a placeholder param."""
++    fixed = _fix(SQL)
++    assert "mt.:colname" not in fixed, (
++        "Placeholder param was corrupted by prefixing the table alias:\n" + fixed
++    )
++    # The placeholder itself must be left intact in the source.
++    assert ":colname" in fixed
++
++
++def test_placeholder_source_unchanged_by_fix():
++    """The source (aside from layout/aliasing fixes) keeps the bare placeholder.
++
++    The bind parameter ``:colname`` must remain an unqualified placeholder in
++    the source, i.e. it must not have ``mt.`` inserted in front of it.
++    """
++    fixed = _fix(SQL)
++    assert "= :colname" in fixed
++    assert "mt.:colname" not in fixed

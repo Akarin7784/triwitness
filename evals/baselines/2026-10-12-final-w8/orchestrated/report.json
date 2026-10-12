@@ -1,0 +1,66 @@
+{
+  "run_dir": "/out/final/results/orchestrated",
+  "rows": [
+    {
+      "config": "final-orchestrated",
+      "agent": "llm",
+      "tasks": 35,
+      "attempts": 35,
+      "resolved_at_1": 0.5428571428571428,
+      "solved": 19,
+      "total_cost_cny": 8.4901,
+      "avg_cost_per_task": 0.2426,
+      "cost_per_resolved": 0.4468,
+      "avg_steps": 42.0,
+      "avg_wall_s": 1283.9,
+      "false_success": 8,
+      "tampered": 1,
+      "cache_hit_rate": 0.9608,
+      "live": true,
+      "ci95": [
+        0.3714,
+        0.7143
+      ],
+      "graded": 35,
+      "failure_categories": {
+        "resolved": 19,
+        "false_success": 8,
+        "agent_error": 3,
+        "unresolved": 5
+      },
+      "test_edited": 9,
+      "verifier_mode": "deterministic",
+      "verifier": {
+        "n": 35,
+        "verified_pass": 9,
+        "true_pass": 5,
+        "resolved": 19,
+        "precision": 0.5556,
+        "recall": 0.2632,
+        "false_success_claimed": 8,
+        "false_success_verified": 4,
+        "by_risk": {
+          "L0": [
+            5,
+            0.6
+          ],
+          "L1": [
+            18,
+            0.5
+          ],
+          "L2": [
+            12,
+            0.5833
+          ]
+        }
+      }
+    }
+  ],
+  "missing": [],
+  "warnings": [
+    "final-orchestrated：8 次虚假成功（声称修好但隐藏测试不过）",
+    "final-orchestrated：1 次疑似篡改测试（基础设施 / 削弱已有测试；Grader 已忽略这些改动）",
+    "final-orchestrated：9 次改写已有测试期望（未应用、不算篡改，建议人审）"
+  ],
+  "infra_errors": {}
+}

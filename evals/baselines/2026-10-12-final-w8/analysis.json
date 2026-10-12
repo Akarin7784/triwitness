@@ -1,0 +1,848 @@
+{
+ "pricing_note": "off_peak_equiv 按 configs/pricing.yaml 空闲价（命中 0.02 / 未命中 1.0 / 输出 4.0 元每百万）重算，消除基线臂高峰价影响",
+ "arms": {
+  "baseline": {
+   "calls": 1917,
+   "peak_calls": 1478,
+   "actual_cny": 7.382,
+   "off_peak_equiv_cny": 4.168,
+   "off_peak_per_task": 0.1191,
+   "tokens": {
+    "cache_hit": 60402304,
+    "cache_miss": 1147754,
+    "output": 453060
+   },
+   "cost_by_role": {
+    "executor": 7.382
+   },
+   "calls_by_role": {
+    "executor": 1917
+   },
+   "safety_cap_hits": {
+    "max_turns": 4,
+    "max_wall_seconds": 4
+   },
+   "off_peak_per_resolved": 0.2605
+  },
+  "orchestrated": {
+   "calls": 2611,
+   "peak_calls": 0,
+   "actual_cny": 8.4901,
+   "off_peak_equiv_cny": 8.4901,
+   "off_peak_per_task": 0.2426,
+   "tokens": {
+    "cache_hit": 68777856,
+    "cache_miss": 2803109,
+    "output": 1077864
+   },
+   "cost_by_role": {
+    "planner": 4.1877,
+    "executor": 3.1628,
+    "reviewer": 1.1397
+   },
+   "calls_by_role": {
+    "planner": 665,
+    "executor": 1637,
+    "reviewer": 309
+   },
+   "safety_cap_hits": {
+    "max_wall_seconds": 5,
+    "max_turns": 2
+   },
+   "off_peak_per_resolved": 0.4468
+  }
+ },
+ "per_task": {
+  "swe-param-1117": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.246397,
+    "steps": 49,
+    "wall_s": 221.59,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.378906,
+    "steps": 14,
+    "wall_s": 430.72,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-spikeinterface-3778": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.177113,
+    "steps": 47,
+    "wall_s": 2443.08,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.126906,
+    "steps": 32,
+    "wall_s": 2762.39,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-sqlglot-7479": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.214557,
+    "steps": 100,
+    "wall_s": 406.5,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_turns 已用尽：100 / 100",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.381931,
+    "steps": 15,
+    "wall_s": 2827.16,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：2229 / 1800",
+    "tamper_paths": []
+   }
+  },
+  "swe-loguru-1451": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.200571,
+    "steps": 45,
+    "wall_s": 804.35,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.233009,
+    "steps": 22,
+    "wall_s": 719.45,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-crosstl-98": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.120459,
+    "steps": 37,
+    "wall_s": 105.27,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.160741,
+    "steps": 31,
+    "wall_s": 180.8,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-loguru-1306": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.100447,
+    "steps": 29,
+    "wall_s": 540.01,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.181799,
+    "steps": 31,
+    "wall_s": 726.75,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": [
+     "tests/conftest.py"
+    ]
+   }
+  },
+  "swe-bedrock-agentcore-sdk-python-279_interface": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.146814,
+    "steps": 39,
+    "wall_s": 350.4,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.099493,
+    "steps": 32,
+    "wall_s": 181.36,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-isort-2491": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.566909,
+    "steps": 100,
+    "wall_s": 757.69,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_turns 已用尽：100 / 100",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.416202,
+    "steps": 99,
+    "wall_s": 783.54,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-spikeinterface-3047": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.099665,
+    "steps": 30,
+    "wall_s": 1668.77,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.180643,
+    "steps": 37,
+    "wall_s": 1523.02,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-django-components-489": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.188368,
+    "steps": 56,
+    "wall_s": 214.82,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.182249,
+    "steps": 23,
+    "wall_s": 203.57,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-cyclopts-701": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.162491,
+    "steps": 47,
+    "wall_s": 311.61,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.18854,
+    "steps": 44,
+    "wall_s": 398.82,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-xcp_d-1433": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.144636,
+    "steps": 55,
+    "wall_s": 849.88,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.177602,
+    "steps": 24,
+    "wall_s": 542.29,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-llm-sandbox-101": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.283557,
+    "steps": 51,
+    "wall_s": 258.06,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.280488,
+    "steps": 41,
+    "wall_s": 280.5,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-cyclopts-633": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.076458,
+    "steps": 25,
+    "wall_s": 241.57,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.159382,
+    "steps": 44,
+    "wall_s": 287.95,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-microsoft-authentication-library-for-python-730": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.514575,
+    "steps": 84,
+    "wall_s": 652.12,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.205989,
+    "steps": 32,
+    "wall_s": 770.56,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-icontract-297": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.215439,
+    "steps": 46,
+    "wall_s": 225.93,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": [
+     "tests/test_invariant.py"
+    ]
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.372288,
+    "steps": 73,
+    "wall_s": 499.78,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-faststream-2701": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.100418,
+    "steps": 36,
+    "wall_s": 3236.19,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：1801 / 1800",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.180933,
+    "steps": 54,
+    "wall_s": 2477.41,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-stumpy-1015": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.128211,
+    "steps": 60,
+    "wall_s": 3224.41,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：1843 / 1800",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.177667,
+    "steps": 52,
+    "wall_s": 3644.4,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：2300 / 1800",
+    "tamper_paths": []
+   }
+  },
+  "swe-conan-19750": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.144412,
+    "steps": 44,
+    "wall_s": 1255.59,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.226713,
+    "steps": 51,
+    "wall_s": 2639.73,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-sqlfluff-7615": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.265926,
+    "steps": 80,
+    "wall_s": 3263.66,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：1810 / 1800",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.374674,
+    "steps": 86,
+    "wall_s": 3680.48,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：2176 / 1800",
+    "tamper_paths": []
+   }
+  },
+  "swe-ccflow-24": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.183018,
+    "steps": 37,
+    "wall_s": 466.99,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.226952,
+    "steps": 43,
+    "wall_s": 359.08,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-huggingface_hub-4056": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.2181,
+    "steps": 61,
+    "wall_s": 1170.69,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.300937,
+    "steps": 76,
+    "wall_s": 2435.97,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-cfn-python-lint-4368": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.329714,
+    "steps": 88,
+    "wall_s": 1203.79,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.199712,
+    "steps": 65,
+    "wall_s": 1079.55,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-marimo-6819": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.480286,
+    "steps": 100,
+    "wall_s": 1927.16,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_turns 已用尽：100 / 100",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.552169,
+    "steps": 4,
+    "wall_s": 2308.43,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_turns 已用尽：100 / 100",
+    "tamper_paths": []
+   }
+  },
+  "swe-scrapy-7351_interface": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.084791,
+    "steps": 23,
+    "wall_s": 859.8,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.124974,
+    "steps": 40,
+    "wall_s": 1221.51,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-openhands-resolver-123": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.100335,
+    "steps": 23,
+    "wall_s": 401.72,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.118053,
+    "steps": 20,
+    "wall_s": 155.41,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-marimo-8401": {
+   "baseline": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.472303,
+    "steps": 100,
+    "wall_s": 1848.95,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_turns 已用尽：100 / 100",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": false,
+    "cost_cny": 0.375583,
+    "steps": 100,
+    "wall_s": 1988.38,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_turns 已用尽：100 / 100",
+    "tamper_paths": []
+   }
+  },
+  "swe-ro-crate-py-193": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.207203,
+    "steps": 50,
+    "wall_s": 198.67,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.396077,
+    "steps": 32,
+    "wall_s": 439.79,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-fromager-1106": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.096221,
+    "steps": 26,
+    "wall_s": 194.04,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.119698,
+    "steps": 25,
+    "wall_s": 164.92,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-canvasapi-716": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.159401,
+    "steps": 46,
+    "wall_s": 247.22,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.170432,
+    "steps": 29,
+    "wall_s": 228.35,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-ultraplot-696": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.176554,
+    "steps": 78,
+    "wall_s": 3221.15,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：1874 / 1800",
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.272476,
+    "steps": 40,
+    "wall_s": 3311.74,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：1838 / 1800",
+    "tamper_paths": []
+   }
+  },
+  "swe-copier-2646": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.313067,
+    "steps": 61,
+    "wall_s": 2086.53,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.227828,
+    "steps": 41,
+    "wall_s": 3129.94,
+    "agent_status": "budget_exhausted",
+    "error": "单任务安全上限 max_wall_seconds 已用尽：1843 / 1800",
+    "tamper_paths": []
+   }
+  },
+  "swe-opensandbox-816": {
+   "baseline": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.220385,
+    "steps": 54,
+    "wall_s": 369.08,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": false,
+    "false_success": true,
+    "cost_cny": 0.309125,
+    "steps": 47,
+    "wall_s": 507.13,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-leanclient-24": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.083464,
+    "steps": 22,
+    "wall_s": 123.66,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.142064,
+    "steps": 26,
+    "wall_s": 163.58,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  },
+  "swe-sqlglot-7457": {
+   "baseline": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.159684,
+    "steps": 88,
+    "wall_s": 1631.48,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   },
+   "orchestrated": {
+    "resolved": true,
+    "false_success": false,
+    "cost_cny": 0.267885,
+    "steps": 44,
+    "wall_s": 1882.58,
+    "agent_status": "finished",
+    "error": null,
+    "tamper_paths": []
+   }
+  }
+ },
+ "discordant": {
+  "orchestrated_only": [
+   "swe-loguru-1451",
+   "swe-scrapy-7351_interface",
+   "swe-sqlglot-7479"
+  ],
+  "baseline_only": []
+ },
+ "both_false_success": [
+  "swe-crosstl-98",
+  "swe-django-components-489",
+  "swe-huggingface_hub-4056",
+  "swe-loguru-1306",
+  "swe-openhands-resolver-123",
+  "swe-opensandbox-816",
+  "swe-ro-crate-py-193"
+ ]
+}

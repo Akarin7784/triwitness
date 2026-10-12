@@ -1,0 +1,156 @@
+diff --git a/docs/changes.md b/docs/changes.md
+index a31c952..110ab68 100644
+--- a/docs/changes.md
++++ b/docs/changes.md
+@@ -9,6 +9,7 @@
+ 
+ ### 🐛 Bug Fixes
+ 
++* Ignore native-space T2w when no T1w-space T2w is available by @tsalo in https://github.com/PennLINC/xcp_d/pull/1436
+ * Warp fsLR surfaces to NLin6 for brainsprite by @tsalo in https://github.com/PennLINC/xcp_d/pull/1419
+ * Warp anat mask to anat space for coreg QC by @tsalo in https://github.com/PennLINC/xcp_d/pull/1423
+ * Remove background label in ConnectPlot by @tsalo in https://github.com/PennLINC/xcp_d/pull/1424
+diff --git a/tests/tw_repro/test_issue_1436.py b/tests/tw_repro/test_issue_1436.py
+new file mode 100644
+index 0000000..6e66a6f
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1436.py
+@@ -0,0 +1,122 @@
++"""Repro for: native-space T2w is collected when no T1w-space T2w is available.
++
++Issue: https://github.com/PennLINC/xcp_d/issues/1436
++
++When both a T1w and a T2w are found, but the T2w is *not* in the same space as
++the T1w (there is no T1w-space T2w), and the T1w is the primary anatomical
++modality (transforms to/from standard space use the T1w), ``collect_data`` is
++supposed to explicitly ignore the T2w. It doesn't, so a native-space T2w is
++returned and later used by the workflow/executive summary with improper
++transforms.
++"""
++
++import os
++
++import pytest
++from bids.layout import BIDSLayout
++
++import xcp_d.utils.bids as xbids
++from xcp_d.data import load as load_data
++
++
++def _write_dataset(root, t1w_space_entity=None, t2w_space_entity=None, t2w_to_template=False):
++    """Write a minimal fMRIPrep-like derivatives dataset.
++
++    Parameters
++    ----------
++    root : str
++        Directory in which to build the dataset.
++    t1w_space_entity : str or None
++        Optional ``space-`` entity to add to the T1w file.
++    t2w_space_entity : str or None
++        Optional ``space-`` entity to add to the T2w file.
++    t2w_to_template : bool
++        Whether to include a T2w-to-template transform.
++    """
++    anat_dir = os.path.join(root, 'sub-01', 'anat')
++    func_dir = os.path.join(root, 'sub-01', 'func')
++    os.makedirs(anat_dir, exist_ok=True)
++    os.makedirs(func_dir, exist_ok=True)
++
++    def _touch(path):
++        with open(path, 'w'):
++            pass
++
++    t1w_space = f'_space-{t1w_space_entity}' if t1w_space_entity else ''
++    t2w_space = f'_space-{t2w_space_entity}' if t2w_space_entity else ''
++
++    # Native (or otherwise specified) anatomical images.
++    _touch(os.path.join(anat_dir, f'sub-01{t1w_space}_desc-preproc_T1w.nii.gz'))
++    _touch(os.path.join(anat_dir, f'sub-01{t2w_space}_desc-preproc_T2w.nii.gz'))
++
++    # T1w is the primary anatomical modality: transforms use the T1w.
++    _touch(
++        os.path.join(anat_dir, 'sub-01_from-T1w_to-MNI152NLin6Asym_mode-image_xfm.h5')
++    )
++    _touch(
++        os.path.join(anat_dir, 'sub-01_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.h5')
++    )
++    if t2w_to_template:
++        _touch(
++            os.path.join(anat_dir, 'sub-01_from-T2w_to-MNI152NLin6Asym_mode-image_xfm.h5')
++        )
++
++    # Brain mask and BOLD data in the target space.
++    _touch(os.path.join(anat_dir, 'sub-01_space-MNI152NLin6Asym_desc-brain_mask.nii.gz'))
++    _touch(
++        os.path.join(
++            func_dir,
++            'sub-01_task-rest_space-MNI152NLin6Asym_res-2_desc-preproc_bold.nii.gz',
++        )
++    )
++    _touch(
++        os.path.join(
++            func_dir,
++            'sub-01_task-rest_space-MNI152NLin6Asym_res-2_desc-brain_mask.nii.gz',
++        )
++    )
++
++    return BIDSLayout(
++        root,
++        validate=False,
++        config=['bids', 'derivatives', str(load_data('xcp_d_bids_config2.json'))],
++    )
++
++
++def _collect(layout):
++    return xbids.collect_data(
++        layout=layout,
++        input_type='fmriprep',
++        participant_label='01',
++        bids_filters=None,
++        file_format='nifti',
++    )
++
++
++def test_native_t2w_ignored_when_no_t1w_space_t2w(tmp_path):
++    """Native-space T2w must be ignored when T1w is the primary anatomical modality."""
++    # T1w and T2w are both native (no space entity); there is no T1w-space T2w and
++    # no T2w-to-template transform, so processing is T1w-only.
++    layout = _write_dataset(str(tmp_path))
++    subj_data = _collect(layout)
++
++    # The T1w is used for the transforms to/from standard space.
++    assert 'from-T1w' in os.path.basename(subj_data['anat_to_template_xfm'])
++    assert 'to-T1w' in os.path.basename(subj_data['template_to_anat_xfm'])
++    # The T1w must be collected.
++    assert subj_data['t1w'] is not None
++    # The native-space T2w must NOT be collected.
++    assert subj_data['t2w'] is None
++
++
++def test_t1w_space_t2w_still_collected(tmp_path):
++    """A T1w-space T2w must still be collected when available."""
++    layout = _write_dataset(str(tmp_path), t2w_space_entity='T1w')
++    subj_data = _collect(layout)
++
++    assert subj_data['t2w'] is not None
++    assert 'space-T1w' in os.path.basename(subj_data['t2w'])
++
++
++if __name__ == '__main__':
++    pytest.main([__file__, '-v'])
+diff --git a/xcp_d/utils/bids.py b/xcp_d/utils/bids.py
+index e6cc6ff..a680378 100644
+--- a/xcp_d/utils/bids.py
++++ b/xcp_d/utils/bids.py
+@@ -300,6 +300,11 @@ def collect_data(
+                     queries['t1w']['space'] = ['T1w', None]
+                     queries['template_to_anat_xfm']['to'] = 'T1w'
+                     queries['anat_to_template_xfm']['from'] = 'T1w'
++                    # Since the T1w is the primary anatomical modality and there is no
++                    # T1w-space T2w, the T2w cannot be used. Restrict the T2w query to
++                    # T1w space (which we already know does not exist) so that a
++                    # native-space T2w isn't collected.
++                    queries['t2w']['space'] = 'T1w'
+                 else:
+                     LOGGER.info('Performing T2w-only processing.')
+                     queries['template_to_anat_xfm']['to'] = 'T2w'

@@ -1,0 +1,160 @@
+diff --git a/sqlglot/expressions/functions.py b/sqlglot/expressions/functions.py
+index 2cfeb2b..bf920e8 100644
+--- a/sqlglot/expressions/functions.py
++++ b/sqlglot/expressions/functions.py
+@@ -321,6 +321,10 @@ class AIClassify(Expression, Func):
+     _sql_names = ["AI_CLASSIFY"]
+ 
+ 
++class AIForecast(Expression, Func):
++    arg_types = {"this": True, "named_args": False}
++
++
+ class FeaturesAtTime(Expression, Func):
+     arg_types = {"this": True, "time": False, "num_rows": False, "ignore_feature_nulls": False}
+ 
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 709ca80..d438f49 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -4668,6 +4668,15 @@ class Generator:
+     def mlforecast_sql(self, expression: exp.MLForecast) -> str:
+         return self._ml_sql(expression, "FORECAST")
+ 
++    def aiforecast_sql(self, expression: exp.AIForecast) -> str:
++        this_sql = self.sql(expression, "this")
++        if isinstance(expression.this, exp.Table):
++            this_sql = f"TABLE {this_sql}"
++
++        named_args = expression.args.get("named_args") or []
++
++        return self.func("FORECAST", this_sql, *named_args)
++
+     def featuresattime_sql(self, expression: exp.FeaturesAtTime) -> str:
+         this_sql = self.sql(expression, "this")
+         if isinstance(expression.this, exp.Table):
+diff --git a/sqlglot/parsers/bigquery.py b/sqlglot/parsers/bigquery.py
+index f0b99ff..f5f9f46 100644
+--- a/sqlglot/parsers/bigquery.py
++++ b/sqlglot/parsers/bigquery.py
+@@ -285,7 +285,7 @@ class BigQueryParser(parser.Parser):
+         "GENERATE_EMBEDDING": lambda self: self._parse_ml(exp.GenerateEmbedding),
+         "GENERATE_TEXT_EMBEDDING": lambda self: self._parse_ml(exp.GenerateEmbedding, is_text=True),
+         "VECTOR_SEARCH": lambda self: self._parse_vector_search(),
+-        "FORECAST": lambda self: self._parse_ml(exp.MLForecast),
++        "FORECAST": lambda self: self._parse_forecast(),
+     }
+ 
+     NO_PAREN_FUNCTIONS: t.ClassVar = {
+@@ -595,6 +595,24 @@ class BigQueryParser(parser.Parser):
+             )
+         )
+ 
++    def _parse_forecast(self) -> exp.AIForecast | exp.MLForecast:
++        # Check if this is AI.FORECAST by looking at previous tokens
++        token = seq_get(self._tokens, self._index - 4)
++        if token and token.text.upper() == "AI":
++            self._match(TokenType.TABLE)
++            this = self._parse_table()
++
++            kwargs = []
++
++            while self._match(TokenType.COMMA):
++                arg = self._parse_lambda()
++                if arg:
++                    kwargs.append(arg)
++
++            return self.expression(exp.AIForecast(this=this, named_args=kwargs))
++
++        return self._parse_ml(exp.MLForecast)
++
+     def _parse_translate(self) -> exp.Translate | exp.MLTranslate:
+         # Check if this is ML.TRANSLATE by looking at previous tokens
+         token = seq_get(self._tokens, self._index - 4)
+diff --git a/tests/dialects/test_bigquery.py b/tests/dialects/test_bigquery.py
+index af43a0b..08593e6 100644
+--- a/tests/dialects/test_bigquery.py
++++ b/tests/dialects/test_bigquery.py
+@@ -2425,6 +2425,23 @@ OPTIONS (
+ 
+                 assert ast.find(exp.GenerateEmbedding)
+ 
++    def test_ai_forecast_tvf(self):
++        sql = (
++            'SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => "num_trips", '
++            'timestamp_col => "date", horizon => 30)'
++        )
++        ast = self.parse_one(sql)
++        self.assertIsNotNone(ast.find(exp.AIForecast))
++
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => 'num_trips', "
++            "timestamp_col => 'date', horizon => 30)"
++        )
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST((SELECT * FROM citibike_trips), data_col => 'num_trips', "
++            "timestamp_col => 'date', horizon => 30, confidence_level => 0.9)"
++        )
++
+     def test_merge(self):
+         self.validate_all(
+             """
+diff --git a/tests/tw_repro/test_issue_ai_forecast.py b/tests/tw_repro/test_issue_ai_forecast.py
+new file mode 100644
+index 0000000..036f9a2
+--- /dev/null
++++ b/tests/tw_repro/test_issue_ai_forecast.py
+@@ -0,0 +1,53 @@
++"""Reproduction for: BigQuery AI.FORECAST TVF syntax fails to parse.
++
++Issue: 'SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => "num_trips",
++timestamp_col => "date", horizon => 30)' raises
++``sqlglot.errors.ParseError: Invalid expression / Unexpected token``.
++"""
++
++import unittest
++
++from sqlglot import exp
++
++from tests.dialects.test_dialect import Validator
++
++
++class TestBigQueryAIForecastIssue(Validator):
++    dialect = "bigquery"
++
++    def test_ai_forecast_tvf_parses(self):
++        # (a) the exact SQL from the Issue (double quotes are string literals in BigQuery)
++        #     must parse without raising, producing an AIForecast node.
++        sql = (
++            'SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => "num_trips", '
++            'timestamp_col => "date", horizon => 30)'
++        )
++        ast = self.parse_one(sql)
++        self.assertIsNotNone(ast.find(exp.AIForecast))
++
++        # (b) round-trip: BigQuery normalizes double-quoted strings to single quotes.
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => 'num_trips', "
++            "timestamp_col => 'date', horizon => 30)"
++        )
++
++    def test_ai_forecast_subquery_and_extra_args(self):
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST((SELECT * FROM citibike_trips), data_col => 'num_trips', "
++            "timestamp_col => 'date', horizon => 30, confidence_level => 0.9)"
++        )
++
++    def test_ml_forecast_still_works(self):
++        # sanity: ML.FORECAST must keep behaving as before
++        ast = self.validate_identity(
++            "SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, STRUCT(2 AS horizon))"
++        )
++        self.assertIsNotNone(ast.find(exp.MLForecast))
++        self.validate_identity(
++            "SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, TABLE `mydataset.mybqtable`, "
++            "STRUCT(2 AS horizon, 4 AS confidence_level))"
++        )
++
++
++if __name__ == "__main__":
++    unittest.main()

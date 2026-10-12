@@ -1,0 +1,153 @@
+diff --git a/rocrate/model/entity.py b/rocrate/model/entity.py
+index 22e69a5..ae75896 100644
+--- a/rocrate/model/entity.py
++++ b/rocrate/model/entity.py
+@@ -40,7 +40,10 @@ class Entity(MutableMapping):
+                 if name.startswith("@"):
+                     self._jsonld[name] = value
+                 else:
+-                    self[name] = value
++                    # properties passed at construction time may come from an
++                    # existing crate (e.g. when reading from disk), so don't
++                    # enforce the "@id" check that applies to user assignments
++                    self._set_property(name, value, validate=False)
+ 
+     @property
+     def id(self):
+@@ -101,10 +104,22 @@ class Entity(MutableMapping):
+     def __setitem__(self, key: str, value):
+         if key.startswith("@"):
+             raise KeyError(f"cannot set '{key}'")
++        self._set_property(key, value, validate=True)
++
++    def _set_property(self, key, value, validate=True):
+         values = value if isinstance(value, list) else [value]
++        if validate:
++            for _ in values:
++                self._validate_property_value(key, _)
+         ref_values = [{"@id": _.id} if isinstance(_, Entity) else _ for _ in values]
+         self._jsonld[key] = ref_values if isinstance(value, list) else ref_values[0]
+ 
++    def _validate_property_value(self, key, value):
++        if isinstance(value, dict) and "@id" not in value:
++            raise ValueError(
++                f"cannot set property {key!r} to a dictionary without an '@id': {value!r}"
++            )
++
+     def __delitem__(self, key: str):
+         if key.startswith("@"):
+             raise KeyError(f"cannot delete '{key}'")
+@@ -161,6 +176,8 @@ class Entity(MutableMapping):
+             current_value = self._jsonld[key] = [current_value]
+         if not isinstance(value, list):
+             value = [value]
++        for _ in value:
++            self._validate_property_value(key, _)
+         current_value.extend([{"@id": _.id} if isinstance(_, Entity) else _ for _ in value])
+         if compact and len(current_value) == 1:
+             self._jsonld[key] = current_value[0]
+diff --git a/tests/tw_repro/test_issue_nested_props.py b/tests/tw_repro/test_issue_nested_props.py
+new file mode 100644
+index 0000000..24d8c54
+--- /dev/null
++++ b/tests/tw_repro/test_issue_nested_props.py
+@@ -0,0 +1,99 @@
++# Copyright 2019-2024 The University of Manchester, UK
++# Copyright 2020-2024 Vlaams Instituut voor Biotechnologie (VIB), BE
++# Copyright 2020-2024 Barcelona Supercomputing Center (BSC), ES
++# Copyright 2020-2024 Center for Advanced Studies, Research and Development in Sardinia (CRS4), IT
++# Copyright 2022-2024 École Polytechnique Fédérale de Lausanne, CH
++# Copyright 2024 Data Centre, SciLifeLab, SE
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""Reproducer for "Setting/Accessing nested properties on entities without @id".
++
++Setting a nested property whose value is a dictionary that does not contain an
++``@id`` used to be accepted silently, but accessing the property afterwards
++raised ``ValueError: no @id in {...}``.
++"""
++
++import pytest
++
++from rocrate.rocrate import ROCrate
++
++
++def test_set_nested_prop_without_id_raises():
++    """Setting a dict without @id must be rejected."""
++    crate = ROCrate()
++    with pytest.raises(ValueError):
++        crate.root_dataset["license"] = {
++            "@type": "CreativeWork",
++            "name": "CC-O",
++            "url": "https://spdx.org/licenses/CC0-1.0",
++        }
++
++
++def test_set_nested_prop_without_id_list_raises():
++    """A list containing a dict without @id must be rejected too."""
++    crate = ROCrate()
++    with pytest.raises(ValueError):
++        crate.root_dataset["license"] = [
++            "https://spdx.org/licenses/CC0-1.0",
++            {
++                "@type": "CreativeWork",
++                "name": "CC-O",
++            },
++        ]
++
++
++def test_set_nested_prop_with_id_ok():
++    """A dict with an @id may still be set and round-trips through __getitem__."""
++    crate = ROCrate()
++    crate.root_dataset["license"] = {"@id": "https://spdx.org/licenses/CC0-1.0"}
++    assert crate.root_dataset["license"] == "https://spdx.org/licenses/CC0-1.0"
++
++
++def test_get_nested_prop_without_id_still_raises_after_fix():
++    """Reading a value without an @id that was loaded from metadata still raises.
++
++    The assignment-side check prevents creating such a property, but a crate
++    read from disk may still contain one; this documents the unchanged
++    read-side behavior.
++    """
++    metadata = {
++        "@context": "https://w3id.org/ro/crate/1.1/context",
++        "@graph": [
++            {
++                "@id": "ro-crate-metadata.json",
++                "@type": "CreativeWork",
++                "about": {"@id": "./"},
++                "conformsTo": {"@id": "https://w3id.org/ro/crate/1.1"},
++            },
++            {
++                "@id": "./",
++                "@type": "Dataset",
++                "license": {
++                    "@type": "CreativeWork",
++                    "name": "CC-O",
++                    "url": "https://spdx.org/licenses/CC0-1.0",
++                },
++            },
++        ],
++    }
++    crate = ROCrate(metadata)
++    with pytest.raises(ValueError):
++        crate.root_dataset["license"]
++
++
++def test_append_to_nested_prop_without_id_raises():
++    """append_to must apply the same check."""
++    crate = ROCrate()
++    with pytest.raises(ValueError):
++        crate.root_dataset.append_to("license", {"@type": "CreativeWork", "name": "CC-O"})

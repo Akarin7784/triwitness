@@ -1,0 +1,90 @@
+diff --git a/conan/internal/api/profile/profile_loader.py b/conan/internal/api/profile/profile_loader.py
+index 61342c2..cfc1533 100644
+--- a/conan/internal/api/profile/profile_loader.py
++++ b/conan/internal/api/profile/profile_loader.py
+@@ -245,8 +245,11 @@ class _ProfileValueParser:
+         if doc.system_tools:
+             ConanOutput().warning("Profile [system_tools] is deprecated,"
+                                   " please use [platform_tool_requires]")
+-        platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
+-        platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
++        platform_tool_requires = _ProfileValueParser._parse_platform_requires(
++            doc_platform_tool_requires, "platform_tool_requires" if doc.platform_tool_requires
++            else "system_tools")
++        platform_requires = _ProfileValueParser._parse_platform_requires(
++            doc_platform_requires, "platform_requires")
+ 
+         def load_replace(doc_replace_requires):
+             result = {}
+@@ -322,6 +325,25 @@ class _ProfileValueParser:
+             result[pattern.strip()] = req_list.strip()
+         return result
+ 
++    @staticmethod
++    def _parse_platform_requires(section_text, section_name):
++        """ Parses the entries of [platform_requires] and [platform_tool_requires] sections.
++        These sections must contain exact references, version ranges are not allowed.
++        """
++        result = []
++        for line in section_text.splitlines():
++            line = line.strip()
++            if not line or line.startswith("#"):
++                continue
++            ref = RecipeReference.loads(line)
++            version = repr(ref.version)
++            if len(version) > 1 and version[0] == "[" and version[-1] == "]":
++                raise ConanException(
++                    f"Version ranges are not allowed in [{section_name}]: '{line}'. "
++                    f"Please use exact package references, like 'name/version'")
++            result.append(ref)
++        return result
++
+     @staticmethod
+     def _parse_tool_requires(doc):
+         result = OrderedDict()
+diff --git a/test/tw_repro/test_issue_platform_requires_range.py b/test/tw_repro/test_issue_platform_requires_range.py
+new file mode 100644
+index 0000000..b812405
+--- /dev/null
++++ b/test/tw_repro/test_issue_platform_requires_range.py
+@@ -0,0 +1,40 @@
++import textwrap
++
++import pytest
++
++from conan.test.assets.genconanfile import GenConanfile
++from conan.test.utils.tools import TestClient
++
++
++class TestPlatformRequiresVersionRange:
++    """Version ranges are not allowed in [platform_requires]/[platform_tool_requires].
++    They must be rejected with a normal profile-reading error."""
++
++    def test_platform_requires_version_range_error(self):
++        client = TestClient(light=True)
++        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
++                     "profile": "[platform_requires]\ndep/[>=1.0]"})
++        client.run("create . -pr=profile", assert_error=True)
++        # A normal ConanException, not an internal AssertionError traceback
++        assert "AssertionError" not in client.out
++        assert "ERROR: Traceback" not in client.out
++        # The error must identify the offending section and reference
++        assert "platform_requires" in client.out
++        assert "dep/[>=1.0]" in client.out
++
++    def test_platform_tool_requires_version_range_error(self):
++        client = TestClient(light=True)
++        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("cmake/[>=3.0]"),
++                     "profile": "[platform_tool_requires]\ncmake/[>=3.0]"})
++        client.run("create . -pr=profile", assert_error=True)
++        assert "AssertionError" not in client.out
++        assert "ERROR: Traceback" not in client.out
++        assert "platform_tool_requires" in client.out
++        assert "cmake/[>=3.0]" in client.out
++
++    def test_platform_requires_exact_still_works(self):
++        client = TestClient(light=True)
++        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
++                     "profile": "[platform_requires]\ndep/1.1"})
++        client.run("create . -pr=profile")
++        assert "dep/1.1#platform - Platform" in client.out

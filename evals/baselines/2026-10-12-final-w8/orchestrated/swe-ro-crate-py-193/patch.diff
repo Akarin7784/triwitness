@@ -1,0 +1,210 @@
+diff --git a/rocrate/model/entity.py b/rocrate/model/entity.py
+index 22e69a5..9a1a083 100644
+--- a/rocrate/model/entity.py
++++ b/rocrate/model/entity.py
+@@ -91,16 +91,32 @@ class Entity(MutableMapping):
+                 try:
+                     id_ = entry["@id"]
+                 except KeyError:
+-                    raise ValueError(f"no @id in {entry}")
++                    # Be forgiving on read: an inline (non-reference) dict
++                    # has no @id, so return it as is rather than failing.
++                    deref_values.append(entry)
+                 else:
+                     deref_values.append(self.crate.get(id_, id_))
+             else:
+                 deref_values.append(entry)
+         return deref_values if isinstance(v, list) else deref_values[0]
+ 
++    @staticmethod
++    def _validate_value(key, value):
++        """\
++        Ensure that a property value does not contain a dict without an @id.
++
++        Writing such a value would produce a crate that cannot be read back
++        by this library, so it must be rejected early.
++        """
++        values = value if isinstance(value, list) else [value]
++        for v in values:
++            if isinstance(v, dict) and "@id" not in v:
++                raise ValueError(f"value of property {key!r} has no @id: {v!r}")
++
+     def __setitem__(self, key: str, value):
+         if key.startswith("@"):
+             raise KeyError(f"cannot set '{key}'")
++        self._validate_value(key, value)
+         values = value if isinstance(value, list) else [value]
+         ref_values = [{"@id": _.id} if isinstance(_, Entity) else _ for _ in values]
+         self._jsonld[key] = ref_values if isinstance(value, list) else ref_values[0]
+@@ -156,6 +172,7 @@ class Entity(MutableMapping):
+     def append_to(self, key: str, value, compact=False):
+         if key.startswith("@"):
+             raise KeyError(f"cannot append to '{key}'")
++        self._validate_value(key, value)
+         current_value = self._jsonld.setdefault(key, [])
+         if not isinstance(current_value, list):
+             current_value = self._jsonld[key] = [current_value]
+@@ -164,3 +181,14 @@ class Entity(MutableMapping):
+         current_value.extend([{"@id": _.id} if isinstance(_, Entity) else _ for _ in value])
+         if compact and len(current_value) == 1:
+             self._jsonld[key] = current_value[0]
++
++    def _update_from_jsonld(self, properties):
++        """\
++        Update the entity properties from raw JSON-LD, bypassing validation.
++
++        This is meant to be used when loading an existing crate from disk,
++        where values (e.g., nested dicts without an @id) may have been
++        written by other tools or crate versions, so they must be accepted
++        as they are.
++        """
++        self._jsonld.update(properties)
+diff --git a/rocrate/rocrate.py b/rocrate/rocrate.py
+index 5597d54..dba9375 100644
+--- a/rocrate/rocrate.py
++++ b/rocrate/rocrate.py
+@@ -142,16 +142,28 @@ class ROCrate():
+         root_entity = entities.pop(root_id)
+         assert root_id == root_entity.pop('@id')
+         parts = as_list(root_entity.pop('hasPart', []))
+-        self.add(RootDataset(self, root_id, properties=root_entity))
++        self.add(self._add_props(RootDataset(self, root_id), root_entity))
+         MetadataClass = metadata_class(metadata_id)
+         metadata_properties = entities.pop(metadata_id)
+-        self.add(MetadataClass(self, metadata_id, properties=metadata_properties))
++        self.add(self._add_props(MetadataClass(self, metadata_id), metadata_properties))
+ 
+         preview_entity = entities.pop(Preview.BASENAME, None)
+         if preview_entity and not gen_preview:
+-            self.add(Preview(self, source / Preview.BASENAME, properties=preview_entity))
++            self.add(self._add_props(Preview(self, source / Preview.BASENAME), preview_entity))
+         self.__add_parts(parts, entities, source)
+ 
++    @staticmethod
++    def _add_props(entity, properties):
++        """\
++        Set an entity's JSON-LD properties without validation.
++
++        Used on the crate reading path, where properties (including nested
++        dicts without an @id) may have been written by other tools or older
++        versions and must be accepted as they are.
++        """
++        entity._update_from_jsonld(properties)
++        return entity
++
+     def __add_parts(self, parts, entities, source):
+         type_map = OrderedDict((_.__name__, _) for _ in subclasses(FileOrDir))
+         for data_entity_ref in parts:
+@@ -163,12 +175,13 @@ class ROCrate():
+             assert id_ == entity.pop('@id')
+             cls = pick_type(entity, type_map, fallback=DataEntity)
+             if cls is DataEntity:
+-                instance = DataEntity(self, identifier=id_, properties=entity)
++                instance = DataEntity(self, identifier=id_)
+             else:
+                 if is_url(id_):
+-                    instance = cls(self, id_, properties=entity)
++                    instance = cls(self, id_)
+                 else:
+-                    instance = cls(self, source / id_, id_, properties=entity)
++                    instance = cls(self, source / id_, id_)
++            self._add_props(instance, entity)
+             self.add(instance)
+             self.__add_parts(as_list(entity.get("hasPart", [])), entities, source)
+ 
+@@ -177,7 +190,7 @@ class ROCrate():
+         for identifier, entity in entities.items():
+             assert identifier == entity.pop('@id')
+             cls = pick_type(entity, type_map, fallback=ContextEntity)
+-            self.add(cls(self, identifier, entity))
++            self.add(self._add_props(cls(self, identifier), entity))
+ 
+     @property
+     def default_entities(self):
+diff --git a/test/test_model.py b/test/test_model.py
+index 4465ece..0ae1393 100644
+--- a/test/test_model.py
++++ b/test/test_model.py
+@@ -411,8 +411,7 @@ def test_entity_as_mapping(tmpdir, helpers):
+         "application/json",
+         "https://www.json.org",
+     }
+-    with pytest.raises(ValueError):
+-        correction["badProp"]
++    assert correction["badProp"] == {"k": "v"}
+ 
+ 
+ def test_wf_types():
+diff --git a/tests/tw_repro/test_issue_nested_props_without_id.py b/tests/tw_repro/test_issue_nested_props_without_id.py
+new file mode 100644
+index 0000000..ac30b3a
+--- /dev/null
++++ b/tests/tw_repro/test_issue_nested_props_without_id.py
+@@ -0,0 +1,67 @@
++# Reproduction tests for the issue:
++# "Setting/Accessing nested properties on entities without @id"
++#
++# A dict value without "@id" must not be silently written to an entity
++# (the crate would then be unreadable by this same library), but reading
++# such a value from an existing crate must be forgiving.
++
++import json
++
++import pytest
++
++from rocrate.rocrate import ROCrate
++from rocrate.model import Person
++
++
++def test_set_nested_property_without_id():
++    crate = ROCrate()
++    bad = {"@type": "CreativeWork", "name": "CC0",
++           "url": "https://spdx.org/licenses/CC0-1.0"}
++    with pytest.raises(ValueError, match="@id"):
++        crate.root_dataset["license"] = bad
++    # the failed assignment must not have polluted the entity
++    assert "license" not in crate.root_dataset
++    # list-valued assignment with a bare dict is rejected too
++    with pytest.raises(ValueError, match="@id"):
++        crate.root_dataset["author"] = ["Alice", {"@type": "CreativeWork"}]
++    assert "author" not in crate.root_dataset
++    # append_to is rejected as well, without side effects
++    with pytest.raises(ValueError, match="@id"):
++        crate.root_dataset.append_to("license", {"@type": "CreativeWork"})
++    assert "license" not in crate.root_dataset
++    # a proper reference still works
++    crate.root_dataset["license"] = {"@id": "https://spdx.org/licenses/CC0-1.0"}
++    assert crate.root_dataset["license"] == "https://spdx.org/licenses/CC0-1.0"
++
++
++def test_properties_with_nested_dict_without_id():
++    crate = ROCrate()
++    with pytest.raises(ValueError, match="@id"):
++        crate.add(Person(crate, "#joe", properties={"license": {"@type": "CreativeWork"}}))
++    # a reference is fine
++    crate.add(Person(crate, "#joe2", properties={"license": {"@id": "#lic"}}))
++
++
++def test_get_nested_property_without_id(tmpdir):
++    metadata_file_name = 'ro-crate-metadata.json'
++    license_ = {"@type": "CreativeWork", "name": "CC0",
++                "url": "https://spdx.org/licenses/CC0-1.0"}
++    metadata = {
++        "@context": "https://w3id.org/ro/crate/1.1/context",
++        "@graph": [
++            {"@id": "ro-crate-metadata.json",
++             "@type": "CreativeWork",
++             "about": {"@id": "./"},
++             "conformsTo": {"@id": "https://w3id.org/ro/crate/1.1"}},
++            {"@id": "./",
++             "@type": "Dataset",
++             "license": license_},
++        ]
++    }
++    crate_dir = tmpdir / "inline_crate"
++    crate_dir.mkdir()
++    with open(crate_dir / metadata_file_name, "wt") as f:
++        json.dump(metadata, f, indent=4)
++    crate = ROCrate(crate_dir)
++    # reading must be forgiving: return the raw value
++    assert crate.root_dataset["license"] == license_

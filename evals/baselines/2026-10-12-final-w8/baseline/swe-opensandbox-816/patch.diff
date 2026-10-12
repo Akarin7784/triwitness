@@ -1,0 +1,251 @@
+diff --git a/server/opensandbox_server/services/validators.py b/server/opensandbox_server/services/validators.py
+index 4b37b57..2096453 100644
+--- a/server/opensandbox_server/services/validators.py
++++ b/server/opensandbox_server/services/validators.py
+@@ -22,6 +22,7 @@ enforce the same preconditions before performing runtime-specific work.
+ from __future__ import annotations
+ 
+ from datetime import datetime, timedelta, timezone
++import os
+ from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
+ 
+ from fastapi import HTTPException, status
+@@ -68,6 +69,58 @@ def _normalize_prefix_path(path: str) -> str:
+     return normalized
+ 
+ 
++def _find_symlink_component(path: str) -> Optional[str]:
++    """
++    Return the first path component of ``path`` that is a symbolic link.
++
++    The check walks every prefix of the (lexically normalized) path, from the
++    filesystem root down to the full path, and inspects each component with
++    ``os.path.islink``.  Components that do not exist yet (``os.path.islink``
++    returns ``False`` for missing paths) are not considered symlinks.
++
++    Windows-style paths (e.g. ``D:\\data``) are reported as ``None`` because
++    their components cannot be stat-ed on a POSIX host.  Callers still rely on
++    the lexical checks in :func:`ensure_valid_host_path` for those paths.
++
++    Args:
++        path: Absolute host path to inspect.
++
++    Returns:
++        The offending component (as an absolute path) when a symlink is found,
++        otherwise ``None``.
++    """
++    # On POSIX hosts, Windows drive paths (C:\ or D:/) cannot be stat-ed for
++    # symlink resolution; skip the filesystem walk for them.
++    if os.name != "nt" and re.match(r"^[A-Za-z]:[\\/]", path):
++        return None
++
++    native_path = os.path.normpath(path)
++    components: List[str] = []
++
++    # Build the list of path components from the root down to the leaf.
++    head, tail = os.path.split(native_path)
++    while tail:
++        components.append(tail)
++        head, tail = os.path.split(head)
++    # ``head`` now holds the anchor (``/`` on POSIX or ``C:\\`` on Windows).
++    anchor = head
++    if not anchor:
++        # Relative paths should have been rejected earlier; nothing to walk.
++        return None
++
++    current = anchor
++    for component in reversed(components):
++        current = os.path.join(current, component)
++        try:
++            if os.path.islink(current):
++                return current
++        except OSError:
++            # Cannot stat this component (e.g. permissions); treat as
++            # non-symlink and let downstream checks handle it.
++            continue
++    return None
++
++
+ def _is_valid_label_key(key: str) -> bool:
+     if "/" in key:
+         prefix, name = key.split("/", 1)
+@@ -450,6 +503,25 @@ def ensure_valid_host_path(
+             },
+         )
+ 
++    # Reject any path that contains a symbolic link.  Lexical normalisation
++    # above cannot detect symlinks, so an attacker could otherwise place a
++    # symlink inside an allowed prefix that points at ``/`` (or any other host
++    # path): the lexical allowlist check would pass while Docker resolves the
++    # symlink when performing the bind mount.  This mirrors the symlink-aware
++    # validation already applied to PVC volumes via os.path.realpath(strict=True).
++    symlink_component = _find_symlink_component(path)
++    if symlink_component is not None:
++        raise HTTPException(
++            status_code=status.HTTP_400_BAD_REQUEST,
++            detail={
++                "code": SandboxErrorCodes.INVALID_HOST_PATH,
++                "message": (
++                    f"Host path '{path}' contains symbolic link "
++                    f"'{symlink_component}', which is not allowed."
++                ),
++            },
++        )
++
+     # Check against allowed prefixes if provided
+     if allowed_prefixes is not None:
+         # Normalize separators for cross-platform prefix checks so Windows-style
+diff --git a/server/tests/tw_repro/test_issue_symlink.py b/server/tests/tw_repro/test_issue_symlink.py
+new file mode 100644
+index 0000000..e14f870
+--- /dev/null
++++ b/server/tests/tw_repro/test_issue_symlink.py
+@@ -0,0 +1,148 @@
++# Copyright 2025 Alibaba Group Holding Ltd.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""
++Reproduction for the host-path symlink escape in the ``allowed_host_paths``
++allowlist of OpenSandbox.
++
++An attacker places a symbolic link inside a whitelisted host path, the symlink
++points at the host root directory ``/`` (or any other host path outside the
++allowlist), and then requests a bind mount using the symlink path.  Because
++``ensure_valid_host_path`` only performs lexical normalisation (``normpath``)
++and never resolves symbolic links (``realpath``), the allowlist check passes
++while Docker happily resolves the symlink when bind mounting, giving access to
++an arbitrary host path.
++"""
++
++import os
++from unittest.mock import MagicMock, patch
++
++import pytest
++from fastapi import HTTPException, status
++
++from opensandbox_server.api.schema import (
++    CreateSandboxRequest,
++    Host,
++    ImageSpec,
++    ResourceLimits,
++    Volume,
++)
++from opensandbox_server.config import StorageConfig
++from opensandbox_server.services.constants import SandboxErrorCodes
++from opensandbox_server.services.docker import DockerSandboxService
++from opensandbox_server.services.validators import ensure_valid_host_path
++
++from tests.test_docker_service import _app_config
++
++
++class TestEnsureValidHostPathRejectsSymlinks:
++    """``ensure_valid_host_path`` must reject paths containing symlinks."""
++
++    def test_symlink_inside_allowed_prefix_pointing_to_root_is_rejected(self, tmp_path):
++        """A symlink under an allowed prefix that points to ``/`` must be rejected."""
++        allowed_dir = tmp_path / "allowed"
++        allowed_dir.mkdir()
++        escape = allowed_dir / "escape"
++        os.symlink("/", escape)
++
++        with pytest.raises(HTTPException) as exc_info:
++            ensure_valid_host_path(str(escape), [str(allowed_dir)])
++
++        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
++        assert exc_info.value.detail["code"] in (
++            SandboxErrorCodes.INVALID_HOST_PATH,
++            SandboxErrorCodes.HOST_PATH_NOT_ALLOWED,
++        )
++
++    def test_lexical_prefix_match_with_symlink_component_is_rejected(self, tmp_path):
++        """The symlink path lexically starts with the allowed prefix, but must still be rejected."""
++        allowed_dir = tmp_path / "allowed"
++        allowed_dir.mkdir()
++        escape = allowed_dir / "escape"
++        os.symlink("/", escape)
++        requested = str(escape / "etc")
++
++        # Sanity check: the requested path really does look allowlisted lexically.
++        assert os.path.normpath(requested).startswith(str(allowed_dir))
++
++        with pytest.raises(HTTPException) as exc_info:
++            ensure_valid_host_path(requested, [str(allowed_dir)])
++
++        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
++
++    def test_nested_symlink_deep_inside_prefix_is_rejected(self, tmp_path):
++        """A symlink that is not a direct child of the allowed prefix must also be caught."""
++        allowed_dir = tmp_path / "allowed"
++        nested = allowed_dir / "a" / "b"
++        nested.mkdir(parents=True)
++        escape = nested / "escape"
++        os.symlink("/", escape)
++
++        with pytest.raises(HTTPException) as exc_info:
++            ensure_valid_host_path(str(escape), [str(allowed_dir)])
++
++        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
++
++    def test_regular_path_inside_prefix_is_still_allowed(self, tmp_path):
++        """Non-symlink paths under an allowed prefix must keep working."""
++        allowed_dir = tmp_path / "allowed"
++        target = allowed_dir / "sub"
++        target.mkdir(parents=True)
++
++        assert ensure_valid_host_path(str(target), [str(allowed_dir)]) is None
++
++
++class TestDockerServiceRejectsSymlinkedHostVolume:
++    """``create_sandbox`` must reject symlinked host volumes that escape the allowlist."""
++
++    @pytest.mark.asyncio
++    @patch("opensandbox_server.services.docker.docker")
++    async def test_create_sandbox_symlink_to_root_is_rejected(self, mock_docker, tmp_path):
++        mock_client = MagicMock()
++        mock_client.containers.list.return_value = []
++        mock_docker.from_env.return_value = mock_client
++
++        allowed_dir = tmp_path / "allowed"
++        allowed_dir.mkdir()
++        escape = allowed_dir / "escape"
++        os.symlink("/", escape)
++
++        cfg = _app_config()
++        cfg.storage = StorageConfig(allowed_host_paths=[str(allowed_dir)])
++        service = DockerSandboxService(config=cfg)
++
++        request = CreateSandboxRequest(
++            image=ImageSpec(uri="python:3.11"),
++            timeout=120,
++            resourceLimits=ResourceLimits(root={}),
++            env={},
++            metadata={},
++            entrypoint=["python"],
++            volumes=[
++                Volume(
++                    name="workdir",
++                    host=Host(path=str(escape)),
++                    mount_path="/mnt/work",
++                    read_only=False,
++                )
++            ],
++        )
++
++        with patch.object(service, "_ensure_image_available"), patch.object(
++            service, "_prepare_sandbox_runtime"
++        ):
++            with pytest.raises(HTTPException) as exc_info:
++                await service.create_sandbox(request)
++
++        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST

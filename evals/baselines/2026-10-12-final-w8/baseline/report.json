@@ -1,0 +1,66 @@
+{
+  "run_dir": "/out/final/results/baseline",
+  "rows": [
+    {
+      "config": "final-baseline",
+      "agent": "llm",
+      "tasks": 35,
+      "attempts": 35,
+      "resolved_at_1": 0.45714285714285713,
+      "solved": 16,
+      "total_cost_cny": 7.3819,
+      "avg_cost_per_task": 0.2109,
+      "cost_per_resolved": 0.4614,
+      "avg_steps": 54.8,
+      "avg_wall_s": 1056.6,
+      "false_success": 9,
+      "tampered": 1,
+      "cache_hit_rate": 0.9814,
+      "live": true,
+      "ci95": [
+        0.3143,
+        0.6286
+      ],
+      "graded": 35,
+      "failure_categories": {
+        "resolved": 16,
+        "false_success": 9,
+        "agent_error": 5,
+        "unresolved": 5
+      },
+      "test_edited": 5,
+      "verifier_mode": "deterministic",
+      "verifier": {
+        "n": 35,
+        "verified_pass": 8,
+        "true_pass": 3,
+        "resolved": 16,
+        "precision": 0.375,
+        "recall": 0.1875,
+        "false_success_claimed": 9,
+        "false_success_verified": 5,
+        "by_risk": {
+          "L0": [
+            4,
+            0.25
+          ],
+          "L1": [
+            21,
+            0.4286
+          ],
+          "L2": [
+            10,
+            0.6
+          ]
+        }
+      }
+    }
+  ],
+  "missing": [],
+  "warnings": [
+    "final-baseline：9 次虚假成功（声称修好但隐藏测试不过）",
+    "final-baseline：1 次疑似篡改测试（基础设施 / 削弱已有测试；Grader 已忽略这些改动）",
+    "final-baseline：5 次改写已有测试期望（未应用、不算篡改，建议人审）"
+  ],
+  "infra_errors": {}
+}

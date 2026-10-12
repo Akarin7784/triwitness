@@ -1,0 +1,115 @@
+diff --git a/README.md b/README.md
+index 0bcda58..b3aad61 100644
+--- a/README.md
++++ b/README.md
+@@ -121,6 +121,16 @@ STATICFILES_DIRS = [
+ ]
+ ```
+ 
++You may also use the `(prefix, path)` tuple form that Django supports, in which case
++django-components uses the path part to search for components:
++
++```python
++STATICFILES_DIRS = [
++    ...,
++    ("downloads", os.path.join(BASE_DIR, "components")),
++]
++```
++
+ ### Optional
+ 
+ To avoid loading the app in each template using `{% load component_tags %}`, you can add the tag as a 'builtin' in settings.py
+diff --git a/src/django_components/template_loader.py b/src/django_components/template_loader.py
+index ea897b8..c2d165e 100644
+--- a/src/django_components/template_loader.py
++++ b/src/django_components/template_loader.py
+@@ -37,6 +37,12 @@ class Loader(FilesystemLoader):
+ 
+         directories: Set[Path] = set()
+         for component_dir in component_dirs:
++            # STATICFILES_DIRS may contain `(prefix, path)` tuples, where the prefix is
++            # only used to prefix the URL, while the path part is the actual directory.
++            # See https://docs.djangoproject.com/en/4.2/ref/settings/#std-setting-STATICFILES_DIRS
++            if isinstance(component_dir, (list, tuple)):
++                component_dir = component_dir[1]
++
+             curr_directories: Set[Path] = set()
+ 
+             # For each dir in `settings.STATICFILES_DIRS`, we go over all Django apps
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_staticfiles_dirs_tuple.py b/tests/tw_repro/test_issue_staticfiles_dirs_tuple.py
+new file mode 100644
+index 0000000..93a09ca
+--- /dev/null
++++ b/tests/tw_repro/test_issue_staticfiles_dirs_tuple.py
+@@ -0,0 +1,68 @@
++"""
++Reproduction for: template_loader blocks on STATICFILES_DIRS if there are tuples
++
++Django natively allows `(prefix, path)` tuples in `STATICFILES_DIRS`
++(https://docs.djangoproject.com/en/3.2/ref/settings/#std-setting-STATICFILES_DIRS).
++The component `Loader.get_dirs()` assumed every entry was a plain str/Path and
++crashed with `TypeError: expected str, bytes or os.PathLike object, not tuple`
++while trying to resolve the dirs.
++"""
++
++from pathlib import Path
++
++from django.template.engine import Engine
++from django.test import override_settings
++
++# isort: off
++from tests.django_test_setup import settings  # noqa: F401
++from tests.testutils import BaseTestCase
++
++# isort: on
++
++from django_components.template_loader import Loader
++
++
++def get_dirs():
++    return Loader(Engine.get_default()).get_dirs()
++
++
++class TestStaticFilesDirsTuples(BaseTestCase):
++    def test_get_dirs_with_tuple_entry(self):
++        """The second element of a (prefix, path) pair is used as the dir."""
++        with override_settings(
++            BASE_DIR=Path(__file__).resolve().parent.parent,
++            STATICFILES_DIRS=[("downloads", "components")],
++        ):
++            dirs = get_dirs()
++
++        self.assertEqual(
++            sorted(dirs),
++            sorted([Path(__file__).resolve().parent.parent / "components"]),
++        )
++
++    def test_get_dirs_with_mixed_entries(self):
++        """Plain str/Path entries keep working alongside tuple entries."""
++        with override_settings(
++            BASE_DIR=Path(__file__).resolve().parent.parent,
++            STATICFILES_DIRS=["components/relative_file", ("downloads", "components")],
++        ):
++            dirs = get_dirs()
++
++        self.assertEqual(
++            sorted(dirs),
++            sorted(
++                [
++                    Path(__file__).resolve().parent.parent / "components" / "relative_file",
++                    Path(__file__).resolve().parent.parent / "components",
++                ]
++            ),
++        )
++
++    def test_get_dirs_with_tuple_and_nonexistent_dir(self):
++        """Exact snippet from the issue must not crash and should match nothing."""
++        with override_settings(
++            STATICFILES_DIRS=[("downloads", "/opt/webfiles/stats")],
++        ):
++            dirs = get_dirs()
++
++        self.assertEqual(dirs, [])

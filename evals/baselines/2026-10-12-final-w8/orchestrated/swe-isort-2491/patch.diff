@@ -1,0 +1,174 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 22a063e..ba048da 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -7,6 +7,7 @@ Find out more about isort's release policy [here](https://pycqa.github.io/isort/
+ ## Releases
+ 
+ ### Unreleased
++  - Fix comments on multi-line aliased `from` imports being moved from the `from ... import (` line onto the alias line (#2359)
+ 
+ ### 8.0.0 February 19 2026 
+ 
+diff --git a/isort/output.py b/isort/output.py
+index 12937db..4c4121f 100644
+--- a/isort/output.py
++++ b/isort/output.py
+@@ -356,6 +356,11 @@ def _with_from_imports(
+                         from_comments = parsed.categorized_comments["straight"].get(
+                             f"{module}.{from_import}"
+                         )
++                        # Whole-statement (from-line) comments must not be lost
++                        # when the statement collapses to a single aliased line.
++                        if comments:
++                            from_comments = list(from_comments or []) + list(comments)
++                            comments = None
+ 
+                         if not config.only_sections:
+                             output.extend(
+@@ -436,20 +441,54 @@ def _with_from_imports(
+                         if specific_comment is not None:
+                             from_comments.append(specific_comment)
+ 
+-                        output.append(
+-                            wrap.line(
+-                                with_comments(
+-                                    from_comments,
+-                                    import_start + as_import,
+-                                    removed=config.ignore_comments,
+-                                    comment_prefix=config.comment_prefix,
+-                                ),
+-                                parsed.line_separator,
+-                                config,
+-                            )
++                        # Whole-statement comments (e.g. a `from ... import (  # type: ignore`
++                        # comment) must stay on the statement line. Include them so
++                        # the aliased statement is wrapped as a unit instead of
++                        # having the comment relocated onto the alias line by
++                        # ``wrap.line``.
++                        use_comments = list(from_comments)
++                        if comments:
++                            use_comments.extend(comments)
++
++                        as_import_statement = import_start + as_import
++                        commented_import_statement = with_comments(
++                            use_comments,
++                            as_import_statement,
++                            removed=config.ignore_comments,
++                            comment_prefix=config.comment_prefix,
+                         )
++                        if (
++                            comments
++                            and config.use_parentheses
++                            and not config.ignore_comments
++                            and config.multi_line_output
++                            in (
++                                wrap.Modes.VERTICAL_HANGING_INDENT,  # type: ignore[attr-defined]
++                                wrap.Modes.VERTICAL_GRID,  # type: ignore[attr-defined]
++                                wrap.Modes.VERTICAL_GRID_GROUPED,  # type: ignore[attr-defined]
++                            )
++                            and len(commented_import_statement) > config.line_length
++                        ):
++                            output.append(
++                                wrap.import_statement(
++                                    import_start=import_start,
++                                    from_imports=[as_import],
++                                    comments=use_comments,
++                                    line_separator=parsed.line_separator,
++                                    config=config,
++                                )
++                            )
++                        else:
++                            output.append(
++                                wrap.line(
++                                    commented_import_statement,
++                                    parsed.line_separator,
++                                    config,
++                                )
++                            )
+ 
+                         from_comments = []
++                        comments = None
+ 
+                 if "*" in from_imports:
+                     output.append(
+diff --git a/isort/parse.py b/isort/parse.py
+index 5928b39..466ed99 100644
+--- a/isort/parse.py
++++ b/isort/parse.py
+@@ -205,6 +205,11 @@ def file_contents(contents: str, config: Config = DEFAULT_CONFIG) -> ParsedConte
+             line, import_string, extra_lines = collect_import_continuation(
+                 line, import_string, _get_next_line, line_separator
+             )
++            # A `from` import that spans multiple physical lines (e.g. it is
++            # wrapped in parentheses) carries the whole-statement comment on the
++            # `from ... import (` line, not on any individual member. Such
++            # comments must not be attributed to a single aliased member.
++            multiline_from_import = type_of_import == "from" and bool(extra_lines)
+             for extra_line in extra_lines:
+                 raw_lines.append(extra_line.line)
+                 # If during parsing of the continuation lines we encounter a comment, we record it.
+@@ -272,6 +277,15 @@ def file_contents(contents: str, config: Config = DEFAULT_CONFIG) -> ParsedConte
+                             attach_comments_to = categorized_comments["from"].setdefault(
+                                 f"{top_level_module}.__combined_as__", []
+                             )
++                        elif multiline_from_import:
++                            # The comment belongs to the whole (multi-line)
++                            # statement (it was on the `from ... import (` line),
++                            # not to this individual aliased member. Attach it to
++                            # the module-level `from` comments so it is rendered
++                            # after the `(` when the statement is wrapped.
++                            attach_comments_to = categorized_comments["from"].setdefault(
++                                top_level_module, []
++                            )
+                         else:
+                             if type_of_import == "from" or (
+                                 config.remove_redundant_aliases and as_name == module.split(".")[-1]
+diff --git a/tests/tw_repro/test_issue_2359.py b/tests/tw_repro/test_issue_2359.py
+new file mode 100644
+index 0000000..cd770c2
+--- /dev/null
++++ b/tests/tw_repro/test_issue_2359.py
+@@ -0,0 +1,18 @@
++"""Repro for issue: comments moving bug when using import aliases.
++
++A ``mypy`` comment placed on the ``from ... import (`` line of a long aliased
++import must stay on that line instead of being moved down onto the alias line.
++"""
++
++import isort
++
++INPUT = (
++    "from a_long_name_to_enforce.splitting_across.two_lines import (  # type: ignore[attr-defined]\n"
++    "    a_random_attribute as renamed_random_attribute,\n"
++    ")\n"
++)
++
++
++def test_comment_not_moved_for_aliased_multiline_import_issue_2359():
++    assert isort.check_code(INPUT, profile="black", show_diff=True) is True
++    assert isort.code(INPUT, profile="black") == INPUT
+diff --git a/tests/unit/test_regressions.py b/tests/unit/test_regressions.py
+index 8484c6e..eea3a8c 100644
+--- a/tests/unit/test_regressions.py
++++ b/tests/unit/test_regressions.py
+@@ -1898,3 +1898,19 @@ def test_unrecoverable_exception_on_valid_input_ending_with_backslash_issue_1893
+     https://github.com/PyCQA/isort/issues/1893
+     """
+     assert isort.code("import os #\\") == "import os  # \\\n"
++
++
++def test_comment_not_moved_for_aliased_multiline_import_issue_2359():
++    """Ensure a comment on a multi-line aliased ``from`` import stays on the
++    ``from ... import (`` line instead of being moved onto the alias line.
++
++    See: https://github.com/PyCQA/isort/issues/2359
++    """
++    test_input = (
++        "from a_long_name_to_enforce.splitting_across.two_lines import (  "
++        "# type: ignore[attr-defined]\n"
++        "    a_random_attribute as renamed_random_attribute,\n"
++        ")\n"
++    )
++    assert isort.check_code(test_input, profile="black", show_diff=True) is True
++    assert isort.code(test_input, profile="black") == test_input

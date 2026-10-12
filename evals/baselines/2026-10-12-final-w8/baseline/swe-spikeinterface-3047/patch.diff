@@ -1,0 +1,56 @@
+diff --git a/src/spikeinterface/core/sortinganalyzer.py b/src/spikeinterface/core/sortinganalyzer.py
+index 46d0209..ef04104 100644
+--- a/src/spikeinterface/core/sortinganalyzer.py
++++ b/src/spikeinterface/core/sortinganalyzer.py
+@@ -1608,7 +1608,9 @@ class AnalyzerExtension:
+         if self.format == "binary_folder":
+             extension_folder = self._get_binary_extension_folder()
+             for ext_data_file in extension_folder.iterdir():
+-                if ext_data_file.name == "params.json":
++                if ext_data_file.name in ("params.json", "info.json"):
++                    # "params.json" holds the extension params and "info.json" the importing provenance;
++                    # neither is part of the extension data, so we don't load them into self.data
+                     continue
+                 ext_data_name = ext_data_file.stem
+                 if ext_data_file.suffix == ".json":
+diff --git a/src/spikeinterface/core/tests/tw_repro/test_issue_1501.py b/src/spikeinterface/core/tests/tw_repro/test_issue_1501.py
+new file mode 100644
+index 0000000..9214aa7
+--- /dev/null
++++ b/src/spikeinterface/core/tests/tw_repro/test_issue_1501.py
+@@ -0,0 +1,35 @@
++"""
++Repro for: `select_units` fails in `SortingAnalyzer` after using `load_sorting_analyzer`.
++
++After saving a SortingAnalyzer to binary_folder and reloading it, calling
++`select_units` raises `TypeError: unhashable type: 'numpy.ndarray'`.
++
++Root cause: the extension `info.json` file (importing provenance) is loaded
++into `extension.data` under the key "info" by `AnalyzerExtension.load_data`,
++and then `_select_extension_data` tries to index that dict with an array.
++"""
++
++import pytest
++
++
++def test_select_units_after_reload_binary_folder(tmp_path):
++    import spikeinterface.core as si
++
++    rec, sorting = si.generate_ground_truth_recording(num_channels=4, durations=[1.0], seed=0)
++    folder = tmp_path / "test"
++    analyzer = si.create_sorting_analyzer(sorting, rec, format="binary_folder", folder=folder)
++    analyzer.compute(["random_spikes", "waveforms", "templates"])
++
++    new_analyzer = si.load_sorting_analyzer(folder=folder)
++
++    # The importing provenance ("info") must NOT pollute the extension data.
++    for ext_name, ext in new_analyzer.extensions.items():
++        assert "info" not in ext.data, f"'info' leaked into data of extension {ext_name}"
++
++    # select_units must work after reloading
++    selected = new_analyzer.select_units(unit_ids=[1])
++    assert selected.unit_ids == [1]
++
++    # And the extension data must be correctly sliced
++    templates = selected.get_extension("templates")
++    assert templates.data["average"].shape[0] == 1

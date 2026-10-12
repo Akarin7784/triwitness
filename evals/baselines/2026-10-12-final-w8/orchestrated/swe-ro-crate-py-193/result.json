@@ -1,0 +1,37 @@
+{
+  "task_id": "swe-ro-crate-py-193",
+  "config": "final-orchestrated",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": false,
+  "reward": 0.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": true,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_nested_props_without_id.py"
+  ],
+  "edited_paths": [
+    "test/test_model.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.396077,
+  "tokens_in": 2442408,
+  "tokens_cached": 2324864,
+  "tokens_out": 58009,
+  "peak_calls": 0,
+  "steps": 32,
+  "wall_s": 439.79,
+  "trajectory_id": "final-orchestrated/swe-ro-crate-py-193/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "verifier_mode": "deterministic",
+  "verifier_verdict": "pass",
+  "verifier_deterministic": "pass",
+  "verifier_model_verdict": null,
+  "verify_repro_status": "reproduced",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.0,
+  "verifier_error": null
+}

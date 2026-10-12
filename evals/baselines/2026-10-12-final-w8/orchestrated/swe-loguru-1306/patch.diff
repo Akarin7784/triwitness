@@ -1,0 +1,233 @@
+diff --git a/CHANGELOG.rst b/CHANGELOG.rst
+index e5519fc..5ef21a8 100644
+--- a/CHANGELOG.rst
++++ b/CHANGELOG.rst
+@@ -7,6 +7,7 @@
+ - Allow the ``rotation`` argument of file sinks to accept a list of rotation conditions, any of which can trigger the rotation (`#1174 <https://github.com/Delgan/loguru/issues/1174>`_, thanks `@CollinHeist <https://github.com/CollinHeist>`_).
+ - Update the default log format to include the timezone offset since it produces less ambiguous logs (`#856 <https://github.com/Delgan/loguru/pull/856>`_, thanks `@tim-x-y-z <https://github.com/tim-x-y-z>`_).
+ - Honor the ``NO_COLOR`` environment variable to disable color output by default if ``colorize`` is not provided (`#1178 <https://github.com/Delgan/loguru/issues/1178>`_).
++- Honor the ``FORCE_COLOR`` environment variable to enable color output by default if ``colorize`` is not provided, even when the stream is not connected to a terminal.
+ - Add requirement for ``TERM`` environment variable not to be ``"dumb"`` to enable colorization (`#1287 <https://github.com/Delgan/loguru/pull/1287>`_, thanks `@snosov1 <https://github.com/snosov1>`_).
+ - Make ``logger.catch()`` usable as an asynchronous context manager (`#1084 <https://github.com/Delgan/loguru/issues/1084>`_).
+ - Make ``logger.catch()`` compatible with asynchronous generators (`#1302 <https://github.com/Delgan/loguru/issues/1302>`_).
+diff --git a/docs/resources/troubleshooting.rst b/docs/resources/troubleshooting.rst
+index 4595b5a..1468367 100644
+--- a/docs/resources/troubleshooting.rst
++++ b/docs/resources/troubleshooting.rst
+@@ -25,6 +25,9 @@ Frequently Asked Questions and Troubleshooting Tips for Loguru
+ .. |the-no-color-environment-variable| replace:: the ``NO_COLOR`` environment variable
+ .. _the-no-color-environment-variable: https://no-color.org/
+ 
++.. |the-force-color-environment-variable| replace:: the ``FORCE_COLOR`` environment variable
++.. _the-force-color-environment-variable: https://force-color.org/
++
+ .. _ANSI escape sequences: https://en.wikipedia.org/wiki/ANSI_escape_code
+ 
+ 
+@@ -143,7 +146,7 @@ When such stream object is used for logging, Loguru will also call |isatty| to d
+ 
+ Additionally, it is not uncommon in some virtual environments for the standard output not to be considered as connected to a terminal, even though you can view the logs' output live without redirection. This is the case, for instance, in some cloud services. Check the value of ``sys.stderr.isatty()`` if you encounter any issues.
+ 
+-Various heuristics assist in determining whether colors should be enabled by default. Specifically, Loguru honors |the-no-color-environment-variable|_ and disables coloring if it is set to any value. Additionally, terminals identified by ``TERM=dumb`` are considered to lack color support.
++Various heuristics assist in determining whether colors should be enabled by default. Specifically, Loguru honors |the-no-color-environment-variable|_ and disables coloring if it is set to any value. Conversely, it honors |the-force-color-environment-variable|_ and enables coloring if it is set to any value, even if the stream is not connected to a terminal. If both are set, ``NO_COLOR`` takes precedence. Additionally, terminals identified by ``TERM=dumb`` are considered to lack color support (unless ``FORCE_COLOR`` is set).
+ 
+ In any case, you can always control log coloring by explicitly specifying the ``colorize`` argument of the |add| method::
+ 
+diff --git a/loguru/_colorama.py b/loguru/_colorama.py
+index b380536..100145f 100644
+--- a/loguru/_colorama.py
++++ b/loguru/_colorama.py
+@@ -10,6 +10,9 @@ def should_colorize(stream):
+     if "NO_COLOR" in os.environ:
+         return False
+ 
++    if "FORCE_COLOR" in os.environ:
++        return True
++
+     if getattr(builtins, "__IPYTHON__", False) and (stream is sys.stdout or stream is sys.stderr):
+         try:
+             import ipykernel
+diff --git a/tests/conftest.py b/tests/conftest.py
+index 9f0fa13..abdeb17 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -188,6 +188,14 @@ def check_env_variables():
+             )
+ 
+ 
++@pytest.fixture(autouse=True)
++def clear_color_environment(monkeypatch):
++    # These environment variables affect the automatic colorization detection, which would make the
++    # tests non-deterministic if they happen to be set in the environment running the test suite.
++    monkeypatch.delenv("NO_COLOR", raising=False)
++    monkeypatch.delenv("FORCE_COLOR", raising=False)
++
++
+ @pytest.fixture(autouse=True)
+ def reset_logger():
+     def reset():
+diff --git a/tests/test_add_option_colorize.py b/tests/test_add_option_colorize.py
+index 47d0071..e3b072b 100644
+--- a/tests/test_add_option_colorize.py
++++ b/tests/test_add_option_colorize.py
+@@ -84,3 +84,30 @@ def test_override_no_color(monkeypatch):
+         logger.add(stream, format="<blue>{message}</blue>", colorize=True)
+         logger.debug("Message", colorize=False)
+         assert stream.getvalue() == parse("<blue>Message</blue>\n")
++
++
++def test_force_color_when_stream_is_not_a_tty(monkeypatch):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        logger.add(stream, format="<blue>{message}</blue>", colorize=None)
++        logger.debug("Message")
++        assert stream.getvalue() == parse("<blue>Message</blue>\n")
++
++
++def test_force_color_does_not_override_explicit_colorize_false(monkeypatch):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        logger.add(stream, format="<blue>{message}</blue>", colorize=False)
++        logger.debug("Message")
++        assert stream.getvalue() == "Message\n"
++
++
++def test_force_color_does_not_affect_file_sink(monkeypatch, tmp_path):
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        logger.add(tmp_path / "file.log", format="<blue>{message}</blue>")
++        logger.debug("Message")
++
++    assert (tmp_path / "file.log").read_text() == "Message\n"
+diff --git a/tests/test_colorama.py b/tests/test_colorama.py
+index ab659e0..611dd44 100644
+--- a/tests/test_colorama.py
++++ b/tests/test_colorama.py
+@@ -171,6 +171,40 @@ def test_honor_no_color_standard(monkeypatch, patched, expected):
+         assert should_colorize(stream) is expected
+ 
+ 
++@pytest.mark.parametrize(
++    ("patched", "expected"),
++    [
++        ("__stdout__", True),
++        ("__stderr__", True),
++        ("stdout", True),
++        ("stderr", True),
++        ("", True),
++    ],
++)
++def test_honor_force_color_standard(monkeypatch, patched, expected):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        context.setattr(sys, patched, stream, raising=False)
++        assert should_colorize(stream) is expected
++
++
++def test_honor_force_color_even_with_dumb_term(monkeypatch):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        context.setitem(os.environ, "TERM", "dumb")
++        assert should_colorize(stream) is True
++
++
++def test_no_color_takes_precedence_over_force_color(monkeypatch):
++    stream = StreamIsattyTrue()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "NO_COLOR", "1")
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        assert should_colorize(stream) is False
++
++
+ @pytest.mark.parametrize(
+     ("patched", "expected"),
+     [
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_force_color.py b/tests/tw_repro/test_issue_force_color.py
+new file mode 100644
+index 0000000..6faa8ee
+--- /dev/null
++++ b/tests/tw_repro/test_issue_force_color.py
+@@ -0,0 +1,76 @@
++"""Reproduction for "Support for FORCE_COLOR" (https://force-color.org/).
++
++FORCE_COLOR must force color output to be enabled by default (when ``colorize`` is not
++provided), even for non-TTY streams and regardless of heuristics such as ``TERM=dumb``.
++The ``NO_COLOR`` variable still takes precedence over ``FORCE_COLOR``.
++"""
++
++import os
++import sys
++
++import pytest
++
++from loguru import logger
++from loguru._colorama import should_colorize
++
++from ..conftest import StreamIsattyFalse, StreamIsattyTrue, parse
++
++
++@pytest.fixture(autouse=True)
++def clear_environment():
++    env = os.environ.copy()
++    os.environ.clear()
++    yield
++    os.environ.update(env)
++
++
++@pytest.mark.parametrize("patched", ["__stdout__", "__stderr__", "stdout", "stderr", ""])
++def test_honor_force_color_standard(monkeypatch, patched):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        context.setattr(sys, patched, stream, raising=False)
++        assert should_colorize(stream) is True
++
++
++def test_honor_force_color_even_with_dumb_term(monkeypatch):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        context.setitem(os.environ, "TERM", "dumb")
++        assert should_colorize(stream) is True
++
++
++def test_no_color_takes_precedence_over_force_color(monkeypatch):
++    stream = StreamIsattyTrue()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "NO_COLOR", "1")
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        assert should_colorize(stream) is False
++
++
++def test_force_color_when_stream_is_not_a_tty(monkeypatch):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        logger.add(stream, format="<blue>{message}</blue>", colorize=None)
++        logger.debug("Message")
++        assert stream.getvalue() == parse("<blue>Message</blue>\n")
++
++
++def test_force_color_does_not_override_explicit_colorize_false(monkeypatch):
++    stream = StreamIsattyFalse()
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        logger.add(stream, format="<blue>{message}</blue>", colorize=False)
++        logger.debug("Message")
++        assert stream.getvalue() == "Message\n"
++
++
++def test_force_color_does_not_affect_file_sink(monkeypatch, tmp_path):
++    with monkeypatch.context() as context:
++        context.setitem(os.environ, "FORCE_COLOR", "1")
++        logger.add(tmp_path / "file.log", format="<blue>{message}</blue>")
++        logger.debug("Message")
++
++    assert (tmp_path / "file.log").read_text() == "Message\n"

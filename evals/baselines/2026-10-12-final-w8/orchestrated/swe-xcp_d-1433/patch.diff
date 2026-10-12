@@ -1,0 +1,241 @@
+diff --git a/tests/tw_repro/test_issue_1437.py b/tests/tw_repro/test_issue_1437.py
+new file mode 100644
+index 0000000..75f9c71
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1437.py
+@@ -0,0 +1,99 @@
++"""Reproduction for: Native-space T2w is collected even when no T1w-space T2w is available.
++
++Synthetic fMRIPrep-style derivative datasets (empty files are enough for pybids).
++"""
++
++import json
++import os
++
++from bids.layout import BIDSLayout
++
++import xcp_d.utils.bids as xbids
++
++
++def _write(path, text=''):
++    os.makedirs(os.path.dirname(path), exist_ok=True)
++    with open(path, 'w') as fo:
++        fo.write(text)
++
++
++def _make_dataset(root, anat_files, xfm_files):
++    _write(
++        os.path.join(root, 'dataset_description.json'),
++        json.dumps({
++            'Name': 'synthetic-derivative',
++            'BIDSVersion': '1.8.0',
++            'DatasetType': 'derivative',
++        }),
++    )
++    anat_dir = os.path.join(root, 'sub-01', 'anat')
++    func_dir = os.path.join(root, 'sub-01', 'func')
++    for fname in anat_files + xfm_files:
++        _write(os.path.join(anat_dir, fname))
++    _write(
++        os.path.join(func_dir, 'sub-01_task-rest_space-MNI152NLin6Asym_res-2_desc-preproc_bold.nii.gz')
++    )
++    # Also need a matching standard-space anatomical brain mask.
++    _write(os.path.join(anat_dir, 'sub-01_space-MNI152NLin6Asym_res-2_desc-brain_mask.nii.gz'))
++    return root
++
++
++def test_collect_data_t1w_and_native_t2w(tmp_path_factory):
++    """Native-space T2w must be ignored when the T1w is the primary anatomical modality."""
++    bids_dir = str(tmp_path_factory.mktemp('t1w_and_native_t2w'))
++    _make_dataset(
++        bids_dir,
++        anat_files=[
++            'sub-01_desc-preproc_T1w.nii.gz',
++            'sub-01_desc-preproc_T2w.nii.gz',
++        ],
++        xfm_files=[
++            'sub-01_from-T1w_to-MNI152NLin6Asym_mode-image_xfm.h5',
++            'sub-01_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.h5',
++        ],
++    )
++
++    layout = BIDSLayout(bids_dir, validate=False)
++    subj_data = xbids.collect_data(
++        layout=layout,
++        input_type='fmriprep',
++        participant_label='01',
++        bids_filters=None,
++        file_format='nifti',
++    )
++
++    # The native-space T2w cannot be warped with the available (T1w-based) transforms,
++    # so it must not be collected.
++    assert subj_data['t2w'] is None
++    assert os.path.basename(subj_data['t1w']) == 'sub-01_desc-preproc_T1w.nii.gz'
++    assert 'to-MNI152NLin6Asym' in subj_data['anat_to_template_xfm']
++    assert 'from-T1w' in subj_data['anat_to_template_xfm']
++
++
++def test_collect_data_t2w_only(tmp_path_factory):
++    """T2w-only processing must keep working."""
++    bids_dir = str(tmp_path_factory.mktemp('t2w_only'))
++    _make_dataset(
++        bids_dir,
++        anat_files=[
++            'sub-01_desc-preproc_T2w.nii.gz',
++        ],
++        xfm_files=[
++            'sub-01_from-T2w_to-MNI152NLin6Asym_mode-image_xfm.h5',
++            'sub-01_from-MNI152NLin6Asym_to-T2w_mode-image_xfm.h5',
++        ],
++    )
++
++    layout = BIDSLayout(bids_dir, validate=False)
++    subj_data = xbids.collect_data(
++        layout=layout,
++        input_type='fmriprep',
++        participant_label='01',
++        bids_filters=None,
++        file_format='nifti',
++    )
++
++    assert subj_data['t1w'] is None
++    assert os.path.basename(subj_data['t2w']) == 'sub-01_desc-preproc_T2w.nii.gz'
++    assert 'from-T2w' in subj_data['anat_to_template_xfm']
++    assert 'to-T2w' in subj_data['template_to_anat_xfm']
+diff --git a/xcp_d/tests/test_utils_bids.py b/xcp_d/tests/test_utils_bids.py
+index 7528c4d..1dab4fe 100644
+--- a/xcp_d/tests/test_utils_bids.py
++++ b/xcp_d/tests/test_utils_bids.py
+@@ -44,6 +44,116 @@ def test_collect_participants(datasets):
+     assert found_labels == ['01']
+ 
+ 
++def _write_synthetic_derivative_dataset(root, anat_files, xfm_files):
++    """Write a minimal fMRIPrep-style derivative dataset with empty files.
++
++    Parameters
++    ----------
++    root : :obj:`str`
++        Directory in which to create the dataset.
++    anat_files : :obj:`list` of :obj:`str`
++        Anatomical files to create in the ``sub-01/anat`` folder.
++    xfm_files : :obj:`list` of :obj:`str`
++        Transform files to create in the ``sub-01/anat`` folder.
++
++    Returns
++    -------
++    root : :obj:`str`
++        The dataset root.
++    """
++    dataset_description = {
++        'Name': 'synthetic-derivative',
++        'BIDSVersion': '1.8.0',
++        'DatasetType': 'derivative',
++    }
++    with open(os.path.join(root, 'dataset_description.json'), 'w') as fo:
++        json.dump(dataset_description, fo)
++
++    anat_dir = os.path.join(root, 'sub-01', 'anat')
++    func_dir = os.path.join(root, 'sub-01', 'func')
++    os.makedirs(anat_dir, exist_ok=True)
++    os.makedirs(func_dir, exist_ok=True)
++
++    # Standard-space brain mask and BOLD data, needed for any anatomical strategy.
++    anat_files = list(anat_files) + [
++        'sub-01_space-MNI152NLin6Asym_res-2_desc-brain_mask.nii.gz',
++    ]
++    for fname in anat_files:
++        with open(os.path.join(anat_dir, fname), 'w'):
++            pass
++
++    for fname in xfm_files:
++        with open(os.path.join(anat_dir, fname), 'w'):
++            pass
++
++    bold_file = 'sub-01_task-rest_space-MNI152NLin6Asym_res-2_desc-preproc_bold.nii.gz'
++    with open(os.path.join(func_dir, bold_file), 'w'):
++        pass
++
++    return root
++
++
++def test_collect_data_t1w_and_native_t2w(tmp_path_factory):
++    """Native-space T2w must be ignored when the T1w is the primary anatomical modality."""
++    bids_dir = str(tmp_path_factory.mktemp('t1w_and_native_t2w'))
++    _write_synthetic_derivative_dataset(
++        bids_dir,
++        anat_files=[
++            'sub-01_desc-preproc_T1w.nii.gz',
++            'sub-01_desc-preproc_T2w.nii.gz',
++        ],
++        xfm_files=[
++            'sub-01_from-T1w_to-MNI152NLin6Asym_mode-image_xfm.h5',
++            'sub-01_from-MNI152NLin6Asym_to-T1w_mode-image_xfm.h5',
++        ],
++    )
++
++    layout = BIDSLayout(bids_dir, validate=False)
++    subj_data = xbids.collect_data(
++        layout=layout,
++        input_type='fmriprep',
++        participant_label='01',
++        bids_filters=None,
++        file_format='nifti',
++    )
++
++    # The T2w is in native T2w space and only T1w-based transforms are available,
++    # so the T2w cannot be warped and must be ignored.
++    assert subj_data['t2w'] is None
++    assert os.path.basename(subj_data['t1w']) == 'sub-01_desc-preproc_T1w.nii.gz'
++    assert 'to-MNI152NLin6Asym' in subj_data['anat_to_template_xfm']
++    assert 'from-T1w' in subj_data['anat_to_template_xfm']
++
++
++def test_collect_data_t2w_only(tmp_path_factory):
++    """T2w-only processing must still collect the T2w and its transforms."""
++    bids_dir = str(tmp_path_factory.mktemp('t2w_only'))
++    _write_synthetic_derivative_dataset(
++        bids_dir,
++        anat_files=[
++            'sub-01_desc-preproc_T2w.nii.gz',
++        ],
++        xfm_files=[
++            'sub-01_from-T2w_to-MNI152NLin6Asym_mode-image_xfm.h5',
++            'sub-01_from-MNI152NLin6Asym_to-T2w_mode-image_xfm.h5',
++        ],
++    )
++
++    layout = BIDSLayout(bids_dir, validate=False)
++    subj_data = xbids.collect_data(
++        layout=layout,
++        input_type='fmriprep',
++        participant_label='01',
++        bids_filters=None,
++        file_format='nifti',
++    )
++
++    assert subj_data['t1w'] is None
++    assert os.path.basename(subj_data['t2w']) == 'sub-01_desc-preproc_T2w.nii.gz'
++    assert 'from-T2w' in subj_data['anat_to_template_xfm']
++    assert 'to-T2w' in subj_data['template_to_anat_xfm']
++
++
+ def test_collect_data_ds001419(datasets):
+     """Test the collect_data function."""
+     bids_dir = datasets['ds001419']
+diff --git a/xcp_d/utils/bids.py b/xcp_d/utils/bids.py
+index e6cc6ff..42ead54 100644
+--- a/xcp_d/utils/bids.py
++++ b/xcp_d/utils/bids.py
+@@ -300,6 +300,10 @@ def collect_data(
+                     queries['t1w']['space'] = ['T1w', None]
+                     queries['template_to_anat_xfm']['to'] = 'T1w'
+                     queries['anat_to_template_xfm']['from'] = 'T1w'
++                    # The T2w is in native T2w space, but all available transforms are T1w-based,
++                    # so the T2w cannot be warped and must be ignored.
++                    # There is definitely no T1w-space T2w at this point (checked above).
++                    queries['t2w']['space'] = 'T1w'
+                 else:
+                     LOGGER.info('Performing T2w-only processing.')
+                     queries['template_to_anat_xfm']['to'] = 'T2w'

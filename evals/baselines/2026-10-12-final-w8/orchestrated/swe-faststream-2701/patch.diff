@@ -1,0 +1,130 @@
+diff --git a/faststream/_internal/application.py b/faststream/_internal/application.py
+index 021dfff..75eb9fa 100644
+--- a/faststream/_internal/application.py
++++ b/faststream/_internal/application.py
+@@ -113,6 +113,7 @@ class StartAbleApplication:
+             raise SetupError(msg)
+ 
+         self.brokers.append(broker)
++        broker._update_fd_config(self.config)
+         _ = self.schema.add_broker(broker)
+ 
+ 
+diff --git a/tests/application/test_delayed_broker.py b/tests/application/test_delayed_broker.py
+index c2eb32c..431af8c 100644
+--- a/tests/application/test_delayed_broker.py
++++ b/tests/application/test_delayed_broker.py
+@@ -1,8 +1,9 @@
+ import pytest
+ 
++from faststream import Context, FastStream
+ from faststream._internal.application import StartAbleApplication
+ from faststream.exceptions import SetupError
+-from faststream.rabbit import RabbitBroker
++from faststream.rabbit import RabbitBroker, RabbitRouter, TestRabbitBroker
+ 
+ 
+ def test_set_broker() -> None:
+@@ -16,6 +17,42 @@ def test_set_broker() -> None:
+     assert app.broker is broker
+ 
+ 
++def test_set_broker_updates_fd_config() -> None:
++    app = FastStream()
++    broker = RabbitBroker()
++
++    app.set_broker(broker)
++
++    assert broker.config.fd_config.context is app.config.context
++    assert broker.context.get("app") is app
++
++
++@pytest.mark.asyncio()
++async def test_set_broker_context_injection() -> None:
++    router = RabbitRouter()
++
++    @router.subscriber("test")
++    async def handler(msg: str, field: int = Context("field")) -> str:
++        assert field == 1
++        return msg
++
++    broker = RabbitBroker()
++    app = FastStream()
++    app.set_broker(broker)
++    broker.include_router(router)
++
++    @app.on_startup
++    async def set_field() -> None:
++        app.context.set_global("field", 1)
++
++    async with TestRabbitBroker(broker) as br:
++        await app.start()
++        try:
++            await br.publish("hi", "test")
++        finally:
++            await app.stop()
++
++
+ def test_set_more_than_once_broker() -> None:
+     app = StartAbleApplication()
+     broker_1 = RabbitBroker()
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..930225f
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,54 @@
++"""Repro for: set_broker() needs to call _update_fd_config.
++
++Issue: when a broker is attached to an application with `app.set_broker(broker)`
++instead of passing it to the constructor, `FastStream`/`StartAbleApplication`
++never calls `broker._update_fd_config(self.config)`. As a result the broker keeps
++its own `FastDependsConfig` (with its own `ContextRepo`) and loses the
++application context, breaking `faststream.Context` injection.
++
++These tests must FAIL on the unfixed code.
++"""
++
++import pytest
++
++from faststream import FastStream
++from faststream.rabbit import RabbitBroker
++
++
++def test_set_broker_updates_fd_config() -> None:
++    app = FastStream()
++    broker = RabbitBroker()
++
++    app.set_broker(broker)
++
++    assert broker.config.fd_config.context is app.config.context
++    assert broker.context.get("app") is app
++
++
++@pytest.mark.asyncio()
++async def test_set_broker_context_injection() -> None:
++    from faststream import Context
++    from faststream.rabbit import RabbitRouter, TestRabbitBroker
++
++    router = RabbitRouter()
++
++    @router.subscriber("test")
++    async def handler(msg: str, field: int = Context("field")) -> str:
++        assert field == 1
++        return msg
++
++    broker = RabbitBroker()
++    app = FastStream()
++    app.set_broker(broker)
++    broker.include_router(router)
++
++    @app.on_startup
++    async def set_field() -> None:
++        app.context.set_global("field", 1)
++
++    async with TestRabbitBroker(broker) as br:
++        await app.start()
++        try:
++            await br.publish("hi", "test")
++        finally:
++            await app.stop()

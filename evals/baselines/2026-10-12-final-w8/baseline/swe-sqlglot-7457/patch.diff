@@ -1,0 +1,166 @@
+diff --git a/sqlglot/expressions/functions.py b/sqlglot/expressions/functions.py
+index 2cfeb2b..7128bf7 100644
+--- a/sqlglot/expressions/functions.py
++++ b/sqlglot/expressions/functions.py
+@@ -330,7 +330,16 @@ class GenerateEmbedding(Expression, Func):
+ 
+ 
+ class MLForecast(Expression, Func):
+-    arg_types = {"this": True, "expression": False, "params_struct": False}
++    # `is_ai` distinguishes the `AI.FORECAST(TABLE t, data_col => ..., ...)` table-valued
++    # function from the `ML.FORECAST(MODEL m, [TABLE t,] STRUCT(...))` function.
++    # `named_args` holds the `x => y` arguments of the AI form.
++    arg_types = {
++        "this": True,
++        "expression": False,
++        "params_struct": False,
++        "named_args": False,
++        "is_ai": False,
++    }
+ 
+ 
+ class MLTranslate(Expression, Func):
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 709ca80..89e1add 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -4666,6 +4666,16 @@ class Generator:
+         return self._ml_sql(expression, "TRANSLATE")
+ 
+     def mlforecast_sql(self, expression: exp.MLForecast) -> str:
++        if expression.args.get("is_ai"):
++            this_sql = self.sql(expression, "this")
++            this_sql = f"TABLE {this_sql}" if isinstance(expression.this, exp.Table) else this_sql
++
++            return self.func(
++                "FORECAST",
++                this_sql,
++                *expression.args.get("named_args") or [],
++            )
++
+         return self._ml_sql(expression, "FORECAST")
+ 
+     def featuresattime_sql(self, expression: exp.FeaturesAtTime) -> str:
+diff --git a/sqlglot/parsers/bigquery.py b/sqlglot/parsers/bigquery.py
+index f0b99ff..5e53b56 100644
+--- a/sqlglot/parsers/bigquery.py
++++ b/sqlglot/parsers/bigquery.py
+@@ -285,7 +285,7 @@ class BigQueryParser(parser.Parser):
+         "GENERATE_EMBEDDING": lambda self: self._parse_ml(exp.GenerateEmbedding),
+         "GENERATE_TEXT_EMBEDDING": lambda self: self._parse_ml(exp.GenerateEmbedding, is_text=True),
+         "VECTOR_SEARCH": lambda self: self._parse_vector_search(),
+-        "FORECAST": lambda self: self._parse_ml(exp.MLForecast),
++        "FORECAST": lambda self: self._parse_forecast(),
+     }
+ 
+     NO_PAREN_FUNCTIONS: t.ClassVar = {
+@@ -595,6 +595,33 @@ class BigQueryParser(parser.Parser):
+             )
+         )
+ 
++    def _parse_forecast(self) -> exp.MLForecast:
++        # `AI.FORECAST` is a table-valued function, whereas `ML.FORECAST` expects a
++        # MODEL and a STRUCT of parameters, so we dispatch based on the namespace.
++        # https://cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-ai-forecast
++        namespace = seq_get(self._tokens, self._index - 4)
++        if namespace and namespace.text.upper() == "AI":
++            return self._parse_ai_forecast()
++
++        return self._parse_ml(exp.MLForecast)
++
++    def _parse_ai_forecast(self) -> exp.MLForecast:
++        self._match(TokenType.TABLE)
++        this = self._parse_table()
++
++        named_args = []
++
++        while self._match(TokenType.COMMA):
++            arg = self._parse_lambda()
++            if not arg:
++                break
++
++            named_args.append(arg)
++
++        return self.expression(
++            exp.MLForecast(this=this, named_args=named_args or None, is_ai=True)
++        )
++
+     def _parse_translate(self) -> exp.Translate | exp.MLTranslate:
+         # Check if this is ML.TRANSLATE by looking at previous tokens
+         token = seq_get(self._tokens, self._index - 4)
+diff --git a/tests/dialects/test_bigquery.py b/tests/dialects/test_bigquery.py
+index af43a0b..525bb55 100644
+--- a/tests/dialects/test_bigquery.py
++++ b/tests/dialects/test_bigquery.py
+@@ -2414,6 +2414,17 @@ OPTIONS (
+             "SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, (SELECT * FROM mydataset.query_table), STRUCT())"
+         )
+ 
++        ai_forecast_ast = self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => 'num_trips', timestamp_col => 'date', horizon => 30)"
++        )
++        assert ai_forecast_ast.find(exp.MLForecast)
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE mydataset.mytable, data_col => 'num_trips', timestamp_col => 'date', id_cols => ['id'], horizon => 30, confidence_level => 0.9)"
++        )
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE mydataset.mytable, timestamp_col => 'date')"
++        )
++
+         for name in ("GENERATE_EMBEDDING", "GENERATE_TEXT_EMBEDDING"):
+             with self.subTest(f"Testing BigQuery's ML function {name}"):
+                 ast = self.validate_identity(
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_ai_forecast.py b/tests/tw_repro/test_issue_ai_forecast.py
+new file mode 100644
+index 0000000..eda0acc
+--- /dev/null
++++ b/tests/tw_repro/test_issue_ai_forecast.py
+@@ -0,0 +1,45 @@
++from tests.dialects.test_dialect import Validator
++
++
++class TestBigQueryAIForecastIssue(Validator):
++    dialect = "bigquery"
++
++    def test_ai_forecast_tvf_parses(self):
++        # The exact statement from the issue must parse without a ParseError
++        self.parse_one(
++            'SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => "num_trips", timestamp_col => "date", horizon => 30)'
++        )
++
++    def test_ai_forecast_tvf_roundtrip_double_quotes(self):
++        # BigQuery normalizes double-quoted strings to single quotes, so the
++        # equivalent, round-trippable SQL is expected here
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => 'num_trips', timestamp_col => 'date', horizon => 30)"
++        )
++
++    def test_ai_forecast_tvf_identity(self):
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE mydataset.mytable, data_col => 'num_trips', timestamp_col => 'date', horizon => 30)"
++        )
++
++    def test_ai_forecast_tvf_minimal(self):
++        self.validate_identity(
++            "SELECT * FROM AI.FORECAST(TABLE mydataset.mytable, timestamp_col => 'date')"
++        )
++
++    def test_ai_forecast_named_args_values(self):
++        ast = self.parse_one(
++            'SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => "num_trips", timestamp_col => "date", horizon => 30)'
++        )
++        self.assertEqual(
++            ast.sql(dialect="bigquery"),
++            "SELECT * FROM AI.FORECAST(TABLE citibike_trips, data_col => 'num_trips', timestamp_col => 'date', horizon => 30)",
++        )
++
++    def test_ml_forecast_still_works(self):
++        self.validate_identity(
++            "SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, STRUCT(2 AS horizon))"
++        )
++        self.validate_identity(
++            "SELECT * FROM ML.FORECAST(MODEL `mydataset.mymodel`, TABLE `mydataset.mybqtable`, STRUCT(2 AS horizon, 4 AS confidence_level))"
++        )

@@ -1,0 +1,39 @@
+{
+  "task_id": "swe-bedrock-agentcore-sdk-python-279_interface",
+  "config": "final-orchestrated",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": false,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_config.py",
+    "tests/tw_repro/test_issue_191.py"
+  ],
+  "edited_paths": [
+    "tests/bedrock_agentcore/memory/integrations/strands/test_agentcore_memory_session_manager.py",
+    "tests_integ/memory/integrations/test_session_manager.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.099493,
+  "tokens_in": 600693,
+  "tokens_cached": 568832,
+  "tokens_out": 14064,
+  "peak_calls": 0,
+  "steps": 32,
+  "wall_s": 181.36,
+  "trajectory_id": "final-orchestrated/swe-bedrock-agentcore-sdk-python-279_interface/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "verifier_mode": "deterministic",
+  "verifier_verdict": "inconclusive",
+  "verifier_deterministic": "inconclusive",
+  "verifier_model_verdict": null,
+  "verify_repro_status": "reproduced",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.0,
+  "verifier_error": null
+}

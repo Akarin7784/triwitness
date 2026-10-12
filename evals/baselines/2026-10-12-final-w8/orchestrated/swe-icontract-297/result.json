@@ -1,0 +1,38 @@
+{
+  "task_id": "swe-icontract-297",
+  "config": "final-orchestrated",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/test_inheritance_invariant.py",
+    "tests/tw_repro/test_issue_295.py"
+  ],
+  "edited_paths": [
+    "tests/test_invariant.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.372288,
+  "tokens_in": 3758717,
+  "tokens_cached": 3647744,
+  "tokens_out": 47090,
+  "peak_calls": 0,
+  "steps": 73,
+  "wall_s": 499.78,
+  "trajectory_id": "final-orchestrated/swe-icontract-297/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "verifier_mode": "deterministic",
+  "verifier_verdict": "pass",
+  "verifier_deterministic": "pass",
+  "verifier_model_verdict": null,
+  "verify_repro_status": "reproduced",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.0,
+  "verifier_error": null
+}

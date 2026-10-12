@@ -1,0 +1,299 @@
+diff --git a/llm_sandbox/language_handlers/base.py b/llm_sandbox/language_handlers/base.py
+index ae78663..993da99 100644
+--- a/llm_sandbox/language_handlers/base.py
++++ b/llm_sandbox/language_handlers/base.py
+@@ -24,8 +24,8 @@ if TYPE_CHECKING:
+             """Get archive of files from container."""
+             ...
+ 
+-        def run(self, code: str, libraries: list | None = None, timeout: int = 30) -> Any:
+-            """Run code in the container."""
++        def run(self, code: str, libraries: list | None = None, timeout: float | None = None) -> Any:
++            """Run code in the container. ``timeout=None`` uses the session's configured timeout."""
+             ...
+ 
+ 
+@@ -219,7 +219,7 @@ class AbstractLanguageHandler(ABC):
+         libraries: list | None = None,
+         enable_plotting: bool = True,
+         output_dir: str = "/tmp/sandbox_plots",
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run code and extract artifacts (plots) in a language-specific manner.
+ 
+@@ -233,7 +233,8 @@ class AbstractLanguageHandler(ABC):
+             libraries: Optional list of libraries to install before running
+             enable_plotting: Whether to enable plot detection and extraction
+             output_dir: Directory where plots should be saved
+-            timeout: Timeout for the code execution
++            timeout: Timeout for the code execution. If None, the session's configured
++                timeout (``execution_timeout`` / ``default_timeout``) is used.
+ 
+         Returns:
+             tuple: (execution_result, list_of_plots)
+diff --git a/llm_sandbox/language_handlers/cpp_handler.py b/llm_sandbox/language_handlers/cpp_handler.py
+index 6185998..5da4668 100644
+--- a/llm_sandbox/language_handlers/cpp_handler.py
++++ b/llm_sandbox/language_handlers/cpp_handler.py
+@@ -41,7 +41,7 @@ class CppHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run C++ code without artifact extraction.
+ 
+@@ -59,7 +59,8 @@ class CppHandler(AbstractLanguageHandler):
+             libraries: Optional list of libraries to install before running
+             enable_plotting: Whether to enable plot detection (ignored for C++)
+             output_dir: Directory where plots should be saved (unused)
+-            timeout: Timeout for the code execution
++            timeout: Timeout for the code execution. If None, the session's configured
++                timeout (``execution_timeout`` / ``default_timeout``) is used
+ 
+         Returns:
+             tuple: (execution_result, empty_list_of_plots)
+diff --git a/llm_sandbox/language_handlers/go_handler.py b/llm_sandbox/language_handlers/go_handler.py
+index e56ce16..e64a0ce 100644
+--- a/llm_sandbox/language_handlers/go_handler.py
++++ b/llm_sandbox/language_handlers/go_handler.py
+@@ -33,7 +33,7 @@ class GoHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run Go code without artifact extraction.
+ 
+@@ -51,7 +51,8 @@ class GoHandler(AbstractLanguageHandler):
+             libraries: Optional list of libraries to install before running
+             enable_plotting: Whether to enable plot detection (ignored for Go)
+             output_dir: Directory where plots should be saved (unused)
+-            timeout: Timeout for the code execution
++            timeout: Timeout for the code execution. If None, the session's configured
++                timeout (``execution_timeout`` / ``default_timeout``) is used
+ 
+         Returns:
+             tuple: (execution_result, empty_list_of_plots)
+diff --git a/llm_sandbox/language_handlers/java_handler.py b/llm_sandbox/language_handlers/java_handler.py
+index 8efea3b..0fea5f1 100644
+--- a/llm_sandbox/language_handlers/java_handler.py
++++ b/llm_sandbox/language_handlers/java_handler.py
+@@ -38,7 +38,7 @@ class JavaHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run Java code without artifact extraction.
+ 
+@@ -56,7 +56,8 @@ class JavaHandler(AbstractLanguageHandler):
+             libraries: Optional list of libraries to install before running
+             enable_plotting: Whether to enable plot detection (ignored for Java)
+             output_dir: Directory where plots should be saved (unused)
+-            timeout: Timeout for the code execution
++            timeout: Timeout for the code execution. If None, the session's configured
++                timeout (``execution_timeout`` / ``default_timeout``) is used
+ 
+         Returns:
+             tuple: (execution_result, empty_list_of_plots)
+diff --git a/llm_sandbox/language_handlers/javascript_handler.py b/llm_sandbox/language_handlers/javascript_handler.py
+index a3e523c..880f59a 100644
+--- a/llm_sandbox/language_handlers/javascript_handler.py
++++ b/llm_sandbox/language_handlers/javascript_handler.py
+@@ -40,7 +40,7 @@ class JavaScriptHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run JavaScript code without artifact extraction.
+ 
+@@ -59,7 +59,8 @@ class JavaScriptHandler(AbstractLanguageHandler):
+             libraries: Optional list of libraries to install before running
+             enable_plotting: Whether to enable plot detection (ignored for JavaScript)
+             output_dir: Directory where plots should be saved (unused)
+-            timeout: Timeout for the code execution
++            timeout: Timeout for the code execution. If None, the session's configured
++                timeout (``execution_timeout`` / ``default_timeout``) is used
+ 
+         Returns:
+             tuple: (execution_result, empty_list_of_plots)
+diff --git a/llm_sandbox/language_handlers/ruby_handler.py b/llm_sandbox/language_handlers/ruby_handler.py
+index c43eb34..cbe2586 100644
+--- a/llm_sandbox/language_handlers/ruby_handler.py
++++ b/llm_sandbox/language_handlers/ruby_handler.py
+@@ -32,7 +32,7 @@ class RubyHandler(AbstractLanguageHandler):
+         libraries: list | None = None,
+         enable_plotting: bool = True,  # noqa: ARG002
+         output_dir: str = "/tmp/sandbox_plots",  # noqa: ARG002
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> tuple[Any, list[PlotOutput]]:
+         """Run Ruby code without artifact extraction.
+ 
+@@ -50,7 +50,8 @@ class RubyHandler(AbstractLanguageHandler):
+             libraries: Optional list of libraries to install before running
+             enable_plotting: Whether to enable plot detection (ignored for Ruby)
+             output_dir: Directory where plots should be saved (unused)
+-            timeout: Timeout for the code execution
++            timeout: Timeout for the code execution. If None, the session's configured
++                timeout (``execution_timeout`` / ``default_timeout``) is used
+ 
+         Returns:
+             tuple: (execution_result, empty_list_of_plots)
+diff --git a/llm_sandbox/session.py b/llm_sandbox/session.py
+index 292fa38..5e07ab8 100644
+--- a/llm_sandbox/session.py
++++ b/llm_sandbox/session.py
+@@ -409,7 +409,7 @@ class ArtifactSandboxSession:
+         self,
+         code: str,
+         libraries: list | None = None,
+-        timeout: int = 30,
++        timeout: float | None = None,
+     ) -> ExecutionResult:
+         """Run code in the sandbox session and extract any generated artifacts.
+ 
+@@ -423,7 +423,9 @@ class ArtifactSandboxSession:
+                         seaborn, plotly, or other visualization libraries.
+             libraries (list | None, optional): Additional libraries to install before running
+                                                 the code. Defaults to None.
+-            timeout (int, optional): Timeout in seconds for the code execution. Defaults to 30.
++            timeout (float | None, optional): Timeout in seconds for the code execution.
++                If None, the session's ``execution_timeout`` is used, falling back to
++                ``default_timeout`` -- same behaviour as ``SandboxSession``. Defaults to None.
+ 
+         Returns:
+             ExecutionResult: An object containing:
+diff --git a/tests/test_session.py b/tests/test_session.py
+index 9b64ee9..8df14ba 100644
+--- a/tests/test_session.py
++++ b/tests/test_session.py
+@@ -224,7 +224,7 @@ class TestArtifactSandboxSession:
+             libraries=["numpy"],
+             enable_plotting=False,
+             output_dir="/tmp/sandbox_plots",
+-            timeout=30,
++            timeout=None,
+         )
+ 
+     @patch("llm_sandbox.session.create_session")
+@@ -258,7 +258,7 @@ class TestArtifactSandboxSession:
+             libraries=None,
+             enable_plotting=True,
+             output_dir="/tmp/sandbox_plots",
+-            timeout=30,
++            timeout=None,
+         )
+ 
+     @patch("llm_sandbox.session.create_session")
+diff --git a/tests/tw_repro/test_issue_artifact_session_timeout.py b/tests/tw_repro/test_issue_artifact_session_timeout.py
+new file mode 100644
+index 0000000..7bd7a5e
+--- /dev/null
++++ b/tests/tw_repro/test_issue_artifact_session_timeout.py
+@@ -0,0 +1,98 @@
++# ruff: noqa: SLF001, PLR2004
++
++"""Reproduction for: ArtifactSandboxSession does not allow timeouts greater than 30 seconds.
++
++Expected behaviour (from the issue): ArtifactSandboxSession timeout parameters behave
++the same as SandboxSession, i.e. a configured ``execution_timeout``/``default_timeout``
++greater than 30 seconds is honoured instead of being capped at a hard-coded 30.
++
++Strategy: build a REAL ``ArtifactSandboxSession`` (real ``SandboxDockerSession`` +
++real language handler) with Docker mocked out, patch ``_execute_with_timeout`` on the
++underlying session to capture the effective timeout, and assert it equals the configured
++value rather than 30.
++"""
++
++from unittest.mock import MagicMock, patch
++
++from llm_sandbox.session import ArtifactSandboxSession
++
++
++def _make_artifact_session(**kwargs: object) -> ArtifactSandboxSession:
++    return ArtifactSandboxSession(lang="python", **kwargs)
++
++
++def _run_and_capture_timeout(
++    session: ArtifactSandboxSession,
++    *,
++    run_kwargs: dict | None = None,
++    enable_plotting: bool | None = None,
++) -> float | None:
++    base = session._session
++    base.container = MagicMock()
++    base.is_open = True
++
++    if enable_plotting is not None:
++        session.enable_plotting = enable_plotting
++
++    with (
++        patch.object(base, "install"),
++        patch.object(base, "copy_to_runtime"),
++        patch.object(base, "execute_commands"),
++        patch.object(base, "_execute_with_timeout") as mock_exec,
++        patch.object(base.language_handler, "extract_plots", return_value=[]),
++    ):
++        mock_exec.return_value = MagicMock(exit_code=0, stdout="output", stderr="")
++        session.run("print('hello')", **(run_kwargs or {}))
++
++        assert mock_exec.call_args is not None
++        # timeout is passed as a keyword in BaseSession.run
++        return mock_exec.call_args.kwargs.get("timeout")
++
++
++@patch("llm_sandbox.docker.docker.from_env")
++def test_artifact_session_honors_execution_timeout(mock_from_env: MagicMock) -> None:
++    """execution_timeout > 30 must be used, not the hard-coded 30."""
++    session = _make_artifact_session(default_timeout=300.0, execution_timeout=120.0)
++    assert _run_and_capture_timeout(session, enable_plotting=True) == 120.0
++
++
++@patch("llm_sandbox.docker.docker.from_env")
++def test_artifact_session_falls_back_to_default_timeout(mock_from_env: MagicMock) -> None:
++    """When execution_timeout is unset, default_timeout is used."""
++    session = _make_artifact_session(default_timeout=300.0)
++    assert _run_and_capture_timeout(session) == 300.0
++
++
++@patch("llm_sandbox.docker.docker.from_env")
++def test_artifact_session_explicit_timeout_overrides_config(mock_from_env: MagicMock) -> None:
++    """An explicit per-call timeout still overrides the session config."""
++    session = _make_artifact_session(execution_timeout=120.0)
++    assert _run_and_capture_timeout(session, run_kwargs={"timeout": 45.0}) == 45.0
++
++
++@patch("llm_sandbox.docker.docker.from_env")
++def test_artifact_session_no_hardcoded_30_forwarded(mock_from_env: MagicMock) -> None:
++    """The plotting path must not inject a literal 30 into the language handler."""
++    session = _make_artifact_session()
++    base = session._session
++    base.container = MagicMock()
++    base.is_open = True
++
++    with (
++        patch.object(base, "install"),
++        patch.object(base, "copy_to_runtime"),
++        patch.object(base, "execute_commands"),
++        patch.object(base, "_execute_with_timeout") as mock_exec,
++        patch.object(
++            base.language_handler,
++            "run_with_artifacts",
++            wraps=base.language_handler.run_with_artifacts,
++        ) as mock_run_with_artifacts,
++        patch.object(base.language_handler, "extract_plots", return_value=[]),
++    ):
++        mock_exec.return_value = MagicMock(exit_code=0, stdout="output", stderr="")
++        session.enable_plotting = True
++        session.run("print('hello')")
++
++    assert mock_run_with_artifacts.call_args is not None
++    assert mock_run_with_artifacts.call_args.kwargs.get("timeout") is None

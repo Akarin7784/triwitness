@@ -1,0 +1,210 @@
+diff --git a/crosstl/src/translator/codegen/directx_codegen.py b/crosstl/src/translator/codegen/directx_codegen.py
+index 47eedd4..a6df948 100644
+--- a/crosstl/src/translator/codegen/directx_codegen.py
++++ b/crosstl/src/translator/codegen/directx_codegen.py
+@@ -360,6 +360,7 @@ class HLSLCodeGen:
+             "ASSIGN_SUB": "-=",
+             "ASSIGN_MUL": "*=",
+             "ASSIGN_DIV": "/=",
++            "ASSIGN_AND": "&=",
+             "LESS_EQUAL": "<=",
+             "GREATER_EQUAL": ">=",
+             "EQUAL": "==",
+diff --git a/crosstl/src/translator/codegen/metal_codegen.py b/crosstl/src/translator/codegen/metal_codegen.py
+index 2a258c9..fa01be2 100644
+--- a/crosstl/src/translator/codegen/metal_codegen.py
++++ b/crosstl/src/translator/codegen/metal_codegen.py
+@@ -419,6 +419,7 @@ class MetalCodeGen:
+             "ASSIGN_SUB": "-=",
+             "ASSIGN_MUL": "*=",
+             "ASSIGN_DIV": "/=",
++            "ASSIGN_AND": "&=",
+             "GREATER_THAN": ">",
+             "LESS_EQUAL": "<=",
+             "GREATER_EQUAL": ">=",
+diff --git a/crosstl/src/translator/codegen/opengl_codegen.py b/crosstl/src/translator/codegen/opengl_codegen.py
+index 0a462c1..7d3a3b0 100644
+--- a/crosstl/src/translator/codegen/opengl_codegen.py
++++ b/crosstl/src/translator/codegen/opengl_codegen.py
+@@ -276,6 +276,7 @@ class GLSLCodeGen:
+             "ASSIGN_SUB": "-=",
+             "ASSIGN_MUL": "*=",
+             "ASSIGN_DIV": "/=",
++            "ASSIGN_AND": "&=",
+             "GREATER_THAN": ">",
+             "LESS_EQUAL": "<=",
+             "GREATER_EQUAL": ">=",
+diff --git a/crosstl/src/translator/parser.py b/crosstl/src/translator/parser.py
+index 82899e6..03d45e6 100644
+--- a/crosstl/src/translator/parser.py
++++ b/crosstl/src/translator/parser.py
+@@ -634,6 +634,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "LESS_THAN",
+             "GREATER_THAN",
+             "LESS_EQUAL",
+@@ -689,6 +690,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "EQUAL",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -719,6 +721,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "EQUALS",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -769,6 +772,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "EQUAL",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -934,6 +938,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
+         ]:
+diff --git a/tests/test_translator/test_codegen/test_opengl_codegen.py b/tests/test_translator/test_codegen/test_opengl_codegen.py
+index a789e6e..5afd8a9 100644
+--- a/tests/test_translator/test_codegen/test_opengl_codegen.py
++++ b/tests/test_translator/test_codegen/test_opengl_codegen.py
+@@ -283,3 +283,23 @@ def test_function_call():
+         print(code)
+     except SyntaxError:
+         pytest.fail("Struct parsing not implemented.")
++
++
++def test_assignment_operator_and():
++    code = """
++    shader S {
++        vertex {
++            void main() {
++                int a = 1;
++                a &= 1;
++            }
++        }
++    }
++    """
++    try:
++        tokens = tokenize_code(code)
++        ast = parse_code(tokens)
++        generated = generate_code(ast)
++    except SyntaxError:
++        pytest.fail("ASSIGN_AND codegen not implemented.")
++    assert "&=" in generated
+diff --git a/tests/test_translator/test_parser.py b/tests/test_translator/test_parser.py
+index 672f075..958618c 100644
+--- a/tests/test_translator/test_parser.py
++++ b/tests/test_translator/test_parser.py
+@@ -360,3 +360,30 @@ def test_bitwise_operators():
+         parse_code(tokens)
+     except SyntaxError:
+         pytest.fail("Bitwise Shift not working")
++
++
++def test_assignment_and_operator():
++    code = """
++    shader S {
++        vertex {
++            void main() {
++                int a = 1;
++                a &= 1;
++            }
++        }
++    }
++    """
++    try:
++        tokens = tokenize_code(code)
++        ast = parse_code(tokens)
++    except SyntaxError:
++        pytest.fail("ASSIGN_AND parsing not implemented.")
++
++    assert ("ASSIGN_AND", "&=") in tokens
++    binaryops = [
++        node
++        for node in ast.vertex_section.functions[0].body
++        if getattr(node, "op", None) == "&="
++    ]
++    assert binaryops, "&= assignment did not produce a BinaryOpNode"
++    assert binaryops[0].op == "&="
+diff --git a/tests/tw_repro/test_issue_assign_and.py b/tests/tw_repro/test_issue_assign_and.py
+new file mode 100644
+index 0000000..da3be1e
+--- /dev/null
++++ b/tests/tw_repro/test_issue_assign_and.py
+@@ -0,0 +1,61 @@
++"""Repro for: Add Parsing for `Assignment AND` Token.
++
++Issue: the parser must handle the ``ASSIGN_AND`` (``&=``) token so that
++expressions using the ``&=`` operator can be parsed (and later code-generated).
++
++These tests fail on the original code with
++``SyntaxError: Unexpected token in variable declaration: ASSIGN_AND``.
++"""
++
++from crosstl.src.translator.lexer import Lexer
++import pytest
++from typing import List
++from crosstl.src.translator.parser import Parser
++from crosstl.src.translator.codegen.opengl_codegen import GLSLCodeGen
++
++CODE = """
++shader S {
++    vertex {
++        void main() {
++            int a = 1;
++            a &= 1;
++        }
++    }
++}
++"""
++
++
++def tokenize_code(code: str) -> List:
++    lexer = Lexer(code)
++    return lexer.tokens
++
++
++def parse_code(tokens: List):
++    parser = Parser(tokens)
++    return parser.parse()
++
++
++def test_assignment_and_operator():
++    # AC1: parsing a shader containing `&=` must not raise SyntaxError.
++    try:
++        tokens = tokenize_code(CODE)
++        ast = parse_code(tokens)
++    except SyntaxError:
++        pytest.fail("ASSIGN_AND parsing not implemented.")
++
++    # token stream contains ASSIGN_AND with text "&="
++    assert ("ASSIGN_AND", "&=") in tokens
++
++    # AC2: the &= statement is a BinaryOpNode whose op is the token *text* "&="
++    vertex_body = ast.vertex_section.functions[0].body
++    binaryops = [node for node in vertex_body if getattr(node, "op", None) == "&="]
++    assert binaryops, f"no BinaryOpNode with op '&=' found in {vertex_body}"
++    assert binaryops[0].op == "&="
++
++
++def test_assignment_and_operator_codegen():
++    # AC3: end-to-end codegen must emit `&=`.
++    tokens = tokenize_code(CODE)
++    ast = parse_code(tokens)
++    generated = GLSLCodeGen().generate(ast)
++    assert "&=" in generated

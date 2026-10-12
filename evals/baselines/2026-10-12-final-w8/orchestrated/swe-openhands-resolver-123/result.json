@@ -1,0 +1,37 @@
+{
+  "task_id": "swe-openhands-resolver-123",
+  "config": "final-orchestrated",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": false,
+  "reward": 0.0,
+  "agent_status": "finished",
+  "agent_claimed_success": true,
+  "false_success": true,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_branch_exists.py"
+  ],
+  "edited_paths": [
+    "tests/test_send_pull_request.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.118053,
+  "tokens_in": 528621,
+  "tokens_cached": 481024,
+  "tokens_out": 15209,
+  "peak_calls": 0,
+  "steps": 20,
+  "wall_s": 155.41,
+  "trajectory_id": "final-orchestrated/swe-openhands-resolver-123/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "verifier_mode": "deterministic",
+  "verifier_verdict": "inconclusive",
+  "verifier_deterministic": "inconclusive",
+  "verifier_model_verdict": null,
+  "verify_repro_status": "reproduced",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.0,
+  "verifier_error": null
+}

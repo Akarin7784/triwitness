@@ -1,0 +1,27 @@
+{
+  "started_at": "2026-10-12T23:55:32.352689+08:00",
+  "live": true,
+  "estimate_cny": 0.1744,
+  "max_total_cny": 50.0,
+  "configs": [
+    {
+      "name": "final-baseline",
+      "agent": "llm",
+      "executor": {
+        "model": "deepseek-flash",
+        "thinking": false
+      },
+      "attempts": 1,
+      "budget_profile": "eval",
+      "harness": "configs/harness/long-context-1m.yaml",
+      "category": "final-eval",
+      "verifier": "deterministic",
+      "verifier_model_policy": "thin_pass",
+      "verifier_regression": true
+    }
+  ],
+  "tasks": [
+    "swe-cyclopts-633"
+  ],
+  "peak_flag": null
+}

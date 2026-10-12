@@ -1,0 +1,57 @@
+diff --git a/cyclopts/parameter.py b/cyclopts/parameter.py
+index 8bb86f2..ac51514 100644
+--- a/cyclopts/parameter.py
++++ b/cyclopts/parameter.py
+@@ -272,9 +272,13 @@ class Parameter:
+ 
+         type_ = resolve_annotated(type_)
+         if is_union(type_):
+-            out = []
++            # Deduplicate (e.g. user-specified negatives are identical for each
++            # union member) while preserving order.
++            out: list[str] = []
+             for x in get_args(type_):
+-                out.extend(self.get_negatives(x))
++                for negative in self.get_negatives(x):
++                    if negative not in out:
++                        out.append(negative)
+             return tuple(out)
+ 
+         origin = get_origin(type_)
+diff --git a/tests/tw_repro/test_issue_negative_union.py b/tests/tw_repro/test_issue_negative_union.py
+new file mode 100644
+index 0000000..16570c6
+--- /dev/null
++++ b/tests/tw_repro/test_issue_negative_union.py
+@@ -0,0 +1,31 @@
++"""Repro: duplicate negative shown in help for a ``bool | None`` parameter.
++
++Issue: a parameter annotated ``Annotated[bool | None, Parameter(negative="--negative")]``
++shows ``--negative`` twice in the help text.
++"""
++
++from typing import Annotated
++
++from cyclopts import App, Parameter
++
++
++def test_get_negatives_bool_none_union_no_duplicate():
++    p = Parameter(negative="--negative", name=("--param",))
++    assert ("--negative",) == p.get_negatives(bool | None)
++
++
++def test_help_no_duplicate_negative_for_bool_none_union(console):
++    app = App(result_action="return_value")
++
++    @app.default
++    def cmd(
++        *,
++        param: Annotated[bool | None, Parameter(negative="--negative")] = None,
++    ):
++        pass
++
++    with console.capture() as capture:
++        app(["--help"], console=console)
++
++    help_text = capture.get()
++    assert help_text.count("--negative") == 1, help_text

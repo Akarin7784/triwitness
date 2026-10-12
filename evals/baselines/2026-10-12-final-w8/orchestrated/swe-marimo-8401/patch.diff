@@ -1,0 +1,221 @@
+diff --git a/P_empty b/P_empty
+new file mode 100644
+index 0000000..e69de29
+diff --git a/marimo/_runtime/context/kernel_context.py b/marimo/_runtime/context/kernel_context.py
+index 3048c8a..3147040 100644
+--- a/marimo/_runtime/context/kernel_context.py
++++ b/marimo/_runtime/context/kernel_context.py
+@@ -6,6 +6,7 @@ from dataclasses import dataclass
+ from typing import TYPE_CHECKING, Any, Optional
+ 
+ from marimo._ast.app import AppKernelRunnerRegistry
++from marimo._ast.cell_id import is_external_cell_id
+ from marimo._config.config import MarimoConfig
+ from marimo._messaging.types import Stderr, Stdout
+ from marimo._plugins.ui._core.ids import IDProvider, NoIDProviderException
+@@ -30,6 +31,12 @@ if TYPE_CHECKING:
+     from marimo._types.ids import CellId_t
+ 
+ 
++def _external_cell_id_stripped(cell_id: CellId_t) -> str:
++    """Strip the UUID prefix from an (external) cell id."""
++    # UUIDs are 36 characters long, including hyphens.
++    return str(cell_id)[36:]
++
++
+ @dataclass
+ class KernelRuntimeContext(RuntimeContext):
+     """Encapsulates runtime state for a session."""
+@@ -71,9 +78,16 @@ class KernelRuntimeContext(RuntimeContext):
+     @property
+     def cell_id(self) -> Optional[CellId_t]:
+         """Get the cell id of the currently executing cell, if any."""
+-        if self.execution_context is not None:
+-            return self.execution_context.cell_id
+-        return None
++        if self.execution_context is None:
++            return None
++        cell_id = self.execution_context.cell_id
++        # Cells of an app created while a runtime context was installed carry
++        # a UUID prefix, but the kernel's graph is keyed by the unprefixed
++        # cell id (to match the frontend's cell ids). Drop the prefix so that
++        # the reported id can be used to look up the graph.
++        if is_external_cell_id(cell_id):
++            return _external_cell_id_stripped(cell_id)  # type: ignore[return-value]
++        return cell_id
+ 
+     @property
+     def cli_args(self) -> CLIArgs:
+diff --git a/marimo/_save/save.py b/marimo/_save/save.py
+index 3c9ee96..2957bb4 100644
+--- a/marimo/_save/save.py
++++ b/marimo/_save/save.py
+@@ -158,9 +158,18 @@ class _cache_call(CacheContext):
+             maybe_cell_id = (
+                 ctx.cell_id or ctx.execution_context.cell_id or CellId_t("")
+             )
+-            # If the cell ID is "external", that means it's not from the main
+-            # graph but rather from an embedded graph.
+-            self._external = is_external_cell_id(maybe_cell_id)
++            # Cells of embedded/cloned apps (as well as apps constructed while
++            # a runtime context is installed) get a UUID prefix. Such graphs
++            # are not part of the current context's graph, so the defining
++            # scope is used as a fallback (see `_prepare_call_execution`).
++            #
++            # NB. a UUID prefix alone is not enough to conclude that the
++            # function is external: cell ids of the running notebook may also
++            # carry one, and those cells *are* registered in the current
++            # graph. In that case, keep the (cheap and always correct)
++            # context-based path.
++            if is_external_cell_id(maybe_cell_id):
++                self._external = maybe_cell_id not in ctx.graph.cells
+             if not self._external:
+                 graph = ctx.graph
+                 glbls = ctx.globals
+@@ -245,8 +254,15 @@ class _cache_call(CacheContext):
+     def _build_base_block(
+         self, fn: Callable[..., Any], graph: DirectedGraph, cell_id: CellId_t
+     ) -> BlockHasher:
++        # NB. bound methods are stored as `functools.partial`, but only the
++        # underlying function is hashable. Look through any bound arguments to
++        # arrive at the actual definition.
++        ast_fn = fn
++        while isinstance(ast_fn, functools.partial):
++            ast_fn = ast_fn.func
++
+         module = get_hashable_ast(
+-            fn, skip_decorators={"cache", "persistent_cache"}
++            ast_fn, skip_decorators={"cache", "persistent_cache"}
+         )
+ 
+         return BlockHasher(
+@@ -270,13 +286,36 @@ class _cache_call(CacheContext):
+         """
+         # Build base block if needed (for external/late binding)
+         if self.base_block is None:
+-            assert self._external, UNEXPECTED_FAILURE_BOILERPLATE
++            # note, that `self.base_block` is only unset when the definition
++            # was not able to resolve a graph (e.g. a function defined in an
++            # imported module, or a function from an embedded app that is not
++            # part of the current graph).
+             assert self.__wrapped__ is not None, UNEXPECTED_FAILURE_BOILERPLATE
+-            graph = graph_from_scope(self.scope)
+-            cell_id = get_cell_id_from_scope(self.__wrapped__, self.scope)
+-            self.base_block = self._build_base_block(
+-                self.__wrapped__, graph, cell_id
++            ctx = safe_get_context()
++            cell_id = (
++                (ctx.cell_id or ctx.execution_context.cell_id)
++                if ctx is not None and ctx.execution_context is not None
++                else None
+             )
++            if cell_id is not None and cell_id in ctx.graph.cells:
++                # Defined for a cell of the current graph, but the definition
++                # could not resolve a graph (e.g. the cell id is prefixed, or
++                # the function was defined for an embedded app). The current
++                # context is the correct one to use.
++                self.base_block = self._build_base_block(
++                    self.__wrapped__, ctx.graph, cell_id
++                )
++            else:
++                # The definition is genuinely external (a module import, a
++                # script, or a foreign app), so the scope of the definition is
++                # the only source of the graph.
++                graph = graph_from_scope(self.scope)
++                cell_id = get_cell_id_from_scope(
++                    self.__wrapped__, self.scope
++                )
++                self.base_block = self._build_base_block(
++                    self.__wrapped__, graph, cell_id
++                )
+ 
+         # Rewrite scoped args to prevent shadowed variables
+         arg_dict = {f"{ARG_PREFIX}{k}": v for (k, v) in zip(self._args, args)}
+diff --git a/marimo/_save/toplevel.py b/marimo/_save/toplevel.py
+index 9be98d1..bd7ac27 100644
+--- a/marimo/_save/toplevel.py
++++ b/marimo/_save/toplevel.py
+@@ -17,6 +17,17 @@ LOGGER = _loggers.marimo_logger()
+ 
+ 
+ def get_app_from_scope(scope: dict[str, Any]) -> App | None:
++    # NB. a missing 'app' is expected, and not an error: the scope is just the
++    # frame the cached function was defined in (which, for instance, may be a
++    # plain notebook cell). It's only worth surfacing when an 'app' is present
++    # but is not a valid instance.
++    if "app" not in scope:
++        LOGGER.debug(
++            "The scope does not contain an 'app' instance; skipping scope "
++            "based graph recovery."
++        )
++        return None
++
+     app = scope.get("app", None)
+     if not isinstance(app, App):
+         LOGGER.warning(
+diff --git a/test/P_empty.json b/test/P_empty.json
+new file mode 100644
+index 0000000..e69de29
+diff --git a/test/P_empty.pickle b/test/P_empty.pickle
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_cache_external_cell_id.py b/tests/tw_repro/test_issue_cache_external_cell_id.py
+new file mode 100644
+index 0000000..181e2c7
+--- /dev/null
++++ b/tests/tw_repro/test_issue_cache_external_cell_id.py
+@@ -0,0 +1,54 @@
++# Copyright 2026 Marimo. All rights reserved.
++"""Repro for: caching fails with "The scope does not contain a valid 'app' instance."
++
++When a cell runs with a cell id that carries a UUID prefix (e.g. cells of an
++App created while a runtime context is installed -- which is the case in the
++VS Code extension), `mo.cache` used to treat the cell as "external" and fall
++back to recovering the notebook graph from the definition scope. Plain
++notebook cells have no `app` in scope, so a warning was emitted and caching
++broke.
++"""
++
++from __future__ import annotations
++
++from uuid import uuid4
++
++import pytest
++
++from marimo._runtime.runtime import Kernel
++from tests.conftest import ExecReqProvider
++
++
++@pytest.mark.asyncio
++async def test_cache_in_external_cell_id(
++    k: Kernel, exec_req: ExecReqProvider
++) -> None:
++    # Cell id with a UUID prefix => "external" cell id.
++    cell_id = f"{uuid4()}Hbol"
++    await k.run(
++        [
++            exec_req.get_with_id(
++                cell_id,
++                """
++                import marimo as mo
++
++                @mo.cache
++                def slow():
++                    import time
++                    time.sleep(0.01)
++                    return "Done sleeping!"
++
++                first = slow()
++                second = slow()
++                """,
++            )
++        ]
++    )
++
++    assert "does not contain a valid 'app' instance" not in k.stderr.messages
++    assert not k.stderr.messages, k.stderr
++    assert k.globals["first"] == "Done sleeping!"
++    assert k.globals["second"] == "Done sleeping!"
++    # The second call must be served from cache.
++    assert k.globals["slow"].misses == 1
++    assert k.globals["slow"].hits == 1

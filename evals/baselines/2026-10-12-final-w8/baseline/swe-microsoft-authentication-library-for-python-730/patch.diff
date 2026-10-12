@@ -1,0 +1,444 @@
+diff --git a/docs/index.rst b/docs/index.rst
+index 1c5d79b..a15f550 100644
+--- a/docs/index.rst
++++ b/docs/index.rst
+@@ -188,3 +188,12 @@ And then feed the configuration object into a :class:`ManagedIdentityClient` obj
+    :members:
+ 
+    .. automethod:: __init__
++
++The ``acquire_token_for_client()`` method accepts an optional ``claims_challenge``
++parameter. When claims are present, the local token cache is bypassed, so that a
++fresh token is obtained. This is used to support Continuous Access Evaluation (CAE).
++
++.. autoclass:: msal.ManagedIdentityAssertion
++   :members:
++
++   .. automethod:: __init__
+diff --git a/msal/__init__.py b/msal/__init__.py
+index 380d584..e003b29 100644
+--- a/msal/__init__.py
++++ b/msal/__init__.py
+@@ -38,6 +38,7 @@ from .managed_identity import (
+     SystemAssignedManagedIdentity, UserAssignedManagedIdentity,
+     ManagedIdentityClient,
+     ManagedIdentityError,
++    ManagedIdentityAssertion,
+     ArcPlatformNotSupportedError,
+     )
+ 
+diff --git a/msal/application.py b/msal/application.py
+index b3c07a4..1751e7e 100644
+--- a/msal/application.py
++++ b/msal/application.py
+@@ -8,6 +8,7 @@ from threading import Lock
+ import os
+ 
+ from .oauth2cli import Client, JwtAssertionCreator
++from .oauth2cli.assertion import AssertionCreator
+ from .oauth2cli.oidc import decode_part
+ from .authority import Authority, WORLD_WIDE
+ from .mex import send_request as mex_send_request
+@@ -737,7 +738,12 @@ The reserved list: {}""".format(list(scope_set), list(reserved_scope)))
+         if self.app_version:
+             default_headers['x-app-ver'] = self.app_version
+         default_body = {"client_info": 1}
+-        if isinstance(client_credential, dict):
++        if isinstance(client_credential, AssertionCreator):
++            # This is used by, for example, msal.ManagedIdentityAssertion for FIC.
++            client_assertion_type = Client.CLIENT_ASSERTION_TYPE_JWT
++            client_assertion = client_credential.create_regenerative_assertion(
++                audience=authority.token_endpoint, issuer=self.client_id)
++        elif isinstance(client_credential, dict):
+             client_assertion_type = Client.CLIENT_ASSERTION_TYPE_JWT
+             # Use client_credential.get("...") rather than "..." in client_credential
+             # so that we can ignore an empty string came from an empty ENV VAR.
+@@ -2321,6 +2327,17 @@ class ConfidentialClientApplication(ClientApplication):  # server-side web app
+         telemetry_context = self._build_telemetry_context(
+             self.ACQUIRE_TOKEN_FOR_CLIENT_ID, refresh_reason=refresh_reason)
+         client = self._regional_client or self.client
++        if claims_challenge and isinstance(self.client_credential, AssertionCreator):
++            # Relay the claims challenge to the (FIC) assertion provider,
++            # so that the downstream AAD request is accompanied by a fresh
++            # assertion which was obtained with the claims challenge.
++            import copy
++            client = copy.copy(client)
++            client.client_assertion = self.client_credential.create_regenerative_assertion(
++                audience=client.configuration["token_endpoint"],
++                issuer=self.client_id,
++                claims_challenge=claims_challenge,
++                )
+         response = client.obtain_token_for_client(
+             scope=scopes,  # This grant flow requires no scope decoration
+             headers=telemetry_context.generate_headers(),
+diff --git a/msal/managed_identity.py b/msal/managed_identity.py
+index 5636f56..783398b 100644
+--- a/msal/managed_identity.py
++++ b/msal/managed_identity.py
+@@ -15,6 +15,7 @@ from .token_cache import TokenCache
+ from .individual_cache import _IndividualCache as IndividualCache
+ from .throttled_http_client import ThrottledHttpClientBase, RetryAfterParser
+ from .cloudshell import _is_running_in_cloud_shell
++from .oauth2cli.assertion import AssertionCreator, _str2bytes
+ 
+ 
+ logger = logging.getLogger(__name__)
+@@ -237,12 +238,29 @@ class ManagedIdentityClient(object):
+             self.__instance = socket.getfqdn()  # Moved from class definition to here
+         return self.__instance
+ 
+-    def acquire_token_for_client(self, *, resource):  # We may support scope in the future
++    def acquire_token_for_client(self, *, resource, claims_challenge=None):
+         """Acquire token for the managed identity.
+ 
+         The result will be automatically cached.
+         Subsequent calls will automatically search from cache first.
+ 
++        :param claims_challenge:
++            The claims_challenge parameter requests specific claims requested by the
++            resource provider in the form of a claims_challenge directive in the
++            www-authenticate header to be returned from the UserInfo Endpoint and/or in
++            the ID Token and/or Access Token. It is a string of a JSON object which
++            contains lists of claims being requested from these locations.
++
++            When this parameter is present, the token cache will be bypassed,
++            so that a fresh token will be fetched from the managed identity endpoint.
++            This is needed by Continuous Access Evaluation (CAE).
++
++            .. note::
++
++                The Managed Identity (MSI v1) endpoint is unchanged, therefore the
++                claims will NOT be sent to the endpoint. This parameter only instructs
++                MSAL to bypass its local cache.
++
+         .. note::
+ 
+             Known issue: When an Azure VM has only one user-assigned managed identity,
+@@ -255,8 +273,13 @@ class ManagedIdentityClient(object):
+         access_token_from_cache = None
+         client_id_in_cache = self._managed_identity.get(
+             ManagedIdentity.ID, "SYSTEM_ASSIGNED_MANAGED_IDENTITY")
+-        if True:  # Does not offer an "if not force_refresh" option, because
+-                  # there would be built-in token cache in the service side anyway
++        if claims_challenge:
++            # The MSI v1 endpoint does not support claims, so we can only bypass
++            # the local cache to hopefully obtain a new token. See also
++            # https://learn.microsoft.com/en-us/entra/identity-platform/claims-challenge
++            logger.debug(
++                "Claims challenge is present. Bypassing the token cache.")
++        else:
+             matches = self._token_cache.find(
+                 self._token_cache.CredentialType.ACCESS_TOKEN,
+                 target=[resource],
+@@ -283,6 +306,7 @@ class ManagedIdentityClient(object):
+                     if int(entry["refresh_on"]) < now:  # aging
+                         break  # With a fallback in hand, we break here to go refresh
+                 return access_token_from_cache  # It is still good as new
++        now = time.time()
+         try:
+             result = _obtain_token(self._http_client, self._managed_identity, resource)
+             if "access_token" in result:
+@@ -309,6 +333,60 @@ class ManagedIdentityClient(object):
+         return access_token_from_cache
+ 
+ 
++class ManagedIdentityAssertion(AssertionCreator):
++    """Feed an instance of this class to a ConfidentialClientApplication's
++    ``client_credential`` parameter (or its ``client_assertion`` counterpart),
++    so that this app can use a FIC (Federated Identity Credential) whose
++    assertion is the Managed Identity token.
++
++    This is an experimental feature.
++
++    The claims are exposed here, so that the claims challenge obtained by the
++    downstream app can be relayed into the Managed Identity request, which in
++    turn bypasses the Managed Identity token cache.
++    """
++    def __init__(self, client, resource):
++        """
++        :param client:
++            An instance of :class:`ManagedIdentityClient` which will be used to
++            obtain the Managed Identity token.
++        :param str resource:
++            The resource of the Managed Identity token.
++        """
++        self._client = client
++        self._resource = resource
++
++    def create_normal_assertion(
++            self, audience, issuer, subject=None, expires_at=None, expires_in=600,
++            issued_at=None, assertion_id=None, **kwargs):
++        """Create an assertion by obtaining a Managed Identity token.
++
++        The claims challenge, if any, is relayed to the Managed Identity client,
++        which will then bypass its own token cache.
++        """
++        return _str2bytes(self._client.acquire_token_for_client(
++            resource=self._resource,
++            claims_challenge=kwargs.get("claims_challenge"),
++            )["access_token"])
++
++    def create_regenerative_assertion(
++            self, audience, issuer, subject=None, expires_in=600, **kwargs):
++        """Same as the base class, except that when a claims challenge is present,
++        the assertion shall be regenerated on every call, so that the claims
++        challenge can be relayed to the Managed Identity client every time.
++        """
++        if kwargs.get("claims_challenge"):
++            # Do not use AutoRefresher, otherwise the (cached) assertion
++            # would not honor the per-request claims challenge.
++            def regenerated(claims_challenge=kwargs.get("claims_challenge")):
++                return self.create_normal_assertion(
++                    audience, issuer, subject,
++                    claims_challenge=claims_challenge)
++            return regenerated
++        return super(ManagedIdentityAssertion, self).create_regenerative_assertion(
++            audience, issuer, subject, expires_in=expires_in, **kwargs)
++
++
+ def _scope_to_resource(scope):  # This is an experimental reasonable-effort approach
+     u = urlparse(scope)
+     if u.scheme:
+diff --git a/msal/oauth2cli/oauth2.py b/msal/oauth2cli/oauth2.py
+index 01b7fc3..c358bc8 100644
+--- a/msal/oauth2cli/oauth2.py
++++ b/msal/oauth2cli/oauth2.py
+@@ -198,9 +198,19 @@ class BaseClient(object):
+             # See https://tools.ietf.org/html/rfc7521#section-4.2
+             encoder = self.client_assertion_encoders.get(
+                     self.default_body["client_assertion_type"], lambda a: a)
++            _assertion = self.client_assertion
++            if callable(_assertion):
++                # Do lazy on-the-fly computation.
++                # An enhanced assertion callable (such as
++                # msal.ManagedIdentityAssertion) may accept a claims_challenge
++                # keyword, so that the claims can be relayed to the assertion.
++                claims_challenge = (data or {}).get("claims")
++                if claims_challenge and _accepts_claims_challenge(_assertion):
++                    _assertion = _assertion(claims_challenge=claims_challenge)
++                else:
++                    _assertion = _assertion()
+             _data["client_assertion"] = encoder(
+-                self.client_assertion()  # Do lazy on-the-fly computation
+-                if callable(self.client_assertion) else self.client_assertion
++                _assertion
+                 )   # The type is bytes, which is preferable. See also:
+                     # https://github.com/psf/requests/issues/4503#issuecomment-455001070
+ 
+@@ -275,6 +285,21 @@ def _scope_set(scope):
+     return set(scope) if scope else set([])
+ 
+ 
++def _accepts_claims_challenge(assertion_callable):
++    """Return True if the callable optionally accepts a claims_challenge kwarg."""
++    try:
++        import inspect
++        signature = inspect.signature(assertion_callable)
++    except (TypeError, ValueError):  # E.g., some built-ins have no signature
++        return False
++    for name, param in signature.parameters.items():
++        if name == "claims_challenge" and param.kind in (
++                param.POSITIONAL_OR_KEYWORD, param.KEYWORD_ONLY):
++            return True
++    return any(  # E.g., it accepts **kwargs, so we optimistically pass the claim
++        param.kind == param.VAR_KEYWORD for param in signature.parameters.values())
++
++
+ def _generate_pkce_code_verifier(length=43):
+     assert 43 <= length <= 128
+     verifier = "".join(  # https://tools.ietf.org/html/rfc7636#section-4.1
+diff --git a/tests/tw_repro/test_issue_claims_mi.py b/tests/tw_repro/test_issue_claims_mi.py
+new file mode 100644
+index 0000000..b42e294
+--- /dev/null
++++ b/tests/tw_repro/test_issue_claims_mi.py
+@@ -0,0 +1,189 @@
++"""Repro for: Implement Claims API to Bypass Cache When Claims are Present in MSAL with Managed Identity
++
++Expected behavior (from the Issue):
++  * MSAL for Managed Identity exposes a claims API, i.e.
++    ``ManagedIdentityClient.acquire_token_for_client(..., claims_challenge=...)``.
++  * When claims are present in the token request, the token cache shall be bypassed
++    so that a fresh token is requested from the Managed Identity endpoint.
++  * The claims shall NOT be forwarded to the (unchanged) MSI v1 endpoint.
++  * The MI assertion provider (used for FIC) shall expose claims too.
++
++This test fails on the original code:
++  - ``acquire_token_for_client(resource=..., claims_challenge=...)`` raises TypeError
++    (unexpected keyword argument), because the claims API is not implemented.
++  - ``msal.ManagedIdentityAssertion`` does not exist.
++"""
++import json
++import time
++import unittest
++
++from tests.http_client import MinimalResponse
++from msal import (
++    SystemAssignedManagedIdentity,
++    ManagedIdentityClient,
++)
++from msal.token_cache import is_subdict_of
++
++
++CLAIMS = '{"access_token":{"nbf":{"essential":true,"value":"%s"}}}' % int(time.time())
++
++
++class ManagedIdentityClaimsTestCase(unittest.TestCase):
++    def setUp(self):
++        self.app = ManagedIdentityClient(
++            SystemAssignedManagedIdentity(),
++            http_client=self._HttpClient(),
++            )
++
++    class _HttpClient(object):
++        def __init__(self):
++            self.call_count = 0
++        def get(self, url, params=None, headers=None, **kwargs):
++            self.call_count += 1
++            return MinimalResponse(
++                status_code=200,
++                text='{"access_token": "AT%s", "expires_in": "7890", "resource": "R"}' % (
++                    self.call_count),
++                )
++        def close(self):
++            pass
++
++    def test_claims_challenge_is_accepted_and_bypasses_cache(self):
++        # 1st call: no claims -> obtain a token and populate the cache
++        first = self.app.acquire_token_for_client(resource="R")
++        self.assertEqual("AT1", first["access_token"])
++        call_count = self.app._http_client.http_client.call_count
++
++        # 2nd call: no claims -> served from cache
++        second = self.app.acquire_token_for_client(resource="R")
++        self.assertEqual("AT1", second["access_token"], "Should hit the cache")
++        self.assertEqual(
++            call_count, self.app._http_client.http_client.call_count,
++            "A cache hit should not trigger a new http call")
++
++        # 3rd call: claims present -> cache must be bypassed
++        third = self.app.acquire_token_for_client(
++            resource="R", claims_challenge=CLAIMS)
++        self.assertNotEqual(
++            "AT1", third["access_token"],
++            "Claims challenge shall bypass the cache and fetch a new token")
++        self.assertTrue(is_subdict_of(
++            {"access_token": "AT2", "token_type": "Bearer"}, third))
++        self.assertEqual(
++            call_count + 1, self.app._http_client.http_client.call_count,
++            "Claims challenge shall trigger a new http call")
++
++    def test_claims_are_not_sent_to_the_endpoint(self):
++        captured = {}
++
++        def fake_get(url, params=None, headers=None, **kwargs):
++            captured["url"] = url
++            captured["params"] = params or {}
++            captured["data"] = kwargs.get("data")
++            return MinimalResponse(
++                status_code=200,
++                text='{"access_token": "AT", "expires_in": "7890", "resource": "R"}',
++                )
++
++        self.app._http_client.get = fake_get
++        self.app.acquire_token_for_client(resource="R", claims_challenge=CLAIMS)
++        self.assertNotIn("claims", captured["params"], "MSI v1 endpoint is unchanged")
++
++    def test_claims_challenge_defaults_to_none(self):
++        result = self.app.acquire_token_for_client(resource="R")
++        self.assertEqual("access_token", next(iter(result)))
++
++
++class ManagedIdentityAssertionTestCase(unittest.TestCase):
++    """The MI assertion provider used by FIC shall expose claims too."""
++
++    def test_assertion_provider_exists_and_forwards_claims(self):
++        import msal
++        self.assertTrue(hasattr(msal, "ManagedIdentityAssertion"))
++        from msal.managed_identity import ManagedIdentityAssertion
++
++        recorded = {}
++
++        class _FakeClient(object):
++            def acquire_token_for_client(self, *, resource, claims_challenge=None):
++                recorded["resource"] = resource
++                recorded["claims_challenge"] = claims_challenge
++                return {"access_token": "AT"}
++
++        provider = ManagedIdentityAssertion(
++            client=_FakeClient(), resource="R")
++        assertion = provider.create_normal_assertion(
++            audience="audience", issuer="issuer", claims_challenge=CLAIMS)
++        self.assertEqual(b"AT", assertion)
++        self.assertEqual("R", recorded["resource"])
++        self.assertEqual(
++            CLAIMS, recorded["claims_challenge"],
++            "The MI assertion provider shall forward claims to the MI client")
++
++    def test_assertion_provider_works_as_client_credential_for_fic(self):
++        import msal
++        from unittest.mock import patch
++        from msal.authority import tenant_discovery
++
++        base = "https://login.microsoftonline.com/my_tenant/oauth2/v2.0"
++        wellknown = json.dumps({
++            "authorization_endpoint": base + "/authorize",
++            "token_endpoint": base + "/token",
++            "issuer": "https://login.microsoftonline.com/my_tenant/v2.0",
++            "device_authorization_endpoint": base + "/devicecode",
++        })
++
++        class FakeMIHttp(object):
++            def __init__(self):
++                self.calls = 0
++            def get(self, url, params=None, headers=None, **kwargs):
++                self.calls += 1
++                return MinimalResponse(status_code=200, text=(
++                    '{"access_token": "MI_AT%s", "expires_in": "7890", '
++                    '"resource": "MI_RESOURCE"}') % self.calls)
++            def close(self):
++                pass
++
++        mi_http = FakeMIHttp()
++        mi = msal.ManagedIdentityClient(
++            SystemAssignedManagedIdentity(), http_client=mi_http)
++        provider = msal.ManagedIdentityAssertion(client=mi, resource="MI_RESOURCE")
++
++        with patch("msal.authority.tenant_discovery",
++                   side_effect=lambda endpoint, http_client, **kw: json.loads(wellknown)):
++            app = msal.ConfidentialClientApplication(
++                "my_client_id",
++                authority="https://login.microsoftonline.com/my_tenant",
++                client_credential=provider)
++
++        captured = {}
++
++        def mock_post(url, headers=None, *args, **kwargs):
++            captured.update(kwargs)
++            return MinimalResponse(status_code=200, text=json.dumps({
++                "access_token": "CCA_AT", "token_type": "Bearer", "expires_in": 3600,
++                }))
++
++        # Without claims: the MI token is cached and reused for the assertion
++        app.acquire_token_for_client(["scope"], post=mock_post)
++        self.assertEqual(
++            b"MI_AT1", captured["data"].get("client_assertion"),
++            "MI assertion shall be used as the client assertion")
++        app.acquire_token_for_client(["scope"], post=mock_post)
++        self.assertEqual(
++            b"MI_AT1", captured["data"].get("client_assertion"),
++            "MI token should come from the MI cache when no claims are present")
++
++        # With claims: the MI cache shall be bypassed, so a fresh MI token is used
++        app.acquire_token_for_client(
++            ["scope"], claims_challenge=CLAIMS, post=mock_post)
++        self.assertEqual(
++            b"MI_AT2", captured["data"].get("client_assertion"),
++            "Claims shall bypass the MI cache and use a fresh MI token")
++        self.assertEqual(
++            CLAIMS, captured["data"].get("claims"),
++            "The claims shall also be sent to the downstream AAD endpoint")
++
++
++if __name__ == "__main__":
++    unittest.main()

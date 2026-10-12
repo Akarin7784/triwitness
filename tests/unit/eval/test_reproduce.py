@@ -53,6 +53,9 @@ def test_plan_rejects_non_flash(tmp_path: Path) -> None:
 def test_compare_and_snapshot_change(tmp_path: Path) -> None:
     a = _run(tmp_path, "old", {"t1": True, "t2": False, "t3": True})
     b = _run(tmp_path, "new", {"t1": True, "t2": True}, model="deepseek-flash-2026-11")
+    meta = json.loads((b / "run.json").read_text(encoding="utf-8"))
+    meta["tasks"] = ["t1", "t2", "t3"]  # t3 计划了但没出结果（infra）
+    (b / "run.json").write_text(json.dumps(meta), encoding="utf-8")
     cmp = write_comparison(a, b)
     assert cmp["compared"] == 2 and cmp["agreement"] == 0.5
     assert cmp["missing_in_reproduction"] == ["cfg/t3/1"]
@@ -75,3 +78,12 @@ def test_cli_plan_only(tmp_path: Path) -> None:
     r = CliRunner().invoke(app, ["eval", "reproduce", str(tmp_path / "old"), "--plan"])
     assert r.exit_code == 0, r.output
     assert "模型服务端可能已更新" in r.output and "baseline-deepseek" in r.output and "3 次" in r.output
+
+
+def test_missing_only_counts_planned_tasks(tmp_path: Path) -> None:
+    a = _run(tmp_path, "old", {"t1": True, "t2": False, "t3": True})
+    b = _run(tmp_path, "new", {"t1": True})
+    meta = json.loads((b / "run.json").read_text(encoding="utf-8"))
+    meta["tasks"] = ["t1"]  # --task t1 子集复现
+    (b / "run.json").write_text(json.dumps(meta), encoding="utf-8")
+    assert compare(a, b)["missing_in_reproduction"] == []

@@ -1,0 +1,51 @@
+{
+ "suite": "test",
+ "tasks": 35,
+ "arms": {
+  "baseline": "configs/runs/final-baseline.yaml",
+  "orchestrated": "configs/runs/final-orchestrated.yaml"
+ },
+ "configs": {
+  "baseline": {
+   "name": "final-baseline",
+   "harness": "configs/harness/long-context-1m.yaml",
+   "executor": {
+    "model": "deepseek-flash",
+    "thinking": false
+   },
+   "attempts": 1,
+   "budget_profile": "eval",
+   "category": "final-eval",
+   "verifier": "deterministic"
+  },
+  "orchestrated": {
+   "name": "final-orchestrated",
+   "harness": "configs/harness/orchestrated-1m.yaml",
+   "executor": {
+    "model": "deepseek-flash",
+    "thinking": false
+   },
+   "attempts": 1,
+   "budget_profile": "eval",
+   "category": "final-eval",
+   "verifier": "deterministic"
+  }
+ },
+ "estimate_cny_off_peak": {
+  "baseline": 3.85,
+  "orchestrated": 13.3,
+  "total": 17.15
+ },
+ "estimate_cny_peak": {
+  "baseline": 7.7,
+  "orchestrated": 26.6,
+  "total": 34.3
+ },
+ "budget_guide_cny": 18.0,
+ "pricing": {
+  "verified_at": "2026-10-10",
+  "sha256": "22338c4f7b258690"
+ },
+ "git_sha": "86b5975",
+ "planned_at": "2026-10-12T15:57:18+08:00"
+}

@@ -1,0 +1,182 @@
+diff --git a/conan/internal/api/profile/profile_loader.py b/conan/internal/api/profile/profile_loader.py
+index 61342c2..3cb3423 100644
+--- a/conan/internal/api/profile/profile_loader.py
++++ b/conan/internal/api/profile/profile_loader.py
+@@ -242,11 +242,16 @@ class _ProfileValueParser:
+ 
+         doc_platform_requires = doc.platform_requires or ""
+         doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
++        # The deprecated [system_tools] alias is reported with its own name in the error messages
++        platform_tool_requires_section = "platform_tool_requires" if doc.platform_tool_requires \
++            else "system_tools"
+         if doc.system_tools:
+             ConanOutput().warning("Profile [system_tools] is deprecated,"
+                                   " please use [platform_tool_requires]")
+-        platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
+-        platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
++        platform_tool_requires = _ProfileValueParser._parse_platform_refs(
++            doc_platform_tool_requires, platform_tool_requires_section)
++        platform_requires = _ProfileValueParser._parse_platform_refs(doc_platform_requires,
++                                                                     "platform_requires")
+ 
+         def load_replace(doc_replace_requires):
+             result = {}
+@@ -313,6 +318,24 @@ class _ProfileValueParser:
+         base_profile.runner.update(runner)
+         return base_profile
+ 
++    @staticmethod
++    def _parse_platform_refs(raw_info, section):
++        """ The [platform_requires]/[platform_tool_requires] entries must be exact references,
++        version ranges are not allowed, as they cannot be resolved against the platform
++        """
++        result = []
++        for line in raw_info.splitlines():
++            line = line.strip()
++            if not line or line.startswith("#"):
++                continue
++            ref = RecipeReference.loads(line)
++            version = str(ref.version)
++            if version and version[0] == "[" and version[-1] == "]":
++                raise ConanException(f"[{section}] '{line}': version ranges are not allowed, "
++                                     f"please use exact 'pkg/version' references")
++            result.append(ref)
++        return result
++
+     @staticmethod
+     def _parse_key_value(raw_info):
+         result = OrderedDict()
+diff --git a/conan/internal/graph/graph_builder.py b/conan/internal/graph/graph_builder.py
+index 993a4e2..6fc0ceb 100644
+--- a/conan/internal/graph/graph_builder.py
++++ b/conan/internal/graph/graph_builder.py
+@@ -299,6 +299,12 @@ class DepsGraphBuilder:
+         if system_reqs:
+             version_range = require.version_range
+             for d in system_reqs:
++                # Platform entries must be exact references. A range must never be copied into the
++                # requirement, as it would break the graph invariant (graph.py assert). The profile
++                # loader already rejects them, this is a defensive guard for direct API usage.
++                d_version = str(d.version)
++                if d_version and d_version[0] == "[" and d_version[-1] == "]":
++                    continue
+                 if require.ref.name == d.name:
+                     if version_range:
+                         if version_range.contains(d.version, resolve_prereleases):
+diff --git a/test/integration/graph/test_platform_requires.py b/test/integration/graph/test_platform_requires.py
+index 81a0859..57771fd 100644
+--- a/test/integration/graph/test_platform_requires.py
++++ b/test/integration/graph/test_platform_requires.py
+@@ -150,6 +150,20 @@ class TestPlatformRequires:
+         client.run("install . -pr=profile", assert_error=True)
+         assert "ERROR: Package 'dep/1.1' not resolved" in client.out
+ 
++    def test_platform_requires_version_range_error(self):
++        """ a version range in [platform_requires] is not allowed, it must be an exact reference
++        and it must be a clear error message, not an internal AssertionError
++        """
++        client = TestClient(light=True)
++        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
++                     "profile": "[platform_requires]\ndep/[>=1.0]"})
++        client.run("install . -pr=profile", assert_error=True)
++        assert "ERROR: Error reading 'profile' profile:" in client.out
++        assert "[platform_requires]" in client.out
++        assert "dep/[>=1.0]" in client.out
++        assert "AssertionError" not in client.out
++        assert "Traceback" not in client.out
++
+     def test_platform_requires_with_options(self):
+         """ https://github.com/conan-io/conan/issues/15685
+         """
+diff --git a/test/unittests/client/profile_loader/profile_loader_test.py b/test/unittests/client/profile_loader/profile_loader_test.py
+index 18bfe10..54ab7a2 100644
+--- a/test/unittests/client/profile_loader/profile_loader_test.py
++++ b/test/unittests/client/profile_loader/profile_loader_test.py
+@@ -129,6 +129,32 @@ def test_profile_compose_platform_tool_requires():
+                                                RecipeReference.loads("tool2/2.0")]
+ 
+ 
++@pytest.mark.parametrize("section", ["platform_requires", "platform_tool_requires", "system_tools"])
++def test_profile_platform_version_range_error(section):
++    """ version ranges are not allowed in the platform sections, they must be exact references """
++    tmp = temp_folder()
++    save(os.path.join(tmp, "profile"), f"[{section}]\ntool/[>=1.0]")
++
++    profile_loader = ProfileLoader(cache_folder=temp_folder())
++    with pytest.raises(ConanException) as exc:
++        profile_loader.load_profile("./profile", tmp)
++    msg = str(exc.value)
++    assert f"[{section}]" in msg
++    assert "tool/[>=1.0]" in msg
++
++
++def test_profile_platform_exact_refs_ok():
++    """ exact references are still accepted in the platform sections """
++    tmp = temp_folder()
++    save(os.path.join(tmp, "profile"), "[platform_requires]\ndep/1.0\n"
++                                       "[platform_tool_requires]\ntool/2.0")
++
++    profile_loader = ProfileLoader(cache_folder=temp_folder())
++    profile = profile_loader.load_profile("./profile", tmp)
++    assert profile.platform_requires == [RecipeReference.loads("dep/1.0")]
++    assert profile.platform_tool_requires == [RecipeReference.loads("tool/2.0")]
++
++
+ def test_profile_compose_tool_requires():
+     tmp = temp_folder()
+     save(os.path.join(tmp, "profile0"), "[tool_requires]\ntool1/1.0")
+diff --git a/tests/tw_repro/test_issue_platform_requires_range.py b/tests/tw_repro/test_issue_platform_requires_range.py
+new file mode 100644
+index 0000000..78af946
+--- /dev/null
++++ b/tests/tw_repro/test_issue_platform_requires_range.py
+@@ -0,0 +1,49 @@
++"""
++Reproduction for: AssertionError when doing `conan install`
++(assert not require.version_range) when a [platform_requires] profile entry
++contains a version range instead of an exact reference.
++
++Expected behavior (acceptance criteria):
++- Entries in [platform_requires] / [platform_tool_requires] must be exact refs.
++- A version range must be rejected with a normal profile-reading error that
++  identifies the offending section and reference.
++- The CLI output must not expose `AssertionError` or an internal traceback.
++"""
++import pytest
++
++from conan.api.model import RecipeReference
++from conan.errors import ConanException
++from conan.internal.api.profile.profile_loader import _ProfileValueParser
++from conan.test.assets.genconanfile import GenConanfile
++from conan.test.utils.tools import TestClient
++
++
++def test_cli_install_platform_requires_range_no_assertionerror():
++    client = TestClient(light=True)
++    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
++                 "profile": "[platform_requires]\ndep/[>=1.0]"})
++    client.run("install . -pr=profile", assert_error=True)
++
++    assert "ERROR: Error reading 'profile' profile:" in client.out
++    assert "[platform_requires]" in client.out
++    assert "dep/[>=1.0]" in client.out
++    assert "AssertionError" not in client.out
++    assert "Traceback" not in client.out
++
++
++@pytest.mark.parametrize("section", ["platform_requires", "platform_tool_requires", "system_tools"])
++def test_profile_loader_rejects_ranges(section):
++    text = f"[{section}]\ntool/[>=1.0]"
++    with pytest.raises(ConanException) as exc:
++        _ProfileValueParser.get_profile(text)
++    msg = str(exc.value)
++    assert f"[{section}]" in msg
++    assert "tool/[>=1.0]" in msg
++    assert "range" in msg.lower()
++
++
++def test_profile_loader_accepts_exact_refs():
++    profile = _ProfileValueParser.get_profile(
++        "[platform_requires]\ndep/1.0\n[platform_tool_requires]\ntool/2.0")
++    assert profile.platform_requires[0] == RecipeReference.loads("dep/1.0")
++    assert profile.platform_tool_requires[0] == RecipeReference.loads("tool/2.0")

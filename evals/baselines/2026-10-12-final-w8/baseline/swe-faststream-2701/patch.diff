@@ -1,0 +1,76 @@
+diff --git a/faststream/_internal/application.py b/faststream/_internal/application.py
+index 021dfff..75eb9fa 100644
+--- a/faststream/_internal/application.py
++++ b/faststream/_internal/application.py
+@@ -113,6 +113,7 @@ class StartAbleApplication:
+             raise SetupError(msg)
+ 
+         self.brokers.append(broker)
++        broker._update_fd_config(self.config)
+         _ = self.schema.add_broker(broker)
+ 
+ 
+diff --git a/tests/tw_repro/test_issue_set_broker.py b/tests/tw_repro/test_issue_set_broker.py
+new file mode 100644
+index 0000000..73780a1
+--- /dev/null
++++ b/tests/tw_repro/test_issue_set_broker.py
+@@ -0,0 +1,58 @@
++"""Reproduces: set_broker() needs to call _update_fd_config.
++
++Issue: calling `.set_broker()` on a StartAbleApplication after construction
++(without passing the broker to `__init__`) must update the broker's
++fast-depends config just like `_init_setupable_` does when the broker is
++passed at construction time. Otherwise the app and broker end up with
++different ContextRepo instances and Context injection breaks.
++"""
++
++import pytest
++
++from faststream._internal.application import StartAbleApplication
++from faststream._internal.context import ContextRepo
++from faststream._internal.di import FastDependsConfig
++from faststream.rabbit import RabbitBroker
++
++
++def test_set_broker_updates_fd_config() -> None:
++    app = StartAbleApplication()
++
++    context = ContextRepo()
++    app.config = FastDependsConfig(context=context)
++
++    broker = RabbitBroker()
++    app.set_broker(broker)
++
++    # The broker's fast-depends config must be merged with the app config,
++    # the same way it would be for FastStream(broker).
++    assert broker.config.fd_config.context is context
++    assert broker.context is app.context
++
++
++def test_broker_at_construction_updates_fd_config() -> None:
++    """Control case: construction-time broker shares the app's context."""
++    context = ContextRepo()
++    broker = RabbitBroker()
++
++    app = StartAbleApplication(broker, config=FastDependsConfig(context=context))
++
++    assert broker.config.fd_config.context is context
++    assert broker.context is app.context
++
++
++def test_set_broker_updates_fd_config_with_faststream() -> None:
++    from faststream import FastStream
++
++    app = FastStream()
++    context = app.context
++
++    broker = RabbitBroker()
++    app.set_broker(broker)
++
++    assert broker.config.fd_config.context is context
++    assert broker.context is context
++
++
++if __name__ == "__main__":
++    pytest.main([__file__, "-v"])

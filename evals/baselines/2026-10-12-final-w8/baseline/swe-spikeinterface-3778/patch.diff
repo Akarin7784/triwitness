@@ -1,0 +1,127 @@
+diff --git a/src/spikeinterface/core/tests/test_unitsaggregationsorting.py b/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
+index 09b8aff..e4f740c 100644
+--- a/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
++++ b/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
+@@ -78,7 +78,7 @@ def test_unitsaggregationsorting(create_cache_folder):
+     sorting1.set_property("template", np.zeros((num_units, 20, 50)))
+     sorting1.set_property("template", np.zeros((num_units, 2, 10)))
+ 
+-    # incomplete property (str can't be propagated)
++    # incomplete property (str can be propagated, the missing values are filled with "")
+     sorting1.set_property("quality", ["good"] * num_units)
+     sorting2.set_property("quality", ["bad"] * num_units)
+ 
+@@ -88,7 +88,11 @@ def test_unitsaggregationsorting(create_cache_folder):
+ 
+     sorting_agg_prop = aggregate_units([sorting1, sorting2, sorting3])
+     assert "brain_area" in sorting_agg_prop.get_property_keys()
+-    assert "quality" not in sorting_agg_prop.get_property_keys()
++    # `quality` is a string property with different string lengths between sortings
++    # (see https://github.com/SpikeInterface/spikeinterface/issues/3734); it should be
++    # merged and propagated, with the missing values filled with "".
++    assert "quality" in sorting_agg_prop.get_property_keys()
++    assert np.all(sorting_agg_prop.get_property("quality")[: 2 * num_units] == ["good"] * num_units + ["bad"] * num_units)
+     assert "rand" in sorting_agg_prop.get_property_keys()
+     print(sorting_agg_prop.get_property("brain_area"))
+ 
+diff --git a/src/spikeinterface/core/unitsaggregationsorting.py b/src/spikeinterface/core/unitsaggregationsorting.py
+index 9eb37e3..3e9bc08 100644
+--- a/src/spikeinterface/core/unitsaggregationsorting.py
++++ b/src/spikeinterface/core/unitsaggregationsorting.py
+@@ -7,6 +7,26 @@ from .base import BaseExtractor
+ from .basesorting import BaseSorting, BaseSortingSegment
+ 
+ 
++def _merge_dtypes(dtype1, dtype2):
++    """
++    Merge two numpy dtypes of the same kind into a common dtype that can hold
++    the values of both.
++
++    This is mainly needed for fixed-width string dtypes (e.g. "<U4" and "<U2"),
++    which are not equal even though they are compatible: the resulting dtype uses
++    the largest string length ("<U4" in the example).
++    """
++    merged = np.result_type(dtype1, dtype2)
++    # np.result_type can fall back on a generic dtype (e.g. object) for exotic
++    # dtypes; keep the widest of the two in that case.
++    if merged.kind != dtype1.kind:
++        if dtype1.itemsize >= dtype2.itemsize:
++            merged = dtype1
++        else:
++            merged = dtype2
++    return merged
++
++
+ class UnitsAggregationSorting(BaseSorting):
+     """
+     Aggregates units of multiple sortings into a single sorting object
+@@ -84,13 +104,21 @@ class UnitsAggregationSorting(BaseSorting):
+             for prop_name in sort.get_property_keys():
+                 if prop_name in deleted_keys:
+                     continue
++                dtype = sort.get_property(prop_name).dtype
+                 if prop_name in property_keys:
+-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
++                    existing_dtype = property_keys[prop_name]
++                    if existing_dtype == dtype:
++                        continue
++                    # Dtypes with the same kind (e.g. fixed-width strings of different length)
++                    # are compatible and can be merged into a common dtype.
++                    if existing_dtype.kind == dtype.kind:
++                        property_keys[prop_name] = _merge_dtypes(existing_dtype, dtype)
++                    else:
+                         print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
+                         del property_keys[prop_name]
+                         deleted_keys.append(prop_name)
+                 else:
+-                    property_keys[prop_name] = sort.get_property(prop_name).dtype
++                    property_keys[prop_name] = dtype
+         for prop_name in property_keys:
+             dtype = property_keys[prop_name]
+             property_dict[prop_name] = np.array([], dtype=dtype)
+diff --git a/tests/tw_repro/test_issue_3734.py b/tests/tw_repro/test_issue_3734.py
+new file mode 100644
+index 0000000..d479816
+--- /dev/null
++++ b/tests/tw_repro/test_issue_3734.py
+@@ -0,0 +1,40 @@
++"""
++Reproduction for issue: `aggregate_units` doesn't propagate properties when
++string lengths don't match.
++
++Two sortings have the same string property (e.g. labels), but the string
++dtypes differ (e.g. "<U4" vs "<U2") because the max string length is
++different. The dtype comparison in UnitsAggregationSorting drops the
++property instead of merging it.
++
++See https://github.com/SpikeInterface/spikeinterface BLOCKED link
++"""
++
++import numpy as np
++
++from spikeinterface.core import generate_sorting, aggregate_units
++
++
++def test_aggregate_units_string_property_different_lengths():
++    num_units1 = 2
++    num_units2 = 3
++
++    sorting1 = generate_sorting(num_units=num_units1, seed=1205)
++    sorting1.set_property("chris_label", ["good"] * sorting1.get_num_units())
++
++    sorting2 = generate_sorting(num_units=num_units2, seed=1205)
++    sorting2.set_property("chris_label", ["ok"] * sorting2.get_num_units())
++
++    # Sanity check: the string lengths (and therefore the dtypes) differ
++    assert sorting1.get_property("chris_label").dtype != sorting2.get_property("chris_label").dtype
++
++    sort = aggregate_units([sorting1, sorting2])
++
++    # The property must be propagated even though the dtypes differ
++    assert "chris_label" in sort.get_property_keys()
++    expected = np.array(["good"] * num_units1 + ["ok"] * num_units2)
++    np.testing.assert_array_equal(sort.get_property("chris_label"), expected)
++
++
++if __name__ == "__main__":
++    test_aggregate_units_string_property_different_lengths()

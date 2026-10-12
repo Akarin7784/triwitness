@@ -1,0 +1,54 @@
+diff --git a/param/reactive.py b/param/reactive.py
+index e11ef41..cf8e6f4 100644
+--- a/param/reactive.py
++++ b/param/reactive.py
+@@ -1813,7 +1813,7 @@ class rx:
+     #----------------------------------------------------------------
+ 
+     def __array_ufunc__(self, ufunc, method, *args, **kwargs):
+-        new = self._resolve_accessor()
++        new = self._resolve_accessor() if self._method else self
+         operation = {
+             'fn': getattr(ufunc, method),
+             'args': args[1:],
+@@ -1823,7 +1823,7 @@ class rx:
+         return new._clone(operation)
+ 
+     def _apply_operator(self, operator, *args, reverse=False, **kwargs) -> 'rx':
+-        new = self._resolve_accessor()
++        new = self._resolve_accessor() if self._method else self
+         operation = {
+             'fn': operator,
+             'args': args,
+diff --git a/tests/testreactive.py b/tests/testreactive.py
+index 23f50d3..e05ea01 100644
+--- a/tests/testreactive.py
++++ b/tests/testreactive.py
+@@ -775,3 +775,27 @@ def test_reactive_set_value_attributeerror():
+     x = rx(1)
+     with pytest.raises(AttributeError, match="'rx' has no attribute 'value'"):
+         x.value = 1
++
++
++def test_reactive_shared_expression_evaluated_once():
++    # https://github.com/holoviz/param/issues/...
++    # A single shared rx expression feeding N downstream .rx.pipe consumers
++    # must be evaluated once per input change, not once per consumer.
++    calls = []
++
++    def compute(value):
++        calls.append(value)
++        return {k: value * i for i, k in enumerate(("a", "b", "c"), start=1)}
++
++    p = Parameters()
++
++    shared = rx(compute)(p.param.integer)
++    consumers = [shared.rx.pipe(lambda d, k=k: d[k]) for k in ("a", "b", "c")]
++
++    assert [c.rx.value for c in consumers] == [7, 14, 21]
++    assert len(calls) == 1
++
++    p.integer = 2
++
++    assert [c.rx.value for c in consumers] == [2, 4, 6]
++    assert len(calls) == 2, f"compute called {len(calls)} times, expected 2"

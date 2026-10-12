@@ -1,0 +1,118 @@
+diff --git a/src/spikeinterface/core/tests/test_unitsaggregationsorting.py b/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
+index 09b8aff..697f01c 100644
+--- a/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
++++ b/src/spikeinterface/core/tests/test_unitsaggregationsorting.py
+@@ -78,7 +78,7 @@ def test_unitsaggregationsorting(create_cache_folder):
+     sorting1.set_property("template", np.zeros((num_units, 20, 50)))
+     sorting1.set_property("template", np.zeros((num_units, 2, 10)))
+ 
+-    # incomplete property (str can't be propagated)
++    # incomplete property (str can be propagated when dtype kinds match, even with different string lengths)
+     sorting1.set_property("quality", ["good"] * num_units)
+     sorting2.set_property("quality", ["bad"] * num_units)
+ 
+@@ -88,11 +88,34 @@ def test_unitsaggregationsorting(create_cache_folder):
+ 
+     sorting_agg_prop = aggregate_units([sorting1, sorting2, sorting3])
+     assert "brain_area" in sorting_agg_prop.get_property_keys()
+-    assert "quality" not in sorting_agg_prop.get_property_keys()
++    assert "quality" in sorting_agg_prop.get_property_keys()
++    assert list(sorting_agg_prop.get_property("quality")) == ["good"] * num_units + ["bad"] * num_units + [
++        ""
++    ] * num_units
++    assert "template" not in sorting_agg_prop.get_property_keys()
+     assert "rand" in sorting_agg_prop.get_property_keys()
+     print(sorting_agg_prop.get_property("brain_area"))
+ 
+ 
++def test_unit_aggregation_string_properties_with_different_lengths():
++    # https://github.com/SpikeInterface/spikeinterface/issues (aggregate_units doesn't propagate
++    # properties when string lengths don't match): numpy encodes the max string length in the dtype
++    # (<U4 vs <U2), but the properties should still be merged.
++    sorting1 = generate_sorting(num_units=2)
++    sorting1.set_property("chris_label", ["good"] * sorting1.get_num_units())
++
++    sorting2 = generate_sorting(num_units=3)
++    sorting2.set_property("chris_label", ["ok"] * sorting2.get_num_units())
++
++    assert sorting1.get_property("chris_label").dtype != sorting2.get_property("chris_label").dtype
++
++    aggregated_sorting = aggregate_units([sorting1, sorting2])
++    assert "chris_label" in aggregated_sorting.get_property_keys()
++    chris_label = aggregated_sorting.get_property("chris_label")
++    assert chris_label.dtype.kind == "U"
++    assert list(chris_label) == ["good", "good", "ok", "ok", "ok"]
++
++
+ def test_unit_aggregation_preserve_ids():
+ 
+     sorting1 = generate_sorting(num_units=3)
+diff --git a/src/spikeinterface/core/unitsaggregationsorting.py b/src/spikeinterface/core/unitsaggregationsorting.py
+index 9eb37e3..2ec5490 100644
+--- a/src/spikeinterface/core/unitsaggregationsorting.py
++++ b/src/spikeinterface/core/unitsaggregationsorting.py
+@@ -85,8 +85,8 @@ class UnitsAggregationSorting(BaseSorting):
+                 if prop_name in deleted_keys:
+                     continue
+                 if prop_name in property_keys:
+-                    if property_keys[prop_name] != sort.get_property(prop_name).dtype:
+-                        print(f"Skipping property '{prop_name}: difference in dtype between sortings'")
++                    if property_keys[prop_name].kind != sort.get_property(prop_name).dtype.kind:
++                        print(f"Skipping property '{prop_name}': difference in dtype kind between sortings")
+                         del property_keys[prop_name]
+                         deleted_keys.append(prop_name)
+                 else:
+diff --git a/tests/tw_repro/test_issue_aggregate_units_string_props.py b/tests/tw_repro/test_issue_aggregate_units_string_props.py
+new file mode 100644
+index 0000000..4e236e6
+--- /dev/null
++++ b/tests/tw_repro/test_issue_aggregate_units_string_props.py
+@@ -0,0 +1,48 @@
++"""
++Repro for: `aggregate_units` doesn't propagate properties when string lengths don't match.
++
++numpy encodes the maximum string length in the dtype (``<U4`` vs ``<U2``), so a strict
++dtype comparison in ``UnitsAggregationSorting.__init__`` silently drops properties that
++only differ in string width.
++"""
++
++import numpy as np
++
++from spikeinterface.core import aggregate_units, generate_sorting
++
++
++def test_aggregate_units_propagates_string_properties_with_different_lengths():
++    sorting1 = generate_sorting(num_units=2)
++    sorting1.set_property("chris_label", ["good"] * sorting1.get_num_units())
++    sorting2 = generate_sorting(num_units=3)
++    sorting2.set_property("chris_label", ["ok"] * sorting2.get_num_units())
++
++    # sanity check: the two properties really have different string widths
++    assert sorting1.get_property("chris_label").dtype != sorting2.get_property("chris_label").dtype
++    assert sorting1.get_property("chris_label").dtype.kind == "U"
++    assert sorting2.get_property("chris_label").dtype.kind == "U"
++
++    sorting_agg = aggregate_units([sorting1, sorting2])
++
++    assert "chris_label" in sorting_agg.get_property_keys()
++    values = sorting_agg.get_property("chris_label")
++    assert values.dtype.kind == "U"
++    assert list(values) == ["good", "good", "ok", "ok", "ok"]
++
++
++def test_aggregate_units_propagates_ks_labels_like_case():
++    # kilk sorting by group where one group only contains "mua" (shorter string) entries
++    sorting1 = generate_sorting(num_units=2)
++    sorting1.set_property("KS_labels", ["mua"] * sorting1.get_num_units())
++    sorting2 = generate_sorting(num_units=2)
++    sorting2.set_property("KS_labels", ["good"] * sorting2.get_num_units())
++
++    sorting_agg = aggregate_units([sorting1, sorting2])
++    assert "KS_labels" in sorting_agg.get_property_keys()
++    assert list(sorting_agg.get_property("KS_labels")) == ["mua", "mua", "good", "good"]
++    assert np.array_equal(sorting_agg.get_property("KS_labels").dtype.kind, "U")
++
++
++if __name__ == "__main__":
++    test_aggregate_units_propagates_string_properties_with_different_lengths()
++    test_aggregate_units_propagates_ks_labels_like_case()

@@ -1,0 +1,262 @@
+diff --git a/src/huggingface_hub/_snapshot_download.py b/src/huggingface_hub/_snapshot_download.py
+index ed72652..9be5874 100644
+--- a/src/huggingface_hub/_snapshot_download.py
++++ b/src/huggingface_hub/_snapshot_download.py
+@@ -380,14 +380,18 @@ def snapshot_download(
+     results: list[str | DryRunFileInfo] = []
+ 
+     # User can use its own tqdm class or the default one from `huggingface_hub.utils`
++    user_tqdm_class = tqdm_class  # keep track of whether the user explicitly passed a class
+     tqdm_class = tqdm_class or hf_tqdm
+ 
+     # Create a progress bar for the bytes downloaded
+     # This progress bar is shared across threads/files and gets updated each time we fetch
+     # metadata for a file.
++    # If the user provides its own `tqdm_class`, it's up to them to decide how to report progress:
++    # do not let tqdm's TTY auto-detection (`disable=None`) silently disable the bar in non-TTY
++    # environments (see https://github.com/huggingface/huggingface_hub/issues/3663).
+     bytes_progress = tqdm_class(
+         desc="Downloading (incomplete total...)",
+-        disable=is_tqdm_disabled(log_level=logger.getEffectiveLevel()),
++        disable=False if user_tqdm_class is not None else is_tqdm_disabled(log_level=logger.getEffectiveLevel()),
+         total=0,
+         initial=0,
+         unit="B",
+diff --git a/src/huggingface_hub/utils/tqdm.py b/src/huggingface_hub/utils/tqdm.py
+index 50e8a49..39c0a85 100644
+--- a/src/huggingface_hub/utils/tqdm.py
++++ b/src/huggingface_hub/utils/tqdm.py
+@@ -297,12 +297,20 @@ def _get_progress_bar_context(
+         #   Makes it easier to use the same code path for both cases but in the later
+         #   case, the progress bar is not closed when exiting the context manager.
+ 
++    # When the user provides their own `tqdm_class`, they are the ones in charge of tracking
++    # progress (e.g. reporting it to a web UI). Therefore we must not let tqdm's auto-detection
++    # disable the bar: `disable=None` defers to `sys.stderr.isatty()`, which is `False` in
++    # non-TTY contexts (web servers, background threads, Docker, ...) and would silently turn
++    # `update()` into a no-op. See https://github.com/huggingface/huggingface_hub/issues/3663.
++    # Note: if the custom class inherits from `huggingface_hub.utils.tqdm`, a globally disabled
++    # progress bar is still enforced in its `__init__` (i.e. `disable` overridden to `True`).
++    disable = False if tqdm_class is not None else is_tqdm_disabled(log_level=log_level)
+     return (tqdm_class or tqdm)(  # type: ignore
+         unit=unit,
+         unit_scale=unit_scale,
+         total=total,
+         initial=initial,
+         desc=desc,
+-        disable=is_tqdm_disabled(log_level=log_level),
++        disable=disable,
+         name=name,
+     )
+diff --git a/tests/test_utils_tqdm.py b/tests/test_utils_tqdm.py
+index add7615..0ed440e 100644
+--- a/tests/test_utils_tqdm.py
++++ b/tests/test_utils_tqdm.py
+@@ -1,3 +1,4 @@
++import logging
+ import time
+ import unittest
+ from pathlib import Path
+@@ -5,6 +6,7 @@ from unittest.mock import patch
+ 
+ import pytest
+ from pytest import CaptureFixture
++from tqdm.auto import tqdm as base_tqdm
+ 
+ from huggingface_hub.utils import (
+     SoftTemporaryDirectory,
+@@ -14,6 +16,7 @@ from huggingface_hub.utils import (
+     tqdm,
+     tqdm_stream_file,
+ )
++from huggingface_hub.utils.tqdm import _get_progress_bar_context
+ 
+ 
+ class CapsysBaseTest(unittest.TestCase):
+@@ -235,3 +238,46 @@ class TestTqdmGroup(CapsysBaseTest):
+         captured = self.capsys.readouterr()
+         assert captured.out == ""
+         assert "10/10" in captured.err
++
++
++class TestCustomTqdmClassProgressBar(CapsysBaseTest):
++    """Regression tests for https://github.com/huggingface/huggingface_hub/issues/3663.
++
++    A user-provided `tqdm_class` must not be silently disabled by tqdm's TTY auto-detection
++    (`disable=None` + `sys.stderr.isatty()`), which is always `False` in non-TTY environments
++    (web servers, background threads, Docker, pytest, ...).
++    """
++
++    def test_custom_tqdm_class_is_not_disabled_in_non_tty(self) -> None:
++        updates: list[tuple[int, int | None]] = []
++
++        class MyProgress(base_tqdm):
++            def __init__(self, *args, **kwargs):
++                kwargs.pop("name", None)
++                super().__init__(*args, **kwargs)
++
++            def update(self, n=1):
++                super().update(n)
++                updates.append((self.n, self.total))
++
++        # pytest captures stderr => this is a non-TTY environment
++        assert base_tqdm(total=1, disable=None).disable is True
++
++        bar = _get_progress_bar_context(
++            desc="file.bin",
++            log_level=logging.WARNING,
++            total=10,
++            tqdm_class=MyProgress,
++        )
++        assert bar.disable is False
++
++        for _ in range(5):
++            bar.update(1)
++
++        assert bar.n == 5
++        assert updates == [(1, 10), (2, 10), (3, 10), (4, 10), (5, 10)]
++
++    def test_default_progress_bar_disabled_when_logging_notset(self) -> None:
++        """Default behaviour is unchanged when no `tqdm_class` is provided."""
++        bar = _get_progress_bar_context(desc="file.bin", log_level=logging.NOTSET, total=1)
++        assert bar.disable is True
+diff --git a/tests/tw_repro/test_issue_custom_tqdm_class_non_tty.py b/tests/tw_repro/test_issue_custom_tqdm_class_non_tty.py
+new file mode 100644
+index 0000000..e05b7ce
+--- /dev/null
++++ b/tests/tw_repro/test_issue_custom_tqdm_class_non_tty.py
+@@ -0,0 +1,134 @@
++"""Reproduction for: `tqdm_class` progress tracking silently broken in non-TTY environments.
++
++Passing a custom `tqdm_class` must mean "I want to track progress my way". It must not be
++silently disabled by tqdm's TTY auto-detection (`disable=None` + `sys.stderr.isatty()`),
++which is always False under pytest / web servers / background threads / Docker.
++"""
++
++import logging
++import unittest
++
++import pytest
++from pytest import CaptureFixture
++from tqdm.auto import tqdm as base_tqdm
++
++from huggingface_hub.utils.tqdm import _get_progress_bar_context
++
++
++class CapsysBaseTest(unittest.TestCase):
++    @pytest.fixture(autouse=True)
++    def capsys(self, capsys: CaptureFixture) -> None:
++        self.capsys = capsys
++
++
++class MyProgress(base_tqdm):
++    """A user-defined progress bar that tracks progress on its own."""
++
++    all_updates: list[tuple[int, int | None]] = []
++
++    def __init__(self, *args, **kwargs):
++        kwargs.pop("name", None)  # hf-specific kwarg
++        self.updates = []
++        super().__init__(*args, **kwargs)
++
++    def update(self, n=1):
++        super().update(n)
++        self.updates.append((self.n, self.total))
++        MyProgress.all_updates.append((self.n, self.total))
++
++    @classmethod
++    def reset(cls):
++        cls.all_updates = []
++
++
++class TestCustomTqdmClassNonTty(CapsysBaseTest):
++    def test_non_tty_environment_is_reproduced(self) -> None:
++        """Sanity check: the environment of this test is indeed a non-TTY one.
++
++        This is what makes the issue reproducible: tqdm's auto-detection kicks in when
++        `disable=None` and disables the bar.
++        """
++        # This is what makes the issue reproducible: tqdm's auto-detection (disable=None +
++        # `sys.stderr.isatty()`) disables the bar. This assertion would fail in a real TTY.
++        assert base_tqdm(total=1, disable=None).disable is True
++
++    def test_custom_tqdm_class_is_not_disabled(self) -> None:
++        bar = _get_progress_bar_context(
++            desc="file.bin",
++            log_level=logging.WARNING,
++            total=10,
++            tqdm_class=MyProgress,
++        )
++        assert bar.disable is False, "custom tqdm_class must not be silently disabled by TTY auto-detection"
++
++        for _ in range(5):
++            bar.update(1)
++
++        assert bar.n == 5
++        assert len(bar.updates) == 5
++        assert bar.updates[-1] == (5, 10)
++
++    def test_custom_tqdm_class_in_hf_hub_download(self) -> None:
++        """End-to-end through the public `hf_hub_download` code path, against a local HTTP
++        server, in a non-TTY process. This mirrors the issue's reproduction snippet: the
++        custom `update()` is called but used to leave `self.n` at 0."""
++        import hashlib
++        import http.server
++        import os
++        import socketserver
++        import tempfile
++        import threading
++
++        from huggingface_hub import hf_hub_download
++
++        MyProgress.reset()
++        payload = b"x" * 5000
++        sha = hashlib.sha256(payload).hexdigest()
++        commit = "0" * 40
++
++        class Handler(http.server.BaseHTTPRequestHandler):
++            def _write_headers(self):
++                self.send_response(200)
++                self.send_header("Content-Length", str(len(payload)))
++                self.send_header("X-Repo-Commit", commit)
++                self.send_header("X-Linked-Etag", f'"{sha}"')
++                self.send_header("ETag", f'"{sha}"')
++                self.end_headers()
++
++            def do_HEAD(self):
++                self._write_headers()
++
++            def do_GET(self):
++                self._write_headers()
++                self.wfile.write(payload)
++
++            def log_message(self, *args):  # silence
++                pass
++
++        with socketserver.TCPServer(("127.0.0.1", 0), Handler) as server:
++            port = server.server_address[1]
++            threading.Thread(target=server.serve_forever, daemon=True).start()
++            try:
++                with tempfile.TemporaryDirectory() as cache_dir:
++                    path = hf_hub_download(
++                        repo_id="fake/repo",
++                        filename="f.bin",
++                        cache_dir=cache_dir,
++                        endpoint=f"http://127.0.0.1:{port}",
++                        tqdm_class=MyProgress,
++                    )
++                    assert os.path.getsize(path) == len(payload)
++            finally:
++                server.shutdown()
++
++        assert MyProgress.all_updates, "custom update() was never called"
++        assert MyProgress.all_updates[-1][0] == len(payload), f"custom update() was a no-op: {MyProgress.all_updates}"
++
++    def test_default_progress_bar_still_auto_detected(self) -> None:
++        """Guardrail: without an explicit `tqdm_class`, the default behaviour is unchanged
++        (TTY auto-detection + `log_level=NOTSET` disabling)."""
++        bar = _get_progress_bar_context(desc="file.bin", log_level=logging.NOTSET, total=1)
++        assert bar.disable is True
++
++        bar = _get_progress_bar_context(desc="file.bin", log_level=logging.WARNING, total=1)
++        assert bar.disable is True  # non-TTY auto-detection still applies for the default class

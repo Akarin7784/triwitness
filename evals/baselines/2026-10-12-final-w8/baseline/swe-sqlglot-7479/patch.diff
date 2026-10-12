@@ -1,0 +1,212 @@
+diff --git a/sqlglot/expressions/functions.py b/sqlglot/expressions/functions.py
+index 757ecba..cb293af 100644
+--- a/sqlglot/expressions/functions.py
++++ b/sqlglot/expressions/functions.py
+@@ -321,6 +321,40 @@ class AIClassify(Expression, Func):
+     _sql_names = ["AI_CLASSIFY"]
+ 
+ 
++class AIEmbed(Expression, Func):
++    arg_types = {
++        "this": True,
++        "connection_id": False,
++        "endpoint": False,
++        "model_params": False,
++        "output_dimensionality": False,
++        "task_type": False,
++        "output_dtype": False,
++    }
++
++
++class AIGenerate(Expression, Func):
++    arg_types = {
++        "this": True,
++        "connection_id": False,
++        "endpoint": False,
++        "model_params": False,
++        "request_type": False,
++        "output_schema": False,
++    }
++
++
++class AISimilarity(Expression, Func):
++    arg_types = {
++        "this": True,
++        "expression": True,
++        "connection_id": False,
++        "endpoint": False,
++        "model_params": False,
++        "task_type": False,
++    }
++
++
+ class FeaturesAtTime(Expression, Func):
+     arg_types = {"this": True, "time": False, "num_rows": False, "ignore_feature_nulls": False}
+ 
+diff --git a/sqlglot/generator.py b/sqlglot/generator.py
+index 9ba486b..1515a98 100644
+--- a/sqlglot/generator.py
++++ b/sqlglot/generator.py
+@@ -4666,6 +4666,20 @@ class Generator:
+ 
+         return self.func(name, model, expr_sql, parameters)
+ 
++    def _ai_scalar_sql(self, expression: exp.Func, name: str) -> str:
++        args = [self.sql(expression, key) for key in expression.arg_types if key != "this"]
++
++        return self.func(name, expression.this, *args)
++
++    def aiembed_sql(self, expression: exp.AIEmbed) -> str:
++        return self._ai_scalar_sql(expression, "AI.EMBED")
++
++    def aigenerate_sql(self, expression: exp.AIGenerate) -> str:
++        return self._ai_scalar_sql(expression, "AI.GENERATE")
++
++    def aisimilarity_sql(self, expression: exp.AISimilarity) -> str:
++        return self._ai_scalar_sql(expression, "AI.SIMILARITY")
++
+     def predict_sql(self, expression: exp.Predict) -> str:
+         return self._ml_sql(expression, "PREDICT")
+ 
+diff --git a/sqlglot/parsers/bigquery.py b/sqlglot/parsers/bigquery.py
+index 64b6042..e121796 100644
+--- a/sqlglot/parsers/bigquery.py
++++ b/sqlglot/parsers/bigquery.py
+@@ -120,6 +120,20 @@ def _build_regexp_extract(expr_type: type[E], default_group: exp.Expr | None = N
+     return _builder
+ 
+ 
++def _build_ai_scalar_function(expr_type: type[E]) -> t.Callable:
++    def _builder(args: list) -> E:
++        expression = expr_type(this=seq_get(args, 0))
++
++        # AI.* scalar functions accept named arguments, e.g AI.EMBED(x, connection_id => 'c')
++        for arg in args[1:]:
++            if isinstance(arg, exp.Kwarg):
++                expression.set(arg.this.name.lower(), arg)
++
++        return expression
++
++    return _builder
++
++
+ def _build_time(args: list) -> exp.Func:
+     if len(args) == 1:
+         return exp.TsOrDsToTime(this=args[0])
+@@ -178,6 +192,8 @@ class BigQueryParser(parser.Parser):
+ 
+     FUNCTIONS: t.ClassVar[dict[str, t.Callable]] = {
+         **{k: v for k, v in parser.Parser.FUNCTIONS.items() if k != "SEARCH"},
++        "AI.EMBED": _build_ai_scalar_function(exp.AIEmbed),
++        "AI.SIMILARITY": _build_ai_scalar_function(exp.AISimilarity),
+         "APPROX_TOP_COUNT": exp.ApproxTopK.from_arg_list,
+         "BIT_AND": exp.BitwiseAndAgg.from_arg_list,
+         "BIT_OR": exp.BitwiseOrAgg.from_arg_list,
+@@ -273,6 +289,7 @@ class BigQueryParser(parser.Parser):
+         "ARRAY": lambda self: self.expression(
+             exp.Array(expressions=[self._parse_statement()], struct_name_inheritance=True)
+         ),
++        "AI.GENERATE": lambda self: self._parse_ai_generate(),
+         "JSON_ARRAY": lambda self: self.expression(
+             exp.JSONArray(expressions=self._parse_csv(self._parse_bitwise))
+         ),
+@@ -578,6 +595,19 @@ class BigQueryParser(parser.Parser):
+ 
+         return expr
+ 
++    def _parse_ai_generate(self) -> exp.AIGenerate:
++        return self._parse_ai_scalar_function(exp.AIGenerate)
++
++    def _parse_ai_scalar_function(self, expr_type: type[E]) -> E:
++        expression = self.expression(expr_type(this=self._parse_bitwise()))
++
++        while self._match(TokenType.COMMA):
++            arg = self._parse_lambda()
++            if isinstance(arg, exp.Kwarg):
++                expression.set(arg.this.name.lower(), arg)
++
++        return expression
++
+     def _parse_ml(self, expr_type: type[E], **kwargs: t.Any) -> E:
+         self._match_text_seq("MODEL")
+         this = self._parse_table()
+@@ -731,5 +761,4 @@ class BigQueryParser(parser.Parser):
+                 parsed = self._parse_function(any_token=True)
+                 if parsed:
+                     this = self.expression(exp.Dot(this=this.this, expression=parsed))
+-
+         return this
+diff --git a/tests/tw_repro/test_issue_ai.py b/tests/tw_repro/test_issue_ai.py
+new file mode 100644
+index 0000000..9038628
+--- /dev/null
++++ b/tests/tw_repro/test_issue_ai.py
+@@ -0,0 +1,68 @@
++"""Repro for: richer typed handling for BigQuery AI.* scalar functions.
++
++The issue asks for `AI.EMBED`, `AI.SIMILARITY` and `AI.GENERATE` to be parsed into
++richer typed AST nodes instead of a generic `Dot` wrapping an `Anonymous` function,
++while keeping round trip behavior backward compatible.
++"""
++
++import unittest
++
++from sqlglot import parse_one
++from sqlglot import expressions as exp
++
++
++class TestBigQueryAIScalarFunctions(unittest.TestCase):
++    def _function(self, sql):
++        node = parse_one(sql, dialect="bigquery").expressions[0]
++        self.assertIsInstance(node, exp.Dot)
++        return node.expression
++
++    def test_ai_embed(self):
++        fn = self._function("SELECT AI.EMBED('hello')")
++        self.assertIsInstance(fn, exp.AIEmbed)
++        self.assertEqual(
++            parse_one("SELECT AI.EMBED('hello')", dialect="bigquery").sql(dialect="bigquery"),
++            "SELECT AI.EMBED('hello')",
++        )
++
++    def test_ai_similarity(self):
++        fn = self._function("SELECT AI.SIMILARITY('a', 'b')")
++        self.assertIsInstance(fn, exp.AISimilarity)
++        self.assertEqual(
++            parse_one("SELECT AI.SIMILARITY('a', 'b')", dialect="bigquery").sql(
++                dialect="bigquery"
++            ),
++            "SELECT AI.SIMILARITY('a', 'b')",
++        )
++
++    def test_ai_generate(self):
++        fn = self._function("SELECT AI.GENERATE('Write a haiku')")
++        self.assertIsInstance(fn, exp.AIGenerate)
++        self.assertEqual(
++            parse_one("SELECT AI.GENERATE('Write a haiku')", dialect="bigquery").sql(
++                dialect="bigquery"
++            ),
++            "SELECT AI.GENERATE('Write a haiku')",
++        )
++
++    def test_rich_arguments(self):
++        # Arguments should be semantically accessible, not just positional Anonymous args
++        embed = self._function(
++            "SELECT AI.EMBED('hello', connection_id => 'us.example', endpoint => 'text-embedding-005')"
++        )
++        self.assertIsInstance(embed.this, exp.Literal)
++        self.assertTrue(embed.args.get("connection_id"))
++        self.assertTrue(embed.args.get("endpoint"))
++
++        generate = self._function(
++            "SELECT AI.GENERATE('Write a haiku', connection_id => 'us.example', "
++            "endpoint => 'gemini-2.0-flash', model_params => JSON '{}')"
++        )
++        self.assertIsInstance(generate.this, exp.Literal)
++        self.assertTrue(generate.args.get("connection_id"))
++        self.assertTrue(generate.args.get("endpoint"))
++        self.assertTrue(generate.args.get("model_params"))
++
++
++if __name__ == "__main__":
++    unittest.main()

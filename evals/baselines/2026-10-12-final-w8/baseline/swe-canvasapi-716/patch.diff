@@ -1,0 +1,177 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 2bedc43..c174c58 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,6 +2,10 @@
+ 
+ ## [Unreleased]
+ 
++### Bugfixes
++
++- `obj_or_str` now accepts a plain string and returns it unchanged, matching the behavior of `obj_or_id`. This fixes feature flag methods (`Account.get_feature_flag()`, `Course.get_feature_flag()`, `User.get_feature_flag()`, `FeatureFlag.delete()`, `FeatureFlag.set_feature_flag()`) rejecting string feature names.
++
+ ## [3.5.0] - 2026-03-12
+ 
+ ### General
+diff --git a/canvasapi/util.py b/canvasapi/util.py
+index 21c2a02..63b12a6 100644
+--- a/canvasapi/util.py
++++ b/canvasapi/util.py
+@@ -135,35 +135,35 @@ def obj_or_id(parameter, param_name, object_types):
+ 
+ def obj_or_str(obj, attr, object_types):
+     """
+-    Accepts an object. If the object has the attribute, return the
+-    corresponding string. Otherwise, throw an exception.
++    Accepts either a string or an object. If it is a string, return it.
++    If it is an object of one of the correct types, return the string
++    representation of the given attribute. Otherwise, throw an exception.
+ 
+-    :param obj: object from which to retrieve attribute
+-    :type obj: object
++    :param obj: str or object from which to retrieve attribute
++    :type obj: str or object
+     :param attr: name of the attribute to retrieve
+     :type attr: str
+     :param object_types: tuple containing the types of the object being passed in
+     :type object_types: tuple
+     :rtype: str
+     """
+-    try:
+-        return str(getattr(obj, attr))
+-    except (AttributeError, TypeError):
+-        if not isinstance(attr, str):
+-            raise TypeError(
+-                "Atttibute parameter {} must be of type string".format(attr)
+-            )
+-        for obj_type in object_types:
+-            if isinstance(obj, obj_type):
+-                try:
+-                    return str(getattr(obj, attr))
+-                except AttributeError:
+-                    raise AttributeError("{} object does not have {} attribute").format(
+-                        obj, attr
+-                    )
++    if isinstance(obj, str):
++        return obj
+ 
+-        obj_type_list = ",".join([obj_type.__name__ for obj_type in object_types])
+-        raise TypeError("Parameter {} must be of type {}.".format(obj, obj_type_list))
++    if not isinstance(attr, str):
++        raise TypeError("Attribute parameter {} must be of type string".format(attr))
++
++    for obj_type in object_types:
++        if isinstance(obj, obj_type):
++            try:
++                return str(getattr(obj, attr))
++            except AttributeError:
++                raise AttributeError(
++                    "{} object does not have {} attribute".format(obj, attr)
++                )
++
++    obj_type_list = ",".join([obj_type.__name__ for obj_type in object_types])
++    raise TypeError("Parameter {} must be of type {}.".format(obj, obj_type_list))
+ 
+ 
+ def get_institution_url(base_url):
+diff --git a/tests/test_util.py b/tests/test_util.py
+index cd85648..3d584a5 100644
+--- a/tests/test_util.py
++++ b/tests/test_util.py
+@@ -466,9 +466,12 @@ class TestUtil(unittest.TestCase):
+         with self.assertRaises(TypeError):
+             obj_or_str(user, user, (User,))
+ 
++    def test_obj_or_str_str(self, m):
++        self.assertEqual(obj_or_str("user", "name", (User,)), "user")
++
+     def test_obj_or_str_invalid_obj_type(self, m):
+         with self.assertRaises(TypeError):
+-            obj_or_str("user", "name", (User,))
++            obj_or_str(1, "name", (User,))
+ 
+     # get_institution_url()
+     def test_get_institution_url(self, m):
+diff --git a/tests/tw_repro/test_issue_533.py b/tests/tw_repro/test_issue_533.py
+new file mode 100644
+index 0000000..6f4c7bd
+--- /dev/null
++++ b/tests/tw_repro/test_issue_533.py
+@@ -0,0 +1,77 @@
++"""Repro for: `obj_or_str` improperly rejects strings.
++
++`obj_or_str` should behave like `obj_or_id`: if the caller passes a plain
++string (e.g. a feature name), it should be returned unchanged. If an object
++of one of the accepted types is passed, the named attribute should be
++extracted and returned as a string.
++"""
++
++import unittest
++
++import requests_mock
++
++from canvasapi import Canvas
++from canvasapi.feature import Feature
++from canvasapi.util import obj_or_str
++from tests import settings
++from tests.util import register_uris
++
++
++@requests_mock.Mocker()
++class TestObjOrStrStr(unittest.TestCase):
++    def setUp(self):
++        self.canvas = Canvas(settings.BASE_URL, settings.API_KEY)
++
++    def test_obj_or_str_str(self, m):
++        """A plain str is returned unchanged (like obj_or_id does for ints)."""
++        result = obj_or_str("epub_export", "name", (Feature,))
++        self.assertIsInstance(result, str)
++        self.assertEqual(result, "epub_export")
++
++    def test_obj_or_str_obj(self, m):
++        """An object of an accepted type still yields its attribute as str."""
++        register_uris({"account": ["get_by_id", "get_features"]}, m)
++        account = self.canvas.get_account(1)
++        feature = account.get_features()[0]
++        result = obj_or_str(feature, "name", (Feature,))
++        self.assertIsInstance(result, str)
++        self.assertEqual(result, "epub_export")
++
++
++@requests_mock.Mocker()
++class TestFeatureFlagStrCallSites(unittest.TestCase):
++    """All documented call sites should accept a str feature name."""
++
++    def setUp(self):
++        self.canvas = Canvas(settings.BASE_URL, settings.API_KEY)
++
++        with requests_mock.Mocker() as m:
++            requires = {
++                "account": ["get_by_id"],
++                "course": ["get_by_id"],
++                "user": ["get_by_id"],
++            }
++            register_uris(requires, m)
++
++            self.account = self.canvas.get_account(1)
++            self.course = self.canvas.get_course(1)
++            self.user = self.canvas.get_user(1)
++
++    def test_account_get_feature_flag_str(self, m):
++        register_uris({"account": ["get_feature_flag"]}, m)
++        flag = self.account.get_feature_flag("epub_export")
++        self.assertEqual(flag.feature, "epub_export")
++
++    def test_course_get_feature_flag_str(self, m):
++        register_uris({"course": ["get_feature_flag"]}, m)
++        flag = self.course.get_feature_flag("epub_export")
++        self.assertEqual(flag.feature, "epub_export")
++
++    def test_user_get_feature_flag_str(self, m):
++        register_uris({"user": ["get_feature_flag"]}, m)
++        flag = self.user.get_feature_flag("high_contrast")
++        self.assertEqual(flag.feature, "high_contrast")
++
++
++if __name__ == "__main__":
++    unittest.main()

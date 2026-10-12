@@ -107,6 +107,12 @@ def find_task_dirs(task_ids: list[str], root: Path = Path("evals/tasks")) -> tup
 
 def compare(orig_dir: Path, new_dir: Path) -> dict[str, Any]:
     a, b = _results(orig_dir), _results(new_dir)
+    # 只把复现计划里的任务算作“缺少”（--task 只复现子集时，其余题不是缺失）
+    try:
+        planned = set(json.loads((new_dir / "run.json").read_text(encoding="utf-8")).get("tasks") or [])
+    except (OSError, json.JSONDecodeError):
+        planned = set()
+    planned = planned or {k[1] for k in a}
     rows = []
     for key in sorted(set(a) & set(b)):
         ra, rb = a[key], b[key]
@@ -120,7 +126,7 @@ def compare(orig_dir: Path, new_dir: Path) -> dict[str, Any]:
         "source": str(orig_dir),
         "reproduction": str(new_dir),
         "compared": n,
-        "missing_in_reproduction": [f"{k[0]}/{k[1]}/{k[2]}" for k in sorted(set(a) - set(b))],
+        "missing_in_reproduction": [f"{k[0]}/{k[1]}/{k[2]}" for k in sorted(set(a) - set(b)) if k[1] in planned],
         "agreement": round(agree / n, 4) if n else None,
         "orig_solved": sum(r["orig_resolved"] for r in rows),
         "new_solved": sum(r["new_resolved"] for r in rows),

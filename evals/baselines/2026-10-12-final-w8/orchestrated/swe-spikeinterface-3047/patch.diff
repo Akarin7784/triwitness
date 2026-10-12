@@ -1,0 +1,165 @@
+diff --git a/src/spikeinterface/core/sortinganalyzer.py b/src/spikeinterface/core/sortinganalyzer.py
+index 46d0209..fc1ff33 100644
+--- a/src/spikeinterface/core/sortinganalyzer.py
++++ b/src/spikeinterface/core/sortinganalyzer.py
+@@ -1608,7 +1608,10 @@ class AnalyzerExtension:
+         if self.format == "binary_folder":
+             extension_folder = self._get_binary_extension_folder()
+             for ext_data_file in extension_folder.iterdir():
+-                if ext_data_file.name == "params.json":
++                # params.json holds the extension params (loaded by load_params)
++                # info.json holds the importing provenance (see _save_importing_provenance)
++                # neither of them is extension "data", so they must not end up in self.data
++                if ext_data_file.name in ("params.json", "info.json"):
+                     continue
+                 ext_data_name = ext_data_file.stem
+                 if ext_data_file.suffix == ".json":
+@@ -1830,6 +1833,33 @@ class AnalyzerExtension:
+             extension_group = self._get_zarr_extension_group(mode="r+")
+             extension_group.attrs["info"] = info
+ 
++    def _load_importing_provenance(self):
++        # read back the info written by _save_importing_provenance
++        # note : this is not extension data, so it is stored on the extension object itself
++        # and never put into self.data (which only contains the results of a computation)
++        if self.format == "binary_folder":
++            info_file = self._get_binary_extension_folder() / "info.json"
++            if not info_file.is_file():
++                return None
++            with info_file.open("r") as f:
++                info = json.load(f)
++        elif self.format == "zarr":
++            extension_group = self._get_zarr_extension_group(mode="r")
++            info = extension_group.attrs.get("info", None)
++        else:
++            info = None
++        return info
++
++    @property
++    def importing_provenance(self):
++        """
++        The importing provenance (class path, module and version) of the extension class,
++        as saved by `_save_importing_provenance`.
++
++        It is `None` when nothing was saved (e.g. memory format or a not-yet-saved extension).
++        """
++        return self._load_importing_provenance()
++
+     def get_pipeline_nodes(self):
+         assert (
+             self.use_nodepipeline
+diff --git a/src/spikeinterface/core/tests/test_sortinganalyzer.py b/src/spikeinterface/core/tests/test_sortinganalyzer.py
+index d780932..fec51c2 100644
+--- a/src/spikeinterface/core/tests/test_sortinganalyzer.py
++++ b/src/spikeinterface/core/tests/test_sortinganalyzer.py
+@@ -215,6 +215,42 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
+     assert dummy_ext.params["param1"] == 5.5
+ 
+ 
++@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
++def test_select_units_after_load(tmp_path, dataset, format):
++    # https://github.com/SpikeInterface/spikeinterface issue: select_units fails after load_sorting_analyzer
++    # because the extension "info.json" (importing provenance) was loaded into extension.data
++    recording, sorting = dataset
++
++    if format == "zarr":
++        folder = tmp_path / "analyzer_select_units_after_load.zarr"
++    else:
++        folder = tmp_path / "analyzer_select_units_after_load"
++
++    sorting_analyzer = create_sorting_analyzer(sorting, recording, format=format, folder=folder)
++    sorting_analyzer.compute(["random_spikes", "waveforms", "templates"])
++
++    loaded_analyzer = load_sorting_analyzer(folder=folder)
++    loaded_ext = loaded_analyzer.get_extension("templates")
++
++    # the metadata keys must not leak into the extension data
++    assert "info" not in loaded_ext.data
++    assert "params" not in loaded_ext.data
++    assert "average" in loaded_ext.data
++    # but the importing provenance is still accessible on the extension
++    assert loaded_ext.importing_provenance is not None
++
++    selected_unit_ids = sorting.unit_ids[::2]
++    new_analyzer = loaded_analyzer.select_units(unit_ids=selected_unit_ids)
++
++    assert np.array_equal(new_analyzer.unit_ids, selected_unit_ids)
++
++    keep_unit_indices = np.flatnonzero(np.isin(loaded_analyzer.unit_ids, selected_unit_ids))
++    expected_average = loaded_ext.data["average"][keep_unit_indices, :, :]
++    new_average = new_analyzer.get_extension("templates").data["average"]
++    assert new_average.shape[0] == len(selected_unit_ids)
++    assert np.allclose(np.asarray(new_average), expected_average)
++
++
+ def test_extension_params():
+     from spikeinterface.core.sortinganalyzer import _builtin_extensions
+ 
+diff --git a/src/spikeinterface/core/tests/tw_repro/test_issue_repro_select_units_after_load.py b/src/spikeinterface/core/tests/tw_repro/test_issue_repro_select_units_after_load.py
+new file mode 100644
+index 0000000..9d89f50
+--- /dev/null
++++ b/src/spikeinterface/core/tests/tw_repro/test_issue_repro_select_units_after_load.py
+@@ -0,0 +1,62 @@
++"""
++Repro for: `select_units` fails in `SortingAnalyzer` after using `load_sorting_analyzer`.
++
++After saving a SortingAnalyzer to a `binary_folder` and reloading it, the extension data
++loaded from disk wrongly contains the `info` key coming from `info.json` written by
++`AnalyzerExtension._save_importing_provenance`. When selecting units, the unit-index array
++is applied to every data key, which raises:
++    TypeError: unhashable type: 'numpy.ndarray'
++"""
++
++import numpy as np
++import pytest
++
++import spikeinterface.core as si
++
++
++@pytest.fixture(scope="module")
++def dataset():
++    recording, sorting = si.generate_ground_truth_recording(
++        durations=[10.0],
++        sampling_frequency=16000.0,
++        num_channels=4,
++        num_units=4,
++        generate_sorting_kwargs=dict(firing_rates=10.0, refractory_period_ms=4.0),
++        noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
++        seed=2205,
++    )
++    return recording, sorting
++
++
++@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
++def test_select_units_after_load(tmp_path, dataset, format):
++    recording, sorting = dataset
++
++    if format == "zarr":
++        folder = tmp_path / "analyzer.zarr"
++    else:
++        folder = tmp_path / "analyzer"
++
++    analyzer = si.create_sorting_analyzer(sorting, recording, format=format, folder=folder)
++    analyzer.compute(["random_spikes", "waveforms", "templates"])
++
++    loaded = si.load_sorting_analyzer(folder=folder)
++
++    # AC2: metadata keys must not leak into `data`
++    assert "info" not in loaded.get_extension("templates").data
++    assert "params" not in loaded.get_extension("templates").data
++    assert "average" in loaded.get_extension("templates").data
++
++    selected_unit_ids = sorting.unit_ids[::2]
++
++    # AC1: this used to raise `TypeError: unhashable type: 'numpy.ndarray'` for binary_folder
++    new_analyzer = loaded.select_units(unit_ids=selected_unit_ids)
++
++    assert np.array_equal(new_analyzer.unit_ids, selected_unit_ids)
++
++    # AC3: template array sliced by unit index
++    keep_unit_indices = np.flatnonzero(np.isin(loaded.unit_ids, selected_unit_ids))
++    expected_average = loaded.get_extension("templates").data["average"][keep_unit_indices, :, :]
++    obtained_average = new_analyzer.get_extension("templates").data["average"]
++    assert obtained_average.shape[0] == len(selected_unit_ids)
++    assert np.allclose(np.asarray(obtained_average), expected_average)

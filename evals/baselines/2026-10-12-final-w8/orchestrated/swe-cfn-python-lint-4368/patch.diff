@@ -1,0 +1,84 @@
+diff --git a/src/cfnlint/rules/resources/Metadata.py b/src/cfnlint/rules/resources/Metadata.py
+index 7b96df6..fae8454 100644
+--- a/src/cfnlint/rules/resources/Metadata.py
++++ b/src/cfnlint/rules/resources/Metadata.py
+@@ -8,7 +8,8 @@ from typing import Any
+ import cfnlint.data.schemas.other.resources
+ import cfnlint.helpers
+ from cfnlint.jsonschema import ValidationResult, Validator
+-from cfnlint.jsonschema._keywords import additionalProperties, properties
++from cfnlint.jsonschema._keywords import properties
++from cfnlint.jsonschema._keywords_cfn import additionalProperties
+ from cfnlint.rules.jsonschema.CfnLintJsonSchema import CfnLintJsonSchema, SchemaDetails
+ 
+ 
+diff --git a/tests/tw_repro/test_issue_3009.py b/tests/tw_repro/test_issue_3009.py
+new file mode 100644
+index 0000000..99e02f8
+--- /dev/null
++++ b/tests/tw_repro/test_issue_3009.py
+@@ -0,0 +1,64 @@
++"""
++Reproduction for issue: E3009 Additional properties are not allowed
++('Fn::Transform' was unexpected) when Fn::Transform is used inside
++AWS::CloudFormation::Init metadata.
++"""
++
++from __future__ import annotations
++
++from cfnlint import lint
++from cfnlint.config import ManualArgs
++
++TEMPLATE = """\
++AWSTemplateFormatVersion: 2010-09-09
++Resources:
++  ApplicationInstance:
++    Type: AWS::EC2::Instance
++    Metadata:
++      "AWS::CloudFormation::Init":
++        configSets:
++          installAndConfigure:
++            - installCoreDependencies
++            - configureHttpd
++        installCoreDependencies:
++          packages:
++            yum:
++              httpd: []
++        configureHttpd:
++          files:
++            /etc/httpd/conf.d/www.conf:
++              Fn::Transform:
++                Name: AWS::Include
++                Parameters:
++                  Location: "s3://unique-bucket-name/includes/www.conf.yaml"
++              mode: "000644"
++              owner: "root"
++              group: "root"
++    Properties:
++      ImageId: ami-0a9f08a6603f3338e
++      InstanceType: t4g.micro
++      SecurityGroupIds:
++        - sg-0b4c66acea364af1
++      SubnetId: subnet-0f10a6f6d7cec2aef
++      UserData:
++        Fn::Base64: !Sub |
++          #!/bin/bash -xe
++          /opt/aws/bin/cfn-init \\
++            --stack ${AWS::StackName} \\
++            --resource ApplicationInstance \\
++            --configsets installAndConfigure \\
++            --region ${AWS::Region} \\
++            --verbose
++"""
++
++
++def test_fn_transform_in_cfn_init_metadata():
++    matches = lint(
++        TEMPLATE,
++        config=ManualArgs(regions=["us-east-1"]),
++    )
++    e3009 = [m for m in matches if m.rule.id == "E3009"]
++    assert e3009 == [], (
++        "Expected no E3009 errors for Fn::Transform under "
++        f"AWS::CloudFormation::Init, got: {[m.message for m in e3009]!r}"
++    )

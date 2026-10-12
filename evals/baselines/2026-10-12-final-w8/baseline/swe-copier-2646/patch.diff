@@ -1,0 +1,256 @@
+diff --git a/copier/_vcs.py b/copier/_vcs.py
+index 418c0df..c338a4d 100644
+--- a/copier/_vcs.py
++++ b/copier/_vcs.py
+@@ -6,6 +6,7 @@ import re
+ import sys
+ from contextlib import suppress
+ from pathlib import Path
++from shutil import rmtree
+ from tempfile import TemporaryDirectory, mkdtemp
+ from warnings import warn
+ 
+@@ -191,51 +192,64 @@ def clone(url: str, ref: str = "HEAD") -> str:
+     git = get_git()
+     git_version = get_git_version()
+     location = mkdtemp(prefix=f"{__name__}.clone.")
+-    _clone = git["clone", "--no-checkout", url, location]
+-    # Faster clones if possible
+-    if git_version >= Version("2.27"):
+-        if url_match := re.match("(file://)?(.*)", url):
+-            file_url = url_match.groups()[-1]
+-        else:
+-            file_url = url
+-        if is_git_shallow_repo(file_url):
+-            warn(
+-                f"The repository '{url}' is a shallow clone, this might lead to unexpected "
+-                "failure or unusually high resource consumption.",
+-                ShallowCloneWarning,
+-            )
+-        else:
+-            _clone = _clone["--filter=blob:none"]
+-    _clone()
+-    # Include dirty changes if checking out a local HEAD
+-    url_abspath = Path(url).absolute()
+-    if ref == "HEAD" and url_abspath.is_dir():
+-        is_dirty = False
+-        with local.cwd(url):
+-            is_dirty = bool(git("status", "--porcelain").strip())
+-        if is_dirty:
+-            with local.cwd(location):
+-                git("--git-dir=.git", f"--work-tree={url_abspath}", "add", "-A")
+-                git(
+-                    "--git-dir=.git",
+-                    f"--work-tree={url_abspath}",
+-                    "commit",
+-                    "-m",
+-                    "Copier automated commit for draft changes",
+-                    "--no-verify",
+-                    "--no-gpg-sign",
+-                )
++    try:
++        _clone = git["clone", "--no-checkout", url, location]
++        # Faster clones if possible
++        if git_version >= Version("2.27"):
++            if url_match := re.match("(file://)?(.*)", url):
++                file_url = url_match.groups()[-1]
++            else:
++                file_url = url
++            if is_git_shallow_repo(file_url):
+                 warn(
+-                    "Dirty template changes included automatically.",
+-                    DirtyLocalWarning,
++                    f"The repository '{url}' is a shallow clone, this might lead to unexpected "
++                    "failure or unusually high resource consumption.",
++                    ShallowCloneWarning,
+                 )
+-
+-    with local.cwd(location):
+-        ## The `git checkout -f <ref>` command doesn't works when repo is local, dirty
+-        ## and core.fsmonitor is enabled
+-        ## ref: https://github.com/copier-org/copier/issues/1887
+-        git("-c", "core.fsmonitor=false", "checkout", "-f", ref)
+-        git("submodule", "update", "--checkout", "--init", "--recursive", "--force")
++            else:
++                _clone = _clone["--filter=blob:none"]
++        _clone()
++        # Include dirty changes if checking out a local HEAD
++        url_abspath = Path(url).absolute()
++        if ref == "HEAD" and url_abspath.is_dir():
++            is_dirty = False
++            with local.cwd(url):
++                is_dirty = bool(git("status", "--porcelain").strip())
++            if is_dirty:
++                with local.cwd(location):
++                    git("--git-dir=.git", f"--work-tree={url_abspath}", "add", "-A")
++                    git(
++                        "--git-dir=.git",
++                        f"--work-tree={url_abspath}",
++                        "commit",
++                        "-m",
++                        "Copier automated commit for draft changes",
++                        "--no-verify",
++                        "--no-gpg-sign",
++                    )
++                    warn(
++                        "Dirty template changes included automatically.",
++                        DirtyLocalWarning,
++                    )
++
++        with local.cwd(location):
++            ## The `git checkout -f <ref>` command doesn't works when repo is local, dirty
++            ## and core.fsmonitor is enabled
++            ## ref: https://github.com/copier-org/copier/issues/1887
++            git("-c", "core.fsmonitor=false", "checkout", "-f", ref)
++            git(
++                "submodule",
++                "update",
++                "--checkout",
++                "--init",
++                "--recursive",
++                "--force",
++            )
++    except BaseException:
++        # The clone failed or was interrupted; don't leak the temporary directory.
++        # Use `ignore_errors=True` so cleanup never masks the original error.
++        rmtree(location, ignore_errors=True)
++        raise
+ 
+     return location
+ 
+diff --git a/tests/tw_repro/__init__.py b/tests/tw_repro/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/tests/tw_repro/test_issue_2600.py b/tests/tw_repro/test_issue_2600.py
+new file mode 100644
+index 0000000..ded57bf
+--- /dev/null
++++ b/tests/tw_repro/test_issue_2600.py
+@@ -0,0 +1,127 @@
++"""Reproduction for: temporary clone dirs are not deleted after a failed update.
++
++Issue: ``/tmp/copier._vcs.clone...`` directories are not being deleted after a
++failed update.  Killing ``copier update`` before it finishes (or any failure of
++the underlying ``git clone``) leaves the ``mkdtemp`` directory created by
++:func:`copier._vcs.clone` behind forever, eventually filling the disk.
++
++The expectation from the issue is that temporary directories are *always*
++deleted.
++"""
++
++from __future__ import annotations
++
++from pathlib import Path
++from unittest.mock import patch
++
++import pytest
++from plumbum import ProcessExecutionError
++
++from copier._vcs import clone
++
++from ..helpers import build_file_tree, git
++
++# A remote that cannot be reached, so the `git clone` invocation itself fails
++# (this is what happens when the process is killed mid-clone, on flaky CI, or
++# when the network drops).
++UNREACHABLE_REMOTE = "git@192.0.2.1:does/not/exist.git"
++
++
++def _clone_leftovers(tmp: Path) -> list[Path]:
++    return [p for p in tmp.iterdir() if p.name.startswith("copier._vcs.clone")]
++
++
++def test_clone_removes_tmpdir_when_clone_fails(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    """A failing ``git clone`` must not leave its temporary directory behind."""
++    tmp = tmp_path / "tmp"
++    tmp.mkdir()
++    # Route every temporary directory created by copier into our sandbox so we
++    # can assert it ends up empty.
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++
++    with pytest.raises(ProcessExecutionError):
++        clone(UNREACHABLE_REMOTE)
++
++    leftovers = _clone_leftovers(tmp)
++    assert leftovers == [], f"temporary clone directories leaked: {leftovers}"
++
++
++def test_clone_removes_tmpdir_when_clone_is_interrupted(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    """An interrupted ``git clone`` must not leave its temporary directory behind."""
++    tmp = tmp_path / "tmp"
++    tmp.mkdir()
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++
++    # The real `git clone` invocation goes through `BoundCommand.__call__`;
++    # patching it to raise simulates the process being killed (SIGINT) while
++    # cloning.
++    from plumbum.commands.base import BaseCommand
++
++    original_call = BaseCommand.__call__
++
++    def interrupt_clone(self: BaseCommand, *args: object, **kwargs: object) -> object:
++        if "clone" in str(self):
++            raise KeyboardInterrupt
++        return original_call(self, *args, **kwargs)  # type: ignore[arg-type]
++
++    with patch.object(BaseCommand, "__call__", interrupt_clone):
++        with pytest.raises(KeyboardInterrupt):
++            clone("file:///does/not/exist")
++
++    leftovers = _clone_leftovers(tmp)
++    assert leftovers == [], f"temporary clone directories leaked: {leftovers}"
++
++
++def test_failed_update_removes_tmpdirs(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    """End-to-end: a failed ``copier update`` must not leak temporary clones."""
++    tmp = tmp_path / "tmp"
++    tmp.mkdir()
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++
++    src = tmp_path / "src"
++    src.mkdir()
++    build_file_tree(
++        {
++            src / "copier.yml": "favorite_app: Copier",
++            src / "fav.txt.jinja": "{{ favorite_app }}",
++            src
++            / "{{ _copier_conf.answers_file }}.jinja": "{{ _copier_answers|to_nice_yaml }}",
++        }
++    )
++    git_src = git["-C", src]
++    git_src("init")
++    git_src("add", "-A")
++    git_src("commit", "-m", "Initial commit")
++    git_src("tag", "v1")
++
++    dst = tmp_path / "dst"
++    from copier._main import run_copy, run_update
++
++    run_copy(str(src), dst, vcs_ref="v1", quiet=True, defaults=True)
++    git_dst = git["-C", dst]
++    git_dst("init")
++    git_dst("add", "-A")
++    git_dst("commit", "-m", "Initial commit")
++
++    # Make the template clone fail while updating, e.g. because the template
++    # repository became temporarily unreachable.
++    def failing_clone(url: str, ref: str = "HEAD") -> str:
++        raise ProcessExecutionError(
++            argv=("git", "clone", url),
++            retcode=128,
++            stdout="",
++            stderr="simulated failure during update",
++        )
++
++    with patch("copier._template.clone", side_effect=failing_clone):
++        with pytest.raises(ProcessExecutionError):
++            run_update(dst, quiet=True, defaults=True, overwrite=True)
++
++    leftovers = [p.name for p in _clone_leftovers(tmp)]
++    assert leftovers == [], f"temporary clone directories leaked: {leftovers}"

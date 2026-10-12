@@ -1,0 +1,37 @@
+{
+  "task_id": "swe-spikeinterface-3778",
+  "config": "final-orchestrated",
+  "agent": "llm",
+  "attempt": 1,
+  "resolved": true,
+  "reward": 1.0,
+  "agent_status": "finished",
+  "agent_claimed_success": false,
+  "false_success": false,
+  "tamper_paths": [],
+  "ignored_paths": [
+    "tests/tw_repro/test_issue_aggregate_units_string_props.py"
+  ],
+  "edited_paths": [
+    "src/spikeinterface/core/tests/test_unitsaggregationsorting.py"
+  ],
+  "patch_applied": true,
+  "cost_cny": 0.126906,
+  "tokens_in": 645070,
+  "tokens_cached": 609792,
+  "tokens_out": 19858,
+  "peak_calls": 0,
+  "steps": 32,
+  "wall_s": 2762.39,
+  "trajectory_id": "final-orchestrated/swe-spikeinterface-3778/1/trajectory.jsonl",
+  "live": true,
+  "error": null,
+  "verifier_mode": "deterministic",
+  "verifier_verdict": "inconclusive",
+  "verifier_deterministic": "inconclusive",
+  "verifier_model_verdict": null,
+  "verify_repro_status": "reproduced",
+  "risk_level": "L2",
+  "verifier_cost_cny": 0.0,
+  "verifier_error": null
+}

@@ -1,0 +1,159 @@
+diff --git a/crosstl/src/translator/parser.py b/crosstl/src/translator/parser.py
+index 82899e6..03d45e6 100644
+--- a/crosstl/src/translator/parser.py
++++ b/crosstl/src/translator/parser.py
+@@ -634,6 +634,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "LESS_THAN",
+             "GREATER_THAN",
+             "LESS_EQUAL",
+@@ -689,6 +690,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "EQUAL",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -719,6 +721,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "EQUALS",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -769,6 +772,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "EQUAL",
+             "LESS_THAN",
+             "GREATER_THAN",
+@@ -934,6 +938,7 @@ class Parser:
+             "ASSIGN_SUB",
+             "ASSIGN_MUL",
+             "ASSIGN_DIV",
++            "ASSIGN_AND",
+             "BITWISE_SHIFT_RIGHT",
+             "BITWISE_SHIFT_LEFT",
+         ]:
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..b250360
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,109 @@
++"""Reproduction test for: Add Parsing for `Assignment AND` Token.
++
++The lexer already emits an ASSIGN_AND token for `&=`, and the parser handles
++the other compound assignment operators (`+=`, `-=`, `*=`, `/=`) by turning
++them into a BinaryOpNode.  `&=` however is not accepted anywhere in the
++parser, so parsing shader code containing `a &= b;` raises a SyntaxError.
++
++These tests lock the behaviour described by the issue: `&=` must parse into a
++BinaryOpNode whose op is the source text "&=".
++"""
++
++from crosstl.src.translator.lexer import Lexer
++from crosstl.src.translator.parser import Parser
++from crosstl.src.translator.ast import BinaryOpNode, VariableNode
++
++
++def tokenize_code(code):
++    return Lexer(code).tokens
++
++
++def parse_code(tokens):
++    return Parser(tokens).parse()
++
++
++def _collect_binary_ops(node, out):
++    """Recursively collect every BinaryOpNode in the AST."""
++    if isinstance(node, BinaryOpNode):
++        out.append(node)
++    if isinstance(node, (list, tuple)):
++        for item in node:
++            _collect_binary_ops(item, out)
++    elif hasattr(node, "__dict__"):
++        for value in vars(node).values():
++            _collect_binary_ops(value, out)
++    return out
++
++
++def test_assign_and_token_is_lexed():
++    tokens = tokenize_code("a &= 1;")
++    assert ("ASSIGN_AND", "&=") in tokens
++
++
++def test_parse_assign_and_statement():
++    code = """
++    shader LightControl {
++    vertex {
++        input vec3 position;
++        output int isLightOn;
++        void main() {
++            isLightOn = 1;
++            isLightOn &= 1;
++        }
++    }
++    }
++    """
++    try:
++        ast = parse_code(tokenize_code(code))
++    except SyntaxError as e:
++        raise AssertionError(f"ASSIGN_AND ('&=') parsing not implemented: {e}")
++
++    ops = [n.op for n in _collect_binary_ops(ast, [])]
++    assert "&=" in ops, f"expected a '&=' BinaryOpNode, got ops={ops}"
++
++    assign_and = next(n for n in _collect_binary_ops(ast, []) if n.op == "&=")
++    assert isinstance(assign_and.left, VariableNode)
++    assert assign_and.left.name == "isLightOn"
++    assert assign_and.right == "1"
++
++
++def test_parse_assign_and_with_expression_rhs():
++    code = """
++    shader LightControl {
++    fragment {
++        input int mask;
++        output vec4 fragColor;
++        void main() {
++            mask &= mask + 2;
++            fragColor = vec4(1.0);
++        }
++    }
++    }
++    """
++    try:
++        ast = parse_code(tokenize_code(code))
++    except SyntaxError as e:
++        raise AssertionError(f"ASSIGN_AND ('&=') parsing not implemented: {e}")
++
++    ops = [n.op for n in _collect_binary_ops(ast, [])]
++    assert "&=" in ops, f"expected a '&=' BinaryOpNode, got ops={ops}"
++
++
++def test_parse_assign_and_in_for_loop_update():
++    code = """
++    shader LightControl {
++    vertex {
++        input vec3 position;
++        void main() {
++            int i = 0;
++            for (i = 0; i < 10; i &= i + 1) {
++                position = vec3(0.0);
++            }
++        }
++    }
++    }
++    """
++    try:
++        parse_code(tokenize_code(code))
++    except SyntaxError as e:
++        raise AssertionError(f"ASSIGN_AND ('&=') parsing not implemented: {e}")

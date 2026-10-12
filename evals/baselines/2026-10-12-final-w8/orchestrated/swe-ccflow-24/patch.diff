@@ -1,0 +1,247 @@
+diff --git a/ccflow/callable.py b/ccflow/callable.py
+index 24c84d4..827075b 100644
+--- a/ccflow/callable.py
++++ b/ccflow/callable.py
+@@ -147,7 +147,11 @@ class _CallableModel(BaseModel, abc.ABC):
+ 
+     @abc.abstractmethod
+     def __call__(self, context: ContextType) -> ResultType:
+-        """This method produces the result. Implementations should be decorated with Flow.call."""
++        """This method produces the result. Implementations should be decorated with Flow.call.
++
++        When called, the context can be passed as a context object, or as the kwargs of the
++        context itself (the ``context`` keyword is reserved for the context object).
++        """
+ 
+     @abc.abstractmethod
+     def __deps__(
+@@ -234,7 +238,7 @@ class FlowOptions(BaseModel):
+         return self._get_evaluator_from_options(options)
+ 
+     def __call__(self, fn):
+-        def wrapper(model, context=Signature.empty):
++        def wrapper(model, context=Signature.empty, **kwargs):
+             # TODO: Let ModelEvaluationContext handle this type checking
+             if not isinstance(model, CallableModel):
+                 raise TypeError("Can only decorate methods on CallableModels with the flow decorator")
+@@ -242,6 +246,13 @@ class FlowOptions(BaseModel):
+                 raise TypeError(f"Context type {model.context_type} must be a subclass of ContextBase")
+             if not isclass(model.result_type) or not issubclass(model.result_type, ResultBase):
+                 raise TypeError(f"Result type {model.result_type} must be a subclass of ResultBase")
++            if kwargs:
++                # The kwargs of the context can be passed directly, in which case the context
++                # is validated from them below. The 'context' keyword is reserved for the context
++                # object itself, so it cannot be used together with context field kwargs.
++                if context is not Signature.empty:
++                    raise TypeError(f"{fn.__name__}() cannot be called with both 'context' and context field keyword arguments")
++                context = kwargs
+             if context is Signature.empty:
+                 context = _cached_signature(fn).parameters["context"].default
+                 if context is Signature.empty:
+@@ -368,7 +379,14 @@ class FlowOptionsOverride(BaseModel):
+ class Flow(PydanticBaseModel):
+     @staticmethod
+     def call(*args, **kwargs):
+-        """Decorator for methods on callable models"""
++        """Decorator for methods on callable models.
++
++        The decorated method takes a single ``context`` argument. When it is invoked on a model
++        instance, the context can be provided either as a ``context`` object (or as a positional
++        argument), or as the kwargs of the context itself, e.g. ``model(field=value, ...)``.
++        The ``context`` keyword is reserved for the context object, so it cannot be combined with
++        context field kwargs.
++        """
+         if len(args) == 1 and callable(args[0]):
+             # No arguments to decorator, this is the decorator
+             fn = args[0]
+diff --git a/ccflow/tests/test_callable.py b/ccflow/tests/test_callable.py
+index 56e1f55..af6ff4a 100644
+--- a/ccflow/tests/test_callable.py
++++ b/ccflow/tests/test_callable.py
+@@ -198,6 +198,22 @@ class TestCallableModel(TestCase):
+         self.assertIn("type_", out)
+         self.assertNotIn("context_type", out)
+ 
++    def test_call_kwargs(self):
++        m = MyCallable(i=5)
++        # The context fields can be passed directly as kwargs
++        self.assertEqual(m(a="foo"), MyResult(x=5, y="foo"))
++        self.assertEqual(m(a="foo"), m(MyContext(a="foo")))
++        # An explicit context is still supported
++        self.assertEqual(m(context=MyContext(a="foo")), MyResult(x=5, y="foo"))
++        self.assertEqual(m(MyContext(a="foo")), MyResult(x=5, y="foo"))
++
++        # Can't pass both a context and context field kwargs
++        self.assertRaises(TypeError, m, MyContext(a="foo"), a="foo")
++        self.assertRaises(TypeError, m, context=MyContext(a="foo"), a="foo")
++
++        # Invalid kwargs are validated against the context type
++        self.assertRaises(ValidationError, m, b="foo")
++
+     def test_inheritance(self):
+         m = MyCallableChild(i=5)
+         self.assertEqual(m(MyContext(a="foo")), MyResult(x=5, y="foo"))
+@@ -302,6 +318,12 @@ class TestCallableModelGenericType(TestCase):
+ 
+ 
+ class TestCallableModelDeps(TestCase):
++    def test_kwargs_deps(self):
++        m = MyCallable(i=1)
++        n = MyCallableParent_basic(my_callable=m)
++        self.assertEqual(n.__deps__(a="hello"), n.__deps__(MyContext(a="hello")))
++        self.assertEqual(n.__deps__(a="hello"), [(m, [MyContext(a="goodbye")])])
++
+     def test_basic(self):
+         m = MyCallable(i=1)
+         n = MyCallableParent_basic(my_callable=m)
+diff --git a/ccflow/tests/test_decorator.py b/ccflow/tests/test_decorator.py
+index b479a32..3ad86c7 100644
+--- a/ccflow/tests/test_decorator.py
++++ b/ccflow/tests/test_decorator.py
+@@ -117,6 +117,19 @@ class TestFlowDecorator(TestCase):
+         self.assertEqual(model.bar("2022-01-01"), GenericResult(value=date(2022, 1, 1)))
+         self.assertEqual(model.baz("2022-01-01"), date(2022, 1, 1))
+ 
++    def test_kwargs(self):
++        """Test that context fields can be passed as kwargs to any decorated method."""
++        model = DefaultModel()
++        self.assertEqual(model(date="2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        # Context defaults are still used when nothing is passed
++        self.assertEqual(model(), GenericResult(value=date.today()))
++
++        model = MyModel()
++        self.assertEqual(model(date="2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        self.assertEqual(model.foo(date="2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        self.assertEqual(model.bar(date="2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        self.assertEqual(model.baz(date="2022-01-01"), date(2022, 1, 1))
++
+     def test_default(self):
+         model = DefaultModel()
+         self.assertEqual(model(), GenericResult(value=date.today()))
+diff --git a/docs/wiki/Key-Features.md b/docs/wiki/Key-Features.md
+index 6aada3b..1bdcff6 100644
+--- a/docs/wiki/Key-Features.md
++++ b/docs/wiki/Key-Features.md
+@@ -22,6 +22,22 @@ The naming was inspired by the open source library [Pydantic](https://docs.pydan
+ `CallableModel`'s are called with a context (something that derives from `ContextBase`) and returns a result (something that derives from `ResultBase`).
+ As an example, you may have a `SQLReader` callable model that when called with a `DateRangeContext` returns a `ArrowResult` (wrapper around a Arrow table) with data in the date range defined by the context by querying some SQL database.
+ 
++A `CallableModel` can be called either with a context object, or directly with the fields of the context
++as keyword arguments, in which case the context will be validated from them:
++
++```python
++model = SQLReader(...)
++
++# Call with a context object
++model(DateRangeContext(start_date="2022-01-01", end_date="2022-01-02"))
++
++# Or pass the context fields directly as kwargs (they will be validated into a DateRangeContext)
++model(start_date="2022-01-01", end_date="2022-01-02")
++```
++
++The `context` keyword is reserved for the context object itself, so it cannot be combined with context
++field kwargs.
++
+ ## Model Registry
+ 
+ A `ModelRegistry` is a named collection of models.
+diff --git a/tests/tw_repro/test_issue_1.py b/tests/tw_repro/test_issue_1.py
+new file mode 100644
+index 0000000..783e3db
+--- /dev/null
++++ b/tests/tw_repro/test_issue_1.py
+@@ -0,0 +1,94 @@
++"""Repro for issue: "Ability to pass kwargs to CallableModel".
++
++Expected behavior: a CallableModel can be called directly with the kwargs of its
++context, i.e. ``m(a="foo")`` behaves like ``m(MyContext(a="foo"))``.
++"""
++
++from datetime import date
++from unittest import TestCase
++
++import pytest
++from pydantic import ValidationError
++
++from ccflow import CallableModel, ContextBase, DateContext, Flow, GenericResult, ResultBase
++
++
++class MyContext(ContextBase):
++    a: str
++
++
++class MyResult(ResultBase):
++    x: int
++    y: str
++
++
++class MyCallable(CallableModel):
++    i: int
++    ll: list = []
++
++    @Flow.call
++    def __call__(self, context: MyContext) -> MyResult:
++        return MyResult(x=self.i, y=context.a)
++
++
++class MyCallableParent(CallableModel):
++    my_callable: MyCallable
++
++    @Flow.call
++    def __call__(self, context: MyContext) -> MyResult:
++        return self.my_callable(context)
++
++    @Flow.deps
++    def __deps__(self, context: MyContext) -> list:
++        return [(self.my_callable, [MyContext(a="goodbye")])]
++
++
++class DateModel(CallableModel):
++    @Flow.call
++    def __call__(self, context: DateContext = "0d") -> GenericResult:
++        return context.date
++
++    @Flow.call
++    def foo(self, context: DateContext) -> GenericResult:
++        return context.date
++
++
++class TestIssue1(TestCase):
++    def test_call_kwargs(self):
++        m = MyCallable(i=5)
++        # kwargs of the context can be passed straight to the model
++        self.assertEqual(m(a="foo"), MyResult(x=5, y="foo"))
++        self.assertEqual(m(a="foo"), m(MyContext(a="foo")))
++        # explicit context still works
++        self.assertEqual(m(context=MyContext(a="foo")), MyResult(x=5, y="foo"))
++        self.assertEqual(m(MyContext(a="foo")), MyResult(x=5, y="foo"))
++
++    def test_call_kwargs_and_context_raises(self):
++        m = MyCallable(i=5)
++        with self.assertRaises(TypeError):
++            m(MyContext(a="foo"), a="foo")
++        with self.assertRaises(TypeError):
++            m(context=MyContext(a="foo"), a="foo")
++
++    def test_call_kwargs_validation_error(self):
++        m = MyCallable(i=5)
++        with self.assertRaises(ValidationError):
++            m(b="foo")
++
++    def test_kwargs_deps(self):
++        m = MyCallable(i=1)
++        n = MyCallableParent(my_callable=m)
++        self.assertEqual(n.__deps__(a="hello"), n.__deps__(MyContext(a="hello")))
++        self.assertEqual(n.__deps__(a="hello"), [(m, [MyContext(a="goodbye")])])
++
++    def test_kwargs_decorated_method(self):
++        model = DateModel()
++        self.assertEqual(model(date="2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        self.assertEqual(model.foo(date="2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        # existing behavior preserved
++        self.assertEqual(model("2022-01-01"), GenericResult(value=date(2022, 1, 1)))
++        self.assertEqual(model(), GenericResult(value=date.today()))
++
++
++if __name__ == "__main__":
++    pytest.main([__file__, "-q"])

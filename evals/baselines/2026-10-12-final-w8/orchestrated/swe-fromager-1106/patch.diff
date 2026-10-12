@@ -1,0 +1,214 @@
+diff --git a/src/fromager/dependency_graph.py b/src/fromager/dependency_graph.py
+index b461286..4c8872e 100644
+--- a/src/fromager/dependency_graph.py
++++ b/src/fromager/dependency_graph.py
+@@ -351,7 +351,10 @@ class DependencyGraph:
+         Removes the node and all edges pointing to it. This includes:
+         - Back-references in child nodes' parents lists
+         - Forward edges in parent nodes' children lists
+-        Child nodes of the removed node are kept if referenced elsewhere.
++        Child nodes of the removed node are kept if they are still referenced by
++        another node. A child left without any parent is removed recursively,
++        so removing a node also prunes any subtree that only the removed node
++        kept alive.
+ 
+         Args:
+             req_name: Canonical name of the package
+@@ -364,27 +367,57 @@ class DependencyGraph:
+ 
+         logger.debug(f"Removing failed dependency {key} from graph")
+ 
+-        deleted_node = self.nodes[key]
++        self._remove_node(key)
+ 
+-        # Clean up back-references (parents) in nodes that were children of the removed node
+-        for child_edge in deleted_node.children:
+-            child_node = child_edge.destination_node
+-            filtered_parents = [
+-                edge for edge in child_node.parents if edge.destination_node.key != key
+-            ]
+-            child_node.parents.clear()
+-            child_node.parents.extend(filtered_parents)
++    def _remove_node(self, key: str) -> None:
++        """Remove a single node and recursively remove children it orphaned.
++
++        A child node (or grandchild, ...) is removed when the node being
++        removed was its last remaining parent. Children that are still
++        referenced by another node are kept, but stale parent edges pointing
++        at removed nodes are dropped.
++        """
++        if key == ROOT:
++            # never remove the root node
++            return
++
++        node = self.nodes.get(key)
++        if node is None:
++            # already removed by an earlier recursive call
++            return
++
++        # Collect the children before we start mutating edges.
++        child_keys = [edge.destination_node.key for edge in node.children]
+ 
+         # Remove the node itself
+         del self.nodes[key]
+ 
+         # Remove forward edges from any node whose children pointed to the removed node
+-        for node in self.nodes.values():
++        for other_node in self.nodes.values():
+             filtered_children = [
+-                edge for edge in node.children if edge.destination_node.key != key
++                edge for edge in other_node.children if edge.destination_node.key != key
+             ]
+-            node.children.clear()
+-            node.children.extend(filtered_children)
++            other_node.children.clear()
++            other_node.children.extend(filtered_children)
++
++        for child_key in child_keys:
++            if child_key not in self.nodes:
++                # the child was already removed along with another node
++                continue
++            child_node = self.nodes[child_key]
++            # Drop parent edges pointing at nodes that are no longer in the
++            # graph (including the one we just removed) to avoid stale
++            # references.
++            child_node.parents[:] = [
++                edge
++                for edge in child_node.parents
++                if edge.destination_node.key in self.nodes
++            ]
++            if not child_node.parents:
++                logger.debug(
++                    f"Removing orphaned dependency {child_key} from graph"
++                )
++                self._remove_node(child_key)
+ 
+     def get_dependency_edges(
+         self, match_dep_types: list[RequirementType] | None = None
+diff --git a/tests/tw_repro/test_issue_879.py b/tests/tw_repro/test_issue_879.py
+new file mode 100644
+index 0000000..f05eae0
+--- /dev/null
++++ b/tests/tw_repro/test_issue_879.py
+@@ -0,0 +1,121 @@
++"""Reproduction for: remove_dependency leaves orphaned child nodes in graph.
++
++Issue: DependencyGraph.remove_dependency() removes a node and its incoming
++edges, but does not recursively clean up child nodes that become orphaned
++(no remaining parents), nor does it always remove stale entries from the
++``parents`` list of the children.
++
++See https://github.com/python-wheel-build/fromager/issues/878 for the parent
++issue.
++"""
++
++from __future__ import annotations
++
++from packaging.requirements import Requirement
++from packaging.utils import canonicalize_name
++from packaging.version import Version
++
++from fromager.dependency_graph import DependencyGraph
++from fromager.requirements_file import RequirementType
++
++
++def add_top_level(
++    graph: DependencyGraph, name: str, version: str = "1.0"
++) -> None:
++    graph.add_dependency(
++        parent_name=None,
++        parent_version=None,
++        req_type=RequirementType.TOP_LEVEL,
++        req=Requirement(name),
++        req_version=Version(version),
++    )
++
++
++def add_child(
++    graph: DependencyGraph,
++    parent_name: str,
++    parent_version: str,
++    child_name: str,
++    child_version: str = "1.0",
++    req_type: RequirementType = RequirementType.BUILD_BACKEND,
++) -> None:
++    graph.add_dependency(
++        parent_name=canonicalize_name(parent_name),
++        parent_version=Version(parent_version),
++        req_type=req_type,
++        req=Requirement(child_name),
++        req_version=Version(child_version),
++    )
++
++
++def test_remove_dependency_removes_orphaned_child() -> None:
++    """The tomli/flit-core scenario from the issue."""
++    graph = DependencyGraph()
++    add_top_level(graph, "tomli", "1.5")
++    add_child(graph, "tomli", "1.5", "flit-core", "3.11.0")
++
++    assert len(graph) == 2
++
++    graph.remove_dependency(canonicalize_name("tomli"), Version("1.5"))
++
++    assert "tomli==1.5" not in graph.nodes
++    # the orphaned child must be gone too
++    assert "flit-core==3.11.0" not in graph.nodes
++    assert len(graph) == 0
++    assert list(graph.get_all_nodes()) == [graph.get_root_node()]
++
++
++def test_remove_dependency_recursive_chain() -> None:
++    """Orphan removal recurses through a chain of nodes."""
++    graph = DependencyGraph()
++    add_top_level(graph, "a", "1.0")
++    add_child(graph, "a", "1.0", "b", "1.0")
++    add_child(graph, "b", "1.0", "c", "1.0")
++
++    graph.remove_dependency(canonicalize_name("a"), Version("1.0"))
++
++    assert set(graph.nodes) == {""}
++    assert len(graph) == 0
++
++
++def test_remove_dependency_keeps_shared_child() -> None:
++    """A child that still has another parent is kept, without a stale edge."""
++    graph = DependencyGraph()
++    add_top_level(graph, "a", "1.0")
++    add_top_level(graph, "b", "1.0")
++    add_child(graph, "a", "1.0", "c", "1.0")
++    add_child(graph, "b", "1.0", "c", "1.0")
++
++    graph.remove_dependency(canonicalize_name("a"), Version("1.0"))
++
++    assert "a==1.0" not in graph.nodes
++    assert "b==1.0" in graph.nodes
++    assert "c==1.0" in graph.nodes
++    assert [
++        edge.destination_node.key for edge in graph.nodes["c==1.0"].parents
++    ] == ["b==1.0"]
++
++
++def test_remove_dependency_missing_node_is_noop() -> None:
++    graph = DependencyGraph()
++    add_top_level(graph, "a", "1.0")
++
++    before = dict(graph.nodes)
++    graph.remove_dependency(canonicalize_name("does-not-exist"), Version("1.0"))
++
++    assert set(graph.nodes) == set(before)
++    assert len(graph) == 1
++
++
++def test_remove_dependency_cycle() -> None:
++    """Removing a node participating in a cycle must not hang or raise."""
++    graph = DependencyGraph()
++    add_top_level(graph, "a", "1.0")
++    add_child(graph, "a", "1.0", "b", "1.0")
++    add_child(graph, "b", "1.0", "a", "1.0")
++
++    graph.remove_dependency(canonicalize_name("a"), Version("1.0"))
++
++    assert "a==1.0" not in graph.nodes
++    assert "b==1.0" not in graph.nodes
++    assert len(graph) == 0

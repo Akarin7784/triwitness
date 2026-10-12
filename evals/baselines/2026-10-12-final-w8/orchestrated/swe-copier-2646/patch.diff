@@ -1,0 +1,396 @@
+diff --git a/copier/_main.py b/copier/_main.py
+index b8d897e..b7414dc 100644
+--- a/copier/_main.py
++++ b/copier/_main.py
+@@ -284,9 +284,22 @@ class Worker:
+         self._cleanup()
+ 
+     def _cleanup(self) -> None:
+-        """Execute all stored cleanup methods."""
++        """Execute all stored cleanup methods.
++
++        All hooks are executed, even when one of them fails. The first exception
++        raised by a hook, if any, is re-raised after every hook has been tried,
++        so that a single failing hook doesn't prevent other temporary files from
++        being removed.
++        """
++        first_error: Exception | None = None
+         for method in self._cleanup_hooks:
+-            method()
++            try:
++                method()
++            except Exception as error:  # noqa: PERF203
++                if first_error is None:
++                    first_error = error
++        if first_error is not None:
++            raise first_error
+ 
+     def _check_unsafe(self, mode: Operation) -> None:
+         """Check whether a template uses unsafe features."""
+diff --git a/copier/_subproject.py b/copier/_subproject.py
+index fbd2e5b..feb7167 100644
+--- a/copier/_subproject.py
++++ b/copier/_subproject.py
+@@ -49,9 +49,22 @@ class Subproject:
+         return False
+ 
+     def _cleanup(self) -> None:
+-        """Remove temporary files and folders created by the subproject."""
++        """Remove temporary files and folders created by the subproject.
++
++        All hooks are executed, even when one of them fails. The first exception
++        raised by a hook, if any, is re-raised after every hook has been tried,
++        so that a single failing hook doesn't prevent other temporary files from
++        being removed.
++        """
++        first_error: Exception | None = None
+         for method in self._cleanup_hooks:
+-            method()
++            try:
++                method()
++            except Exception as error:  # noqa: PERF203
++                if first_error is None:
++                    first_error = error
++        if first_error is not None:
++            raise first_error
+ 
+     @property
+     def _raw_answers(self) -> AnyByStrDict:
+diff --git a/copier/_template.py b/copier/_template.py
+index 3dbd614..1a98feb 100644
+--- a/copier/_template.py
++++ b/copier/_template.py
+@@ -3,14 +3,12 @@
+ from __future__ import annotations
+ 
+ import re
+-import sys
+ from collections import ChainMap, defaultdict
+ from collections.abc import Mapping, Sequence
+ from contextlib import suppress
+ from dataclasses import field
+ from functools import cached_property
+ from pathlib import Path, PurePosixPath
+-from shutil import rmtree
+ from typing import Any, Literal
+ from warnings import warn
+ 
+@@ -23,7 +21,7 @@ from plumbum.commands.processes import ProcessExecutionError
+ from plumbum.machines import local
+ from pydantic.dataclasses import dataclass
+ 
+-from ._tools import copier_version, handle_remove_readonly
++from ._tools import copier_version, rmtree_readonly
+ from ._types import AnyByStrDict, VCSTypes
+ from ._vcs import clone, get_git, get_latest_tag, get_repo
+ from .errors import (
+@@ -223,18 +221,7 @@ class Template:
+ 
+     def _cleanup(self) -> None:
+         if temp_clone := self._temp_clone():
+-            if sys.version_info >= (3, 12):
+-                rmtree(
+-                    temp_clone,
+-                    ignore_errors=False,
+-                    onexc=handle_remove_readonly,
+-                )
+-            else:
+-                rmtree(
+-                    temp_clone,
+-                    ignore_errors=False,
+-                    onerror=handle_remove_readonly,
+-                )
++            rmtree_readonly(temp_clone)
+ 
+     def _temp_clone(self) -> Path | None:
+         """Get the path to the temporary clone of the template.
+diff --git a/copier/_tools.py b/copier/_tools.py
+index 22b9bda..5ae6583 100644
+--- a/copier/_tools.py
++++ b/copier/_tools.py
+@@ -14,6 +14,7 @@ from decimal import Decimal
+ from enum import Enum
+ from importlib.metadata import version
+ from pathlib import Path
++from shutil import rmtree
+ from types import TracebackType
+ from typing import Any, Literal, TextIO, TypeVar, cast
+ 
+@@ -22,6 +23,8 @@ from packaging.version import Version
+ from pathspec.patterns.gitwildmatch import GitWildMatchPattern
+ from pydantic import StrictBool
+ 
++from ._types import StrOrPath
++
+ colorama.just_fix_windows_console()
+ 
+ 
+@@ -176,6 +179,27 @@ def handle_remove_readonly(
+         raise
+ 
+ 
++def rmtree_readonly(path: StrOrPath) -> None:
++    """Remove a directory tree, even if it contains read-only files.
++
++    This is a wrapper around `shutil.rmtree` that uses
++    [handle_remove_readonly][copier._tools.handle_remove_readonly] to deal with
++    read-only files, whatever the OS.
++    """
++    if sys.version_info >= (3, 12):
++        rmtree(
++            path,
++            ignore_errors=False,
++            onexc=handle_remove_readonly,
++        )
++    else:
++        rmtree(
++            path,
++            ignore_errors=False,
++            onerror=handle_remove_readonly,
++        )
++
++
+ _re_whitespace = re.compile(r"^\s+|\s+$")
+ 
+ 
+diff --git a/copier/_vcs.py b/copier/_vcs.py
+index 418c0df..07d11c1 100644
+--- a/copier/_vcs.py
++++ b/copier/_vcs.py
+@@ -14,6 +14,7 @@ from packaging.version import InvalidVersion, Version
+ from plumbum import TF, ProcessExecutionError, colors, local
+ from plumbum.machines import LocalCommand
+ 
++from ._tools import rmtree_readonly
+ from ._types import OptBool, OptStrOrPath, StrOrPath
+ from .errors import DirtyLocalWarning, ShallowCloneWarning
+ 
+@@ -191,51 +192,60 @@ def clone(url: str, ref: str = "HEAD") -> str:
+     git = get_git()
+     git_version = get_git_version()
+     location = mkdtemp(prefix=f"{__name__}.clone.")
+-    _clone = git["clone", "--no-checkout", url, location]
+-    # Faster clones if possible
+-    if git_version >= Version("2.27"):
+-        if url_match := re.match("(file://)?(.*)", url):
+-            file_url = url_match.groups()[-1]
+-        else:
+-            file_url = url
+-        if is_git_shallow_repo(file_url):
+-            warn(
+-                f"The repository '{url}' is a shallow clone, this might lead to unexpected "
+-                "failure or unusually high resource consumption.",
+-                ShallowCloneWarning,
+-            )
+-        else:
+-            _clone = _clone["--filter=blob:none"]
+-    _clone()
+-    # Include dirty changes if checking out a local HEAD
+-    url_abspath = Path(url).absolute()
+-    if ref == "HEAD" and url_abspath.is_dir():
+-        is_dirty = False
+-        with local.cwd(url):
+-            is_dirty = bool(git("status", "--porcelain").strip())
+-        if is_dirty:
+-            with local.cwd(location):
+-                git("--git-dir=.git", f"--work-tree={url_abspath}", "add", "-A")
+-                git(
+-                    "--git-dir=.git",
+-                    f"--work-tree={url_abspath}",
+-                    "commit",
+-                    "-m",
+-                    "Copier automated commit for draft changes",
+-                    "--no-verify",
+-                    "--no-gpg-sign",
+-                )
++    try:
++        _clone = git["clone", "--no-checkout", url, location]
++        # Faster clones if possible
++        if git_version >= Version("2.27"):
++            if url_match := re.match("(file://)?(.*)", url):
++                file_url = url_match.groups()[-1]
++            else:
++                file_url = url
++            if is_git_shallow_repo(file_url):
+                 warn(
+-                    "Dirty template changes included automatically.",
+-                    DirtyLocalWarning,
++                    f"The repository '{url}' is a shallow clone, this might lead to unexpected "
++                    "failure or unusually high resource consumption.",
++                    ShallowCloneWarning,
+                 )
+-
+-    with local.cwd(location):
+-        ## The `git checkout -f <ref>` command doesn't works when repo is local, dirty
+-        ## and core.fsmonitor is enabled
+-        ## ref: https://github.com/copier-org/copier/issues/1887
+-        git("-c", "core.fsmonitor=false", "checkout", "-f", ref)
+-        git("submodule", "update", "--checkout", "--init", "--recursive", "--force")
++            else:
++                _clone = _clone["--filter=blob:none"]
++        _clone()
++        # Include dirty changes if checking out a local HEAD
++        url_abspath = Path(url).absolute()
++        if ref == "HEAD" and url_abspath.is_dir():
++            is_dirty = False
++            with local.cwd(url):
++                is_dirty = bool(git("status", "--porcelain").strip())
++            if is_dirty:
++                with local.cwd(location):
++                    git("--git-dir=.git", f"--work-tree={url_abspath}", "add", "-A")
++                    git(
++                        "--git-dir=.git",
++                        f"--work-tree={url_abspath}",
++                        "commit",
++                        "-m",
++                        "Copier automated commit for draft changes",
++                        "--no-verify",
++                        "--no-gpg-sign",
++                    )
++                    warn(
++                        "Dirty template changes included automatically.",
++                        DirtyLocalWarning,
++                    )
++
++        with local.cwd(location):
++            ## The `git checkout -f <ref>` command doesn't works when repo is local, dirty
++            ## and core.fsmonitor is enabled
++            ## ref: https://github.com/copier-org/copier/issues/1887
++            git("-c", "core.fsmonitor=false", "checkout", "-f", ref)
++            git(
++                "submodule", "update", "--checkout", "--init", "--recursive", "--force"
++            )
++    except BaseException:
++        # Remove the temporary directory created above before re-raising, so that
++        # failures (including `KeyboardInterrupt`) don't leave garbage behind.
++        with suppress(Exception):
++            rmtree_readonly(location)
++        raise
+ 
+     return location
+ 
+diff --git a/tests/test_tmpdir.py b/tests/test_tmpdir.py
+index 6494a24..5ab39f4 100644
+--- a/tests/test_tmpdir.py
++++ b/tests/test_tmpdir.py
+@@ -107,3 +107,48 @@ def test_cli(
+     assert (dst / "fav.txt").read_text() == "Copier"
+     assert (dst / "v2").read_text() == "true"
+     empty_dir(tmp)
++
++
++def test_update_failure_leaves_tmp_clean(
++    template_path: str,
++    tmp_path_factory: pytest.TempPathFactory,
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """A failed update must not leave its temporary clone behind."""
++    from plumbum import ProcessExecutionError
++
++    tmp, dst = map(tmp_path_factory.mktemp, ["tmp", "dst"])
++    _git = git["-C", dst]
++    # Mock tmp dir to assert it ends up clean
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++    run_copy(template_path, dst, vcs_ref="v1", quiet=True, defaults=True)
++    _git("init")
++    _git("add", "-A")
++    _git("commit", "-m", "Initial commit")
++    empty_dir(tmp)
++    with pytest.raises(ProcessExecutionError):
++        run_update(
++            dst, vcs_ref="does-not-exist", overwrite=True, defaults=True, quiet=True
++        )
++    empty_dir(tmp)
++
++
++def test_cleanup_hooks_run_after_failure(tmp_path: Path) -> None:
++    """A failing cleanup hook must not prevent the remaining hooks from running."""
++    from copier._main import Worker
++
++    worker = Worker(src_path=str(tmp_path / "src"), dst_path=tmp_path / "dst")
++    calls: list[str] = []
++
++    def failing_hook() -> None:
++        calls.append("failing")
++        raise OSError("boom")
++
++    def succeeding_hook() -> None:
++        calls.append("succeeding")
++
++    worker._cleanup_hooks.append(failing_hook)
++    worker._cleanup_hooks.append(succeeding_hook)
++    with pytest.raises(OSError):
++        worker._cleanup()
++    assert calls == ["failing", "succeeding"]
+diff --git a/tests/test_tools.py b/tests/test_tools.py
+index 2b28800..72fce99 100644
+--- a/tests/test_tools.py
++++ b/tests/test_tools.py
+@@ -56,3 +56,16 @@ def test_temporary_directory_with_git_repo_deletion() -> None:
+ )
+ def test_normalizing_git_paths(path: str, normalized: str) -> None:
+     assert normalize_git_path(path) == normalized
++
++
++def test_rmtree_readonly(tmp_path: Path) -> None:
++    """`rmtree_readonly` removes trees containing read-only files."""
++    from copier._tools import rmtree_readonly
++
++    tree = tmp_path / "tree"
++    tree.mkdir()
++    ro_file = tree / "readonly.txt"
++    ro_file.write_text("don't touch me!")
++    ro_file.chmod(S_IREAD)
++    rmtree_readonly(tree)
++    assert not tree.exists()
+diff --git a/tests/test_vcs.py b/tests/test_vcs.py
+index 4b97a16..3abd9ae 100644
+--- a/tests/test_vcs.py
++++ b/tests/test_vcs.py
+@@ -6,7 +6,7 @@ from unittest import mock
+ 
+ import pytest
+ from packaging.version import Version
+-from plumbum import local
++from plumbum import ProcessExecutionError, local
+ from pytest_gitconfig.plugin import GitConfig
+ 
+ from copier import run_copy, run_update
+@@ -296,3 +296,37 @@ def test_get_git_version(git_version_output: str, expected_version: Version) ->
+         "copier._vcs.get_git", return_value=mock.MagicMock(side_effect=_mock_git)
+     ):
+         assert get_git_version() == expected_version
++
++
++def test_clone_failure_removes_temp_dir(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, gitconfig: GitConfig
++) -> None:
++    """A failed clone must not leave its temporary directory behind."""
++    tmp = tmp_path / "tmp"
++    tmp.mkdir()
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++    src = tmp_path / "src"
++    build_file_tree({src / "copier.yml": "favorite_app: Copier"})
++    git_save(src)
++    with pytest.raises(ProcessExecutionError):
++        clone(str(src), "does-not-exist")
++    assert list(tmp.iterdir()) == []
++
++
++def test_clone_interrupt_removes_temp_dir(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    """An interrupted clone must not leave its temporary directory behind."""
++    tmp = tmp_path / "tmp"
++    tmp.mkdir()
++    monkeypatch.setattr("tempfile.tempdir", str(tmp))
++    monkeypatch.setattr("copier._vcs.get_git_version", lambda: Version("2.40"))
++
++    class InterruptingGit:
++        def __getitem__(self, key: str) -> object:
++            raise KeyboardInterrupt
++
++    monkeypatch.setattr("copier._vcs.get_git", InterruptingGit)
++    with pytest.raises(KeyboardInterrupt):
++        clone("https://invalid.invalid/x.git")
++    assert list(tmp.iterdir()) == []
