@@ -78,9 +78,16 @@ export function Sidebar(p: SidebarProps) {
   const inProject = (c: SidebarItem) => !!c.projectId && p.projects.some((x) => x.id === c.projectId)
   const recents = p.items.filter((c) => !c.starred && !inProject(c))
   // 同名会话（如三条「#87 并发刷新 token …」）：额外显示短 id 区分（走查 r2-4）
-  const titleCount = new Map<string, number>()
-  for (const c of p.items) titleCount.set(c.title, (titleCount.get(c.title) ?? 0) + 1)
-  const dupHint = (c: SidebarItem) => ((titleCount.get(c.title) ?? 0) > 1 ? shortId(c.id) : undefined)
+  // 序号按出现先后（at 升序，缺省按列表倒序）编号 ·1 ·2 ·3
+  const byTitle = new Map<string, SidebarItem[]>()
+  p.items.forEach((c) => byTitle.set(c.title, [...(byTitle.get(c.title) ?? []), c]))
+  const ordinal = new Map<string, number>()
+  for (const list of byTitle.values()) {
+    if (list.length < 2) continue
+    const order = list.map((c, i) => ({ c, k: c.at ?? -i })).sort((a, b) => a.k - b.k)
+    order.forEach(({ c }, i) => ordinal.set(c.id, i + 1))
+  }
+  const dupHint = (c: SidebarItem) => (ordinal.has(c.id) ? `·${ordinal.get(c.id)}` : undefined)
   const groups = p.projects
     .map((pr) => ({ ...pr, chats: p.items.filter((c) => !c.starred && c.projectId === pr.id) }))
     .filter((g) => g.chats.length > 0)
@@ -293,8 +300,8 @@ function ChatRow({
             </span>
           </Tip>
         )}
-        <span title={hint ? `${c.title} ${hint}` : c.title} className={clsx('flex min-w-0 flex-1 items-baseline gap-1.5 font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
-          <span data-testid="chat-row-title" className="min-w-0 truncate">{middleEllipsis(c.title, hint ? 11 : 14)}</span>
+        <span title={hint ? `${c.title} ${hint} (${c.id})` : c.title} className={clsx('flex min-w-0 flex-1 items-baseline gap-1.5 font-serif text-[13px]', active ? 'text-ink' : 'text-ink-soft/90')}>
+          <span data-testid="chat-row-title" className="min-w-0 truncate">{middleEllipsis(c.title, hint ? 13 : 14)}</span>
           {hint && <span data-testid="chat-row-hint" className="shrink-0 font-mono text-[12px] text-sepia-muted">{hint}</span>}
         </span>
         <span data-testid="chat-row-slot" className="relative flex h-6 w-[38px] shrink-0 items-center justify-end">
@@ -391,8 +398,3 @@ function middleEllipsis(s: string, max = 14): string {
   return a.slice(0, max - 1 - tail).join('') + '…' + a.slice(a.length - tail).join('')
 }
 
-/** 短 id：取 id 最后一段的前 6 位（如 fixture:success → succes，uuid → 末段前 6 位） */
-function shortId(id: string): string {
-  const seg = id.split(/[:/_-]/).filter(Boolean).pop() ?? id
-  return '·' + seg.slice(0, 6)
-}
