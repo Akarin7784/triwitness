@@ -224,7 +224,7 @@ triwitness/
 ├── specs/                         # SDD 规格文档（001-xxx.md …）
 ├── docs/
 │   ├── architecture.md
-│   ├── adr/                       # 架构决策记录（ADR-0001-python.md …）
+│   ├── adr/                       # ADR-0000…0003, 0005–0007（路由/沙箱/评审默认等；见 docs/adr/）
 │   ├── ai-native-log.md           # AI 原生开发日志
 │   ├── interview/                 # 30 秒 / 2 分钟 / 5 分钟讲稿、问答
 │   └── blog/                      # 每周博客草稿
@@ -722,7 +722,7 @@ flowchart LR
 ### 6.4 轨迹导出
 
 - 内部格式：`Trajectory`（第八节），JSONL，一步一行，带配置哈希、提示版本、模型快照名。
-- 导出：①OpenAI 风格 messages（可用于 SFT）；②"轨迹 + 奖励"（隐藏测试结果作为 0/1 奖励，可用于 RLVR / 拒绝采样）；③Harbor 结果格式；④可视化 HTML 回放（单文件，可附在博客里）。
+- 导出（`tw traj export`，W8-03）：①OpenAI 风格 messages（SFT）；②"轨迹 + 奖励"（隐藏测试 0/1，RLVR / 拒绝采样）；③Harbor trial 目录；④单文件 HTML 回放。样例：`evals/fixtures/traj_export/`。
 - 发布前做**脱敏**：去掉 API key 占位、本机路径、邮箱；只发布许可证允许的仓库片段。
 
 ### 6.5 结果发布

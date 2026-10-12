@@ -3308,6 +3308,19 @@
           "title": "Issue Title",
           "type": "string"
         },
+        "memory": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Memory"
+        },
         "mode": {
           "default": "background",
           "enum": [

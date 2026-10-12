@@ -427,8 +427,13 @@ class InProcessOrchestrator:
             from triwitness.tools.skills import LoadSkill
 
             registry.register(LoadSkill(mem))
+        # 桌面端「本次用了哪些记忆」可读此产物；事件侧可选字段见 TaskStartedPayload.memory（stub）
         self.rec.artifact("memory.json", {
-            "repo_key": mem.repo_key, "facts_chars": len(mem.facts), "episodes": mem.search is not None,
+            "repo_key": mem.repo_key,
+            "facts_chars": len(mem.facts),
+            "fact_ids": list(getattr(mem, "fact_ids", []) or []),
+            "episode_ids": list(getattr(mem, "episode_ids", []) or []),
+            "episodes": mem.search is not None,
             "skills": [{"name": s.name, "version": s.version} for s in mem.skills],
         })  # fmt: skip
         return mem.prefix_sections()

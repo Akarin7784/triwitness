@@ -787,6 +787,41 @@ def diag_export(
     _perm_call(go)
 
 
+traj_app = typer.Typer(add_completion=False, no_args_is_help=True, help="轨迹导出（SFT / RLVR / Harbor / HTML）")
+app.add_typer(traj_app, name="traj")
+
+
+@traj_app.command("export")
+def traj_export(
+    run_dir: Annotated[Path, typer.Argument(help="含 trajectory.jsonl 的运行目录（evals/results/... 或 ~/.triwitness/runs/<id>）")],
+    format: Annotated[
+        str,
+        typer.Option("--format", "-f", help="openai / rlvr / harbor / html / all（默认 all）"),
+    ] = "all",
+    out: Annotated[Path | None, typer.Option("--out", "-o", help="输出目录（默认 <run_dir>/export）")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="机器可读摘要")] = False,
+) -> None:
+    """从已有轨迹导出 OpenAI messages / 轨迹+奖励 / Harbor trial / 单文件 HTML（¥0，不调模型）。"""
+    from triwitness.core.errors import ConfigError
+    from triwitness.eval.traj_export import FORMATS, export_run
+
+    del as_json
+    fmts = [f.strip() for f in format.split(",") if f.strip()]
+    dest = out or (run_dir / "export")
+
+    def go() -> dict[str, object]:
+        try:
+            results = export_run(run_dir, dest, formats=fmts)
+        except (FileNotFoundError, ValueError) as e:
+            raise ConfigError(str(e)) from None
+        return {
+            "out": str(dest),
+            "formats": [{"format": r.format, "path": str(r.path), "bytes": r.bytes} for r in results],
+        }
+
+    _perm_call(go)
+
+
 perm_app = typer.Typer(add_completion=False, no_args_is_help=True, help="权限规则（桌面端规则编辑器）")
 app.add_typer(perm_app, name="permissions")
 _LayerOpt = Annotated[str, typer.Option(help="user（~/.triwitness/permissions.yaml）/ local（仓库本地）")]

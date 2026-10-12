@@ -71,6 +71,8 @@ class TaskStartedPayload(Payload):
     harness_hash: str | None = None  # 规范化配置 + 提示版本的哈希
     prompt_versions: dict[str, str] | None = None  # 角色 → name@vN（04 §3.3 原则 4）
     mode: Literal["background", "interactive", "eval"] = "background"
+    # 可选：本次注入的记忆摘要（桌面端芯片）；完整列表见 artifacts/memory.json
+    memory: dict[str, Any] | None = None
 
 
 class StateChangePayload(Payload):

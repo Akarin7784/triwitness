@@ -31,7 +31,7 @@
 
 | kind | payload 必填（可选） | UI 呈现 |
 |---|---|---|
-| `task_started` | `issue_title`、`repo`、`config_hash`（`issue_number`、`mode`、`harness`、`harness_hash`、`prompt_versions`） | 侧栏新会话；对话首条 |
+| `task_started` | `issue_title`、`repo`、`config_hash`（`issue_number`、`mode`、`harness`、`harness_hash`、`prompt_versions`、`memory`：`{fact_ids,episode_ids,skills}` 可选 stub） | 侧栏新会话；对话首条；记忆芯片可读 `memory` 或 `artifacts/memory.json` |
 | `state_change` | `from`、`to`（TaskState） | 推流状态点颜色与角色点亮；标题栏状态 |
 | `model_call` | `model`、`thinking`、`usage{input_tokens,cache_hit_tokens,cache_miss_tokens,output_tokens,reasoning_tokens}`、`cost_cny`、`latency_ms`（`served_model`、`peak`、`finish_reason`、`request_ref`、`response_ref`） | 推流一行；状态栏累计 ¥ 与命中率；`peak=true` 标红 |
 | `tool_call` | `tool`、`ok`、`duration_ms`（`exit_code`、`output_ref`、`truncated`、`error_type`、`permission`、`permission_rule`、`message_ref`） | 推流 `$ tool …`；失败用赭红 |
@@ -67,3 +67,5 @@
 - W1-24（TrajectoryRecorder）完成后，用 FakeRouter 真实跑出 3 条轨迹替换手写 fixture，diff 只允许时间戳与 ID 不同。
 
 变更：2026-10-11 新增 `model_delta` / `reasoning_delta`；`model_call`、`tool_call` 增加可选 `call_id`，`tool_call` 增加可选 `args_preview` / `output_preview`（UI-20，只增不改，v 仍为 1）。2026-10-10 新增 `mode_changed`（勇士模式，ADR-0005 §3.6）。2026-10-10 新增 `approval_requested` / `approval_resolved`，`tool_call`、`verification` 增加可选字段（ADR-0005，只增不改）。2026-10-10 `model_call` 增加 `request_ref` / `response_ref`、`tool_call` 增加 `message_ref`（W1-24 轨迹回放，只增不改）。
+
+变更：2026-10-12 `task_started.memory` 可选 stub（桌面端「本次用了哪些记忆」）；权威列表仍是 `artifacts/memory.json`。

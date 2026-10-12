@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>TriWitness replay · csv-blank-line · resolved</title>
+<style>
+body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 1.5rem; color: #1a1a1a; background: #fafafa; }
+h1 { font-size: 1.25rem; margin: 0 0 .5rem; }
+.meta { color: #555; font-size: .9rem; margin-bottom: 1rem; }
+.badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .8rem;
+  background: #d1fae5; color: #065f46; }
+table { border-collapse: collapse; width: 100%; background: #fff; font-size: .85rem; }
+th, td { border-bottom: 1px solid #eee; padding: .4rem .5rem; text-align: left; vertical-align: top; }
+th { background: #f3f4f6; position: sticky; top: 0; }
+.seq { width: 3rem; color: #888; }
+.kind { font-family: ui-monospace, monospace; }
+.disp { max-width: 36rem; }
+footer { margin-top: 1.5rem; color: #888; font-size: .75rem; }
+</style>
+</head>
+<body>
+<h1>csv-blank-line <span class="badge">resolved · reward=1.0</span></h1>
+<p class="meta">run_id=baseline-deepseek-csv-blank-line-1 · events=22 · source=/workspace/triwitness/evals/results/2026-10-10T13-10-16/baseline-deepseek/csv-blank-line/1</p>
+<table>
+<thead><tr><th>#</th><th>时间 (UTC)</th><th>kind</th><th>role</th><th>display</th><th>细节</th></tr></thead>
+<tbody>
+<tr><td class='seq'>0</td><td class='ts'>2026-10-10T05:10:18.531819Z</td><td class='kind'>task_started</td><td class='role'>system</td><td class='disp'>parse_rows crashes with IndexError on blank lines</td><td class='extra'></td></tr><tr><td class='seq'>1</td><td class='ts'>2026-10-10T05:10:18.532375Z</td><td class='kind'>state_change</td><td class='role'>system</td><td class='disp'>准备沙箱</td><td class='extra'></td></tr><tr><td class='seq'>2</td><td class='ts'>2026-10-10T05:10:18.740581Z</td><td class='kind'>checkpoint</td><td class='role'>system</td><td class='disp'>快照 start</td><td class='extra'></td></tr><tr><td class='seq'>3</td><td class='ts'>2026-10-10T05:10:18.741610Z</td><td class='kind'>state_change</td><td class='role'>system</td><td class='disp'>修复</td><td class='extra'></td></tr><tr><td class='seq'>4</td><td class='ts'>2026-10-10T05:10:18.826260Z</td><td class='kind'>model_call</td><td class='role'>executor</td><td class='disp'>→ bash、list_files</td><td class='extra'>deepseek-flash · ¥0.0022</td></tr><tr><td class='seq'>5</td><td class='ts'>2026-10-10T05:10:18.906841Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ find . -type f -name &quot;*.py&quot; | head -50 &amp;&amp; echo &quot;---&quot; &amp;&amp; ls -la</td><td class='extra'>bash · ok</td></tr><tr><td class='seq'>6</td><td class='ts'>2026-10-10T05:10:18.964480Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ list_files .</td><td class='extra'>list_files · ok</td></tr><tr><td class='seq'>7</td><td class='ts'>2026-10-10T05:10:20.458981Z</td><td class='kind'>model_call</td><td class='role'>executor</td><td class='disp'>→ read_file、read_file、read_file</td><td class='extra'>deepseek-flash · ¥0.0007</td></tr><tr><td class='seq'>8</td><td class='ts'>2026-10-10T05:10:20.537753Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ read_file csvkit_lite/parse.py</td><td class='extra'>read_file · ok</td></tr><tr><td class='seq'>9</td><td class='ts'>2026-10-10T05:10:20.588639Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ read_file tests/test_basic.py</td><td class='extra'>read_file · ok</td></tr><tr><td class='seq'>10</td><td class='ts'>2026-10-10T05:10:20.624590Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ read_file csvkit_lite/__init__.py</td><td class='extra'>read_file · ok</td></tr><tr><td class='seq'>11</td><td class='ts'>2026-10-10T05:10:23.039264Z</td><td class='kind'>model_call</td><td class='role'>executor</td><td class='disp'>→ edit_file、write_file</td><td class='extra'>deepseek-flash · ¥0.0017</td></tr><tr><td class='seq'>12</td><td class='ts'>2026-10-10T05:10:23.230199Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ edit_file csvkit_lite/parse.py</td><td class='extra'>edit_file · ok</td></tr><tr><td class='seq'>13</td><td class='ts'>2026-10-10T05:10:23.416370Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ write_file tests/tw_repro/test_issue_1.py</td><td class='extra'>write_file · ok</td></tr><tr><td class='seq'>14</td><td class='ts'>2026-10-10T05:10:24.839940Z</td><td class='kind'>model_call</td><td class='role'>executor</td><td class='disp'>→ run_tests</td><td class='extra'>deepseek-flash · ¥0.0003</td></tr><tr><td class='seq'>15</td><td class='ts'>2026-10-10T05:10:25.125309Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>$ run_tests → 4 passed</td><td class='extra'>run_tests · ok</td></tr><tr><td class='seq'>16</td><td class='ts'>2026-10-10T05:10:27.729613Z</td><td class='kind'>model_call</td><td class='role'>executor</td><td class='disp'>All tests pass.</td><td class='extra'>deepseek-flash · ¥0.0014</td></tr><tr><td class='seq'>17</td><td class='ts'>2026-10-10T05:10:27.730339Z</td><td class='kind'>tool_call</td><td class='role'>executor</td><td class='disp'>finish · 置信度 0.98</td><td class='extra'>finish · ok</td></tr><tr><td class='seq'>18</td><td class='ts'>2026-10-10T05:10:27.753494Z</td><td class='kind'>checkpoint</td><td class='role'>system</td><td class='disp'>快照 final</td><td class='extra'></td></tr><tr><td class='seq'>19</td><td class='ts'>2026-10-10T05:10:27.768873Z</td><td class='kind'>state_change</td><td class='role'>system</td><td class='disp'>整理结果</td><td class='extra'></td></tr><tr><td class='seq'>20</td><td class='ts'>2026-10-10T05:10:27.769050Z</td><td class='kind'>state_change</td><td class='role'>system</td><td class='disp'>完成</td><td class='extra'></td></tr><tr><td class='seq'>21</td><td class='ts'>2026-10-10T05:10:27.769301Z</td><td class='kind'>task_finished</td><td class='role'>system</td><td class='disp'>完成 · ¥0.006 · 命中 78%</td><td class='extra'>done</td></tr>
+</tbody>
+</table>
+<footer>TriWitness traj export · format html/v1 · 脱敏轨迹回放</footer>
+</body>
+</html>

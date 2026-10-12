@@ -1,0 +1,49 @@
+{
+  "id": "baseline-deepseek/csv-blank-line/1/trajectory.jsonl",
+  "task_name": "csv-blank-line",
+  "trial_name": "1",
+  "source_run_dir": "/workspace/triwitness/evals/results/2026-10-10T13-10-16/baseline-deepseek/csv-blank-line/1",
+  "verifier_result": {
+    "rewards": {
+      "reward": 1.0
+    }
+  },
+  "agent_result": {
+    "n_input_tokens": 12173,
+    "n_cache_tokens": 9472,
+    "n_output_tokens": 878,
+    "cost_cny": 0.006402,
+    "steps": 5,
+    "wall_s": 13.05,
+    "agent_status": "finished"
+  },
+  "exception_info": null,
+  "triwitness_result": {
+    "task_id": "csv-blank-line",
+    "config": "baseline-deepseek",
+    "agent": "llm",
+    "attempt": 1,
+    "resolved": true,
+    "reward": 1.0,
+    "agent_status": "finished",
+    "agent_claimed_success": true,
+    "false_success": false,
+    "tamper_paths": [],
+    "ignored_paths": [
+      "tests/__pycache__/test_basic.cpython-312-pytest-8.3.3.pyc",
+      "tests/tw_repro/__pycache__/test_issue_1.cpython-312-pytest-8.3.3.pyc",
+      "tests/tw_repro/test_issue_1.py"
+    ],
+    "patch_applied": true,
+    "cost_cny": 0.006402,
+    "tokens_in": 12173,
+    "tokens_cached": 9472,
+    "tokens_out": 878,
+    "peak_calls": 0,
+    "steps": 5,
+    "wall_s": 13.05,
+    "trajectory_id": "baseline-deepseek/csv-blank-line/1/trajectory.jsonl",
+    "live": true,
+    "error": null
+  }
+}
