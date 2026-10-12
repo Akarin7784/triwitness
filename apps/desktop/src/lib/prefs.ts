@@ -54,6 +54,9 @@ export const PRESET_STYLES = [
 export const MAX_ARTIFACT_W = 900
 export const MIN_ARTIFACT_W = 340
 
+export const READING_SIZES = [16, 17, 18] as const
+export type ReadingSize = (typeof READING_SIZES)[number]
+
 export interface Prefs {
   model: string
   thinking: Thinking
@@ -62,6 +65,8 @@ export interface Prefs {
   theme: Theme
   chatFont: ChatFont
   fontScale: number
+  /** 长时阅读：对话正文字号 16（默认）/ 17 / 18 px */
+  readingSize: ReadingSize
   language: Language
   /** 当前风格：预设 id 或自定义风格 id */
   style: string
@@ -85,6 +90,7 @@ export const DEFAULTS: Prefs = {
   theme: 'light',
   chatFont: 'serif',
   fontScale: 1,
+  readingSize: 16,
   language: 'zh',
   style: 'standard',
   customStyles: [],
@@ -108,6 +114,7 @@ function sanitize(p: Prefs, fallback: Prefs = DEFAULTS): Prefs {
   if (!['light', 'auto', 'dark'].includes(q.theme)) q.theme = fallback.theme
   if (!['serif', 'sans', 'system'].includes(q.chatFont)) q.chatFont = fallback.chatFont
   if (!(FONT_SCALES as readonly number[]).includes(q.fontScale)) q.fontScale = fallback.fontScale
+  if (!(READING_SIZES as readonly number[]).includes(q.readingSize)) q.readingSize = fallback.readingSize
   if (q.language !== 'en') q.language = 'zh'
   q.customStyles = Array.isArray(q.customStyles)
     ? q.customStyles

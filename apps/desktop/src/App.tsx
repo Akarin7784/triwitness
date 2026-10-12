@@ -5,6 +5,7 @@ import type { ArtifactEntry } from './components/ArtifactsPage'
 import { AnimatePresence } from 'framer-motion'
 import { ChatPanel } from './components/ChatPanel'
 import { ActivityPanel } from './components/ActivityPanel'
+import { finishedSeqOf, syncTerminal } from './lib/statusSync'
 import { StatusBar } from './components/StatusBar'
 import type { SettingsSection } from './components/SettingsPage'
 import { ConfirmDeleteDialog, RenameDialog, SearchPalette, ShortcutsDialog } from './components/ChatDialogs'
@@ -155,10 +156,11 @@ function useAppearance(p: Prefs) {
     apply()
     root.dataset.chatFont = p.chatFont
     root.style.setProperty('--chat-scale', String(p.fontScale))
+    root.style.setProperty('--read-fs', `${p.readingSize}px`)
     if (p.theme !== 'auto' || !mq) return
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
-  }, [p.theme, p.chatFont, p.fontScale])
+  }, [p.theme, p.chatFont, p.fontScale, p.readingSize])
 }
 
 function clock() {
@@ -216,6 +218,8 @@ export default function App() {
   const [startErr, setStartErr] = useState<string | null>(null)
 
   const revealedSeq = reveal.key === display ? reveal.seq : -1
+  // 右栏写完最后一行的会话 key（状态签终态等它，见 lib/statusSync）
+  const [streamDone, setStreamDone] = useState('')
   const feed = useEventFeed(liveId && !liveTask ? `${display}${PENDING}` : display, makeSource)
 
   // 右侧书写推流的角色点跟笔；对话流（Claude 式）与顶部状态 / 费用签按事件实时走
@@ -705,7 +709,7 @@ export default function App() {
             />
             <ChatPanel
               title={title || tr('三证')}
-              run={isLocal ? null : liveTask && !snap?.result && (live.phase === 'done' || live.phase === 'failed') ? { ...live, phase: 'active', label: tr('进行中') } : live}
+              run={isLocal ? null : liveTask && !snap?.result && (live.phase === 'done' || live.phase === 'failed') ? { ...live, phase: 'active', label: tr('进行中') } : syncTerminal(live, { revealedSeq, done: streamDone === display, shown: !openArt }, tr('进行中'), finishedSeqOf(feed.events))}
               turn={isLocal ? null : turn}
               draftKey={display}
               messages={messages}
@@ -762,6 +766,7 @@ export default function App() {
                   activeRole={isLocal ? null : run.activeRole}
                   onRestart={onRestart}
                   onReveal={onReveal}
+                  onDone={(d) => setStreamDone((cur) => (d ? display : cur === display ? '' : cur))}
                 />
               )}
             </AnimatePresence>

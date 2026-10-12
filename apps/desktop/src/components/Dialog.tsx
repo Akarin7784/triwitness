@@ -64,7 +64,7 @@ export function Dialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, pointerEvents: 'none', transition: { duration: 0.16 } }}
         >
-          <div className="absolute inset-0 bg-ink/20 backdrop-blur-[2px]" onPointerDown={onClose} aria-hidden />
+          <div className="dlg-overlay absolute inset-0 backdrop-blur-[2px]" onPointerDown={onClose} aria-hidden />
           <motion.div
             ref={box}
             role="dialog"
@@ -122,6 +122,7 @@ export function Btn({
       data-primary={primary || undefined}
       className={clsx(
         'shrink-0 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-[13px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-45',
+        kind === 'solid' && 'btn-solid',
         kind === 'solid' && 'bg-ink text-parchment hover:bg-espresso',
         kind === 'danger' && 'bg-rose-ink text-cream hover:brightness-90',
         kind === 'ghost' && 'text-ink-soft hover:bg-panel-raised',
