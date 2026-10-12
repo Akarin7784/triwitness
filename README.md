@@ -62,19 +62,19 @@ uv run tw usage                                     # 用量（本机账本）
 
 ## 已知限制（摘要）
 
-- 不经你确认不推送、不开 PR；不回帖 Issue。开 PR 需要 GitHub 细粒度令牌（只选这个仓库、只给 Contents 与 Pull requests 读写）或本机已登录的 `gh`。
-- 只有 Executor 单角色 + 确定性复验；Planner / Reviewer 角色、断点续跑还没做。
+- **不注册 GitHub App**（v1）：默认只生成本地分支与 `pr.md`；开 PR 需你确认后用 `gh` 或细粒度 PAT（`tw pr open`）。无 Webhook / Issue 标签自动开工 / 安装令牌。
+- `tw run` **默认读本仓库记忆**（`--no-memory` 可关）；评测 / 基线不读写记忆。桌面端尚未展示「本次用了哪些记忆」。
 - 未签名、没有自动更新（“检查更新”打开 Releases 页面）。
-- 真实模式的流式输出和审核模型在 App 里还没有经过真机长时间验证；Windows 真机上的一键安装 Docker 没走通过。
+- 终测排行榜数字尚未冻结（W8-01 未跑）；对外不要引用未发布的 Resolved@1。
 - 界面上标“即将推出”的入口（语音、连接器、更多模型等）点了只会提示。
 
 完整列表：[docs/release/known-limitations.md](docs/release/known-limitations.md)。更新记录：[CHANGELOG.md](CHANGELOG.md)。
 
 ## 路线图
 
-- **v0.3.x**：根据预览反馈修 bug；Windows 真机清单逐项过完；真实模式长任务验证。
-- **v1.0**：代码签名、自动更新（审批后开 PR、断点续跑、本地诊断导出已在 0.3.2 做完）。
-- **之后**：Planner / Reviewer 编排、消融评测、WSL2 后端、Qwen / GLM 跨厂商互审（等资金）。
+- **v0.3.x**：根据预览反馈修 bug；Windows 真机清单；安全网关与记忆默认已落地。
+- **v1.0**：代码签名、自动更新；本地分支 + 可选开 PR（**无 GitHub App**）；轨迹导出 / Leaderboard（等终测数字）；演示与讲稿（Eva）。
+- **之后**：WSL2 后端、Qwen / GLM 跨厂商互审（等资金）。不计划在 v1 注册 GitHub App。
 
 ## 开发
 

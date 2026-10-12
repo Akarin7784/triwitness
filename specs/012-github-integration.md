@@ -1,7 +1,7 @@
 # Spec 012：GitHub 集成（推送分支、开 PR、按风险决策、CI 回流）
 
 - 状态：草稿（W5-01；W5-04 / W5-05 前半 / W5-06 已实现首版，**待 Eva 审阅**，见 §10）｜负责人：Eva｜目标周：W5｜依赖：006、008、009、010、011
-- **GitHub App 暂缓**（Eva 未决定是否注册）：本版只走 `gh` CLI 或个人令牌（PAT）。App 相关内容（Webhook、Issue 标签触发、
+- **GitHub App 不做**（**Eva 2026-10-12 确认不注册**）：本版与 v1 只走 `gh` CLI 或个人令牌（PAT）+ 本地分支 / `pr.md`。App 相关内容（Webhook、Issue 标签触发、
   评论命令、安装令牌）列在 §8，接口已留好，实现顺延。
 - 相关文档：04-detailed-design.md §2.2 步骤 1 / 9 / 10、§3.6、§3.7、§4.6、§7.2；spec 011 §5（幂等键）
 - 代码：`github/pr.py`（v0.3.2：计划 / 推送 / 开 PR）、`github/publish.py`（W5：编排器发布器、风险策略）、
@@ -86,16 +86,16 @@ v0.3.2 已经能“审批后开 PR”：`tw pr plan`（不联网，生成审批�
 - 桌面端：沿用 v0.3.2 的“审批后开 PR”（`tw pr plan` / `tw pr open`）；接入编排器流程放到桌面端 W6 迭代。
 - 手动补开：`tw pr open`（与编排器共用幂等记录）。
 
-## 8. 暂缓：GitHub App（W5-02 / W5-03 / W5-05 后半 / W7-08）
+## 8. 已取消：GitHub App（W5-02 / W5-03 / W7-08）
 
-App 决定后再做，接口已留：
-- 安装令牌：`Publisher` 只依赖“能推送 + 能开 PR + 能读 check runs”，换成 App 安装令牌只需新的认证来源（`detect_auth` 增加一档），
-  令牌按任务申请、任务结束作废（W7-08）。
-- Webhook（`webhook.py`，签名校验）：`issues.labeled`（标签 `triwitness`）→ 创建 Task（Issue 正文作为不可信内容）→ 交给编排器；
-  `check_run.completed` 替代轮询。
-- 评论命令：`/tw approve`、`/tw reject <原因>` 映射到同一个 HITL 请求（`request_id` 写在 PR 正文隐藏注释里），写审计日志。
-  没有 Webhook 时只能轮询评论，噪声与延迟都差，所以不在 PAT 路径上做。
-- 回帖 Issue：开 PR 后在来源 Issue 回帖链接（幂等键 `<task_id>:comment:<n>`）。
+**Eva 2026-10-12 决定：不注册 GitHub App。** W7-08（临时安装令牌）、W5-02（App + Webhook）、依赖 Webhook 的标签触发 / 评论命令 **永久取消**；令牌注入路径无限期推迟。
+
+v1 产品边界：
+- 任务结束生成本地分支 `tw/<run_id>` + `pr.md`（说明与证据包）+ `patch.diff`；
+- 可选：用户确认后用 `gh` / 细粒度 PAT 推送并开 PR（`tw run --open-pr` / `tw pr open`）；
+- **不**提供 GitHub App 安装、Webhook 自动接 Issue、自动回帖 Issue、按任务签发后作废的安装令牌。
+
+接口预留（`Publisher` / `detect_auth`）保留以便将来若改主意可接，但 v1 文档与发布说明均写明「不做」。
 
 ## 9. 测试
 
@@ -108,5 +108,9 @@ App 决定后再做，接口已留：
 
 1. **L0 默认动作**：现在是 `confirm`（开 PR 对外可见）；要不要改成 `auto`？（23:21 未答，维持 confirm）
 2. **CI 返工后是否重跑验证 / Reviewer**：默认重跑确定性验证、不重跑 Reviewer（23:21 未答，按可逆默认）；要不要也重跑 Reviewer？
-3. **GitHub App**：是否注册（单仓库安装、最小权限）；不注册则 §8 全部保持暂缓，W5-14 Demo 改为“`tw run --open-pr` 开出带证据包的 PR”。
+3. **GitHub App**：**已决定不做**（2026-10-12）。Demo / 验收一律用“本地分支 + pr.md / `tw run --open-pr`（gh·PAT）”。
 4. **测试仓库**：W5-06 验收需要一个可推送的测试仓库（建议私有、只给细粒度 PAT）。**不会自行新建仓库**，等 Eva 提供或批准后再做真实验收。
+
+## 变更记录
+
+- 2026-10-12：Eva 确认不注册 GitHub App；§8 由暂缓改为永久取消；W7-08 / W5-02 取消。
