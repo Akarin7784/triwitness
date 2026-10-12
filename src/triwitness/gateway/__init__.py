@@ -4,5 +4,6 @@
 - `mcp_proxy`：MCP 代理（白名单、版本固定、工具元数据指纹、返回内容包 untrusted）；
 - `policy_engine`：参数级确定性规则 + 分类器兜底，任何异常 / 不确定都拒绝（fail closed）；
 - `recycle`：回收区、git 分支护栏、外部破坏性操作延迟执行与撤销；
-- `delegation`：跨 agent 委托消息的注入检测（声称的“已批准”不算数）。
+- `delegation`：跨 agent 委托消息的注入检测（声称的“已批准”不算数）；
+- `scan`：注入特征扫描（MCP 描述 / 返回 / 委托消息共用）。
 """

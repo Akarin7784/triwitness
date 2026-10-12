@@ -3,6 +3,12 @@
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。桌面端版本号用 SemVer（`0.3.1-preview`），核心 Python 包用 PEP 440（`0.3.1a1`）。
 发布流程（`.github/workflows/release.yml`）会把下面对应版本的整节内容作为 GitHub Release 说明。
 
+## [Unreleased]
+
+### Added
+- **W7 安全网关首版（spec 014 / 015）**：Docker `network=allowlist` = internal 网络 + 出网网关 sidecar（域名白名单、SSRF / 元数据 / IP 直连 / DNS 外泄拦截；凭证按域名+方法+路径注入，沙箱只有 `tw-placeholder-*`；审计不记密钥）。MCP 代理（2026-07-28 无状态核心：白名单、版本固定、工具元数据指纹、第 N 次变脸隔离、返回包 untrusted）。参数级策略引擎 fail closed（分类器 uncertain→deny）。回收区 / git 只推 `tw/*` / 外部破坏性操作延迟可撤销。跨 agent 委托注入扫描 + HITL 审批令牌。红队 39 用例确定性开/关对比 39/39（¥0）。
+- **W6 spec 013 §10**：六个开放问题落成可逆默认值（default pending Eva review）：repo 级 Skill 人工审核 + 监控；事实需 `accept`；`tw run` 默认读记忆；门禁点估计 + underpowered 标记（无 Eva 批准不付费门禁）；回滚 −15pp；导出拒绝写进 git 工作区。
+
 ## [0.3.2-preview] - 未发布
 
 ### 变更（不兼容）

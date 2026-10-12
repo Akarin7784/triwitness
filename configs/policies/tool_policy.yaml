@@ -1,0 +1,71 @@
+# 安全网关参数级策略（spec 014 §6，W7-07）。deny > ask > allow；都没命中 → 分类器（仅 classifier_tools）→ 否则拒绝。
+# 默认永远是 deny（fail closed）；引用的参数缺失 = 规则不命中。工具名：内置工具名、http_request、fs_delete、
+# git、github_*、mcp:<server>/<tool>。origin：user / agent / delegated（别的 agent 转交的）/ mcp。
+classifier_tools: [bash]
+rules:
+  # ---------------- deny（硬底线）
+  - {id: git-force-push, tool: git, effect: deny, match: {subcommand: {equals: push}, force: {equals: true}},
+     reason: 禁止 force push}
+  - {id: git-push-protected, tool: git, effect: deny,
+     match: {subcommand: {equals: push}, branch: {not_regex: "^tw/"}}, reason: 只允许推 tw/* 分支}
+  - {id: git-delete-remote-branch, tool: git, effect: deny, match: {subcommand: {equals: push}, delete: {equals: true}},
+     reason: 不允许删远端分支}
+  - {id: bash-secret-paths, tool: bash, effect: deny,
+     match: {command: {regex: "(~|\\$HOME|/root|/home/[^/ ]+)/\\.(ssh|aws|docker|kube|netrc|config/gcloud)|id_rsa|id_ed25519|/proc/[^/ ]+/environ|\\bprintenv\\b|\\benv\\s*(\\||>|$)"}},
+     reason: 读取凭据 / 环境变量}
+  - {id: bash-pipe-exec, tool: bash, effect: deny,
+     match: {command: {regex: "\\b(curl|wget)\\b[^|]*\\|\\s*(sudo\\s+)?(ba|z)?sh\\b"}}, reason: 下载后直接执行}
+  - {id: bash-exfil-upload, tool: bash, effect: deny,
+     match: {command: {regex: "\\bcurl\\b.*\\s(-d|--data\\S*|-F|--form|-T|--upload-file)\\s|\\b(nc|ncat|netcat)\\s+\\S+\\s+\\d+|\\bscp\\s+\\S+\\s+\\S+@"}},
+     reason: 上传 / 外连}
+  - {id: bash-pip-evil-index, tool: bash, effect: deny,
+     match: {command: {regex: '\b(pip|pip3|uv\s+pip|npm|pnpm|yarn)\b[^\n]*--(index-url|extra-index-url|registry)=?\s*https?://'}},
+     reason: 自定义包源（依赖投毒面）}
+  - {id: bash-dns-exfil, tool: bash, effect: deny,
+     match: {command: {regex: "\\b(nslookup|dig|host)\\s+\\S*\\$|\\b(nslookup|dig|host)\\s+[A-Za-z0-9+/=_-]{24,}\\."}},
+     reason: 疑似 DNS 外泄}
+  - {id: bash-rm-outside, tool: bash, effect: deny,
+     match: {command: {regex: "\\brm\\s+(-[a-zA-Z]*[rf][a-zA-Z]*\\s+)+(/|~|\\$HOME|\\.\\./)"}}, reason: 删除工作区外}
+  - {id: bash-ci-secret-print, tool: bash, effect: deny,
+     match: {command: {regex: "\\$\\{\\{\\s*secrets\\."}}, reason: 打印 CI 密钥}
+  - {id: fs-outside-workspace, tool: "*_file", effect: deny,
+     match: {path: {regex: "^(~|/etc|/root|/proc|/sys|/home)|\\.\\./|/\\.ssh/|/\\.aws/"}}, reason: 工作区外 / 凭据路径}
+  - {id: fs-delete-outside, tool: fs_delete, effect: deny, match: {path: {not_regex: "^/workspace/repo(/|$)"}},
+     reason: 只能删工作区内文件（进回收区）}
+  - {id: http-metadata, tool: http_request, effect: deny,
+     match: {url: {regex: "169\\.254\\.169\\.254|metadata\\.google\\.internal|\\[?fd00:ec2::254"}}, reason: 云元数据（SSRF）}
+  - {id: mcp-secret-arg, tool: "mcp:*", effect: deny,
+     match: {note: {regex: "TW-CANARY|PRIVATE KEY|id_rsa|ssh-(rsa|ed25519) |ghp_|sk-[A-Za-z0-9]{16,}"}}, reason: MCP 参数里夹带凭据}
+  - {id: github-merge-by-agent, tool: github_merge_pr, effect: deny, origin: [agent, delegated, mcp],
+     reason: 合并只能人来做}
+  # ---------------- ask（交互时问人；评测 / 后台非交互按 deny）
+  - {id: edit-ci-config, tool: "*_file", effect: ask, match: {path: {regex: "(^|/)\\.github/workflows/|(^|/)\\.gitlab-ci\\.yml$"}},
+     reason: 改 CI 配置要人确认}
+  - {id: edit-deps, tool: "*_file", effect: ask,
+     match: {path: {regex: "(^|/)(pyproject\\.toml|requirements[^/]*\\.txt|package\\.json|setup\\.py|setup\\.cfg)$"}},
+     reason: 改依赖要人确认}
+  - {id: http-destructive, tool: http_request, effect: ask, match: {method: {in: [DELETE, PUT, PATCH]}},
+     reason: 外部写 / 删除要审批（延迟执行、可撤销）}
+  - {id: delegated-network, tool: bash, effect: ask, origin: [delegated],
+     match: {command: {regex: "\\b(curl|wget|pip\\s+install|npm\\s+install|git\\s+(clone|fetch|push))\\b"}},
+     reason: 别的 agent 转交的联网命令要人确认}
+  - {id: github-delete, tool: "github_delete_*", effect: ask, reason: 删除远端资源要审批}
+  # ---------------- allow
+  - {id: fs-in-workspace, tool: "*_file", effect: allow, match: {path: {path_under: /workspace/repo}}}
+  - {id: list-grep, tool: "list_files", effect: allow}
+  - {id: grep, tool: grep, effect: allow}
+  - {id: run-tests, tool: run_tests, effect: allow}
+  - {id: finish, tool: finish, effect: allow}
+  - {id: notes, tool: notes, effect: allow}
+  - {id: load-skill, tool: load_skill, effect: allow}
+  - {id: fs-delete-workspace, tool: fs_delete, effect: allow, match: {path: {path_under: /workspace/repo}}}
+  - {id: git-local, tool: git, effect: allow,
+     match: {subcommand: {in: [status, diff, log, show, add, commit, checkout, switch, branch, stash, restore, rev-parse]}}}
+  - {id: git-push-tw, tool: git, effect: allow, match: {subcommand: {equals: push}, branch: {regex: "^tw/"}}}
+  - {id: http-read-allowlisted, tool: http_request, effect: allow,
+     match: {method: {in: [GET, HEAD]}, url: {domain_in: [pypi.org, files.pythonhosted.org, api.github.com, registry.npmjs.org]}}}
+  - {id: github-open-pr, tool: github_open_pr, effect: allow, match: {head: {regex: "^tw/"}}}
+  - {id: mcp-demo-add, tool: "mcp:tw-demo/add", effect: allow, match: {a: {min: -1000000000}, b: {min: -1000000000}}}
+  - {id: mcp-demo-read-note, tool: "mcp:tw-demo/read_note", effect: allow}
+  - {id: bash-common, tool: bash, effect: allow,
+     match: {command: {regex: "^\\s*(python3?|pytest|uv|pip|ruff|ls|cat|head|tail|grep|rg|find|wc|sed|awk|echo|mkdir|touch|cp|mv|git|make|npm|node|go|cargo)\\b"}}}

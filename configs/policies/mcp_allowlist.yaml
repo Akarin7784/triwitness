@@ -1,0 +1,12 @@
+# MCP 服务器白名单与版本固定（spec 014 §5，W7-06）。不在名单里的 server 不启动；
+# version：必须等于 server/discover 返回的 serverInfo.version；tools：只暴露这些工具；
+# fingerprints：sha256(规范化 JSON{name, description, inputSchema})，写了就钉死，没写就首次 list 时记下（TOFU）。
+# 每次 tools/list 与每次 tools/call 前都会重新比对，变了就隔离该工具并告警。command 里的 {python} 换成当前解释器。
+servers:
+  - name: tw-demo
+    command: ["{python}", "-m", "triwitness.gateway.mcp_demo_server"]
+    version: "1.0.0"
+    tools: [add, read_note]
+    fingerprints:
+      add: 50fdcf71b5b8a5811611f5826a0fe033369c84c4a8a3880ce867cdf9eee9f7cb
+      read_note: 713a84ea5044aad6ec7b9bbce3aea6d4f6fe0d83f11c191baa50ac120ade4a51
