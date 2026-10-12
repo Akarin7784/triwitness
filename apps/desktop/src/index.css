@@ -3,15 +3,15 @@
 @theme {
   /* 纸书配色（SUGG3，0.2.1）：旧书页 + 墨黑 / 棕字 + 墨水蓝强调 + 朱砂红（印章 / 危险）。
      token 名沿用 0.2.0（amber = 强调色，现为墨水蓝；rose-ink = 朱砂红），对比度全部 ≥ WCAG AA 4.5。 */
-  --color-parchment: #f1e6d0;
-  --color-parchment-deep: #e7d9bd;
-  --color-cream: #f8f0df;
-  --color-ink: #221812;
-  --color-ink-soft: #36281d;
-  --color-sepia: #634e3c;
-  --color-sepia-muted: #6e5844;
-  --color-border: #cbb894;
-  --color-border-soft: #dccdb0;
+  --color-parchment: #f7f5f2;
+  --color-parchment-deep: #efeee9;
+  --color-cream: #fbfaf8;
+  --color-ink: #3a3632;
+  --color-ink-soft: #4a4540;
+  --color-sepia: #5c564f;
+  --color-sepia-muted: #6b6560;
+  --color-border: #d9d5cd;
+  --color-border-soft: #e3e0d8;
   --color-amber: #2f4a72;
   --color-amber-ink: #2b4468;
   --color-amber-soft: #7f93b3;
@@ -22,8 +22,8 @@
   --color-plum: #6d4a5c;
   --color-rose-ink: #9a2a22;
   --color-ochre: #7d5212;
-  --color-panel: #ece0c7;
-  --color-panel-raised: #f8f0df;
+  --color-panel: #efeee9;
+  --color-panel-raised: #fbfaf8;
   --color-shadow: rgb(34 24 18 / 0.09);
   /* 随写随干：湿墨（浅墨水蓝）→ 半干 → 正文色 */
   --color-ink-wet: #6f8bb5;
@@ -64,20 +64,8 @@ body {
   color: var(--color-ink);
 }
 
-/* 旧书页：极淡的纸纹颗粒（SVG 噪点，静态背景，不参与重绘）+ 页边泛黄 */
-:root {
-  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.36 0 0 0 0 0.26 0 0 0 0 0.16 0 0 0 0.075 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-:root[data-theme='dark'] {
-  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.85 0 0 0 0 0.7 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.app-grain {
-  background-image:
-    var(--paper-grain),
-    radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--color-amber) 6%, transparent), transparent 50%),
-    radial-gradient(ellipse at 90% 100%, color-mix(in srgb, var(--color-rose-ink) 4%, transparent), transparent 45%),
-    linear-gradient(180deg, var(--color-cream), var(--color-parchment) 40%, var(--color-parchment-deep));
-}
+/* 纸纹已删除（2026-10-13 决议）：纯色底 */
+.app-grain { background: var(--color-parchment); }
 
 .scroll-soft {
   scrollbar-width: thin;
@@ -173,9 +161,7 @@ body {
 }
 
 /* 推流区：顶部轻微晕影，让字像写在纸页里 */
-.stream-paper {
-  background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--color-cream) 60%, transparent), transparent 60%);
-}
+.stream-paper { background: none; }
 
 .fade-in {
   animation: lineEnter 480ms var(--ease-tender) both;
@@ -194,7 +180,7 @@ body {
 }
 
 .paper-card {
-  background: color-mix(in srgb, var(--color-panel-raised) 92%, white);
+  background: var(--color-panel-raised);
   border: 1px solid var(--color-border-soft);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.55) inset,
@@ -210,7 +196,7 @@ body {
 
 /* ───────── 标题栏 ───────── */
 .titlebar {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--color-cream) 85%, transparent), color-mix(in srgb, var(--color-panel) 60%, transparent));
+  background: var(--color-parchment);
   -webkit-user-select: none;
 }
 .tb-icon {
@@ -263,7 +249,7 @@ body {
   background: var(--color-ink);
   color: var(--color-parchment);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.4;
   letter-spacing: 0.02em;
   padding: 5px 9px;
@@ -309,7 +295,7 @@ body {
   border: 1px solid var(--color-border-soft);
   background: color-mix(in srgb, var(--color-cream) 80%, transparent);
   padding: 3px 10px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--color-sepia);
   white-space: nowrap;
 }
@@ -375,7 +361,7 @@ html {
   gap: 24px;
   border-radius: 8px;
   padding: 6px 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--color-ink-soft);
   transition: background-color 180ms var(--ease-tender), color 180ms var(--ease-tender);
 }
@@ -402,7 +388,7 @@ html {
 }
 .ctx-keys {
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--color-sepia-muted);
 }
 
@@ -411,7 +397,7 @@ html {
 .tone-warn { color: var(--color-ochre); }
 .tone-final {
   font-family: var(--font-serif);
-  font-size: 13.5px;
+  font-size: 16px;
   color: var(--color-ink);
 }
 .stream-rule {
@@ -433,7 +419,7 @@ html {
 }
 .stream-chapter .stream-rule-text {
   font-family: var(--font-serif);
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.24em;
   color: var(--color-sepia);
 }
@@ -442,7 +428,7 @@ html {
   border-top: 1px dashed color-mix(in srgb, var(--color-amber) 45%, transparent);
 }
 .stream-divider .stream-rule-text {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--color-amber);
 }
 
@@ -475,25 +461,31 @@ html {
   mask-image: linear-gradient(to bottom, transparent 0, black 18px, black 100%);
 }
 
-/* 助手正文的 Markdown */
-.md, .md-tail { font-size: 14.5px; line-height: 1.85; color: var(--color-ink-soft); }
+/* 助手正文的 Markdown：Typora 风（克制标题、柔和代码底、细边框） */
+.md, .md-tail { font-size: 16px; line-height: 1.7; color: var(--color-ink); }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
-.md p { margin: 0.55em 0; }
-.md ul, .md ol { margin: 0.5em 0; padding-left: 1.4em; }
+.md p { margin: 0.8em 0; }
+.md ul, .md ol { margin: 0.6em 0; padding-left: 1.5em; }
 .md ul { list-style: disc; }
 .md ol { list-style: decimal; }
-.md li { margin: 0.2em 0; }
-.md li::marker { color: var(--color-amber-soft); }
+.md li { margin: 0.35em 0; }
+.md li::marker { color: var(--color-sepia-muted); }
 .md strong { font-weight: 600; color: var(--color-ink); }
-.md h1, .md h2, .md h3 { font-family: var(--font-serif); color: var(--color-ink); margin: 0.9em 0 0.4em; font-weight: 600; letter-spacing: 0.03em; }
-.md h1::after, .md h2::after { content: ''; display: block; width: 1.6em; height: 1.5px; margin-top: 0.3em; background: var(--color-rose-ink); opacity: 0.7; border-radius: 1px; }
-.md h1 { font-size: 1.25em; } .md h2 { font-size: 1.12em; } .md h3 { font-size: 1.02em; }
-.md blockquote { margin: 0.6em 0; padding-left: 0.9em; border-left: 2px solid var(--color-border); color: var(--color-sepia); }
-.md table { border-collapse: collapse; margin: 0.6em 0; font-size: 13px; }
-.md th, .md td { border: 1px solid var(--color-border-soft); padding: 4px 10px; }
-.md hr { border: 0; border-top: 1px solid var(--color-border-soft); margin: 1em 0; }
-.md-tail { margin: 0.55em 0 0; }
+.md a { color: var(--color-amber); text-decoration: underline; text-underline-offset: 2px; }
+.md h1, .md h2, .md h3 { font-family: var(--font-sans); color: var(--color-ink); margin: 1.2em 0 0.5em; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+.md h1 { font-size: 22px; padding-bottom: 0.25em; border-bottom: 1px solid var(--color-border-soft); }
+.md h2 { font-size: 19px; padding-bottom: 0.2em; border-bottom: 1px solid var(--color-border-soft); }
+.md h3 { font-size: 17px; }
+.md blockquote { margin: 0.8em 0; padding: 0 1em; border-left: 3px solid var(--color-border); color: var(--color-sepia); }
+.md code { font-family: var(--font-mono); font-size: 0.875em; background: var(--color-panel); border-radius: 4px; padding: 0.1em 0.35em; }
+.md pre { background: var(--color-panel); border: 1px solid var(--color-border-soft); border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.6; overflow: auto; }
+.md pre code { background: none; padding: 0; font-size: inherit; }
+.md table { border-collapse: collapse; margin: 0.8em 0; font-size: 14px; }
+.md th, .md td { border: 1px solid var(--color-border-soft); padding: 6px 12px; }
+.md th { background: var(--color-panel); font-weight: 600; }
+.md hr { border: 0; border-top: 1px solid var(--color-border-soft); margin: 1.6em 0; }
+.md-tail { margin: 0.8em 0 0; }
 
 .tool-pre {
   margin: 0;
@@ -503,17 +495,17 @@ html {
   word-break: break-all;
   border-radius: 10px;
   border: 1px solid var(--color-border-soft);
-  background: color-mix(in srgb, var(--color-cream) 85%, white);
+  background: var(--color-panel);
   padding: 8px 11px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1.6;
   color: var(--color-ink-soft);
 }
 
 /* 弹出菜单（模型 / + 菜单）：暖纸卡片 */
 .menu-card {
-  background: color-mix(in srgb, var(--color-panel-raised) 96%, white);
+  background: var(--color-panel-raised);
   border: 1px solid var(--color-border-soft);
   border-radius: 14px;
   box-shadow: 0 14px 40px -12px rgb(34 24 18 / 0.28), 0 2px 6px rgb(34 24 18 / 0.06);
@@ -541,14 +533,14 @@ html {
 :root[data-theme='dark'] {
   /* 夜读：深胡桃 / 墨褐纸面（不是纯黑）+ 烛光暖字 + 淡墨水蓝强调 */
   color-scheme: dark;
-  --color-parchment: #211913;
+  --color-parchment: #1f1a15;
   --color-parchment-deep: #1a140f;
-  --color-cream: #2b2119;
-  --color-ink: #ecdfca;
-  --color-ink-soft: #dccbb1;
+  --color-cream: #2d261e;
+  --color-ink: #c4b59c;
+  --color-ink-soft: #cebfa8;
   --color-sepia: #bba386;
-  --color-sepia-muted: #a99176;
-  --color-border: #4d3f32;
+  --color-sepia-muted: #a3937d;
+  --color-border: #4a3e32;
   --color-border-soft: #3b3027;
   --color-amber: #93acd6;
   --color-amber-ink: #a3bbe0;
@@ -560,8 +552,8 @@ html {
   --color-plum: #c09cae;
   --color-rose-ink: #e48c7c;
   --color-ochre: #d9a75e;
-  --color-panel: #251d17;
-  --color-panel-raised: #2e251d;
+  --color-panel: #262019;
+  --color-panel-raised: #2d261e;
   --color-shadow: rgb(0 0 0 / 0.38);
   --color-ink-wet: #8fa6cf;
   --color-ink-mid: #c9cfd9;
@@ -571,9 +563,8 @@ html {
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px var(--color-shadow);
 }
 :root[data-theme='dark'] .tool-pre { background: var(--color-cream); }
-:root[data-theme='dark'] .stream-paper { background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--color-amber) 5%, transparent), transparent 60%); }
 :root[data-theme='dark'] .ctx-menu { background: color-mix(in srgb, var(--color-panel-raised) 97%, transparent); box-shadow: 0 12px 32px rgb(0 0 0 / 0.5); }
-:root[data-theme='dark'] .user-bubble { background: #3a2e24; color: var(--color-ink); }
+:root[data-theme='dark'] .user-bubble { background: var(--color-panel-raised); color: var(--color-ink); }
 :root[data-theme='dark'] .menu-card {
   background: var(--color-panel-raised);
   box-shadow: 0 14px 40px -12px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
@@ -581,13 +572,6 @@ html {
 :root[data-theme='dark'] .menu-item:hover:not(:disabled),
 :root[data-theme='dark'] .menu-item[data-active='true'],
 :root[data-theme='dark'] .tb-icon:hover { background: rgb(255 240 220 / 0.07); }
-:root[data-theme='dark'] .titlebar { background: linear-gradient(180deg, color-mix(in srgb, var(--color-cream) 90%, transparent), color-mix(in srgb, var(--color-parchment) 70%, transparent)); }
-:root[data-theme='dark'] .app-grain {
-  background-image:
-    var(--paper-grain),
-    radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--color-amber) 7%, transparent), transparent 50%),
-    linear-gradient(180deg, var(--color-cream), var(--color-parchment) 40%, var(--color-parchment-deep));
-}
 body { transition: background-color 400ms var(--ease-tender), color 400ms var(--ease-tender); }
 
 /* 对话字体 / 字号：只作用于对话区（Claude 同款：“对话字体”） */
@@ -610,7 +594,7 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
   background: var(--color-cream);
   padding: 0 6px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--color-sepia);
 }
 
@@ -680,3 +664,15 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
 :root[data-hidden] *::after {
   animation-play-state: paused !important;
 }
+
+/* ───────── 电子书批次 1：默认减少动效 + 焦点环 ───────── */
+:root:not([data-motion='standard']) .stream-line,
+:root:not([data-motion='standard']) .ink-char,
+:root:not([data-motion='standard']) .ink-in,
+:root:not([data-motion='standard']) .fade-in { animation: none; }
+:root:not([data-motion='standard']) .ink-bloom { display: none; }
+:root:not([data-motion='standard']) .caret-ink,
+:root:not([data-motion='standard']) .pulse-dot { animation: none; opacity: 0.7; box-shadow: none; }
+:root:not([data-motion='standard']) .think-shimmer { animation: none; background: none; color: var(--color-amber); }
+:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px; }
+.user-bubble { background: var(--color-panel-raised); color: var(--color-ink); border: 1px solid var(--color-border-soft); box-shadow: none; }

@@ -54,7 +54,7 @@ export function TitleBar({
 
       <div data-tauri-drag-region className="flex h-full min-w-0 flex-1 items-center justify-center">
         {title && (
-          <span data-tauri-drag-region className="truncate font-serif text-[12.5px] text-sepia">
+          <span data-tauri-drag-region className="truncate font-serif text-[13px] text-sepia">
             {title}
           </span>
         )}

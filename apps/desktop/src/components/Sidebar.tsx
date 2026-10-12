@@ -148,7 +148,7 @@ export function Sidebar(p: SidebarProps) {
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <p className="px-4 pb-1.5 pt-4 text-[10.5px] tracking-[0.14em] text-sepia-muted">{children}</p>
+  return <p className="px-4 pb-1.5 pt-4 text-[13px] tracking-[0.14em] text-sepia-muted">{children}</p>
 }
 
 function ProjectGroup({ name, onOpen, defaultOpen, children }: { name: string; onOpen: () => void; defaultOpen: boolean; children: ReactNode }) {
@@ -165,7 +165,7 @@ function ProjectGroup({ name, onOpen, defaultOpen, children }: { name: string; o
         >
           <ChevronRight size={12} strokeWidth={1.8} className={clsx('transition-transform duration-300', open && 'rotate-90')} />
         </button>
-        <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-[12.5px] text-ink-soft">
+        <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 text-left text-[13px] text-ink-soft">
           {open ? <FolderOpen size={13} strokeWidth={1.6} className="shrink-0 text-amber-ink" /> : <FolderClosed size={13} strokeWidth={1.6} className="shrink-0 text-sepia" />}
           <span className="truncate">{name}</span>
         </button>
@@ -222,7 +222,7 @@ function NavButton({
         <>
           <span className="truncate">{label}</span>
           {kbd && (
-            <span className="ml-auto font-mono text-[10px] text-sepia-muted opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="ml-auto font-mono text-[13px] text-sepia-muted opacity-0 transition-opacity duration-300 group-hover:opacity-100">
               {kbd}
             </span>
           )}
@@ -295,7 +295,7 @@ function ChatRow({
           {c.time && (
             <span
               className={clsx(
-                'pointer-events-none whitespace-nowrap pr-1 font-mono text-[10px] tabular-nums text-sepia-muted transition-opacity duration-200 group-hover:opacity-0 group-focus-visible:opacity-0 group-has-[:focus-visible]:opacity-0',
+                'pointer-events-none whitespace-nowrap pr-1 font-mono text-[13px] tabular-nums text-sepia-muted transition-opacity duration-200 group-hover:opacity-0 group-focus-visible:opacity-0 group-has-[:focus-visible]:opacity-0',
                 menu && 'opacity-0',
               )}
             >
@@ -356,12 +356,12 @@ function UserMenu({ collapsed, userName, onSettings, onShortcuts, settingsActive
         aria-label={t('用户菜单')}
         onClick={() => setOpen((o) => !o)}
         className={clsx(
-          'flex h-10 items-center gap-2.5 rounded-lg text-[12.5px] transition-colors duration-300 hover:bg-panel-raised',
+          'flex h-10 items-center gap-2.5 rounded-lg text-[13px] transition-colors duration-300 hover:bg-panel-raised',
           collapsed ? 'w-9 justify-center' : 'w-full px-2.5',
           (open || settingsActive) && 'bg-panel-raised',
         )}
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-espresso font-serif text-[12px] text-parchment">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-espresso font-serif text-[13px] text-parchment">
           {name.slice(0, 1)}
         </span>
         {!collapsed && <span className="truncate text-ink-soft">{name}</span>}

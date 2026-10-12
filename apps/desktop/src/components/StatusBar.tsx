@@ -18,7 +18,7 @@ export function StatusBar() {
   const spent = led.status === 'ok' ? `¥${led.data.spent.toFixed(2)}` : '¥—'
 
   return (
-    <footer className="flex h-7 shrink-0 items-center justify-between border-t border-border-soft bg-parchment-deep/70 px-3 text-[10.5px] text-sepia">
+    <footer className="flex h-7 shrink-0 items-center justify-between border-t border-border-soft bg-parchment-deep/70 px-3 text-[13px] text-sepia">
       <div className="flex items-center gap-1">
         <Tip label="deepseek-flash" side="top-start">
           <span className="sb-item">

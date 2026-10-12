@@ -1,185 +1,166 @@
-# 三证桌面端 UI 全面改造计划：电子书阅读风格（v1 草案）
+# 三证桌面端 UI 全面改造计划：电子书 / Typora 阅读风格（v1 定稿）
 
-> 状态：计划稿，未改代码。日期 2026-10-13。范围：`apps/desktop`（Tauri + React）与 `site/`。
-> 原则：交互与控件 **1:1 对齐 Claude Desktop**（不增不减），差异只在美学与验证功能（结论卡、证据、diff）。动画高质量但克制。
+> 状态：**已拍板**（2026-10-13）。范围：`apps/desktop`（Tauri + React）与 `site/`。
+> 原则：交互与控件 **1:1 对齐 Claude Desktop**（不增不减），差异只在美学与验证功能（结论卡、证据、diff）。**浅色简约为默认主主题**（参考 Typora / Markdown 编辑器），夜间为次要主题。动画高质量但克制。
 
-## 0. 硬指标（团队已商定）
+## 0. 已锁定决策（2026-10-13）
+
+| # | 决策 | 来源 |
+|---|---|---|
+| 1 | **纸纹彻底删除，不留开关。** 护眼与简约优先；纸感只靠底色与字体。 | 蓝色大肥鱼 |
+| 2 | **默认正文 16px。** 第 2 批「长时间阅读」再提供 17/18px。 | 蓝色大肥鱼 |
+| 3 | **夜间卡片正文对比度 ≥ 7:1**：只提亮卡片上的文字色，**不压暗卡片底色**。 | 蓝色大肥鱼 |
+| 4 | **分开发布**：git 自动初始化修复（已在 main `59fc73b`）单独合入；UI 批次 1 等 @真用户阿验 30 分钟走查通过后再单独发版。 | 蓝色大肥鱼 |
+| 5 | **浅色简约为主**：参考 Typora 等 Markdown 编辑器；日间默认、少羊皮纸/旧书戏剧感；Markdown（标题/代码/引用/表格/分隔线）贴近 Typora 干净阅读 chrome（细边框、柔和代码底、标题字重克制）。夜间保留为次要主题。 | Eva |
+
+## 1. 硬指标
+
 | 项 | 目标 |
 |---|---|
-| 正文字号 | 16–17px（默认 16px，设置可切 17px） |
+| 正文字号 | 默认 **16px**；长读模式（批 2）17 / 18px |
 | 正文行高 | 1.7 |
-| 行宽 | ≤ ~70 个汉字（`max-width: 70em` 不对；用 `max-width: calc(70 * 1em)` 以正文字号计 ≈ 1120px 上限，实际取 `min(70em, 100%)`，16px 时 1120px；建议对话列 `68em`） |
-| 日间 | 米白底 + 深棕灰字，禁用纯白 `#fff` / 纯黑 `#000` |
-| 夜间 | 深胡桃底，正文对比度 ≈ 7:1（取 7.5–8） |
-| 对比度底线 | 正文 ≥ 7:1，次要文字 ≥ 4.5:1（日夜两套，所有可能底色） |
-| Token 化 | 组件内禁止硬编码颜色，一律走 CSS 变量（现 `src/components` 内有 8 处 6 位 hex 需清理） |
-| 代码 | 等宽 JetBrains Mono，语法高亮降饱和 |
-| 动效 | 默认"减少动效"，并始终尊重 `prefers-reduced-motion` |
+| 行宽 | 对话列约 68 字/行（`max-width: min(68em, 100% - 2*--sp-6)`） |
+| 日间（主） | 干净米白 / 冷灰白底 + 深灰棕字；禁用纯白 `#fff` / 纯黑 `#000`；少羊皮纸 sepia |
+| 夜间（次） | 深胡桃底；**含卡片底上的正文** ≥ 7:1 |
+| 对比度底线 | 正文 ≥ 7:1，次要文字 ≥ 4.5:1（日夜、所有可能底色） |
+| Token 化 | 组件内禁止硬编码颜色，一律 CSS 变量（批 1 清对话路径；设置预览色块批 2） |
+| 代码 | 等宽 JetBrains Mono；语法高亮降饱和；代码块柔和底、细边框（Typora 风） |
+| 动效 | 默认「减少动效」，并始终尊重 `prefers-reduced-motion` |
+| 纸纹 | **已删除**，无开关、无 SVG grain |
 
-## 1. 现状审计（来源：`src/index.css` 682 行、`src/components/*`）
-1. **对比度过高**：日间 `--color-ink #221812` 对 `--color-parchment #f1e6d0` = **14.05:1**；夜间 `#ecdfca` 对 `#211913` = **13.17:1**。长时间阅读偏刺眼，夜间尤甚（目标 7:1）。
-2. **正文字号偏小**：`.md, .md-tail { font-size: 14.5px; line-height: 1.85 }`；组件里大量写死小字号：`text-[12px]`×40、`text-[12.5px]`×40、`text-[11.5px]`×31、`text-[13px]`×29、`text-[10.5px]`×26、`text-[11px]`×17、`text-[10px]`×6。没有统一字号阶梯。
-3. **纹理与渐变噪声**：`.app-grain` 叠了 SVG fractalNoise 纸纹（`--paper-grain`，日 0.075 / 夜 0.035 alpha）+ 2 个彩色 radial-gradient + 线性渐变；`.stream-paper`、`.titlebar` 也各有渐变。阅读区底色不均匀，文字边缘有"脏感"，也增加重绘成本。
-4. **动效偏多、偏长**：`lineEnter 520ms`、`inkSettle 900ms`、`bloomFade 1400ms`、`inkIn 620ms`、`caretBreath 1.8s/2.4s` 无限循环、`shimmer 2.2s` 无限循环、`indeterminate 1.4s` 无限循环。已有 `prefers-reduced-motion` 覆盖（L185、L652），但默认态仍是"全动效"。
-5. **行宽**：消息列 `max-w-[720px]`（×4），16px 时仅 45 字/行，偏窄；用户气泡 `max-width: 75%`。
-6. **语义色名不符**：`--color-amber*` 实际是蓝（#2f4a72），后续维护易误用 → 改名为 `--accent*`。
-7. **焦点态**：仅 Tip 用了 `:focus-visible`，按钮/输入/侧栏项无统一焦点环。
-8. 字体：Noto Serif SC / Noto Sans SC / JetBrains Mono 已本地打包（`src/assets/fonts`），保留。
+## 2. 现状审计（来源：`src/index.css`、`src/components/*`，改造前）
 
-## 2. 新设计 Token
+1. 日间对比过高（14:1），夜间卡片上正文约 6.9:1（不达标）。
+2. 正文字号 14.5px；大量 `text-[10–12.5px]`。
+3. `.app-grain` 纸纹 + 多道渐变 → **删除**。
+4. 动效偏多偏长；默认应 reduced。
+5. 消息列 `max-w-[720px]` 偏窄。
+6. `--color-amber*` 实为蓝 → 增加 `--accent*` 别名，旧名保留一版。
+7. Markdown：章首朱砂短线、偏重标题 → 改为 Typora 式克制标题（无装饰线、字重 600、细底边或无）。
 
-### 2.1 日间「米白书页」
-| Token | 值 | 对 bg 对比度 | 用途 |
-|---|---|---|---|
-| `--bg` | `#f4ede0` | — | 主阅读底（米白，非纯白） |
-| `--panel` | `#ece3d2` | — | 侧栏、代码块底 |
-| `--raised` | `#faf6ee` | — | 输入框、卡片、弹层 |
-| `--border` | `#d6cbb6` | — | 1px 分隔线（装饰性，不要求 3:1） |
-| `--text` | `#3b342c` | **10.53**（panel 9.62 / raised 11.37） | 正文、标题 |
-| `--text-soft` | `#544a3f` | **7.43**（panel 6.79） | 次要正文、工具行 |
-| `--text-muted` | `#6b6052` | **5.27**（panel 4.82） | 时间戳、提示（≥4.5 AA） |
-| `--accent` | `#2f4a72` | **7.70** | 链接、主按钮、焦点环 |
-| `--ok` | `#3a6341` | **5.93** | 验证通过 |
-| `--err` | `#9a2a22` | **6.61** | 失败/错误 |
-| `--warn` | `#7d5212` | **5.84** | 不确定/警告 |
+## 3. 新设计 Token（已按 WCAG 重算）
 
-说明：日间正文 10.5:1 已比现状 14:1 柔和；不降到 7:1 是因为浅底上过低对比在白天强环境光下发灰。
+### 3.1 日间「Typora 浅色」（默认主主题）
 
-### 2.2 夜间「深胡桃」
-| Token | 值 | 对 bg 对比度 | 用途 |
-|---|---|---|---|
-| `--bg` | `#1f1a15` | — | 主阅读底 |
-| `--panel` | `#262019` | — | 侧栏、代码块 |
-| `--raised` | `#2d261e` | — | 输入框、卡片 |
-| `--border` | `#4a3e32` | — | 分隔线 |
-| `--text` | `#bdae97` | **7.94**（raised 6.87） | 正文（≈7:1 目标） |
-| `--text-strong` | `#d2c4ae` | **10.06** | 标题、强调、代码块内正文可选 |
-| `--text-muted` | `#a3937d` | **5.77**（raised 4.99） | 次要信息 |
-| `--accent` | `#9fb4d8` | **8.21** | 链接/主按钮/焦点 |
-| `--ok` | `#97b99c` | **8.00** | 通过 |
-| `--err` | `#e0907f` | **6.96** | 失败 |
-| `--warn` | `#d4a660` | **7.74** | 不确定 |
+干净冷米白，少旧书黄；对标 Typora 默认阅读底。
 
-> 计算方法：WCAG 2.x 相对亮度公式，(L1+0.05)/(L2+0.05)，脚本复算即可。所有文字色在其可能出现的底色上 ≥ 4.5:1。
+| Token（逻辑名） | CSS 变量 | 值 | 对 bg 对比度 | 用途 |
+|---|---|---|---|---|
+| bg | `--color-parchment` | `#f7f5f2` | — | 主阅读底 |
+| bg-deep | `--color-parchment-deep` | `#efeee9` | — | 略深底（侧栏过渡，纯色） |
+| raised / cream | `--color-cream` / `--color-panel-raised` | `#fbfaf8` | — | 输入框、卡片、弹层 |
+| panel | `--color-panel` | `#efeee9` | — | 侧栏、柔和代码底 |
+| border | `--color-border` | `#d9d5cd` | — | 1px 分隔 |
+| border-soft | `--color-border-soft` | `#e3e0d8` | — | 更淡边框 |
+| text | `--color-ink` | `#3a3632` | **11.00**（panel 10.31 / raised 11.48） | 正文、标题 |
+| text-soft | `--color-ink-soft` | `#4a4540` | **8.71**（panel 8.16） | 次要正文 |
+| text-muted | `--color-sepia-muted` | `#6b6560` | **5.28**（panel 4.94） | 时间戳 ≥4.5 |
+| sepia | `--color-sepia` | `#5c564f` | **6.55** | UI 次要标签 |
+| accent | `--color-amber` / `--accent` | `#2f4a72` | **8.24** | 链接、主按钮、焦点 |
+| ok / err / warn | sage / rose-ink / ochre | `#3a6341` / `#9a2a22` / `#7d5212` | 6.35 / 7.07 / 6.25 | 状态色 |
 
-### 2.3 字号阶梯（替换所有 `text-[Npx]` 写死值）
+说明：正文约 11:1，比旧 14:1 柔和，仍明显高于 7:1，白天强光下不发灰。
+
+### 3.2 夜间「深胡桃」（次要主题）
+
+卡片底 **保持** `#2d261e`；**提亮**正文到 `#c4b59c`，使 raised 上 ≥ 7:1。
+
+| Token | CSS 变量 | 值 | 对 bg / raised | 用途 |
+|---|---|---|---|---|
+| bg | `--color-parchment` | `#1f1a15` | — | 主阅读底 |
+| panel | `--color-panel` | `#262019` | — | 侧栏、代码块 |
+| raised | `--color-panel-raised` / cream | `#2d261e` | — | 卡片（**不压暗**） |
+| border | `--color-border` | `#4a3e32` | — | 分隔线 |
+| text | `--color-ink` | `#c4b59c` | **8.58 / 7.41** | 正文（卡片 ≥7.1） |
+| text-strong | （标题可用 ink） | — | — | 标题可同 ink 或略亮 |
+| text-soft | `--color-ink-soft` | `#cebfa8` | **9.57 / 8.27** | 次要正文 |
+| text-muted | `--color-sepia-muted` | `#a3937d` | **5.77 / 4.99** | 次要 ≥4.5 |
+| accent | `--color-amber` | `#9fb4d8` | **8.21** | 链接/焦点 |
+| ok / err / warn | | `#97b99c` / `#e0907f` / `#d4a660` | ≥6.9 | 状态 |
+
+> 计算：WCAG 2.x `(L1+0.05)/(L2+0.05)`。批 1 合入时加 vitest 断言表中关键对。
+
+### 3.3 字号阶梯
+
 | Token | px | 行高 | 用途 |
 |---|---|---|---|
-| `--fs-body` | 16（可切 17） | 1.7 | 消息正文、输入框 |
-| `--fs-ui` | 14 | 1.5 | 按钮、侧栏条目、工具行标题 |
-| `--fs-meta` | 13 | 1.45 | 时间戳、徽标、状态栏（最小字号，取代 10–12.5px） |
-| `--fs-code` | 14 | 1.6 | 代码块/diff |
-| `--fs-h3/h2/h1` | 17 / 19 / 22 | 1.4 | Markdown 标题 |
-| `--fs-display` | 26 | 1.3 | 空状态欢迎语（保留现 26px） |
+| `--fs-body` | **16**（批 2：17/18） | 1.7 | 消息正文、输入框 |
+| `--fs-ui` | 14 | 1.5 | 按钮、侧栏、工具行 |
+| `--fs-meta` | **13**（最小） | 1.45 | 时间戳、徽标、Tip、kbd |
+| `--fs-code` | 14 | 1.6 | 代码块 / diff |
+| `--fs-h3/h2/h1` | 17 / 19 / 22 | 1.4 | Markdown 标题（克制） |
+| `--fs-display` | 26 | 1.3 | 空状态欢迎语 |
 
-- 正文 serif（Noto Serif SC），UI 控件 sans（Noto Sans SC），保持现分工。
-- 段间距 `0.8em`，列表项 `0.35em`；中文 `text-align: start`，不两端对齐；开启 `font-feature-settings: "palt" 0`、`hanging-punctuation` 不用（Chromium 不支持）。
+### 3.4 Markdown（Typora 风）
 
-### 2.4 间距与版式
-- 4px 基准：`--sp-1..8 = 4,8,12,16,24,32,48,64`。
-- 消息列：`max-width: min(68em, 100% - 2*--sp-6)`（16px 时 ≈ 68 字/行），居中。
-- 用户消息：取消气泡化重底色，改为 `--raised` 浅底 + 圆角 12px（Claude Desktop 同构），最大宽 85%。
-- 卡片圆角统一 10px；阴影只保留弹层一级 `0 4px 16px rgb(0 0 0 / .08)`（夜间 .3）。
+- 标题：无朱砂装饰线；`font-weight: 600`；h1/h2 仅极淡底边或无边；字号见上表。
+- 代码块：`background: var(--color-panel)`，`border: 1px solid var(--color-border-soft)`，圆角 8px，内边距宽松；行内 code 同柔和底。
+- 引用：左边 3px `--border`，文字 `--sepia`，无重阴影。
+- 表格：细边框 `--border-soft`，表头略用 panel 底。
+- `hr`：单线 `--border-soft`，上下留白。
+- 正文 serif 可保留；UI sans。段距 `0.8em`，列表项 `0.35em`。
 
-### 2.5 纹理 / 渐变
-- **默认移除** `--paper-grain` 与 `.app-grain` 的彩色 radial-gradient、`.stream-paper`/`.titlebar` 渐变，改纯色 `--bg`。
-- 设置 → 外观里保留开关「纸张纹理」（默认关，alpha 上限 0.03，仅铺在侧栏，不铺阅读区）。若 Eva 认为这是 Claude Desktop 没有的控件，则直接删除，不加开关（**待拍板**）。
+### 3.5 纹理 / 渐变
 
-### 2.6 代码与 diff
-- 高亮主题自定义：日间基色 `--text`，关键字 `#5a4a7a`、字符串 `#4f6b45`、注释 `--text-muted` 斜体、数字 `#7d5212`；夜间对应 `#b7a3c9 / #a9c19a / #a3937d / #d4a660`。饱和度均控制在 HSL S ≤ 35%。
-- diff 增/删行底色：日 `#e4ead8` / `#f0dcd5`，夜 `#26301f` / `#3a2420`；行内仍用 `+/-` 字符，不只靠颜色区分（色弱友好）。
+- **删除** `--paper-grain`、`.app-grain` 多层背景、`.stream-paper` / `.titlebar` 渐变 → 纯色 `--color-parchment` / `--color-panel`。
+- **无开关、无回退**。
 
-### 2.7 动效（克制）
-- 新增 `--motion` 档：`reduced`（默认）/`standard`。`prefers-reduced-motion: reduce` 时强制 `none`。
-- reduced 档：只保留 ≤160ms 的透明度过渡（弹层、菜单 `ctxIn`）；流式输出不做逐行 `lineEnter`/`inkSettle`/`bloomFade`，直接出字；光标 `caretBreath` 改为静态竖线；`shimmer` 改为静态"思考中…"文字 + 单点 1s 低频脉冲（可关）。
-- standard 档：时长上限 240ms，缓动 `--ease-tender`；仍禁止无限循环装饰动画（进度条 indeterminate 除外）。
+### 3.6 动效
 
-### 2.8 焦点与可达性
-- 全局 `:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: inherit }`，鼠标点击不显示（沿用 Tip 的做法）。
-- 焦点环对相邻底色 ≥ 3:1（日 accent 7.7、夜 8.2，满足）。
-- 所有图标按钮有 `aria-label` + Tip；状态不只用颜色（StatusGlyph 保留形状差异）。
+- 默认 `--motion: reduced`（或 `data-motion="reduced"`）。
+- reduced：≤160ms 透明度；流式直接出字；静态光标；无 shimmer 无限循环。
+- `prefers-reduced-motion: reduce` 强制 none。
 
-## 3. 分批范围
-### 批次 1：对话主界面
-| 区域 | 组件 | 改动 |
-|---|---|---|
-| 色板微调 | `index.css` | 新 token（§2）、字号阶梯、移除阅读区纹理/渐变、动效档、焦点环；`amber*` → `accent*`（旧名保留别名一版）；清理组件内硬编码 hex |
-| 排版 | `Markdown` `MarkdownRenderer` | 正文 16px/1.7、列宽 68em、段距、标题阶梯 |
-| 消息气泡 | `MessageBubble` `AssistantTurn` | 用户消息 raised 浅底圆角 12px，最大宽 85%；助手无气泡 |
-| Markdown/代码 | `MarkdownRenderer` `CopyButton` | 降饱和高亮、diff +/- 双编码 |
-| 流式区 | `StreamingText` `WritingStream` `ThinkingBlock` `ToolRow` `VirtualList` | 流式动画降级为直接出字、静态光标；VirtualList 行高估算随字号更新 |
-| 结论卡 | `ResultCard` `StatusGlyph` `MemoryChip` | 通过/不确定/失败 = ok/warn/err + 图形；"不确定"不得用绿色 |
-| 审批卡 | `ApprovalCard` | 主次按钮层级、焦点环 |
-| 侧栏会话列表 | `Sidebar` `TitleBar` `StatusBar` | 纯色 panel，条目 14px、meta 13px，选中态用 accent 左边线 + 背景 |
-| 输入区 | `Composer` `PlusMenu` `ModelPicker` `Attachments` | 16px 输入、raised 底、焦点环；控件集合不变 |
-| 错误/空态 | `Toaster` 空状态 | err 色 + 可读文案 |
+### 3.7 焦点
+
+- 全局 `:focus-visible { outline: 2px solid var(--color-amber); outline-offset: 2px }`。
+
+## 4. 分批范围
+
+### 批次 1：对话主界面（本分支 `ui/ebook-batch1`）
+
+色板 + Typora Markdown + 消息列 + 流式降动效 + 结论/审批卡 + 侧栏/标题/状态栏 + 输入区；删纸纹；16px/1.7；夜间卡片字提亮。
 
 ### 批次 2：设置与主题
-- `SettingsPage` 9 个分区 + `settings/*`（`DataDialogs` `RulesEditor` `SandboxInstall`）、`StyleDialog` `ApiKeyDialog`：全部套 token 与字号阶梯。
-- **主题预览**：外观分区内日/夜/跟随系统的小样预览（同一段正文 + 代码 + 结论卡缩略）。
-- **长时间阅读开关**：开启后正文 17px、行高 1.8、纸张纹理强制关、动效强制 reduced；关闭恢复默认 16px/1.7。
-- 动效档、字号档作为外观项；与 Claude Desktop 外观设置逐项对照，不多出控件（纹理开关是否保留见 §6）。
+
+设置 9 分区；主题预览；**长时间阅读**（17/18px、行高 1.8、动效 reduced）；设置页预览色块改 token。
 
 ### 批次 3：其他页面
-`ProjectsPage`（项目）、`ArtifactsPage`/`ArtifactsPanel`（作品）、`ChatsPage`（会话管理）、`Dialog` `ChatDialogs` `PrDialog` `ProjectPicker` `RepoPicker`（对话框）、`ContextMenu` `Popover` `PlusMenu` `Tip`（菜单/浮层）：统一 token、圆角、阴影、焦点环、13px 最小字号。
 
-### 批次 4：公开站点 `site/` 对齐
-`site/index.html`：同一色板与字号阶梯（可抽 `tokens.css` 共享或复制并在 CI 比对一致），截图换成新界面，日夜跟随 `prefers-color-scheme`。
+项目 / 作品 / 会话管理 / 对话框 / 菜单。
 
-## 4. 验收标准
-1. 全仓 `rg "text-\[(10|10\.5|11|11\.5|12|12\.5)px\]" src` 为 0；最小可读字号 13px。
-2. 消息正文计算样式：font-size 16px（17 档 17px）、line-height 27.2px（1.7）；1920 宽窗口下每行 ≤ 70 汉字（实测截图数字数）。
-3. 无 `#ffffff` / `#000000` 文字或背景（`rg -i "#fff\b|#ffffff|#000\b|#000000"`，阴影 rgba 除外）。
-4. 对比度：自动化测试（vitest 读 token 计算）断言 §2.1/2.2 表中每对 ≥ 表值 − 0.05，夜间正文 7.0–8.5。
-5. 默认首启 motion=reduced；系统开启"减少动画"时无任何 animation（DevTools Animations 面板为空）；无无限循环装饰动画。
-6. 阅读区无纹理/渐变背景（computed `background-image: none`）。
-7. 键盘 Tab 走完 Composer → 发送 → 侧栏 → 设置，每个可交互元素都有可见焦点环。
-8. 控件清单与 Claude Desktop 逐项对照表无"多"或"缺"（附截图对照）。
-9. 现有 vitest 与 `tsc` 全绿；Windows 安装包构建通过。
-10. `rg -n "#[0-9a-fA-F]{3,8}\b|rgb\(" src/components` 为 0（颜色只在 `index.css` token 定义处出现）。
-11. 长时间阅读开关开启后：正文 17px / 行高 1.8 / 无纹理 / 无动画；关闭后恢复。
-12. 批次 4：site 与桌面端 token 值一致（脚本比对）。
-13. 长对话（≥200 条、含 20 个代码块）滚动不掉帧（Performance 面板无 >50ms 长任务成串）。
+### 批次 4：`site/` 视觉对齐。
 
-## 5. 真用户 30 分钟走查清单（@真用户阿验）
-前提：拿到批次 1 的安装包或分支；日间、夜间各 15 分钟；Windows 100% 与 125% 缩放各看一次。每项记 通过 / 问题（严重度）/ 截图。
+## 5. 验收标准（批次 1 优先项标 ★）
 
-**0–3 分钟 首印象**
-- [ ] 打开后底色是否均匀、无脏点纹理；日间是否感觉"纸"而非"白屏"
-- [ ] 侧栏、标题栏、输入框层级是否一眼可分
+1. ★ 对话路径组件无 `text-[10–12.5px]`；CSS Tip/chip/kbd/ctx ≥13px。
+2. ★ 正文 16px / line-height 1.7；列宽约 68em。
+3. ★ 无阅读区纹理/渐变；无 `#fff`/`#000` 作文字或大面积底。
+4. ★ 夜间 ink 在 panel-raised 上 ≥ 7:1（表值 −0.05）。
+5. ★ 默认 motion=reduced；系统减少动画时无装饰动画。
+6. ★ Typora 风 Markdown：无标题朱砂线；柔和代码底。
+7. ★ Tab 焦点环可见（Composer → 发送 → 侧栏）。
+8. ★ vitest + `tsc -b` 全绿。
+9. 全仓最小字号 / 硬编码 hex 清零：批 2–3 收尾。
+10. 长读开关：批 2。
+11. site token 一致：批 4。
+12. 长对话滚动：阿验走查 + Performance 抽查。
 
-**3–12 分钟 长对话阅读（日间）**
-- [ ] 让三证解释一段较长代码（≥15 段输出），连续读完：字号是否无需凑近、行宽是否不用左右甩头
-- [ ] 段落、列表、标题间距是否清楚；中文标点不挤
-- [ ] 流式输出时有无闪烁、跳动、文字位移
-- [ ] 代码块：高亮是否温和、能否区分关键字/字符串/注释；复制按钮可找到
-- [ ] 上下滚动 200 条历史：是否卡顿、位置是否跳
+## 6. 真用户 30 分钟走查（@真用户阿验）
 
-**12–18 分钟 任务与验证**
-- [ ] 选仓库 → 修一个小问题：工具行、思考块折叠/展开是否清楚不吵
-- [ ] diff：增删行不看颜色也能分（看 +/-）
-- [ ] 结论卡：通过/不确定/失败 三态一眼区分；"不确定"不像成功
-- [ ] 开 PR 审批卡按钮层级清楚
+前提：批次 1 分支或安装包；日/夜各 15 分钟；100%/125% 缩放。清单同前版（首印象、长对话、任务与验证、错误空态、夜间、减少动画、键盘焦点）。另加：
 
-**18–21 分钟 错误与空态**
-- [ ] 断网或填错 Key：错误提示是否可读、有下一步
-- [ ] 新建对话空状态：欢迎语与输入框位置舒适
+- [ ] 日间是否像 Typora：干净、少「旧书黄」、代码块柔和不抢戏
+- [ ] 夜间卡片正文是否清晰（不发灰、不刺眼）
 
-**21–30 分钟 夜间（关灯或低亮度）**
-- [ ] 切夜间：正文不刺眼也不发灰；标题与正文可分
-- [ ] 重复长对话阅读 5 分钟，记录眼睛干涩/想眯眼的时刻
-- [ ] 代码块、diff、结论卡夜间三态色是否仍可分
-- [ ] 系统开启"减少动画"后重开：确认没有任何动画
-- [ ] 全程用 Tab 键走一遍主要控件，焦点是否始终可见
+输出：通过 / 问题（严重度）/ 建议；疲劳感 1–5（日、夜）。
 
-**收尾**：输出 通过项 / 问题项（阻断/严重/一般/建议）/ 建议项；主观疲劳感 1–5 分（日、夜各一）。
+## 7. 节奏与发布
 
-## 6. 待拍板
-1. 纸张纹理：彻底删除，还是保留默认关闭的开关（是否违反"控件 1:1"）。
-2. 默认字号 16 还是 17。
-3. 日间正文 10.5:1、夜间 7.9:1 均满足 ≥7:1，是否接受。
-4. 批次 1 是否需与 git 自动初始化修复同一版本发布。
+1. **git 自动初始化**：已单独在 main（`59fc73b`），先发。
+2. **批次 1**：本分支开发 → 测试 → 交阿验走查 → 修问题 → **单独发版**。
+3. 批次 2 → 3 → 4，每批走查后再进下一批。
 
-## 7. 节奏
-1. 批次 1：token + index.css（0.5 天）→ 组件替换字号/色（1–1.5 天）→ 测试与对照截图（0.5 天）→ 打包给阿验走查。
-2. 根据走查修正 → 批次 2（设置与主题）→ 批次 3（其他页面）→ 批次 4（site）。每批交阿验走查后再进下一批。
+## 8. 开放项（已关闭）
+
+原 §6 四问均已拍板，见 §0。无新的阻塞拍板项。

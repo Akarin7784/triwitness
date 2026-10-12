@@ -162,7 +162,7 @@ export function WritingStream({
         }}
         className="stream-paper relative min-h-0 flex-1 overflow-y-auto scroll-soft px-5 py-5"
       >
-        <div className="selectable font-mono text-[12.5px] leading-[1.85] text-ink-soft">
+        <div className="selectable font-mono text-[13px] leading-[1.85] text-ink-soft">
           {grouped.map((line, li) => {
             const isLast = li === grouped.length - 1
             const meta = lineById.get(line.lineId)
@@ -242,7 +242,7 @@ const StreamLineView = memo(function StreamLineView({
       </span>
       <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
         <span
-          className="mr-2 inline-block select-none font-sans text-[10.5px] font-medium tracking-[0.12em]"
+          className="mr-2 inline-block select-none font-sans text-[13px] font-medium tracking-[0.12em]"
           style={{ color: roleColor[role] }}
         >
           {roleLabel[role]}

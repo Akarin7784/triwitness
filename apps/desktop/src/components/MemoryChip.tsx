@@ -28,7 +28,7 @@ export function MemoryChip({ memory }: { memory: MemoryUsed | null }) {
         <ChevronDown size={10} strokeWidth={1.8} className={clsx('shrink-0 transition-transform duration-300', open && 'rotate-180')} />
       </button>
       <Popover open={open} onClose={close} side="down" align="right" testId="memory-panel" className="w-[340px] max-w-[80vw]">
-        <div className="max-h-[360px] overflow-y-auto scroll-soft px-2 py-1.5 text-[12px]">
+        <div className="max-h-[360px] overflow-y-auto scroll-soft px-2 py-1.5 text-[13px]">
           <p className="pb-1.5 font-serif text-[13px] text-ink">{t('本次用了这些记忆')}</p>
           {memory.factsTotal > 0 && (
             <Section title={t('仓库事实')} total={memory.factsTotal} shown={memory.facts.length}>
@@ -49,7 +49,7 @@ export function MemoryChip({ memory }: { memory: MemoryUsed | null }) {
               ))}
             </Section>
           )}
-          <p className="border-t border-border-soft pt-1.5 text-[10.5px] leading-relaxed text-sepia-muted">
+          <p className="border-t border-border-soft pt-1.5 text-[13px] leading-relaxed text-sepia-muted">
             {memory.episodes ? t('另会按问题检索相似经验；') : ''}
             {t('记忆是参考数据，与仓库现状冲突时以仓库为准。不想用：tw run --no-memory')}
           </p>
@@ -62,7 +62,7 @@ export function MemoryChip({ memory }: { memory: MemoryUsed | null }) {
 function Section({ title, total, shown, children }: { title: string; total: number; shown: number; children: React.ReactNode }) {
   return (
     <div className="pb-2">
-      <p className="pb-1 text-[10.5px] uppercase tracking-wider text-sepia-muted">
+      <p className="pb-1 text-[13px] uppercase tracking-wider text-sepia-muted">
         {title} · {total}
         {shown < total ? ` ${t('（显示前 {0} 条）', shown)}` : ''}
       </p>
@@ -77,7 +77,7 @@ function Item({ text, tag, source }: { text: string; tag: string | null; source:
     <li data-testid="memory-item" className="rounded-md px-1.5 py-1 hover:bg-panel-raised">
       <p className="leading-snug text-ink-soft">{text}</p>
       {(tag || src) && (
-        <p className="mt-0.5 flex gap-2 font-mono text-[10px] text-sepia-muted">
+        <p className="mt-0.5 flex gap-2 font-mono text-[13px] text-sepia-muted">
           {tag && <span>{tag}</span>}
           {src && <span title={source ?? undefined}>{t('来源 {0}', src)}</span>}
         </p>

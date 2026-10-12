@@ -40,7 +40,7 @@ export function ResultCard({ result }: { result: ResultMsg }) {
   const v = result.verdict ? VERDICT[result.verdict] : null
   const lines = prSummary(result.pr_md, open ? 200 : 6)
   return (
-    <article data-testid="result-card" className="paper-card fade-in mr-auto w-full max-w-[720px] rounded-2xl px-5 py-4">
+    <article data-testid="result-card" className="paper-card fade-in mr-auto w-full max-w-[68em] rounded-2xl px-5 py-4">
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={clsx(
@@ -62,17 +62,17 @@ export function ResultCard({ result }: { result: ResultMsg }) {
       )}
       {lines.length > 0 && (
         <div className="mt-3 border-t border-border-soft pt-3">
-          <div className="mb-1.5 flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-sepia-muted">
+          <div className="mb-1.5 flex items-center gap-1.5 text-[13px] tracking-[0.12em] text-sepia-muted">
             <ScrollText size={12} strokeWidth={1.6} />
             pr.md
           </div>
-          <pre className="selectable whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink-soft">
+          <pre className="selectable whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-ink-soft">
             {lines.join('\n')}
           </pre>
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-sepia-muted transition-colors hover:text-amber-ink"
+            className="mt-1 inline-flex items-center gap-1 text-[13px] text-sepia-muted transition-colors hover:text-amber-ink"
           >
             <ChevronDown size={12} className={clsx('transition-transform', open && 'rotate-180')} />
             {open ? t('收起') : t('全文')}
@@ -81,13 +81,13 @@ export function ResultCard({ result }: { result: ResultMsg }) {
       )}
       {(result.branch || result.pr_md) && (
         <div className="mt-3 border-t border-border-soft pt-3" data-testid="result-delivery">
-          <p className="text-[12px] leading-relaxed text-sepia">
+          <p className="text-[13px] leading-relaxed text-sepia">
             {pr
               ? t('已推送分支并开 PR #{0}。', String(pr.number))
               : t('已生成本地分支和 PR 说明；还没有推送。点「开 PR」先看审批卡，确认后才推送并在 GitHub 上创建 PR。')}
           </p>
           {result.branch && (
-            <p className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] text-sepia-muted">
+            <p className="mt-1 inline-flex items-center gap-1 font-mono text-[13px] text-sepia-muted">
               <GitBranch size={11} strokeWidth={1.6} />
               {result.branch}
             </p>
@@ -123,7 +123,7 @@ export function ResultCard({ result }: { result: ResultMsg }) {
       )}
       {!(result.branch || result.pr_md) && result.run_id && (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-soft pt-3">
-          <span className="text-[12px] text-sepia">{t('想让别人帮忙看：导出诊断包（脱敏，只存本机）')}</span>
+          <span className="text-[13px] text-sepia">{t('想让别人帮忙看：导出诊断包（脱敏，只存本机）')}</span>
           <DiagButton runId={result.run_id} label={t('诊断包')} />
         </div>
       )}

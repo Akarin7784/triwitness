@@ -21,7 +21,7 @@ export function ThinkingBlock({ block }: { block: Block }) {
         type="button"
         onClick={() => !live && setOpen((o) => !o)}
         className={clsx(
-          'group inline-flex items-center gap-1.5 rounded-md py-0.5 pr-1.5 text-[12.5px] transition-colors duration-300',
+          'group inline-flex items-center gap-1.5 rounded-md py-0.5 pr-1.5 text-[13px] transition-colors duration-300',
           live ? 'cursor-default text-amber-ink' : 'text-sepia-muted hover:text-ink-soft',
         )}
       >
@@ -38,7 +38,7 @@ export function ThinkingBlock({ block }: { block: Block }) {
           <div
             ref={bodyRef}
             className={clsx(
-              'selectable ml-[5px] mt-1 whitespace-pre-wrap border-l border-border pl-3.5 font-serif text-[12.5px] leading-[1.85] text-sepia',
+              'selectable ml-[5px] mt-1 whitespace-pre-wrap border-l border-border pl-3.5 font-serif text-[13px] leading-[1.85] text-sepia',
               live && 'think-live max-h-32 overflow-y-auto scroll-soft',
             )}
           >

@@ -61,7 +61,7 @@ function ContinueButton({ onClick }: { onClick: () => void }) {
       type="button"
       data-testid="continue"
       title={tr('从上次停下的进度继续（已改的文件、已通过的复现会沿用）')}
-      className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-border-soft px-2.5 py-0.5 text-[12px] text-ink-soft hover:bg-border-soft"
+      className="mr-1.5 inline-flex items-center gap-1 rounded-full border border-border-soft px-2.5 py-0.5 text-[13px] text-ink-soft hover:bg-border-soft"
       onClick={onClick}
     >
       <Play size={11} strokeWidth={1.8} />
@@ -111,7 +111,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ pointerEvents: 'none', opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
-                className="user-bubble rounded-2xl bg-ink px-4 py-3 text-parchment shadow-md"
+                className="user-bubble rounded-xl px-4 py-3 text-[16px] leading-[1.7]"
               >
                 <p className="selectable whitespace-pre-wrap text-[14px] leading-[1.8]">{turn.user.text}</p>
               </motion.div>
@@ -134,7 +134,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                 v?.at === 'user' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
               )}
             >
-              <span className="mr-1 text-[10px] tabular-nums text-sepia-muted">{turn.user.time}</span>
+              <span className="mr-1 text-[13px] tabular-nums text-sepia-muted">{turn.user.time}</span>
               {v?.at === 'user' && <VersionNav v={v} />}
               <Tip label={tr('编辑')}>
                 <button
@@ -157,7 +157,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
       )}
 
       {turn.blocks.length > 0 && (
-        <div data-testid="assistant-turn" className="max-w-[720px]">
+        <div data-testid="assistant-turn" className="max-w-[68em]">
           <VirtualList
             items={turn.blocks}
             itemKey={blockKey}
@@ -210,7 +210,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                 </button>
               </Tip>
               {v?.at === 'assistant' && <VersionNav v={v} />}
-              <span className="ml-2 text-[10.5px] text-sepia-muted">{turn.final.meta}</span>
+              <span className="ml-2 text-[13px] text-sepia-muted">{turn.final.meta}</span>
             </div>
           )}
           {(turn.streaming || !turn.final) && v?.at === 'assistant' && (
@@ -227,7 +227,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
 
 function VersionNav({ v }: { v: VersionInfo }) {
   return (
-    <span data-testid="version-nav" className="mx-1 inline-flex items-center gap-0.5 text-[11px] tabular-nums text-sepia">
+    <span data-testid="version-nav" className="mx-1 inline-flex items-center gap-0.5 text-[13px] tabular-nums text-sepia">
       <button type="button" aria-label={tr('上一版')} className={ACT} disabled={v.index <= 0} onClick={() => v.onSelect(v.index - 1)}>
         <ChevronLeft size={13} strokeWidth={1.7} />
       </button>
@@ -283,7 +283,7 @@ function EditBox({ initial, onCancel, onSend }: { initial: string; onCancel: () 
         className="block w-full resize-none bg-transparent px-1 font-serif text-[14.5px] leading-relaxed text-ink outline-none"
       />
       <div className="mt-2 flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1 text-[12.5px] text-ink-soft hover:bg-panel-raised">
+        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-1 text-[13px] text-ink-soft hover:bg-panel-raised">
           {tr('取消')}
         </button>
         <button
@@ -291,7 +291,7 @@ function EditBox({ initial, onCancel, onSend }: { initial: string; onCancel: () 
           disabled={!ok}
           data-testid="edit-send"
           onClick={() => onSend(v.trim())}
-          className="rounded-lg bg-ink px-3 py-1 text-[12.5px] text-parchment transition-colors duration-300 hover:bg-espresso disabled:opacity-40"
+          className="rounded-lg bg-ink px-3 py-1 text-[13px] text-parchment transition-colors duration-300 hover:bg-espresso disabled:opacity-40"
         >
           {tr('发送')}
         </button>

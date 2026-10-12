@@ -155,7 +155,7 @@ export function ChatPanel({
             >
               <Paperclip size={22} strokeWidth={1.6} />
               <span className="font-serif text-[16px] text-ink">{t('把文件放到这里')}</span>
-              <span className="text-[12px] text-sepia-muted">{t('文本会一起交给模型；图片只附文件')}</span>
+              <span className="text-[13px] text-sepia-muted">{t('文本会一起交给模型；图片只附文件')}</span>
             </motion.div>
           </motion.div>
         )}
@@ -201,7 +201,7 @@ export function ChatPanel({
             transition={{ type: 'spring', stiffness: 380, damping: 36 }}
             className="overflow-hidden"
           >
-            <div className="mx-8 mb-2 flex items-center gap-2 rounded-xl border border-rose-ink/40 bg-rose-ink/10 px-3.5 py-2 text-[12.5px] text-rose-ink">
+            <div className="mx-8 mb-2 flex items-center gap-2 rounded-xl border border-rose-ink/40 bg-rose-ink/10 px-3.5 py-2 text-[13px] text-rose-ink">
               <ShieldAlert size={14} strokeWidth={1.7} />
               <span className="font-medium">{t('完全访问模式')}</span>
               <span className="text-rose-ink/80">{t('本任务不确认、不拒绝')}</span>
@@ -236,7 +236,7 @@ export function ChatPanel({
             <ApprovalCard key={a.requestId} req={a} onDecide={(c) => onApprove(a.requestId, c.decision, c.scope)} />
           ))}
         {result && <ResultCard result={result} />}
-        {notice && <p className="fade-in text-center text-[12px] text-sepia-muted">{notice}</p>}
+        {notice && <p className="fade-in text-center text-[13px] text-sepia-muted">{notice}</p>}
       </div>
       </div>
       </ChatScrollContext.Provider>
@@ -348,7 +348,7 @@ function ShareButton({ actions }: { actions: ShareActions }) {
         {t('分享')}
       </button>
       <Popover open={open} onClose={close} side="down" align="right" className="w-[236px]" testId="share-popover">
-        <p className="px-3 pb-1.5 pt-1 text-[11.5px] leading-relaxed text-sepia-muted">{t('只在本机：不上传、不生成公开链接')}</p>
+        <p className="px-3 pb-1.5 pt-1 text-[13px] leading-relaxed text-sepia-muted">{t('只在本机：不上传、不生成公开链接')}</p>
         <MenuItem icon={ClipboardCopy} label={t('复制为 Markdown')} testId="share-copy" onClick={() => (close(), actions.copyMarkdown())} />
         <MenuDivider />
         <MenuItem icon={FileDown} label={t('导出为 Markdown')} testId="share-md" onClick={() => (close(), actions.exportMarkdown())} />

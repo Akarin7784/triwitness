@@ -38,15 +38,15 @@ export function ApprovalCard({
     }
   }
   return (
-    <article data-testid="approval-card" className="paper-card fade-in mr-auto max-w-[720px] rounded-2xl border-amber/40 px-4 py-3.5">
-      <div className="flex items-center gap-2 text-[12px] text-amber-ink">
+    <article data-testid="approval-card" className="paper-card fade-in mr-auto max-w-[68em] rounded-2xl border-amber/40 px-4 py-3.5">
+      <div className="flex items-center gap-2 text-[13px] text-amber-ink">
         <ShieldQuestion size={14} strokeWidth={1.7} />
         <span className="tracking-[0.12em]">{t('待批')}</span>
         <span className="text-sepia-muted">· {req.tool}</span>
         {req.risk && <span className="chip ml-auto">{req.risk}</span>}
       </div>
-      <p className="selectable mt-2 break-all font-mono text-[12.5px] leading-relaxed text-ink">{req.action}</p>
-      {req.reason && <p className="mt-1 text-[12px] text-sepia-muted">{req.reason}</p>}
+      <p className="selectable mt-2 break-all font-mono text-[13px] leading-relaxed text-ink">{req.action}</p>
+      {req.reason && <p className="mt-1 text-[13px] text-sepia-muted">{req.reason}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         {CHOICES.map((c) => (
           <Tip key={c.label} label={c.choice.scope === 'always' && req.suggestedRule ? t('写入规则 {0}', req.suggestedRule) : c.tip}>
@@ -55,7 +55,7 @@ export function ApprovalCard({
               disabled={busy}
               onClick={() => decide(c.choice)}
               className={clsx(
-                'rounded-full px-3.5 py-1 text-[12.5px] transition-colors duration-300 disabled:opacity-40',
+                'rounded-full px-3.5 py-1 text-[13px] transition-colors duration-300 disabled:opacity-40',
                 c.tone === 'primary'
                   ? 'bg-ink text-parchment enabled:hover:bg-espresso'
                   : c.tone === 'deny'
@@ -68,7 +68,7 @@ export function ApprovalCard({
           </Tip>
         ))}
       </div>
-      {err && <p className="mt-2 text-[11.5px] text-rose-ink">{err}</p>}
+      {err && <p className="mt-2 text-[13px] text-rose-ink">{err}</p>}
     </article>
   )
 }

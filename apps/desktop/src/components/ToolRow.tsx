@@ -43,16 +43,16 @@ export function ToolRow({ block }: { block: ToolBlock }) {
         type="button"
         onClick={() => detail && setOpen((o) => !o)}
         className={clsx(
-          'group flex w-full max-w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[12.5px] transition-colors duration-300',
+          'group flex w-full max-w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[13px] transition-colors duration-300',
           detail ? 'hover:bg-panel-raised/80' : 'cursor-default',
           open && 'bg-panel-raised/80',
         )}
       >
         <Icon size={13} strokeWidth={1.6} className={block.ok ? 'shrink-0 text-sepia' : 'shrink-0 text-rose-ink'} />
-        <span className={clsx('min-w-0 flex-1 truncate font-mono text-[12px]', block.ok ? 'text-ink-soft' : 'text-rose-ink')}>
+        <span className={clsx('min-w-0 flex-1 truncate font-mono text-[13px]', block.ok ? 'text-ink-soft' : 'text-rose-ink')}>
           {toolTitle(block)}
         </span>
-        <span className="shrink-0 tabular-nums text-[10.5px] text-sepia-muted">{secs(block.durationMs)}</span>
+        <span className="shrink-0 tabular-nums text-[13px] text-sepia-muted">{secs(block.durationMs)}</span>
         {detail && (
           <ChevronRight
             size={12}
@@ -65,7 +65,7 @@ export function ToolRow({ block }: { block: ToolBlock }) {
         <div className="fade-in mb-1.5 ml-7 mr-1 mt-0.5 space-y-1.5">
           {block.args && <pre className="tool-pre selectable">{block.args}</pre>}
           {block.output && <pre className="tool-pre selectable max-h-56">{block.output}</pre>}
-          {block.permission && <p className="text-[10.5px] text-sepia-muted">{t('权限 · {0}', block.permission)}</p>}
+          {block.permission && <p className="text-[13px] text-sepia-muted">{t('权限 · {0}', block.permission)}</p>}
         </div>
       )}
     </div>

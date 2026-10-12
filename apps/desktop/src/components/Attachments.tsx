@@ -47,8 +47,8 @@ export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRe
                   )}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[12.5px] text-ink">{a.name}</span>
-                  <span className={clsx('flex items-center gap-1 text-[11px]', a.status === 'error' ? 'text-rose-ink' : 'text-sepia-muted')}>
+                  <span className="block truncate text-[13px] text-ink">{a.name}</span>
+                  <span className={clsx('flex items-center gap-1 text-[13px]', a.status === 'error' ? 'text-rose-ink' : 'text-sepia-muted')}>
                     {a.status === 'saving' && <Loader2 size={10} className="animate-spin" />}
                     {a.status === 'error' && <AlertCircle size={10} />}
                     {a.status === 'error' ? a.error : formatSize(a.size)}
@@ -73,7 +73,7 @@ export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRe
         </AnimatePresence>
       </div>
       {hasImage && onRemove && (
-        <p data-testid="image-note" className="px-2 pb-2 text-[11.5px] text-sepia-muted">
+        <p data-testid="image-note" className="px-2 pb-2 text-[13px] text-sepia-muted">
           {t('当前模型只读文字：图片会作为文件附上，但看不到内容。')}
         </p>
       )}
@@ -83,7 +83,7 @@ export function AttachmentChips({ items, onRemove }: { items: Attachment[]; onRe
             {open.kind === 'image' && open.preview ? (
               <img src={open.preview} alt={open.name} className="mx-auto max-h-[58vh] object-contain" />
             ) : open.kind === 'text' && open.preview ? (
-              <pre className="selectable whitespace-pre-wrap p-3 font-mono text-[12px] leading-relaxed text-ink-soft">{open.preview}</pre>
+              <pre className="selectable whitespace-pre-wrap p-3 font-mono text-[13px] leading-relaxed text-ink-soft">{open.preview}</pre>
             ) : (
               <p className="p-4 text-[13px] text-sepia">{t('{0} · 无法预览', formatSize(open.size))}</p>
             )}

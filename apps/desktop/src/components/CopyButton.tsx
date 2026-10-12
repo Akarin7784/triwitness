@@ -16,7 +16,7 @@ export function CopyButton({ text, label = t('复制'), className }: { text: str
       }}
       className={
         className ??
-        'inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber-ink'
+        'inline-flex h-6 items-center gap-1 rounded-md px-1.5 text-[13px] text-sepia-muted transition-colors duration-300 hover:bg-panel-raised hover:text-amber-ink'
       }
     >
       {done ? <Check size={12} strokeWidth={1.8} /> : <Copy size={12} strokeWidth={1.6} />}

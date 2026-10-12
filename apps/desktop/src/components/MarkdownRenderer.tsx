@@ -26,7 +26,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   return (
     <div className="md-code group/code my-3 overflow-hidden rounded-xl border border-border-soft">
       <div className="flex h-7 items-center justify-between bg-parchment-deep/60 pl-3 pr-1">
-        <span className="font-mono text-[10.5px] tracking-wide text-sepia-muted">{lang}</span>
+        <span className="font-mono text-[13px] tracking-wide text-sepia-muted">{lang}</span>
         <span className="flex items-center">
           {code.split('\n').length >= 6 && (
             <button
@@ -42,7 +42,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
           <CopyButton text={code} label={t('复制代码')} />
         </span>
       </div>
-      <pre className="selectable overflow-x-auto scroll-soft bg-cream/80 px-3.5 py-2.5 font-mono text-[12.5px] leading-relaxed text-ink">
+      <pre className="selectable overflow-x-auto scroll-soft bg-cream/80 px-3.5 py-2.5 font-mono text-[13px] leading-relaxed text-ink">
         <code>{code}</code>
       </pre>
     </div>

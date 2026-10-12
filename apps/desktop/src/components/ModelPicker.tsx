@@ -38,7 +38,7 @@ export function ModelPicker({
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
         className={clsx(
-          'inline-flex h-8 min-w-0 max-w-full items-center gap-1 whitespace-nowrap rounded-lg px-2 text-[12.5px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised',
+          'inline-flex h-8 min-w-0 max-w-full items-center gap-1 whitespace-nowrap rounded-lg px-2 text-[13px] text-ink-soft transition-colors duration-300 hover:bg-panel-raised',
           open && 'bg-panel-raised',
         )}
       >
@@ -63,7 +63,7 @@ export function ModelPicker({
           >
             <span className="flex min-w-0 flex-1 flex-col">
               <span className={clsx(m.available ? 'text-ink' : 'text-sepia-muted')}>{m.name}</span>
-              <span className="text-[11px] text-sepia-muted">{m.note}</span>
+              <span className="text-[13px] text-sepia-muted">{m.note}</span>
             </span>
             {m.id === prefs.model && <Check size={14} strokeWidth={1.8} className="mt-0.5 text-amber-ink" />}
           </button>
@@ -79,7 +79,7 @@ export function ModelPicker({
             className="menu-item"
           >
             <span className="flex-1">{tr('思考强度')}</span>
-            <span className="text-[12px] text-sepia-muted">{level.label}</span>
+            <span className="text-[13px] text-sepia-muted">{level.label}</span>
             <ChevronRight size={13} strokeWidth={1.7} className="text-sepia-muted" />
           </button>
           <AnimatePresence>
@@ -106,7 +106,7 @@ export function ModelPicker({
                     className="menu-item"
                   >
                     <span className="flex-1">{t.label}</span>
-                    {t.id === DEFAULT_THINKING && <span className="text-[10.5px] text-sepia-muted">{tr('默认')}</span>}
+                    {t.id === DEFAULT_THINKING && <span className="text-[13px] text-sepia-muted">{tr('默认')}</span>}
                     {t.id === prefs.thinking && <Check size={13} strokeWidth={1.8} className="text-amber-ink" />}
                   </button>
                 ))}

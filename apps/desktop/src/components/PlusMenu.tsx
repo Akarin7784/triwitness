@@ -103,7 +103,7 @@ export function PlusMenu({
               <button type="button" role="menuitem" data-testid="plus-style" className="menu-item" onClick={() => setPage('style')}>
                 <Palette size={14} strokeWidth={1.6} className="text-sepia" />
                 <span>{t('风格')}</span>
-                <span className="ml-auto flex items-center gap-1 pl-3 text-[11.5px] text-sepia-muted">
+                <span className="ml-auto flex items-center gap-1 pl-3 text-[13px] text-sepia-muted">
                   {styles.find((s) => s.id === prefs.style)?.name}
                   <ChevronRight size={12} />
                 </span>
