@@ -51,6 +51,8 @@ import {
   type Language,
   type SavedMode,
   type Theme,
+  READING_SIZES,
+  type ReadingSize,
 } from '../lib/prefs'
 import { secretClear, secretSet, secretStatus, type SecretKind, type SecretState } from '../lib/secrets'
 import { notYet, toast } from '../lib/toast'
@@ -122,8 +124,8 @@ export function SettingsPage({
             data-testid={`settings-nav-${s.id}`}
             onClick={() => onSection(s.id)}
             className={clsx(
-              'relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors duration-300',
-              section === s.id ? 'text-ink' : 'text-ink-soft/85 hover:bg-panel-raised/60',
+              'relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[14px] transition-colors duration-300',
+              section === s.id ? 'text-ink' : 'text-ink-soft hover:bg-panel-raised/60',
             )}
           >
             {section === s.id && (
@@ -133,7 +135,7 @@ export function SettingsPage({
                 transition={{ type: 'spring', stiffness: 460, damping: 38 }}
               />
             )}
-            <s.icon size={14} strokeWidth={1.6} className="relative text-sepia" />
+            <s.icon size={14} strokeWidth={1.6} className="relative text-ink-soft" />
             <span className="relative">{s.label}</span>
           </button>
         ))}
@@ -175,7 +177,7 @@ function Row({ label, hint, children, testId }: { label: string; hint?: string; 
     <div data-testid={testId} className="flex flex-wrap items-center justify-between gap-4 border-b border-border-soft/70 py-4 last:border-0">
       <div className="min-w-0">
         <p className="text-[13.5px] text-ink">{label}</p>
-        {hint && <p className="mt-0.5 text-[11.5px] text-sepia-muted">{hint}</p>}
+        {hint && <p className="mt-0.5 text-[12.5px] text-sepia-muted">{hint}</p>}
       </div>
       <div className="flex shrink-0 items-center gap-2">{children}</div>
     </div>
@@ -185,7 +187,7 @@ function Row({ label, hint, children, testId }: { label: string; hint?: string; 
 function Group({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <div className="mb-7">
-      {title && <p className="mb-2 text-[10.5px] tracking-[0.14em] text-sepia-muted">{title}</p>}
+      {title && <p className="mb-2 text-[12px] tracking-[0.14em] text-sepia-muted">{title}</p>}
       <div className="paper-card rounded-2xl px-5">{children}</div>
     </div>
   )
@@ -204,7 +206,7 @@ function Segmented<T extends string | number>({
 }) {
   const group = useId()
   return (
-    <div data-testid={testId} className="relative inline-flex shrink-0 rounded-full bg-parchment-deep/70 p-1">
+    <div data-testid={testId} className="seg relative inline-flex shrink-0 rounded-full bg-parchment-deep/70 p-1">
       {options.map((o) => {
         const btn = (
           <button
@@ -214,7 +216,7 @@ function Segmented<T extends string | number>({
             aria-pressed={value === o.id}
             onClick={() => (o.disabled ? undefined : onChange(o.id))}
             className={clsx(
-              'relative whitespace-nowrap rounded-full px-3.5 py-1 text-[12.5px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40',
+              'relative whitespace-nowrap rounded-full px-3.5 py-1 text-[13.5px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40',
               value === o.id ? 'text-parchment' : 'text-ink-soft hover:text-amber-ink',
             )}
           >
@@ -281,7 +283,7 @@ function ThemeSwatch({ id, active, onClick }: { id: Theme; active: boolean; onCl
           </span>
         )}
       </span>
-      <span className={clsx('mt-1.5 block text-[12px]', active ? 'text-ink' : 'text-sepia')}>
+      <span className={clsx('mt-1.5 block text-[13px]', active ? 'text-ink' : 'text-sepia')}>
         {THEMES.find((t) => t.id === id)!.label}
       </span>
     </button>
@@ -317,6 +319,14 @@ function General() {
             onChange={(fontScale) => setPrefs({ fontScale })}
             options={FONT_SCALES.map((s) => ({ id: s, label: ({ 0.9: tr('小'), 1: tr('默认'), 1.1: tr('大'), 1.2: tr('特大') } as Record<number, string>)[s] }))}
             testId="font-scale"
+          />
+        </Row>
+        <Row label={tr('长时阅读字号')}>
+          <Segmented<ReadingSize>
+            value={p.readingSize}
+            onChange={(readingSize) => setPrefs({ readingSize })}
+            options={READING_SIZES.map((s) => ({ id: s, label: s === 16 ? tr('{0}px 默认', s) : `${s}px` }))}
+            testId="reading-size"
           />
         </Row>
       </Group>
@@ -465,14 +475,14 @@ function ApiKeyRow({
         </span>
         <span className="flex items-center gap-2">
           {state === 'set' && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[11px] text-sage">
+            <span className="inline-flex items-center gap-1 rounded-full bg-sage/15 px-2 py-0.5 text-[12px] text-sage">
               <Lock size={10} strokeWidth={2} /> {tr('已存入凭据库')}
             </span>
           )}
-          {state === 'unset' && <span className="text-[11.5px] text-sepia-muted">{tr('未设置')}</span>}
+          {state === 'unset' && <span className="text-[12.5px] text-sepia-muted">{tr('未设置')}</span>}
           {state === 'unsupported' && (
             <Tip label={tr('浏览器预览无法访问系统凭据库')} side="top-end">
-              <span className="text-[11.5px] text-sepia-muted">{tr('仅桌面应用')}</span>
+              <span className="text-[12.5px] text-sepia-muted">{tr('仅桌面应用')}</span>
             </Tip>
           )}
           {state && state !== 'unsupported' && !editing && (
@@ -585,7 +595,7 @@ function Usage() {
               </span>
             </Tip>
           </div>
-          <p className="mt-2 text-[11.5px] text-sepia-muted">{tr('DeepSeek 高峰时段按 2× 计价；任何时段都可以正常使用，花费照实记账。')}</p>
+          <p className="mt-2 text-[12.5px] text-sepia-muted">{tr('DeepSeek 高峰时段按 2× 计价；任何时段都可以正常使用，花费照实记账。')}</p>
           <DayBar minutes={bj.minutes} weekday={gate.weekday} />
           <WeekGrid today={bj.day} />
         </div>
@@ -607,13 +617,13 @@ function LedgerCard({ led }: { led: LedgerState }) {
           <Info size={12} strokeWidth={1.6} className="text-sepia-muted" />
         </Tip>
         {data && (
-          <span className="ml-auto text-[11px] tabular-nums text-sepia-muted" data-testid="ledger-summary">
+          <span className="ml-auto text-[12px] tabular-nums text-sepia-muted" data-testid="ledger-summary">
             {tr('{0} 次调用 · 缓存命中 {1} · 已花 ¥{2}', String(data.calls), pct(data.cache_hit_rate), data.spent.toFixed(4))}
           </span>
         )}
       </div>
       {!data ? (
-        <p className="border-t border-border-soft px-5 py-6 text-[12px] text-sepia-muted" data-testid="ledger-empty">
+        <p className="border-t border-border-soft px-5 py-6 text-[13px] text-sepia-muted" data-testid="ledger-empty">
           {led.status === 'loading'
             ? tr('正在读取本机账本…')
             : led.status === 'offline'
@@ -621,12 +631,12 @@ function LedgerCard({ led }: { led: LedgerState }) {
               : tr('读取账本失败：{0}', led.status === 'error' ? led.error : '')}
         </p>
       ) : data.recent.length === 0 ? (
-        <p className="border-t border-border-soft px-5 py-6 text-[12px] text-sepia-muted" data-testid="ledger-empty">
+        <p className="border-t border-border-soft px-5 py-6 text-[13px] text-sepia-muted" data-testid="ledger-empty">
           {tr('还没有真实调用。')}
         </p>
       ) : (
-        <table className="w-full text-left text-[12px]">
-          <thead className="border-y border-border-soft bg-parchment/60 text-[10.5px] tracking-wide text-sepia-muted">
+        <table className="w-full text-left text-[13px]">
+          <thead className="border-y border-border-soft bg-parchment/60 text-[12px] tracking-wide text-sepia-muted">
             <tr>
               <th className="px-5 py-2 font-normal">{tr('时间')}</th>
               <th className="px-2 py-2 font-normal">{tr('任务')}</th>
@@ -638,14 +648,14 @@ function LedgerCard({ led }: { led: LedgerState }) {
           <tbody className="selectable text-ink-soft">
             {data.recent.map((r, i) => (
               <tr key={`${r.ts}-${i}`} className="border-b border-border-soft/70 last:border-0">
-                <td className="whitespace-nowrap px-5 py-2.5 font-mono text-[11px] text-sepia">{r.ts}</td>
+                <td className="whitespace-nowrap px-5 py-2.5 font-mono text-[12px] text-sepia">{r.ts}</td>
                 <td className="px-2 py-2.5">
                   {r.task_id ?? '—'}
-                  <span className="ml-1.5 text-[10.5px] text-sepia-muted">{r.category}</span>
+                  <span className="ml-1.5 text-[12px] text-sepia-muted">{r.category}</span>
                 </td>
                 <td className="whitespace-nowrap px-2 py-2.5 text-sepia">
                   {r.model}
-                  {r.peak && <span className="ml-1.5 text-[10.5px] text-amber-ink">{tr('高峰价')}</span>}
+                  {r.peak && <span className="ml-1.5 text-[12px] text-amber-ink">{tr('高峰价')}</span>}
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums">{pct(hitRate(r))}</td>
                 <td className="px-5 py-2.5 text-right tabular-nums">¥{r.cost_cny.toFixed(r.cost_cny < 0.01 ? 4 : 2)}</td>
@@ -695,7 +705,7 @@ function Permissions() {
                 <span className="pt-0.5"><Radio on={active} /></span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="text-[13.5px] text-ink">{o.label}</span>
-                  <span className="text-[11.5px] leading-relaxed text-sepia-muted" data-allow-wrap>{o.note}</span>
+                  <span className="text-[12.5px] leading-relaxed text-sepia-muted" data-allow-wrap>{o.note}</span>
                 </span>
               </button>
             )
@@ -714,13 +724,13 @@ function Permissions() {
                 <ShieldAlert size={14} strokeWidth={1.7} className="shrink-0" />
                 {tr('完全访问模式')}
               </span>
-              <span className="text-[11.5px] leading-relaxed text-rose-ink/85" data-allow-wrap>
+              <span className="text-[12.5px] leading-relaxed text-rose-ink/85" data-allow-wrap>
                 {armed ? tr('已就绪 · 只用于下一个任务') : tr('不询问、不拒绝；每个任务两步确认，结束自动恢复')}
               </span>
             </span>
           </button>
           {p.permissionMode === 'auto_review' && !armed && (
-            <p data-testid="auto-review-note" data-allow-wrap className="mt-2 rounded-lg bg-parchment/60 px-3 py-2 text-[11.5px] leading-relaxed text-sepia">
+            <p data-testid="auto-review-note" data-allow-wrap className="mt-2 rounded-lg bg-parchment/60 px-3 py-2 text-[12.5px] leading-relaxed text-sepia">
               {tr('审核模型：DeepSeek Flash（不思考），每次约 ¥0.0003，计入账单并写审计日志。')}
             </p>
           )}
@@ -740,17 +750,17 @@ function Permissions() {
             options={(['deny', 'ask', 'allow'] as RuleKind[]).map((k) => ({ id: k, label: `${RULE_LABEL[k]} ${RULES[k].length}` }))}
             testId="rule-kind"
           />
-          <span className="min-w-0 truncate text-[11.5px] text-sepia-muted">{tr('只读 · 自定义规则优先')}</span>
+          <span className="min-w-0 truncate text-[12.5px] text-sepia-muted">{tr('只读 · 自定义规则优先')}</span>
         </div>
         <ul data-testid="rule-list" className="selectable max-h-[300px] overflow-y-auto scroll-soft py-2">
           {RULES[kind].map((r) => (
-            <li key={r.rule + (r.backends ?? []).join()} className="flex items-center gap-2 py-1 font-mono text-[11.5px] text-ink-soft">
+            <li key={r.rule + (r.backends ?? []).join()} className="flex items-center gap-2 py-1 font-mono text-[12.5px] text-ink-soft">
               {r.exception && <span className="rounded bg-sage/15 px-1 text-[10px] text-sage">{tr('例外')}</span>}
               <span className="truncate">{r.rule}</span>
-              {r.backends && <span className="ml-auto shrink-0 text-[10.5px] text-sepia-muted">{tr('仅 {0}', r.backends.join(' / '))}</span>}
+              {r.backends && <span className="ml-auto shrink-0 text-[12px] text-sepia-muted">{tr('仅 {0}', r.backends.join(' / '))}</span>}
             </li>
           ))}
-          {RULES[kind].length === 0 && <li className="py-3 text-center text-[12px] text-sepia-muted">{tr('无')}</li>}
+          {RULES[kind].length === 0 && <li className="py-3 text-center text-[13px] text-sepia-muted">{tr('无')}</li>}
         </ul>
       </Group>
     </>
@@ -788,7 +798,7 @@ function Sandbox() {
   return (
     <>
       <Title>{tr('沙箱')}</Title>
-      <p className="-mt-2 mb-4 text-[12px] leading-relaxed text-sepia-muted" data-allow-wrap>{tr('沙箱后端与权限模式相互独立：模式决定“问不问”，沙箱决定“在哪儿跑”。')}</p>
+      <p className="-mt-2 mb-4 text-[13px] leading-relaxed text-sepia-muted" data-allow-wrap>{tr('沙箱后端与权限模式相互独立：模式决定“问不问”，沙箱决定“在哪儿跑”。')}</p>
       <Group title={tr('后端')}>
         <div role="radiogroup" className="py-2">
           {BACKEND_OPTIONS.map((o) => (
@@ -803,7 +813,7 @@ function Sandbox() {
             >
               <Radio on={p.backend === o.id} />
               <span className="shrink-0 whitespace-nowrap text-[13.5px] text-ink">{o.label}</span>
-              <span className="min-w-0 truncate text-[11.5px] text-sepia-muted" title={o.note}>{o.note}</span>
+              <span className="min-w-0 truncate text-[12.5px] text-sepia-muted" title={o.note}>{o.note}</span>
             </button>
           ))}
         </div>
@@ -823,7 +833,7 @@ function Connectors() {
       <Title>{tr('连接器')}</Title>
       <Group title="GitHub">
         <ApiKeyRow kind="github" label={tr('GitHub 令牌（开 PR 用）')} placeholder="github_pat_…" testId="github-token-row">
-          <p className="mt-2 text-[11.5px] leading-relaxed text-sepia-muted">
+          <p className="mt-2 text-[12.5px] leading-relaxed text-sepia-muted">
             {tr(
               '只在你确认开 PR 时用来推送分支和创建 PR。建议用细粒度令牌：只选要开 PR 的仓库，只给 Contents 与 Pull requests 读写权限，设过期时间。',
             )}{' '}
@@ -885,7 +895,7 @@ function About({ onShortcuts }: { onShortcuts: () => void }) {
       <Title>{tr('关于')}</Title>
       <Group>
         <Row label={tr('三证 TriWitness')}>
-          <span className="font-mono text-[12px] text-sepia">v{APP_VERSION}</span>
+          <span className="font-mono text-[13px] text-sepia">v{APP_VERSION}</span>
         </Row>
         <Row label={tr('快捷键')}>
           <button type="button" onClick={onShortcuts} className="chip hover:text-amber-ink">
@@ -941,7 +951,7 @@ function DayBar({ minutes, weekday }: { minutes: number; weekday: boolean }) {
           </span>
         ))}
       </div>
-      <p className="mt-2 flex items-center gap-3 text-[10.5px] text-sepia-muted">
+      <p className="mt-2 flex items-center gap-3 text-[12px] text-sepia-muted">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-3 rounded-sm bg-rose-ink/35" />
           {tr('高峰')}
@@ -963,7 +973,7 @@ function WeekGrid({ today }: { today: number }) {
         const weekday = d >= 1 && d <= 5
         return (
           <div key={d} className="text-center">
-            <p className={clsx('mb-1 text-[10.5px]', d === today ? 'font-medium text-ink' : 'text-sepia-muted')}>{WEEK[d]}</p>
+            <p className={clsx('mb-1 text-[12px]', d === today ? 'font-medium text-ink' : 'text-sepia-muted')}>{WEEK[d]}</p>
             <div className={clsx('relative h-10 overflow-hidden rounded-md bg-sage/18', d === today && 'ring-1 ring-ink/40')}>
               {weekday &&
                 PEAK_WINDOWS.map(([a, b]) => (

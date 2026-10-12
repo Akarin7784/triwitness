@@ -5,6 +5,7 @@ import type { ArtifactEntry } from './components/ArtifactsPage'
 import { AnimatePresence } from 'framer-motion'
 import { ChatPanel } from './components/ChatPanel'
 import { ActivityPanel } from './components/ActivityPanel'
+import { syncTerminal } from './lib/statusSync'
 import { StatusBar } from './components/StatusBar'
 import type { SettingsSection } from './components/SettingsPage'
 import { ConfirmDeleteDialog, RenameDialog, SearchPalette, ShortcutsDialog } from './components/ChatDialogs'
@@ -155,10 +156,11 @@ function useAppearance(p: Prefs) {
     apply()
     root.dataset.chatFont = p.chatFont
     root.style.setProperty('--chat-scale', String(p.fontScale))
+    root.style.setProperty('--read-fs', `${p.readingSize}px`)
     if (p.theme !== 'auto' || !mq) return
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
-  }, [p.theme, p.chatFont, p.fontScale])
+  }, [p.theme, p.chatFont, p.fontScale, p.readingSize])
 }
 
 function clock() {
@@ -705,7 +707,7 @@ export default function App() {
             />
             <ChatPanel
               title={title || tr('三证')}
-              run={isLocal ? null : liveTask && !snap?.result && (live.phase === 'done' || live.phase === 'failed') ? { ...live, phase: 'active', label: tr('进行中') } : live}
+              run={isLocal ? null : liveTask && !snap?.result && (live.phase === 'done' || live.phase === 'failed') ? { ...live, phase: 'active', label: tr('进行中') } : syncTerminal(live, run, revealedSeq, !openArt)}
               turn={isLocal ? null : turn}
               draftKey={display}
               messages={messages}

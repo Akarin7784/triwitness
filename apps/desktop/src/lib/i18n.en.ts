@@ -472,6 +472,8 @@ export const EN: Record<string, string> = {
   '看起来不像 DeepSeek 密钥（应以 sk- 开头）': 'That does not look like a DeepSeek key (it should start with sk-)',
   '保存并继续': 'Save and continue',
   '触及安全上限': 'Safety limit reached',
+  '长时阅读字号': 'Reading text size',
+  '{0}px 默认': '{0}px default',
   '三证用你自己的 DeepSeek 账户调用模型（只用 deepseek-flash）。粘贴一个 API 密钥就能开始；每次调用的费用记在本机账本里，随时可在「设置 → 用量」查看。': 'TriWitness calls models with your own DeepSeek account (deepseek-flash only). Paste an API key to get started; every call\'s cost is recorded in a local ledger you can check anytime under Settings → Usage.',
   '高峰价 {0} 次': '{0} peak-price calls',
   '本任务实付': 'Actual cost of this task',

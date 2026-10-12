@@ -82,3 +82,16 @@ describe('设置（UI-21）', () => {
     expect(p.takeUnrestricted()).toBe(false)
   })
 })
+
+describe('长时阅读字号', () => {
+  it('默认 16，可存 17/18 并持久化，坏值回默认', async () => {
+    const p = await import('./prefs')
+    expect(p.DEFAULTS.readingSize).toBe(16)
+    p.setPrefs({ readingSize: 18 })
+    p.reloadPrefs()
+    expect(p.getPrefs().readingSize).toBe(18)
+    localStorage.setItem('tw.prefs', JSON.stringify({ readingSize: 40 }))
+    p.reloadPrefs()
+    expect(p.getPrefs().readingSize).toBe(16)
+  })
+})
