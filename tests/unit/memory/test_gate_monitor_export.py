@@ -97,7 +97,7 @@ def test_gate_insufficient_heldout_not_run(store: MemoryStore) -> None:
     plan = plan_gate(pool, "py-unittest-repro", 1, tasks=TASKS, source_repo="https://github.com/o/zzz")
     assert not plan.sufficient and "insufficient_heldout" in plan.note
     assert "未运行" in render_report(plan, None, None)
-    # spec 013 Q1 默认值：repo 级 held-out 不够 → 转人工审核，不判拒绝
+    # spec 013 §10 Q1（已决定）：repo 级 held-out 不够 → 转人工审核，不判拒绝
     assert apply_decision(pool, plan, None, "# n") == "awaiting_review"
     assert pool.state()["py-unittest-repro"]["versions"]["1"]["status"] == "awaiting_review"
 
@@ -199,7 +199,7 @@ def test_export_formats(store: MemoryStore, tmp_path: Path) -> None:
 
 
 def test_export_never_writes_into_a_repo(store: MemoryStore, tmp_path: Path) -> None:
-    """spec 013 Q6 默认值：导出目录在来源仓库或任何 git 工作区里一律拒绝。"""
+    """spec 013 §10 Q6（已决定）：导出目录在来源仓库或任何 git 工作区里一律拒绝。"""
     pool = _pool(store)
     pool.promote("py-unittest-repro", 1, gate_report="#")
     repo = tmp_path / "work" / "proj"

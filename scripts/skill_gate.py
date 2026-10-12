@@ -9,6 +9,7 @@
 - `run` 用 EvalRunner（deepseek-flash、全部记账本 category=skill-gate、总额上限、断点续跑），
   北京时间工作日高峰（9–12、14–18）不开跑（退出码 3）；必须显式 --yes，没有就只打印计划；
 - `report`：配对判定（成功率提升且成本不超 5%）+ Markdown 报告；--apply 才把结论写进 Skill 池。
+- 每周门禁预算约 ¥4（spec 013 §10 Q4，Eva 2026-10-12 已确认）；默认 `--max-total-cny 4`。
 """
 
 from __future__ import annotations

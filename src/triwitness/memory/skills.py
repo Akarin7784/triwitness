@@ -183,7 +183,7 @@ class SkillPool:
         return sk
 
     def await_review(self, name: str, version: int, *, reason: str, gate_report: str) -> None:
-        """repo 级 Skill 凑不够 held-out：不判拒绝，转人工审核（spec 013 Q1，默认值待 Eva 审）。"""
+        """repo 级 Skill 凑不够 held-out：不判拒绝，转人工审核（spec 013 §10 Q1，已决定）。"""
         st = self.state()
         d = self.version_dir(name, version)
         (d / "gate.md").write_text(gate_report, encoding="utf-8")
@@ -206,7 +206,7 @@ class SkillPool:
             raise SkillError("人工审核必须写审核人")
         report = (
             f"# Skill 人工审核：{name} v{version}\n\n"
-            "- 方式：人工审核 + 上线监控（spec 013 Q1 默认值，待 Eva 审）\n"
+            "- 方式：人工审核 + 上线监控（spec 013 §10 Q1，Eva 2026-10-12 已决定）\n"
             f"- 审核人：{reviewer}\n- 备注：{note or '无'}\n"
         )
         return self.promote(

@@ -6,7 +6,7 @@
 - opencode：`.opencode/skills/<名>/SKILL.md`（OpenCode 的项目级 Skill 目录）；
 - agents-skills：`.agents/skills/<名>/SKILL.md`（跨工具通用目录，OpenCode 等也会读）。
 只导出已接受的事实 / 经验与**当前版本**的 Skill（候选、被拒、回滚的不导出）。
-**绝不写进用户的代码仓库**（spec 013 Q6 默认值，待 Eva 审）：--out 落在来源仓库或任何 git 工作区里一律拒绝；
+**绝不写进用户的代码仓库**（spec 013 §10 Q6，Eva 2026-10-12 已决定）：--out 落在来源仓库或任何 git 工作区里一律拒绝；
 Skill 只写到 --out 下的 `.claude/skills`、`.opencode/skills`、`.agents/skills`，要用时用户自己复制。
 """
 

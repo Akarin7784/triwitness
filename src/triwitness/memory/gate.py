@@ -5,10 +5,10 @@
     来源是日常 run（dogfood）时 Skill 不可能见过这些公开任务的答案，不加时间限制，只排除来源。
   - scope=repo：同一仓库（按 repo_key 归一）；scope=global：任意仓库。
   - 少于 min_tasks 个就判 insufficient_heldout，不跑（结论没有意义）；scope=repo 时转人工审核 + 上线监控
-    （spec 013 Q1 默认值，待 Eva 审），global 时拒绝。
+    （spec 013 §10 Q1，Eva 2026-10-12 已决定），global 时拒绝。
 - 设计：两臂 A（无 Skill）/ B（只注入这个 Skill，见 MemoryContext.with_skills），同任务同次数配对，默认 2 次。
 - 判定：B 的成功率 > A（至少 min_gain）且 B 的单次成本 ≤ A ×（1 + cost_tolerance）才合入；
-  McNemar 精确检验 p ≥ 0.05 时标“功效不足”（结论仍按点估计给出，报告里写明，见 spec 013 开放问题 Q4）。
+  McNemar 精确检验 p ≥ 0.05 时标“功效不足”（结论仍按点估计给出，报告里写明，见 spec 013 §10 Q4）。
 - 真跑由 `scripts/skill_gate.py` 驱动（EvalRunner + 高峰闸门 + 账本 + 总额上限）；这里的 `run_gate` 接受注入的
   runner，单元测试与 `tw memory gate --fake` 用假 runner，不花钱。
 """
