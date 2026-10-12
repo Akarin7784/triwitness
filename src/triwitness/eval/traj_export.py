@@ -94,11 +94,13 @@ def _openai_message(msg: dict[str, Any]) -> dict[str, Any]:
                 args = tc.get("arguments", {})
                 if not isinstance(args, str):
                     args = json.dumps(args, ensure_ascii=False)
-                tcs.append({
-                    "id": tc.get("id") or "call_0",
-                    "type": "function",
-                    "function": {"name": tc.get("name") or "", "arguments": args},
-                })
+                tcs.append(
+                    {
+                        "id": tc.get("id") or "call_0",
+                        "type": "function",
+                        "function": {"name": tc.get("name") or "", "arguments": args},
+                    }
+                )
         out["tool_calls"] = tcs
         if not out["content"]:
             out["content"] = None  # type: ignore[assignment]
@@ -155,39 +157,45 @@ def export_rlvr(run_dir: Path) -> dict[str, Any]:
         kind = ev.get("kind")
         p = ev.get("payload") or {}
         if kind == "model_call":
-            steps.append({
-                "seq": ev.get("seq"),
-                "ts": ev.get("ts"),
-                "type": "model_call",
-                "role": ev.get("role"),
-                "model": p.get("served_model") or p.get("model"),
-                "display": p.get("display"),
-                "usage": p.get("usage"),
-                "cost_cny": p.get("cost_cny"),
-                "finish_reason": p.get("finish_reason"),
-                "request_ref": p.get("request_ref"),
-                "response_ref": p.get("response_ref"),
-            })
+            steps.append(
+                {
+                    "seq": ev.get("seq"),
+                    "ts": ev.get("ts"),
+                    "type": "model_call",
+                    "role": ev.get("role"),
+                    "model": p.get("served_model") or p.get("model"),
+                    "display": p.get("display"),
+                    "usage": p.get("usage"),
+                    "cost_cny": p.get("cost_cny"),
+                    "finish_reason": p.get("finish_reason"),
+                    "request_ref": p.get("request_ref"),
+                    "response_ref": p.get("response_ref"),
+                }
+            )
         elif kind == "tool_call":
-            steps.append({
-                "seq": ev.get("seq"),
-                "ts": ev.get("ts"),
-                "type": "tool_call",
-                "role": ev.get("role"),
-                "tool": p.get("tool"),
-                "ok": p.get("ok"),
-                "display": p.get("display"),
-                "exit_code": p.get("exit_code"),
-                "message_ref": p.get("message_ref"),
-                "output_ref": p.get("output_ref"),
-            })
+            steps.append(
+                {
+                    "seq": ev.get("seq"),
+                    "ts": ev.get("ts"),
+                    "type": "tool_call",
+                    "role": ev.get("role"),
+                    "tool": p.get("tool"),
+                    "ok": p.get("ok"),
+                    "display": p.get("display"),
+                    "exit_code": p.get("exit_code"),
+                    "message_ref": p.get("message_ref"),
+                    "output_ref": p.get("output_ref"),
+                }
+            )
         elif kind == "task_finished":
-            steps.append({
-                "seq": ev.get("seq"),
-                "ts": ev.get("ts"),
-                "type": "task_finished",
-                "status": p.get("status"),
-            })
+            steps.append(
+                {
+                    "seq": ev.get("seq"),
+                    "ts": ev.get("ts"),
+                    "type": "task_finished",
+                    "status": p.get("status"),
+                }
+            )
     reward = _reward(run_dir, result)
     return {
         "format": "trajectory-reward/v1",
@@ -197,8 +205,9 @@ def export_rlvr(run_dir: Path) -> dict[str, Any]:
         "resolved": bool(result.get("resolved")) if result else reward >= 1.0,
         "cost_cny": (result or {}).get("cost_cny"),
         "steps": steps,
-        "result": {k: result[k] for k in ("agent_status", "false_success", "steps", "wall_s")
-                   if result and k in result} if result else {},
+        "result": {k: result[k] for k in ("agent_status", "false_success", "steps", "wall_s") if result and k in result}
+        if result
+        else {},
     }
 
 
@@ -253,9 +262,9 @@ def export_html(run_dir: Path) -> str:
         role = ev.get("role") or p.get("role_hint") or ""
         extra = ""
         if kind == "model_call":
-            extra = f'{p.get("model", "")} · ¥{p.get("cost_cny", 0):.4f}'
+            extra = f"{p.get('model', '')} · ¥{p.get('cost_cny', 0):.4f}"
         elif kind == "tool_call":
-            extra = f'{p.get("tool", "")} · {"ok" if p.get("ok") else "fail"}'
+            extra = f"{p.get('tool', '')} · {'ok' if p.get('ok') else 'fail'}"
         elif kind == "task_finished":
             extra = str(p.get("status") or "")
         rows.append(
