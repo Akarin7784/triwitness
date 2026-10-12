@@ -10,6 +10,7 @@
 
 ### Added
 - **W8-03 轨迹导出**（`tw traj export`）：OpenAI messages（SFT）、轨迹+奖励（RLVR）、Harbor 结果目录、单文件 HTML 回放；样例在 `evals/fixtures/traj_export/`。
+- **W5-13 外部对照第三轮（box，10 题 × 3，2026-10-12 13:32–14:31 UTC+8，Eva 批 `--allow-peak`，账本 ¥3.0144）**：`evals/baselines/2026-10-12-harbor-tb2-r3/`。30/30 完成、0 异常，**解决 28/30 = 93.3%**（Wilson 79%–98%）。超时守卫默认 `timeout_guard=block`：overfull-hbox 1/3→3/3，cobol / polyglot 均 3/3。fix-git 1/3 是判分环境 apt 镜像 500/404（Agent 已给出合理 merge，不是回归）。缓存命中 98.1%；比 r2 贵主要因高峰价（496/890）与 polyglot 三次偏贵。
 - **W7 安全网关首版（spec 014 / 015）**：Docker `network=allowlist` = internal 网络 + 出网网关 sidecar（域名白名单、SSRF / 元数据 / IP 直连 / DNS 外泄拦截；凭证按域名+方法+路径注入，沙箱只有 `tw-placeholder-*`；审计不记密钥）。MCP 代理（2026-07-28 无状态核心：白名单、版本固定、工具元数据指纹、第 N 次变脸隔离、返回包 untrusted）。参数级策略引擎 fail closed（分类器 uncertain→deny）。回收区 / git 只推 `tw/*` / 外部破坏性操作延迟可撤销。跨 agent 委托注入扫描 + HITL 审批令牌。红队 39 用例确定性开/关对比 39/39（¥0）。
 - **W6 spec 013 §10**：六个开放问题落成可逆默认值后，**Eva 于 2026-10-12 全部确认**（人工审核 repo 级 Skill；事实仅 `accept`；`tw run` 默认读记忆；门禁点估计 + underpowered；每周门禁约 ¥4；回滚 −15pp；导出仅三目录且不写用户仓库）。桌面端“本次用了哪些记忆”记为 UI TODO（`apps/desktop/STATUS.md`）。
 
