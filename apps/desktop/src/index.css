@@ -287,6 +287,12 @@ body {
 .tip-top-start { bottom: calc(100% + 7px); left: 0; transform: translateY(3px); }
 .tip-host:hover > .tip-top-end, .tip-host:hover > .tip-top-start { transform: none; }
 
+/* 会话状态签（阿验 b2 合并后 P2）：最小宽度按最宽的「进行中」（点 7 + 间距 6 + 三个字），切换状态时标题截断长度不跳；
+   日间「完成」字色加深到 ≥ 7:1（原来与「进行中」「失败」同为 sepia、描边几乎和页面分不开），夜间不变 */
+.state-chip { min-width: calc(7px + 6px + 3em + 22px); justify-content: center; }
+.state-chip[data-phase='done'] { --state-done-fg: #2c4632; color: var(--state-done-fg); }
+:root[data-theme='dark'] .state-chip[data-phase='done'] { color: var(--color-sepia); }
+
 .chip {
   display: inline-flex;
   align-items: center;

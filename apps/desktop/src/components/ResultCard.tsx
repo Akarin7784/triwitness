@@ -10,6 +10,7 @@ import { PrDialog } from './PrDialog'
 import { DiagButton } from './DiagButton'
 import type { PrOpened } from '../lib/pr'
 import { inTauri } from '../lib/appWindow'
+import { inconclusiveAdvice } from '../lib/verdictAdvice'
 import { toast } from '../lib/toast'
 
 const VERDICT: Record<string, { label: string; cls: string }> = {
@@ -39,6 +40,7 @@ export function ResultCard({ result }: { result: ResultMsg }) {
   const canPr = result.status === 'done' && !!result.branch && !!result.run_id
   const v = result.verdict ? VERDICT[result.verdict] : null
   const lines = prSummary(result.pr_md, open ? 200 : 6)
+  const advice = inconclusiveAdvice(result)
   return (
     <article data-testid="result-card" className="paper-card fade-in mr-auto w-full max-w-[68em] rounded-2xl px-5 py-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -59,6 +61,11 @@ export function ResultCard({ result }: { result: ResultMsg }) {
       {result.summary && <p className="selectable mt-3 text-[14px] leading-[1.8] text-ink-soft">{result.summary}</p>}
       {result.reason && !result.summary && (
         <p className="selectable mt-3 text-[13px] leading-[1.8] text-sepia">{result.reason}</p>
+      )}
+      {advice && (
+        <p data-testid="verdict-advice" className="selectable mt-2 text-[14px] leading-[1.8] text-amber-ink">
+          {advice}
+        </p>
       )}
       {lines.length > 0 && (
         <div className="mt-3 border-t border-border-soft pt-3">
