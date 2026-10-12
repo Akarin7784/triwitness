@@ -76,6 +76,8 @@ def main() -> None:
         "--specpath", str(work),
         "--add-data", f"{ROOT / 'configs'}{SEP}configs",
         "--collect-data", "triwitness",  # prompts/*.md、tools/descriptions/*.md
+        # 出网网关源码要原样拷进网关容器（sandbox/egress.py），冻结包里没有 .py，单独带一份
+        "--add-data", f"{ROOT / 'src' / 'triwitness' / 'gateway' / 'egress_proxy.py'}{SEP}triwitness/gateway",
         "--collect-submodules", "triwitness",
         "--collect-submodules", "unittest",  # 演示仓库：tw.exe -m unittest（含 unittest.__main__）
         "--hidden-import", "tzdata",

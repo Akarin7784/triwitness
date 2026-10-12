@@ -39,6 +39,7 @@ from triwitness.sandbox.base import (
     check_sandbox_path,
     validate_sandbox_env,
 )
+from triwitness.sandbox.egress import EgressGateway, sandbox_network_kwargs
 from triwitness.sandbox.gitsnap import GitSnapshotter, git
 
 DEFAULT_IMAGE = "python:3.12-slim"
@@ -97,10 +98,11 @@ def _repo_tar(repo: Path, base_ref: str, prefix: str) -> bytes:
 class DockerSandbox:
     backend: BackendName = "docker"
 
-    def __init__(self, client: Any, container: Any, spec: SandboxSpec) -> None:
+    def __init__(self, client: Any, container: Any, spec: SandboxSpec, gateway: EgressGateway | None = None) -> None:
         self.client = client
         self.container = container
         self.spec = spec
+        self.gateway = gateway
         self.id = container.id[:12]
         self._closed = False
 
@@ -328,6 +330,8 @@ class DockerSandbox:
         _LIVE.pop(self.container.id, None)
         with contextlib.suppress(NotFound):
             await asyncio.to_thread(self.container.remove, force=True)
+        if self.gateway is not None:
+            await asyncio.to_thread(self.gateway.close)
         root = getattr(self, "mirror_root", None)
         if root is not None:
             shutil.rmtree(root, ignore_errors=True)
@@ -365,9 +369,11 @@ class DockerSandboxBackend:
         isolation="container", network_enforced=True, clean_env=True, host_fs_visible=False, allows_full_access=True
     )
 
-    def __init__(self, client: Any | None = None, *, home: Path | None = None) -> None:
+    def __init__(self, client: Any | None = None, *, home: Path | None = None,
+                 gateway_extra_networks: list[str] | None = None) -> None:  # fmt: skip
         self._client = client
         self._home = home
+        self.gateway_extra_networks = list(gateway_extra_networks or [])  # 网关额外接入的网络（测试 / 内网服务）
 
     def client(self) -> Any:
         if self._client is None:
@@ -391,11 +397,13 @@ class DockerSandboxBackend:
 
     async def create(self, spec: SandboxSpec) -> Sandbox:
         validate_sandbox_env(spec.env)
-        if spec.network == "allowlist":
-            raise SandboxError("network=allowlist 尚未实现（W2）")
+        if spec.network == "allowlist" and not spec.allowlist and not spec.credentials:
+            raise SandboxError("network=allowlist 需要至少一个白名单域名或凭证规则（configs/policies/egress.yaml）")
         image = spec.image or DEFAULT_IMAGE
         client = self.client()
         repo_tar = _repo_tar(spec.repo, spec.base_ref, spec.workdir.lstrip("/")) if spec.repo else None
+
+        home = self._home or tw_home()
 
         def run() -> DockerSandbox:
             try:
@@ -403,7 +411,18 @@ class DockerSandboxBackend:
             except ImageNotFound:
                 client.images.pull(image)
             kwargs = container_kwargs(spec)
-            container = client.containers.run(image, **kwargs)
+            gw = None
+            if spec.network == "allowlist":
+                gw = EgressGateway.start(client, spec, audit_dir=home / "gateway",
+                                         extra_networks=self.gateway_extra_networks)  # fmt: skip
+                kwargs.update(sandbox_network_kwargs(gw.net_name))
+                kwargs.pop("extra_hosts", None)  # 出网全经网关；代码托管域名由白名单控制
+            try:
+                container = client.containers.run(image, **kwargs)
+            except Exception:
+                if gw is not None:
+                    gw.close()
+                raise
             try:
                 wd = spec.workdir.lstrip("/")
                 parts = wd.split("/")
@@ -414,8 +433,10 @@ class DockerSandboxBackend:
                     container.put_archive("/", repo_tar)
             except Exception:
                 container.remove(force=True)
+                if gw is not None:
+                    gw.close()
                 raise
-            return DockerSandbox(client, container, spec)
+            return DockerSandbox(client, container, spec, gw)
 
         try:
             sb = await asyncio.to_thread(run)
@@ -434,12 +455,18 @@ class DockerSandboxBackend:
 
         def run() -> int:
             n = 0
+            live_gw = {sb.gateway.container.id for sb in _LIVE.values() if sb.gateway and sb.gateway.container}
             for c in self.client().containers.list(all=True, filters={"label": f"{LABEL}=true"}):
-                if c.id in _LIVE:
+                if c.id in _LIVE or c.id in live_gw:
                     continue
                 with contextlib.suppress(NotFound):
                     c.remove(force=True)
                     n += 1
+            live_nets = {sb.gateway.net_name for sb in _LIVE.values() if sb.gateway}
+            for net in self.client().networks.list(filters={"label": f"{LABEL}=true"}):
+                if net.name not in live_nets:
+                    with contextlib.suppress(NotFound, DockerException):
+                        net.remove()
             return n
 
         return await asyncio.to_thread(run)
@@ -450,6 +477,9 @@ def _cleanup() -> None:  # pragma: no cover - 进程退出时
     for sb in list(_LIVE.values()):
         with contextlib.suppress(Exception):
             sb.container.remove(force=True)
+        if sb.gateway is not None:
+            with contextlib.suppress(Exception):
+                sb.gateway.close()
     _LIVE.clear()
 
 

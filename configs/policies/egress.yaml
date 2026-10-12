@@ -1,0 +1,14 @@
+# 出网白名单档位（spec 014 §3，W7-03）。SandboxSpec(network="allowlist", allowlist=["profile:pypi", "example.org"])。
+# 只认域名：`a.com` 只匹配自身，`*.a.com` 只匹配子域；IP 字面量、私网 / 回环 / 链路本地 / 云元数据地址一律拒绝。
+# 本机代理用 fake-IP DNS（Clash TUN 等，所有域名解析到 198.18.0.0/15）时，网关会把解析结果当私网拒绝。
+# 这种机器在这里或用环境变量 TW_EGRESS_TREAT_AS_PUBLIC=198.18.0.0/15 声明；回环与链路本地（元数据）永远拒绝。
+treat_as_public: []
+profiles:
+  pypi:
+    allow: [pypi.org, files.pythonhosted.org]
+  npm:
+    allow: [registry.npmjs.org]
+  github-api:          # 只放 API；评测沙箱 block_code_hosts 时不要用
+    allow: [api.github.com]
+  deepseek:
+    allow: [api.deepseek.com]

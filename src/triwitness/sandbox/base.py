@@ -13,7 +13,7 @@ from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Protocol, runtime_checkable
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -71,6 +71,10 @@ class SandboxSpec(BaseModel):
     additional_directories: list[Path] = Field(default_factory=list)  # none 后端：文件工具可访问的额外目录
     # 评测防作弊（W5）：出网时把代码托管域名解析到 0.0.0.0（docker 后端；network=none 时本来就不通）
     block_code_hosts: bool = False
+    # network=allowlist（spec 014 §3，W7-03/04）：凭证注入规则（dict 形同 gateway.egress_proxy.CredentialRule），
+    # 真实值只在网关容器里（按 secret_env 从宿主环境读），沙箱里只有 tw-placeholder-*
+    credentials: list[dict[str, Any]] = Field(default_factory=list)
+    allow_private: list[str] = Field(default_factory=list)  # 测试 / 内网服务：显式主机名才允许私网地址
 
 
 class Probe(BaseModel):
