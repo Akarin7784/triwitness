@@ -59,3 +59,86 @@ async def test_pull_timeout_reports_progress(monkeypatch: pytest.MonkeyPatch) ->
         SANDBOX_PROGRESS.reset(token)
         c.images.release.set()
     assert seen == [("pull_image", "running"), ("pull_image", "failed")]
+
+
+def _init(repo: Path, *, commit: bool = True, files: bool = False) -> None:
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    if commit:
+        g = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+        if files:
+            (repo / "a.txt").write_text("1", encoding="utf-8")
+            subprocess.run([*g, "add", "-A"], check=True)
+        subprocess.run([*g, "commit", "-q", "--allow-empty", "-m", "i"], check=True)
+
+
+def test_repo_tar_uses_archive_output_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """回归：归档由 `git archive -o` 写文件，不再依赖 stdout 句柄（Windows 上曾读到空内容）。"""
+    from triwitness.sandbox import local
+
+    calls: list[list[str]] = []
+    real = local.run_capture
+
+    def spy(argv: list[str], **kw: object) -> tuple[int | None, bytes]:
+        calls.append(argv)
+        return real(argv, **kw)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(local, "run_capture", spy)
+    repo = tmp_path / "r"
+    _init(repo)
+    dk._repo_tar(repo, "HEAD", "workspace/repo")
+    archive = [a for a in calls if "archive" in a]
+    assert archive and "-o" in archive[0]
+
+
+def test_repo_tar_empty_tree_snapshot(tmp_path: Path) -> None:
+    """自动初始化的空文件夹（只有 --allow-empty 首次提交）也能打包成合法 tar。"""
+    repo = tmp_path / "r"
+    _init(repo)
+    data = dk._repo_tar(repo, "HEAD", "workspace/repo")
+    with tarfile.open(fileobj=io.BytesIO(data)) as tf:
+        assert tf.getnames() == []
+
+
+def test_repo_tar_no_commit_clear_error(tmp_path: Path) -> None:
+    repo = tmp_path / "r"
+    _init(repo, commit=False)
+    with pytest.raises(SandboxError, match="还没有任何提交"):
+        dk._repo_tar(repo, "HEAD", "workspace/repo")
+
+
+def test_repo_tar_empty_output_clear_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """模拟 Windows 症状：git 退出码 0 但输出为空——给出明确错误而不是 tarfile ReadError。"""
+    from triwitness.sandbox import local
+
+    real = local.run_capture
+
+    def fake(argv: list[str], **kw: object) -> tuple[int | None, bytes]:
+        if "archive" in argv:
+            return 0, b""  # 不写 -o 文件
+        return real(argv, **kw)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(local, "run_capture", fake)
+    repo = tmp_path / "r"
+    _init(repo)
+    with pytest.raises(SandboxError, match="输出为空或被截断"):
+        dk._repo_tar(repo, "HEAD", "workspace/repo")
+
+
+def test_repo_tar_garbage_output_clear_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """模拟截断 / CRLF 改写后的坏 tar：转成 SandboxError。"""
+    from triwitness.sandbox import local
+
+    real = local.run_capture
+
+    def fake(argv: list[str], **kw: object) -> tuple[int | None, bytes]:
+        if "archive" in argv:
+            Path(argv[argv.index("-o") + 1]).write_bytes(b"x\r\n" * 400)
+            return 0, b""
+        return real(argv, **kw)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(local, "run_capture", fake)
+    repo = tmp_path / "r"
+    _init(repo, files=True)
+    with pytest.raises(SandboxError, match="不是有效的 tar"):
+        dk._repo_tar(repo, "HEAD", "workspace/repo")

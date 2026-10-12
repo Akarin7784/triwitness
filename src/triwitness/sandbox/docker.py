@@ -82,29 +82,75 @@ def pull_timeout_s() -> float:
         return float(PULL_TIMEOUT_S)
 
 
+def _git_archive_bytes(repo: Path, base_ref: str) -> bytes:
+    """`git archive -o <文件>`：由 git 自己按二进制写文件，Python 只在 git 退出、文件关闭后再读。
+
+    0.5.1 修复（Windows 首次运行 ReadError 'not a gzip file' / 'end of file header'）：以前把 git 的 stdout
+    重定向到 Python 打开着的 TemporaryFile 句柄。Windows 上 PATH 里的 git 是 `Git\\cmd\\git.exe` 启动器，
+    真正的 git 是它的子进程；句柄经启动器转交、与 Python 共享文件指针，Python 回读时可能读到空内容
+    （退出码却是 0），交给 tarfile 就是这个报错。改成 `-o` 后不再依赖句柄继承与共享文件指针。
+    读之前还会校验：ref 必须能解析成提交、文件非空且是合法 tar，否则给出明确的中文错误。
+    """
+    import tempfile
+
+    from triwitness.sandbox.local import run_capture
+
+    code, out = run_capture(["git", "-C", str(repo), "rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"],
+                            timeout=ARCHIVE_TIMEOUT_S)  # fmt: skip
+    if code is None:
+        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：git 起不来或超过 {ARCHIVE_TIMEOUT_S}s")
+    if code != 0 or not out.strip():
+        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：退出码 {code}，"
+                           f"{base_ref} 不是有效提交（仓库还没有任何提交？）：{repo}")  # fmt: skip
+    tmpdir = tempfile.mkdtemp(prefix="tw-archive-")
+    try:
+        target = Path(tmpdir) / "repo.tar"
+        code, _ = run_capture(["git", "-C", str(repo), "archive", "--format=tar", "-o", str(target), base_ref],
+                              timeout=ARCHIVE_TIMEOUT_S)  # fmt: skip
+        if code is None:
+            raise SandboxError(f"打包仓库失败（git archive {base_ref}）：git 起不来或超过 {ARCHIVE_TIMEOUT_S}s")
+        if code != 0:
+            raise SandboxError(f"打包仓库失败（git archive {base_ref}）：退出码 {code}")
+        raw = target.read_bytes() if target.is_file() else b""
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    if len(raw) < 512:  # 合法 tar 至少一个 512 字节块（空树也有 10 KB 结束块）
+        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：git 返回成功但输出为空或被截断（{len(raw)} 字节）")
+    return raw
+
+
+def _tree_is_empty(repo: Path, base_ref: str) -> bool:
+    from triwitness.sandbox.local import run_capture
+
+    code, out = run_capture(["git", "-C", str(repo), "ls-tree", "--name-only", base_ref], timeout=ARCHIVE_TIMEOUT_S)
+    return code == 0 and not out.strip()
+
+
 def _repo_tar(repo: Path, base_ref: str, prefix: str) -> bytes:
     """`git archive` → 重写成 uid 1000、带前缀目录的 tar。
 
-    0.5.0：不再 subprocess.run(capture_output)——Windows 上 PATH 里的 git 是启动器，超时只杀启动器、
-    孙进程握着管道会让 communicate() 永远等下去（同 v0.3 的 local.py 卡死）。改走 run_capture：输出写临时文件、
-    stdin 为空、超时杀整棵进程树。调用方放在 asyncio.to_thread 里跑，不阻塞事件循环。
+    git 调用走 run_capture（stdin 为空、超时杀整棵进程树，避免 Windows git 启动器卡死）；
+    归档内容由 `git archive -o` 写文件（见 _git_archive_bytes）。调用方放在 asyncio.to_thread 里跑。
     """
-    from triwitness.sandbox.local import run_capture
-
-    code, raw = run_capture(["git", "-C", str(repo), "archive", "--format=tar", base_ref], timeout=ARCHIVE_TIMEOUT_S)
-    if code is None:
-        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：git 起不来或超过 {ARCHIVE_TIMEOUT_S}s")
-    if code != 0:
-        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：退出码 {code}")
+    raw = _git_archive_bytes(repo, base_ref)
     out = io.BytesIO()
-    with tarfile.open(fileobj=io.BytesIO(raw)) as src, tarfile.open(fileobj=out, mode="w") as dst:
-        for m in src.getmembers():
-            if m.name in ("pax_global_header",) or m.type == tarfile.XGLTYPE:
-                continue
-            m.name = posixpath.join(prefix, m.name)
-            m.uid = m.gid = SANDBOX_UID
-            m.uname = m.gname = "tw"
-            dst.addfile(m, src.extractfile(m) if m.isfile() else None)
+    if not raw.strip(b"\0") or _tree_is_empty(repo, base_ref):
+        # 空树（空文件夹自动初始化后的 --allow-empty 首次提交）：git 只输出 pax 全局头 + 全零结束块，
+        # Python tarfile 打开它会报 ReadError('end of file header')——这就是首次运行报错的根因。直接给空 tar。
+        with tarfile.open(fileobj=out, mode="w"):
+            pass
+        return out.getvalue()
+    try:
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as src, tarfile.open(fileobj=out, mode="w") as dst:
+            for m in src.getmembers():
+                if m.name in ("pax_global_header",) or m.type == tarfile.XGLTYPE:
+                    continue
+                m.name = posixpath.join(prefix, m.name)
+                m.uid = m.gid = SANDBOX_UID
+                m.uname = m.gname = "tw"
+                dst.addfile(m, src.extractfile(m) if m.isfile() else None)
+    except tarfile.TarError as e:
+        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：输出不是有效的 tar（{len(raw)} 字节）：{e}") from e
     return out.getvalue()
 
 
