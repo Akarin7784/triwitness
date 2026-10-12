@@ -9,6 +9,6 @@
 | 0005 | [0005-permissions-and-sandbox-modes.md](0005-permissions-and-sandbox-modes.md) | 权限与沙箱模式（Docker 优先于 E2B） |
 | 0006 | [0006-routing.md](0006-routing.md) | 模型路由 |
 | 0007 | [0007-default-reviewer-checklist.md](0007-default-reviewer-checklist.md) | 默认 Reviewer = checklist_t10 |
-| 0008 | [0008-project-delivery-mode.md](0008-project-delivery-mode.md) | 交付模式：项目定默认 + 对话定本轮（待审） |
+| 0008 | [0008-project-delivery-mode.md](0008-project-delivery-mode.md) | 交付模式：项目定默认 + 对话定本轮（已采纳） |
 
 缺 0004（命名）见 TASKS W1-02 延后项。Temporal 取舍见 architecture 编排章节（进程内状态机，不用 Temporal）。
