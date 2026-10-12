@@ -27,6 +27,7 @@ import { ProjectPicker } from './ProjectPicker'
 import { Tip } from './Tip'
 import { StatusGlyph } from './StatusGlyph'
 import { t } from '../lib/i18n'
+import { dupOrdinals } from '../lib/dupOrdinals'
 
 export interface SidebarItem {
   id: string
@@ -39,6 +40,8 @@ export interface SidebarItem {
   projectId?: string | null
   /** 最近活动时间（毫秒）：会话页按它排序 */
   at?: number
+  /** 会话第一轮（根任务）的开始时间：同名序号按它编，后续活动不改号 */
+  firstAt?: number
 }
 
 export type SidebarView = 'chat' | 'settings' | 'projects' | 'artifacts' | 'chats'
@@ -78,15 +81,7 @@ export function Sidebar(p: SidebarProps) {
   const inProject = (c: SidebarItem) => !!c.projectId && p.projects.some((x) => x.id === c.projectId)
   const recents = p.items.filter((c) => !c.starred && !inProject(c))
   // 同名会话（如三条「#87 并发刷新 token …」）：额外显示短 id 区分（走查 r2-4）
-  // 序号按出现先后（at 升序，缺省按列表倒序）编号 ·1 ·2 ·3
-  const byTitle = new Map<string, SidebarItem[]>()
-  p.items.forEach((c) => byTitle.set(c.title, [...(byTitle.get(c.title) ?? []), c]))
-  const ordinal = new Map<string, number>()
-  for (const list of byTitle.values()) {
-    if (list.length < 2) continue
-    const order = list.map((c, i) => ({ c, k: c.at ?? -i })).sort((a, b) => a.k - b.k)
-    order.forEach(({ c }, i) => ordinal.set(c.id, i + 1))
-  }
+  const ordinal = dupOrdinals(p.items)
   const dupHint = (c: SidebarItem) => (ordinal.has(c.id) ? `·${ordinal.get(c.id)}` : undefined)
   const groups = p.projects
     .map((pr) => ({ ...pr, chats: p.items.filter((c) => !c.starred && c.projectId === pr.id) }))

@@ -274,7 +274,7 @@ export default function App() {
         const cur = currentTurn(c.id, chats)
         const shown = cur === c.id ? c : (all.find((x) => x.id === cur) ?? c)
         const o = chats.overlay[c.id]
-        return { ...shown, id: c.id, title: o?.title || c.title, starred: !!o?.starred, projectId: projects.chats[c.id] ?? null }
+        return { ...shown, id: c.id, firstAt: c.at, title: o?.title || c.title, starred: !!o?.starred, projectId: projects.chats[c.id] ?? null }
       })
   }, [catalog, locals, metas, source, chats, projects])
 
