@@ -46,6 +46,15 @@ export interface ResultMsg {
   pr_md: string | null
   /** 本地仓库路径（开 PR 用；0.3.2 起） */
   repo?: string | null
+  /** 结论卡「证据不足」时给具体下一步用（核心 bridge.stdio.verdict_detail；旧核心缺省） */
+  repro_status?: 'reproduced' | 'not_applicable' | 'inconclusive' | 'failed' | null
+  claim_flags?: string[]
+  anticheat_flags?: string[]
+  regression_blind?: boolean
+  review_status?: 'concluded' | 'inconclusive' | null
+  clean_env_reason?: string | null
+  /** 补丁改到 / 新建的文件（最多 20 个） */
+  changed_files?: string[]
 }
 export interface ErrorMsg {
   bridge: 'error'

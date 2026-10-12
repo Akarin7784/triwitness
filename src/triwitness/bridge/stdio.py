@@ -27,6 +27,7 @@ from triwitness.harness.approvals import ApprovalBroker, Approver
 from triwitness.harness.chat import TurnOutcome
 from triwitness.harness.local_run import LocalRunOutcome
 from triwitness.telemetry.trajectory import TrajectoryEvent
+from triwitness.verify.verifier import regression_blind
 
 PROTOCOL = "tw-bridge/1"
 PR_MD_MAX = 20_000
@@ -51,7 +52,33 @@ def result_message(out: LocalRunOutcome) -> dict[str, Any]:
         "reason": r.outcome.reason, "summary": r.finish.summary if r.finish else None,
         "verdict": ev.verdict if ev else None, "risk_level": ev.risk_level if ev else None,
         "clean_env": ev.clean_env if ev else None, "pr_md": pr_md, "repo": out.repo, "run_id": out.run_dir.name,
+        **verdict_detail(ev, out.run_dir),
     }  # fmt: skip
+
+
+def verdict_detail(ev: Any, run_dir: Path) -> dict[str, Any]:
+    """结论卡「证据不足」时给出具体下一步要用的细节（复现状态 / 声明审计 / 防作弊提示 / 回归盲区 / 改了哪些文件）。"""
+    if ev is None:
+        return {}
+    patch = run_dir / "patch.diff"
+    files = changed_files(patch.read_text(encoding="utf-8", errors="replace")) if patch.is_file() else []
+    return {
+        "repro_status": ev.repro_status, "claim_flags": list(ev.claim_flags),
+        "anticheat_flags": list(ev.anticheat_flags),
+        "regression_blind": regression_blind(list(ev.test_runs)) is not None, "review_status": ev.review_status,
+        "clean_env_reason": ev.unverified_reason, "changed_files": files[:20],
+    }  # fmt: skip
+
+
+def changed_files(patch: str) -> list[str]:
+    """补丁里改到 / 新建的文件（`+++ b/<path>`；删除的文件不算）。"""
+    out: list[str] = []
+    for line in patch.splitlines():
+        if line.startswith("+++ b/"):
+            path = line[6:].strip()
+            if path and path not in out:
+                out.append(path)
+    return out
 
 
 def turn_message(out: Outcome) -> dict[str, Any]:

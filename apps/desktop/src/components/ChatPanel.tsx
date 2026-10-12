@@ -176,10 +176,15 @@ export function ChatPanel({
             <MemoryChip memory={run.memory ?? null} />
             <CostChip run={run} />
             {(run.label || pending) && (
-              <span className="chip fade-in" key={pending ? t('待批') : run.label} data-testid="state-chip">
+              <span
+                className="chip state-chip fade-in"
+                key={pending ? t('待批') : run.label}
+                data-testid="state-chip"
+                data-phase={pending ? 'waiting' : run.phase}
+              >
                 <span
                   className={clsx(
-                    'h-1.5 w-1.5 rounded-full transition-colors duration-700',
+                    'h-[7px] w-[7px] shrink-0 rounded-full transition-colors duration-700',
                     PHASE_DOT[pending ? 'waiting' : run.phase],
                   )}
                 />

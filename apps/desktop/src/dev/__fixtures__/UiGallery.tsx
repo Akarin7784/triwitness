@@ -66,7 +66,7 @@ const APPROVAL: PendingApproval = {
   suggestedRule: 'bash(pip install *)',
 }
 
-const result = (verdict: string, status = 'done'): ResultMsg =>
+const result = (verdict: string, status = 'done', extra: Partial<ResultMsg> = {}): ResultMsg =>
   ({
     bridge: 'result',
     kind: 'task',
@@ -84,7 +84,21 @@ const result = (verdict: string, status = 'done'): ResultMsg =>
     clean_env: verdict === 'pass' ? 'verified' : 'failed',
     pr_md: '# 修复登录超时\n\n- 加 3s 超时\n- 失败重试 1 次',
     repo: 'C:/Users/demo/projects/very/long/path/to/repository/name',
+    ...extra,
   }) as unknown as ResultMsg
+
+const PELICAN: Partial<ResultMsg> = {
+  run_id: 'gallery-pelican',
+  reason: null,
+  summary: '生成 index.html：用 SVG 画一只骑自行车的鹈鹕，并补了复现测试。',
+  risk_level: 'L2',
+  clean_env: 'verified',
+  repro_status: 'reproduced',
+  claim_flags: ['issue_underspecified'],
+  anticheat_flags: [],
+  regression_blind: false,
+  changed_files: ['index.html', 'tests/tw_repro/test_issue_1.py'],
+}
 
 const STREAM = '我先读一下 `src/auth/login.ts`，确认超时是在哪里没有生效。\n\n看起来 `fetch` 没有传 `signal`，所以网络慢时会一直等。下一步我会加一个 AbortController，并补测试。\n\n```ts\nconst ctrl = new AbortController()\nconst res = await fetch(url, { signal: ctrl.signal })\n// 30 秒超时\nsetTimeout(() => ctrl.abort(), 30_000)\n```'
 
@@ -139,6 +153,8 @@ export default function UiGallery() {
           <div className="space-y-4">
             <ResultCard result={result('pass')} />
             <ResultCard result={result('inconclusive')} />
+            {/* 真实 run r_01M4RVEZWKASMK9HYES8RPTFK3（鹈鹕 index.html）：复现已通过，但 Issue 没写验收标准 */}
+            <ResultCard result={result('inconclusive', 'done', PELICAN)} />
             <ResultCard result={result('fail', 'failed')} />
           </div>
         </Section>
