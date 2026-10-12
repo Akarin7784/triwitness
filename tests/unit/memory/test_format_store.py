@@ -100,3 +100,21 @@ def test_repo_isolation(tmp_path: Path) -> None:
 )
 def test_memory_allowed_by_session(mode: str, category: str, override: bool | None, allowed: bool) -> None:
     assert memory_allowed(mode, category, override=override) is allowed
+
+
+def test_origin_url_reads_config_without_git_process(tmp_path: Path) -> None:
+    """仓库键直接读 .git/config（含 worktree 的 .git 文件），不起 git 子进程（Windows 桥接模式曾卡死）。"""
+    from triwitness.memory.store import origin_url
+
+    main = tmp_path / "main"
+    main.mkdir()
+    subprocess.run(["git", "init", "-q", str(main)], check=True)
+    subprocess.run(["git", "-C", str(main), "remote", "add", "origin", "https://github.com/o/p.git"], check=True)
+    subprocess.run(["git", "-C", str(main), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q",
+                    "--allow-empty", "-m", "i"], check=True)  # fmt: skip
+    wt = tmp_path / "wt"
+    subprocess.run(["git", "-C", str(main), "worktree", "add", "-q", str(wt)], check=True)
+    assert (wt / ".git").is_file()
+    assert origin_url(main) == origin_url(wt) == "https://github.com/o/p.git"
+    assert repo_key(wt) == "github.com__o__p"
+    assert origin_url(tmp_path) == ""

@@ -48,11 +48,7 @@ def repo_key(repo: str | Path) -> str:
     url = s
     p = Path(s)
     if not re.match(r"^(https?://|git@|ssh://)", s) and p.exists():
-        try:
-            url = subprocess.run(["git", "-C", str(p), "remote", "get-url", "origin"], capture_output=True,
-                                 text=True, timeout=10).stdout.strip() or ""  # fmt: skip
-        except (OSError, subprocess.SubprocessError):
-            url = ""
+        url = origin_url(p)
         if not url:
             h = hashlib.sha256(str(p.resolve()).encode()).hexdigest()[:8]
             return f"local__{_slug(p.resolve().name)}-{h}"
@@ -60,6 +56,57 @@ def repo_key(repo: str | Path) -> str:
     if not m:
         return _slug(url)
     return "__".join(_slug(x) for x in [m.group(1), *m.group(2).split("/")])
+
+
+def _git_common_dir(repo: Path) -> Path | None:
+    """仓库的 git 公共目录（.git 目录；worktree / 子模块的 .git 文件按 gitdir + commondir 解析）。"""
+    dot = repo / ".git"
+    if dot.is_dir():
+        return dot
+    if not dot.is_file():
+        return None
+    try:
+        m = re.match(r"gitdir:\s*(.+)", dot.read_text(encoding="utf-8", errors="replace").strip())
+    except OSError:
+        return None
+    if not m:
+        return None
+    gd = Path(m.group(1).strip())
+    gd = gd if gd.is_absolute() else (repo / gd)
+    common = gd / "commondir"
+    if common.is_file():
+        try:
+            c = Path(common.read_text(encoding="utf-8").strip())
+        except OSError:
+            return gd
+        return c if c.is_absolute() else (gd / c)
+    return gd
+
+
+def origin_url(repo: Path) -> str:
+    """直接读 .git/config 里 remote "origin" 的 url，不起 git 子进程。
+
+    `tw run` 每次都要算仓库键：Windows 打包版桥接模式下 stdin 是 JSONL 管道，起子进程曾卡死（package-windows 冒烟）；
+    读文件既快又不受 PATH / 凭据助手影响。
+    """
+    gd = _git_common_dir(repo)
+    if gd is None:
+        return ""
+    try:
+        text = (gd / "config").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    section = ""
+    for line in text.splitlines():
+        t = line.strip()
+        if t.startswith("["):
+            section = re.sub(r"\s+", " ", t.strip("[]").strip())
+            continue
+        if section == 'remote "origin"':
+            m = re.match(r"url\s*=\s*(.+)", t)
+            if m:
+                return m.group(1).strip().strip('"')
+    return ""
 
 
 def _slug(s: str) -> str:
@@ -124,7 +171,8 @@ class MemoryStore:
         try:
             return subprocess.run(["git", "-C", str(self.root), "-c", "user.name=triwitness",
                                    "-c", "user.email=memory@triwitness.local", "-c", "commit.gpgsign=false", *args],
-                                  capture_output=True, text=True, timeout=30)  # fmt: skip
+                                  capture_output=True, text=True, timeout=30,
+                                  stdin=subprocess.DEVNULL)  # 桥接模式 stdin 是 JSONL 管道，不能继承  # fmt: skip
         except (OSError, subprocess.SubprocessError):
             return None
 
@@ -285,4 +333,13 @@ class MemoryStore:
         return "\n".join(out)
 
 
-__all__ = ["FACT_KINDS", "Episode", "MemoryRejected", "MemoryStore", "memory_allowed", "repo_key", "today"]
+__all__ = [
+    "FACT_KINDS",
+    "Episode",
+    "MemoryRejected",
+    "MemoryStore",
+    "memory_allowed",
+    "origin_url",
+    "repo_key",
+    "today",
+]

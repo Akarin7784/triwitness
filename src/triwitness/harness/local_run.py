@@ -153,7 +153,7 @@ async def run_local(
             else:
                 log.warning("--open-pr 只支持 none 后端（%s 后端不开 PR，改动照常保留）", choice.backend.name)
         # W6：交互运行默认读本仓库的记忆（有才读）；--no-memory 关闭。这里只读，结束后只记 Skill 监控
-        mem = open_memory(str(repo), home=home, mode="background", category="dogfood", override=memory)
+        mem = _open_memory(repo, home, memory)
         result = await run_task(
             recorder=rec,
             router=router,
@@ -212,6 +212,15 @@ async def run_local(
         _observe_skills(repo, home, mem, run_id, result.verification.evidence.verdict == "pass", run_dir)
     return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch,
                            repo=str(repo.resolve()))  # fmt: skip
+
+
+def _open_memory(repo: Path, home: Path, override: bool | None) -> MemoryContext | None:
+    """读记忆出错只记日志：记忆是锦上添花，不能让任务起不来。"""
+    try:
+        return open_memory(str(repo), home=home, mode="background", category="dogfood", override=override)
+    except (OSError, ValueError, TriWitnessError) as e:
+        log.warning("读取记忆失败（本次不用记忆）：%s", e)
+        return None
 
 
 def _observe_skills(repo: Path, home: Path, mem: MemoryContext, run_id: str, solved: bool, run_dir: Path) -> None:
