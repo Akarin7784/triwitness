@@ -312,7 +312,7 @@ function liveGlyphs(cs: { key: string | number; ch: string }[], full: string | u
     const grp: ReactNode[] = []
     while (i < Math.min(b, cs.length)) grp.push(glyph(cs[i++]))
     out.push(
-      <span key={`t${a}`} className="whitespace-nowrap">
+      <span key={`t${a}`} className="stream-token">
         {grp}
       </span>,
     )
@@ -335,7 +335,7 @@ function keepTokensTogether(text: string): ReactNode {
         </span>
       )
       return (
-        <span key={i} className="whitespace-nowrap">
+        <span key={i} className="stream-token">
           {isWrite ? ['$ write_file\u00a0', pathEl] : [pathEl, m[2].replace(/ /g, '\u00a0')]}
         </span>
       )
@@ -343,7 +343,7 @@ function keepTokensTogether(text: string): ReactNode {
     // 「路径 (+18 −4)」：统计和前面的文件名粘在一起，不单独掉到下一行；文件名过长时中间省略
     const st = /^([^\s(（]+)( ?)([(（].+)$/.exec(p)
     return (
-      <span key={i} className="whitespace-nowrap">
+      <span key={i} className="stream-token">
         {st ? [<span key="p" title={st[1]} data-testid="stream-path">{middlePath(st[1], 24)}</span>, st[2] ? '\u00a0' : '', st[3]] : p}
       </span>
     )

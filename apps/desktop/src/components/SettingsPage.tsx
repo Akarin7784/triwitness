@@ -216,14 +216,15 @@ function Segmented<T extends string | number>({
             aria-pressed={value === o.id}
             onClick={() => (o.disabled ? undefined : onChange(o.id))}
             className={clsx(
-              'relative whitespace-nowrap rounded-full px-3.5 py-1 text-[13.5px] transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40',
-              value === o.id ? 'text-parchment' : 'text-ink-soft hover:text-amber-ink',
+              'relative whitespace-nowrap rounded-full px-3.5 py-1 text-[13.5px] disabled:cursor-not-allowed disabled:opacity-40',
+              // 批次 2 b2b-r1 P1：选中项字色 / 底色用专用 token，且不做颜色过渡（切主题时不会出现「浅底浅字」的中间态）
+              value === o.id ? 'seg-on' : 'text-ink-soft transition-colors duration-300 hover:text-amber-ink',
             )}
           >
             {value === o.id && (
               <motion.span
                 layoutId={`seg-${group}`}
-                className="absolute inset-0 rounded-full bg-ink"
+                className="seg-on-pill absolute inset-0 rounded-full"
                 transition={{ type: 'spring', stiffness: 520, damping: 38 }}
               />
             )}

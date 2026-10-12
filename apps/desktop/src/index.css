@@ -751,3 +751,14 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
 .stream-log { font-size: calc(var(--read-fs, 16px) - 3px); }
 .stream-role { font-size: calc(var(--read-fs, 16px) - 3px); }
 .stream-title { font-size: var(--read-fs, 16px); }
+
+/* 设置页分段控件选中项（b2b-r1 P1）：日 #f7f5f2 / #3a3632 = 11.00:1；夜 #1f1a15 / #d8c6ab = 10.34:1（见 segContrast.test.ts） */
+:root { --seg-on-fg: #f7f5f2; --seg-on-bg: #3a3632; }
+:root[data-theme='dark'] { --seg-on-fg: #1f1a15; --seg-on-bg: #d8c6ab; }
+.seg-on, .seg-on > span.relative { color: var(--seg-on-fg); transition: none; }
+.seg-on-pill { background: var(--seg-on-bg); }
+
+/* 右栏（b2b-r1）：token 能放下就整体不拆；比一整行还宽时在 token 内折行，绝不被右缘裁掉 */
+.stream-token { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+/* 中途出现滚动条不再让已显示的行重排 */
+.stream-paper { scrollbar-gutter: stable; }
