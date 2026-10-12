@@ -10,6 +10,7 @@ import { StreamingText } from '../../components/StreamingText'
 import { ApiKeyDialog } from '../../components/ApiKeyDialog'
 import type { ResultMsg } from '../../bridge/protocol'
 import type { PendingApproval } from '../../bridge/liveTask'
+import { getPrefs } from '../../lib/prefs'
 
 const MD = `# 一级标题：修复登录超时
 
@@ -90,14 +91,26 @@ const STREAM = '我先读一下 `src/auth/login.ts`，确认超时是在哪里�
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <section id={id} className="mb-10">
-      <h2 className="mb-3 border-b border-border-soft pb-1 font-sans text-[14px] text-sepia">{title}</h2>
+      <h2 className="mb-3 border-b border-border pb-1.5 font-sans text-[15px] font-semibold text-ink">{title}</h2>
       {children}
     </section>
   )
 }
 
+/** 样例页跟应用用同一份偏好：主题（auto 跟系统）与阅读字号；?theme=dark|light 可临时覆盖（批次 2-7 / P2） */
+function applyPrefs() {
+  const p = getPrefs()
+  const q = new URLSearchParams(location.search).get('theme')
+  const auto = window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  const root = document.documentElement
+  root.dataset.theme = q === 'dark' || q === 'light' ? q : p.theme === 'auto' ? auto : p.theme
+  root.style.setProperty('--read-fs', `${p.readingSize}px`)
+}
+
 export default function UiGallery() {
   const [n, setN] = useState(0)
+  const [, setTick] = useState(0)
+  useEffect(applyPrefs, [])
   const [keyOpen, setKeyOpen] = useState(false)
   useEffect(() => {
     const h = setInterval(() => setN((x) => (x >= STREAM.length ? 0 : x + 3)), 80)
@@ -105,13 +118,14 @@ export default function UiGallery() {
   }, [])
   const theme = document.documentElement.dataset.theme
   return (
-    <div className="app-grain h-full overflow-y-auto scroll-soft">
+    <div className="h-full overflow-y-auto scroll-soft bg-parchment text-ink">
       <div className="mx-auto max-w-[68em] px-8 py-8">
         <header className="mb-8 flex items-center gap-3 font-sans text-[13px] text-sepia">
-          <strong className="text-ink">UI 走查样例（仅开发版）</strong>
+          <strong className="text-[15px] text-ink">UI 走查样例（仅开发版）</strong>
           <button className="rounded-md border border-border px-2 py-1" onClick={() => {
             document.documentElement.dataset.theme = theme === 'dark' ? 'light' : 'dark'
             setN(0)
+            setTick((x) => x + 1)
           }}>切换日 / 夜</button>
           <a className="text-amber underline" href="?">返回应用</a>
         </header>

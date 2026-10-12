@@ -1,3 +1,4 @@
+import { TOKEN_RE, tokenRanges } from '../lib/streamTokens'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import clsx from 'clsx'
@@ -148,7 +149,7 @@ export function WritingStream({
     <div className={clsx('flex h-full min-h-0 flex-col', className)}>
       <div className="flex items-center justify-between gap-3 px-5 pb-3.5 pt-5">
         <div className="flex min-w-0 items-center gap-3">
-          <h2 className="truncate font-serif text-[16px] font-medium tracking-wide text-ink">{title}</h2>
+          <h2 className="stream-title truncate font-serif font-medium tracking-wide text-ink">{title}</h2>
           <div className="flex items-center gap-1.5">
             {(['planner', 'executor', 'verifier', 'reviewer'] as const).map((r) => (
               <Tip key={r} label={roleLabel[r]} side="bottom">
@@ -202,18 +203,14 @@ export function WritingStream({
         }}
         className="stream-paper relative min-h-0 flex-1 overflow-y-auto scroll-soft px-5 py-5"
       >
-        <div className="selectable font-mono text-[13px] leading-[1.85] text-ink-soft">
+        <div className="stream-log selectable font-mono leading-[1.85] text-ink-soft">
           {grouped.map((line, li) => {
             const isLast = li === grouped.length - 1
             const meta = lineById.get(line.lineId)
             // 最后两行逐字（墨迹还在沉淀）；更早的行墨已干，整行一个文本节点 + memo，长任务里 DOM 不再按字膨胀
             const live = !reduced && li >= grouped.length - 2
             const glyphs = live
-              ? chars.slice(line.start, Math.min(line.end, visibleCount)).map((c) => (
-                  <span key={c.key} className="ink-char">
-                    {c.ch}
-                  </span>
-                ))
+              ? liveGlyphs(chars.slice(line.start, Math.min(line.end, visibleCount)), meta?.text)
               : keepTokensTogether(meta?.text ?? chars.slice(line.start, line.end).map((c) => c.ch).join(''))
             return (
               <StreamLineView
@@ -282,7 +279,7 @@ const StreamLineView = memo(function StreamLineView({
       </span>
       <p className="min-w-0 flex-1 whitespace-pre-wrap break-words">
         <span
-          className="mr-2 inline-block select-none font-sans text-[13px] font-medium tracking-[0.12em]"
+          className="stream-role mr-2 inline-block select-none font-sans font-medium tracking-[0.12em]"
           style={{ color: roleColor[role] }}
         >
           {roleLabel[role]}
@@ -300,7 +297,29 @@ const StreamLineView = memo(function StreamLineView({
  * - 「test_issue_87.py → 1 failed」结果
  * - 「$ write_file <路径>」：路径不单独掉行，过长时中间省略，悬停看全路径
  */
-const TOKEN_RE = /([(（]\+\d+ [−-]\d+[)）]|\S+ → \d+ [A-Za-z]+|\$ write_file \S+)/
+function liveGlyphs(cs: { key: string | number; ch: string }[], full: string | undefined): ReactNode {
+  const ranges = full ? tokenRanges(full) : []
+  const out: ReactNode[] = []
+  let i = 0
+  const glyph = (c: { key: string | number; ch: string }) => (
+    <span key={c.key} className="ink-char">
+      {c.ch}
+    </span>
+  )
+  for (const [a, b] of ranges) {
+    if (a >= cs.length) break
+    while (i < a) out.push(glyph(cs[i++]))
+    const grp: ReactNode[] = []
+    while (i < Math.min(b, cs.length)) grp.push(glyph(cs[i++]))
+    out.push(
+      <span key={`t${a}`} className="stream-token">
+        {grp}
+      </span>,
+    )
+  }
+  while (i < cs.length) out.push(glyph(cs[i++]))
+  return out
+}
 function keepTokensTogether(text: string): ReactNode {
   const parts = text.split(TOKEN_RE)
   if (parts.length === 1) return text
@@ -316,14 +335,16 @@ function keepTokensTogether(text: string): ReactNode {
         </span>
       )
       return (
-        <span key={i} className="whitespace-nowrap">
+        <span key={i} className="stream-token">
           {isWrite ? ['$ write_file\u00a0', pathEl] : [pathEl, m[2].replace(/ /g, '\u00a0')]}
         </span>
       )
     }
+    // 「路径 (+18 −4)」：统计和前面的文件名粘在一起，不单独掉到下一行；文件名过长时中间省略
+    const st = /^([^\s(（]+)( ?)([(（].+)$/.exec(p)
     return (
-      <span key={i} className="whitespace-nowrap">
-        {p}
+      <span key={i} className="stream-token">
+        {st ? [<span key="p" title={st[1]} data-testid="stream-path">{middlePath(st[1], 24)}</span>, st[2] ? '\u00a0' : '', st[3]] : p}
       </span>
     )
   })
