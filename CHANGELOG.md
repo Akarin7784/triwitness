@@ -5,9 +5,14 @@
 
 ## [Unreleased]
 
+### Known issues（第 2 批）
+- 演示回放会话里的步骤标题不跟「长时阅读字号」变化（该设置只作用于对话正文与用户气泡）。
+
 ## [0.5.1-preview] - 2026-10-13
 
 UI 批次 1：电子书 / Typora 式浅色简约界面（Eva 定向「选浅色简约风格，参考 typora 等 markdown 编辑器」，蓝色大肥鱼主导，真用户阿验两轮走查）。计划见 `apps/desktop/docs/ebook-ui-plan.md`。
+
+正式安装包 = GitHub Release（草稿）附件 `TriWitness_0.5.1-preview_x64-setup.exe`，sha256 `dda66b861e13ed9ae847a12418144d7fb4c67fc9eef812baba4aa96ce8cab642`（标签 v0.5.1-preview 的 release 工作流构建）。
 
 ### Changed
 - **浅色主主题**：底 `#f7f5f2`、正文 `#3a3632`（11:1）；删除纸纹（不留开关）；正文 16px / 1.7 行高；Markdown 标题 / 引用 / 表格 / 代码贴近 Typora 的克制样式。夜间为次要主题，卡片正文 `#c4b59c`（7.41:1）。
