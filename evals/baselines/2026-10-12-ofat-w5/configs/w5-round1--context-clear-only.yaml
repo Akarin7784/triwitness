@@ -1,0 +1,8 @@
+harness: configs/harness/clear-only.yaml
+executor:
+  model: deepseek-flash
+  thinking: false
+attempts: 1
+budget_profile: eval
+name: w5-round1--context-clear-only
+category: ofat-ablation

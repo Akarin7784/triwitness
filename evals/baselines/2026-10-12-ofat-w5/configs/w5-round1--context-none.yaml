@@ -1,0 +1,8 @@
+harness: configs/harness/no-context-mgmt.yaml
+executor:
+  model: deepseek-flash
+  thinking: false
+attempts: 1
+budget_profile: eval
+name: w5-round1--context-none
+category: ofat-ablation

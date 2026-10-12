@@ -1,0 +1,8 @@
+harness: configs/harness/minimal-4-tools.yaml
+executor:
+  model: deepseek-flash
+  thinking: false
+attempts: 1
+budget_profile: eval
+name: w5-round1--tools-minimal-4
+category: ofat-ablation

@@ -1,0 +1,8 @@
+harness: configs/harness/baseline.yaml
+executor:
+  model: deepseek-flash
+  thinking: false
+attempts: 1
+budget_profile: eval
+name: w5-round1
+category: ofat-ablation

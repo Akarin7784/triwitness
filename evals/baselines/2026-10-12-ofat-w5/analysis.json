@@ -1,0 +1,928 @@
+{
+ "bundle": "ofat-ablation-20261012-0753",
+ "git_sha": "c6e32c0",
+ "env": {
+  "python": "3.12.15",
+  "git_sha": "c6e32c0",
+  "docker": "29.8.2",
+  "os": "linux",
+  "kernel": "6.18.40.1-microsoft-standard-WSL2",
+  "llm_mode": "live"
+ },
+ "repeats": 1,
+ "n_tasks": 15,
+ "mde_paired_20pct_discordant": 0.3235,
+ "mde_independent": 0.4092,
+ "ledger_total_cny": 9.92125,
+ "ledger_calls": 4138,
+ "ledger_window_utc": [
+  "2026-10-11T16:36:00.766746+00:00",
+  "2026-10-11T23:20:51.971370+00:00"
+ ],
+ "ledger_by_config": {
+  "w5-round1": {
+   "calls": 358,
+   "cost": 0.63059,
+   "inp": 6324911,
+   "hit": 6125952,
+   "out": 77278,
+   "max_in": 42392,
+   "peak": 0,
+   "cache_hit": 0.9685
+  },
+  "w5-round1--context-none": {
+   "calls": 381,
+   "cost": 0.68456,
+   "inp": 7208626,
+   "hit": 7003264,
+   "out": 84784,
+   "max_in": 53452,
+   "peak": 0,
+   "cache_hit": 0.9715
+  },
+  "w5-round1--context-compact-only": {
+   "calls": 385,
+   "cost": 0.72208,
+   "inp": 7963681,
+   "hit": 7739136,
+   "out": 85687,
+   "max_in": 49086,
+   "peak": 0,
+   "cache_hit": 0.9718
+  },
+  "w5-round1--context-clear-only": {
+   "calls": 482,
+   "cost": 0.95376,
+   "inp": 11822154,
+   "hit": 11480064,
+   "out": 95518,
+   "max_in": 76240,
+   "peak": 0,
+   "cache_hit": 0.9711
+  },
+  "w5-round1--tools-minimal-4": {
+   "calls": 411,
+   "cost": 0.73716,
+   "inp": 8312676,
+   "hit": 8097920,
+   "out": 90112,
+   "max_in": 55252,
+   "peak": 0,
+   "cache_hit": 0.9742
+  },
+  "w5-round1--tools-repo-map": {
+   "calls": 374,
+   "cost": 0.68864,
+   "inp": 7182041,
+   "hit": 6969856,
+   "out": 84265,
+   "max_in": 47569,
+   "peak": 0,
+   "cache_hit": 0.9705
+  },
+  "w5-round1--thinking-low": {
+   "calls": 311,
+   "cost": 0.69594,
+   "inp": 5335299,
+   "hit": 5168768,
+   "out": 106509,
+   "max_in": 39206,
+   "peak": 0,
+   "cache_hit": 0.9688
+  },
+  "w5-round1--thinking-high": {
+   "calls": 505,
+   "cost": 2.07076,
+   "inp": 17853208,
+   "hit": 17294720,
+   "out": 291595,
+   "max_in": 101210,
+   "peak": 0,
+   "cache_hit": 0.9687
+  },
+  "w5-round1--repro_first-enabled": {
+   "calls": 349,
+   "cost": 0.59401,
+   "inp": 5770287,
+   "hit": 5562752,
+   "out": 68804,
+   "max_in": 40858,
+   "peak": 0,
+   "cache_hit": 0.964
+  },
+  "w5-round1--planner-enabled": {
+   "calls": 582,
+   "cost": 2.14375,
+   "inp": 14423823,
+   "hit": 13837952,
+   "out": 320279,
+   "max_in": 76339,
+   "peak": 0,
+   "cache_hit": 0.9594
+  }
+ },
+ "configs": {
+  "w5-round1": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": null,
+   "diff_ci": null,
+   "mcnemar": null,
+   "p_holm": null,
+   "verdict": "基线",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.6306,
+    "steps": 23.9,
+    "wall": 338.3,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 0.6306,
+    "calls": 358,
+    "tokens_in": 6324911,
+    "tokens_out": 77278,
+    "cache_hit": 0.9685,
+    "max_input_per_call": 42392,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": null,
+   "coverage": {
+    "result_json": 15,
+    "trajectories": 15
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 1,
+   "budget_exceeded": [],
+   "max_input_in_traj": 42392,
+   "tool_calls_top": {
+    "bash": 162,
+    "read_file": 89,
+    "edit_file": 56,
+    "run_tests": 41,
+    "grep": 22,
+    "notes": 22,
+    "finish": 16,
+    "write_file": 15,
+    "list_files": 6,
+    "git": 3
+   }
+  },
+  "w5-round1--context-none": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.6846,
+    "steps": 25.4,
+    "wall": 251.1,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 0.6846,
+    "calls": 381,
+    "tokens_in": 7208626,
+    "tokens_out": 84784,
+    "cache_hit": 0.9715,
+    "max_input_per_call": 53452,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.0036,
+    "ci": [
+     -0.0046,
+     0.0113
+    ]
+   },
+   "coverage": {
+    "result_json": 15,
+    "trajectories": 15
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 1,
+   "budget_exceeded": [],
+   "max_input_in_traj": 53452,
+   "tool_calls_top": {
+    "bash": 193,
+    "read_file": 83,
+    "run_tests": 43,
+    "edit_file": 41,
+    "grep": 29,
+    "write_file": 20,
+    "notes": 20,
+    "finish": 16,
+    "list_files": 9,
+    "git": 3
+   }
+  },
+  "w5-round1--context-compact-only": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.7221,
+    "steps": 25.7,
+    "wall": 264.4,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 0.7221,
+    "calls": 385,
+    "tokens_in": 7963681,
+    "tokens_out": 85687,
+    "cache_hit": 0.9718,
+    "max_input_per_call": 49086,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.0061,
+    "ci": [
+     -0.0025,
+     0.0152
+    ]
+   },
+   "coverage": {
+    "result_json": 15,
+    "trajectories": 15
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 5,
+   "budget_exceeded": [],
+   "max_input_in_traj": 49086,
+   "tool_calls_top": {
+    "bash": 178,
+    "read_file": 88,
+    "edit_file": 65,
+    "run_tests": 44,
+    "notes": 21,
+    "write_file": 17,
+    "grep": 17,
+    "finish": 15,
+    "list_files": 9,
+    "git": 4
+   }
+  },
+  "w5-round1--context-clear-only": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.8538,
+    "steps": 28.5,
+    "wall": 261.6,
+    "false_success": 0,
+    "tamper": 1,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 0,
+    "agent_error": 1,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 0.9538,
+    "calls": 482,
+    "tokens_in": 11822154,
+    "tokens_out": 95518,
+    "cache_hit": 0.9711,
+    "max_input_per_call": 76240,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.02154,
+    "ci": [
+     -0.002,
+     0.0552
+    ]
+   },
+   "coverage": {
+    "result_json": 15,
+    "trajectories": 15
+   },
+   "context_events_in_available_traj": {
+    "clear": 1,
+    "compact": 0
+   },
+   "loop_warnings": 2,
+   "budget_exceeded": [
+    "swe-crosstl-257: 单任务安全上限 max_turns 已用尽：100 / 100"
+   ],
+   "max_input_in_traj": 76240,
+   "tool_calls_top": {
+    "bash": 285,
+    "read_file": 91,
+    "edit_file": 68,
+    "run_tests": 45,
+    "write_file": 20,
+    "grep": 19,
+    "notes": 18,
+    "finish": 16,
+    "list_files": 10,
+    "git": 3
+   }
+  },
+  "w5-round1--tools-minimal-4": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.7372,
+    "steps": 27.4,
+    "wall": 191.3,
+    "false_success": 2,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 2,
+    "agent_error": 0,
+    "unresolved": 1
+   },
+   "ledger": {
+    "cost": 0.7372,
+    "calls": 411,
+    "tokens_in": 8312676,
+    "tokens_out": 90112,
+    "cache_hit": 0.9742,
+    "max_input_per_call": 55252,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.0071,
+    "ci": [
+     -0.0033,
+     0.0192
+    ]
+   },
+   "coverage": {
+    "result_json": 0,
+    "trajectories": 0
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 0,
+   "budget_exceeded": [],
+   "max_input_in_traj": 0,
+   "tool_calls_top": {}
+  },
+  "w5-round1--tools-repo-map": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.6886,
+    "steps": 24.9,
+    "wall": 190.4,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 0.6886,
+    "calls": 374,
+    "tokens_in": 7182041,
+    "tokens_out": 84265,
+    "cache_hit": 0.9705,
+    "max_input_per_call": 47569,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.00387,
+    "ci": [
+     -0.0042,
+     0.0123
+    ]
+   },
+   "coverage": {
+    "result_json": 3,
+    "trajectories": 3
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 0,
+   "budget_exceeded": [],
+   "max_input_in_traj": 35990,
+   "tool_calls_top": {
+    "bash": 56,
+    "run_tests": 12,
+    "edit_file": 10,
+    "read_file": 10,
+    "notes": 5,
+    "write_file": 4,
+    "repo_map": 3,
+    "finish": 3,
+    "list_files": 1,
+    "grep": 1
+   }
+  },
+  "w5-round1--thinking-low": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.6959,
+    "steps": 20.7,
+    "wall": 279.7,
+    "false_success": 2,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 2,
+    "agent_error": 0,
+    "unresolved": 1
+   },
+   "ledger": {
+    "cost": 0.6959,
+    "calls": 311,
+    "tokens_in": 5335299,
+    "tokens_out": 106509,
+    "cache_hit": 0.9688,
+    "max_input_per_call": 39206,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.00436,
+    "ci": [
+     -0.0018,
+     0.0117
+    ]
+   },
+   "coverage": {
+    "result_json": 0,
+    "trajectories": 0
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 0,
+   "budget_exceeded": [],
+   "max_input_in_traj": 0,
+   "tool_calls_top": {}
+  },
+  "w5-round1--thinking-high": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 2.0708,
+    "steps": 33.6,
+    "wall": 306.8,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.97
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 2.0708,
+    "calls": 505,
+    "tokens_in": 17853208,
+    "tokens_out": 291595,
+    "cache_hit": 0.9687,
+    "max_input_per_call": 101210,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.09601,
+    "ci": [
+     0.0364,
+     0.1672
+    ]
+   },
+   "coverage": {
+    "result_json": 13,
+    "trajectories": 13
+   },
+   "context_events_in_available_traj": {
+    "clear": 2,
+    "compact": 1
+   },
+   "loop_warnings": 0,
+   "budget_exceeded": [],
+   "max_input_in_traj": 101210,
+   "tool_calls_top": {
+    "bash": 316,
+    "read_file": 60,
+    "edit_file": 42,
+    "run_tests": 34,
+    "notes": 23,
+    "write_file": 23,
+    "finish": 14,
+    "grep": 9,
+    "git": 1,
+    "list_files": 1
+   }
+  },
+  "w5-round1--repro_first-enabled": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 0.594,
+    "steps": 23.3,
+    "wall": 216.5,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.96
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 0.594,
+    "calls": 349,
+    "tokens_in": 5770287,
+    "tokens_out": 68804,
+    "cache_hit": 0.964,
+    "max_input_per_call": 40858,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": -0.00244,
+    "ci": [
+     -0.0103,
+     0.0038
+    ]
+   },
+   "coverage": {
+    "result_json": 15,
+    "trajectories": 15
+   },
+   "context_events_in_available_traj": {
+    "clear": 0,
+    "compact": 0
+   },
+   "loop_warnings": 0,
+   "budget_exceeded": [],
+   "max_input_in_traj": 40858,
+   "tool_calls_top": {
+    "bash": 185,
+    "read_file": 83,
+    "edit_file": 38,
+    "run_tests": 31,
+    "write_file": 20,
+    "submit_repro": 16,
+    "finish": 15,
+    "notes": 15,
+    "grep": 13,
+    "list_files": 12,
+    "git": 8
+   }
+  },
+  "w5-round1--planner-enabled": {
+   "solved": 12,
+   "n": 15,
+   "rate": 0.8,
+   "wilson": [
+    0.5481,
+    0.9295
+   ],
+   "diff": 0.0,
+   "diff_ci": [
+    0.0,
+    0.0
+   ],
+   "mcnemar": {
+    "b": 0,
+    "c": 0,
+    "p": 1.0
+   },
+   "p_holm": 1.0,
+   "verdict": "无显著差异",
+   "unsolved": [
+    "swe-crosstl-257",
+    "swe-h-transport-materials-224",
+    "swe-lilio-58"
+   ],
+   "report": {
+    "solved": 12,
+    "n": 15,
+    "cost": 2.1437,
+    "steps": 26.9,
+    "wall": 376.9,
+    "false_success": 1,
+    "tamper": 0,
+    "cache": 0.96
+   },
+   "failures": {
+    "resolved": 12,
+    "infra_error": 0,
+    "patch_not_applied": 0,
+    "false_success": 1,
+    "agent_error": 0,
+    "unresolved": 2
+   },
+   "ledger": {
+    "cost": 2.1437,
+    "calls": 582,
+    "tokens_in": 14423823,
+    "tokens_out": 320279,
+    "cache_hit": 0.9594,
+    "max_input_per_call": 76339,
+    "peak_calls": 0
+   },
+   "paired_cost_diff_per_task": {
+    "mean": 0.10088,
+    "ci": [
+     0.05,
+     0.168
+    ]
+   },
+   "coverage": {
+    "result_json": 15,
+    "trajectories": 15
+   },
+   "context_events_in_available_traj": {
+    "clear": 2,
+    "compact": 0
+   },
+   "loop_warnings": 3,
+   "budget_exceeded": [
+    "swe-dymos-1021: 单任务安全上限 max_wall_seconds 已用尽：1957 / 1800"
+   ],
+   "max_input_in_traj": 76339,
+   "tool_calls_top": {
+    "bash": 262,
+    "read_file": 198,
+    "grep": 96,
+    "edit_file": 58,
+    "run_tests": 36,
+    "list_files": 34,
+    "git": 24,
+    "notes": 17,
+    "submit_plan": 16,
+    "finish": 14,
+    "write_file": 13,
+    "repo_map": 9
+   }
+  }
+ }
+}

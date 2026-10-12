@@ -1,0 +1,8 @@
+harness: configs/harness/repro-first.yaml
+executor:
+  model: deepseek-flash
+  thinking: false
+attempts: 1
+budget_profile: eval
+name: w5-round1--repro_first-enabled
+category: ofat-ablation

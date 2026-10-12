@@ -1,0 +1,233 @@
+{
+ "spec": {
+  "name": "w5-round1",
+  "suite": "dev",
+  "base": "configs/runs/baseline-deepseek-nothink.yaml",
+  "per_task_cny": 0.06,
+  "reference": "evals/baselines/2026-10-10-w2/dev/baseline-deepseek-nothink",
+  "factors": {
+   "context": {
+    "none": {
+     "harness": "configs/harness/no-context-mgmt.yaml"
+    },
+    "compact-only": {
+     "harness": "configs/harness/compact-only.yaml"
+    },
+    "clear-only": {
+     "harness": "configs/harness/clear-only.yaml"
+    }
+   },
+   "tools": {
+    "minimal-4": {
+     "harness": "configs/harness/minimal-4-tools.yaml"
+    },
+    "repo-map": {
+     "harness": "configs/harness/repo-map.yaml"
+    }
+   },
+   "thinking": {
+    "low": {
+     "executor": {
+      "thinking": true,
+      "effort": "low"
+     },
+     "cost_factor": 1.5
+    },
+    "high": {
+     "executor": {
+      "thinking": true,
+      "effort": "high"
+     },
+     "cost_factor": 2.5
+    }
+   },
+   "repro_first": {
+    "enabled": {
+     "harness": "configs/harness/repro-first.yaml"
+    }
+   },
+   "planner": {
+    "enabled": {
+     "harness": "configs/harness/planner-only.yaml",
+     "cost_factor": 1.3
+    }
+   }
+  }
+ },
+ "configs": [
+  {
+   "name": "w5-round1",
+   "factor": null,
+   "level": null,
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/baseline.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--context-none",
+   "factor": "context",
+   "level": "none",
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/no-context-mgmt.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--context-none",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--context-compact-only",
+   "factor": "context",
+   "level": "compact-only",
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/compact-only.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--context-compact-only",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--context-clear-only",
+   "factor": "context",
+   "level": "clear-only",
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/clear-only.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--context-clear-only",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--tools-minimal-4",
+   "factor": "tools",
+   "level": "minimal-4",
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/minimal-4-tools.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--tools-minimal-4",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--tools-repo-map",
+   "factor": "tools",
+   "level": "repo-map",
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/repo-map.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--tools-repo-map",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--thinking-low",
+   "factor": "thinking",
+   "level": "low",
+   "cost_factor": 1.5,
+   "config": {
+    "harness": "configs/harness/baseline.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": true,
+     "effort": "low"
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--thinking-low",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--thinking-high",
+   "factor": "thinking",
+   "level": "high",
+   "cost_factor": 2.5,
+   "config": {
+    "harness": "configs/harness/baseline.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": true,
+     "effort": "high"
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--thinking-high",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--repro_first-enabled",
+   "factor": "repro_first",
+   "level": "enabled",
+   "cost_factor": 1.0,
+   "config": {
+    "harness": "configs/harness/repro-first.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--repro_first-enabled",
+    "category": "ofat-ablation"
+   }
+  },
+  {
+   "name": "w5-round1--planner-enabled",
+   "factor": "planner",
+   "level": "enabled",
+   "cost_factor": 1.3,
+   "config": {
+    "harness": "configs/harness/planner-only.yaml",
+    "executor": {
+     "model": "deepseek-flash",
+     "thinking": false
+    },
+    "attempts": 1,
+    "budget_profile": "eval",
+    "name": "w5-round1--planner-enabled",
+    "category": "ofat-ablation"
+   }
+  }
+ ],
+ "estimate_cny": 11.07,
+ "attempts": 1
+}

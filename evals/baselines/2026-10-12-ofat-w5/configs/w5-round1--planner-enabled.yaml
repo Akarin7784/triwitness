@@ -1,0 +1,8 @@
+harness: configs/harness/planner-only.yaml
+executor:
+  model: deepseek-flash
+  thinking: false
+attempts: 1
+budget_profile: eval
+name: w5-round1--planner-enabled
+category: ofat-ablation
