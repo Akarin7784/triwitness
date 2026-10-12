@@ -12,7 +12,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           isUser ? 'bg-ink text-parchment shadow-md' : 'paper-card text-ink-soft',
         )}
       >
-        <p className="selectable whitespace-pre-wrap text-[14px] leading-[1.8]">
+        <p className={clsx('selectable whitespace-pre-wrap', isUser ? 'text-[length:var(--read-fs,16px)] leading-[1.7]' : 'text-[14px] leading-[1.8]')}>
           {message.content.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
             part.startsWith('**') && part.endsWith('**') ? (
               <strong key={i} className="font-medium text-inherit">

@@ -113,7 +113,7 @@ export function AssistantTurn({ turn, actions, attachments }: { turn: Turn; acti
                 exit={{ pointerEvents: 'none', opacity: 0, scale: 0.98, transition: { duration: 0.1 } }}
                 className="user-bubble rounded-xl px-4 py-3 text-[length:var(--read-fs,16px)] leading-[1.7]"
               >
-                <p className="selectable whitespace-pre-wrap text-[14px] leading-[1.8]">{turn.user.text}</p>
+                <p className="selectable whitespace-pre-wrap text-[length:var(--read-fs,16px)] leading-[1.7]">{turn.user.text}</p>
               </motion.div>
             )}
           </AnimatePresence>

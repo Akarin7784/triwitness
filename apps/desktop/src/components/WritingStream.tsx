@@ -22,6 +22,8 @@ interface WritingStreamProps {
   activeRole?: StreamLine['role'] | null
   /** 会话标识：切走再切回时恢复已显示行数与滚动位置，不从头重播（走查 r2-5） */
   sessionKey?: string
+  /** 全部行写完 / 有新行开始写时回调（状态签终态等它） */
+  onDone?: (done: boolean) => void
 }
 
 /** 每个会话看到哪一行、滚到哪里（进程内记忆，切会话不丢） */
@@ -36,6 +38,7 @@ export function WritingStream({
   onReveal,
   activeRole: roleOverride,
   sessionKey,
+  onDone,
 }: WritingStreamProps) {
   const reduced = useReducedMotion()
   const [memo0] = useState(() => (sessionKey ? sessionMemo.get(sessionKey) : undefined))
@@ -64,6 +67,14 @@ export function WritingStream({
     if (!el || !pinnedRef.current || !restoredRef.current) return
     el.scrollTo({ top: el.scrollHeight, behavior: reduced ? 'auto' : 'smooth' })
   }, [visibleCount, reduced])
+
+  const onDoneRef = useRef(onDone)
+  useEffect(() => {
+    onDoneRef.current = onDone
+  }, [onDone])
+  useEffect(() => {
+    onDoneRef.current?.(done)
+  }, [done])
 
   const lineById = useMemo(() => new Map(lines.map((l) => [l.id, l])), [lines])
 
