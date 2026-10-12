@@ -523,4 +523,12 @@ export const EN: Record<string, string> = {
   '诊断包': 'Diagnostics',
   '想让别人帮忙看：导出诊断包（脱敏，只存本机）': 'Need someone to take a look? Export diagnostics (redacted, saved locally only)',
   '日志 + 最近 3 次运行打成 zip，密钥已脱敏，只存本机；出问题时你自己决定发给谁': 'Zips logs and the last 3 runs with secrets redacted, saved only on this machine. You decide whom to send it to.',
+  '本次用了 {0} 条记忆': 'Used {0} memory items this run',
+  '记忆 {0}': 'Memory {0}',
+  '本次用了这些记忆': 'Memory used in this run',
+  '仓库事实': 'Repo facts',
+  '另会按问题检索相似经验；': 'Similar past episodes are also retrieved per issue. ',
+  '记忆是参考数据，与仓库现状冲突时以仓库为准。不想用：tw run --no-memory': 'Memory is reference data; the repo wins on conflict. To opt out: tw run --no-memory',
+  '（显示前 {0} 条）': '(first {0} shown)',
+  '来源 {0}': 'from {0}',
 }

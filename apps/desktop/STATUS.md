@@ -27,7 +27,7 @@
 - **W5-13 外部对照第三轮（核心，评测）**：box 上 TB2 10 题 × 3 + 超时守卫，解决 28/30（¥3.01，含高峰价）；overfull-hbox 3/3。fix-git 两次失败是判分 apt 镜像故障。桌面端无改动。
 - **W5-13 第三轮准备（核心，harness）**：超时循环守卫（超时后提醒、拦截几乎相同的重跑、按剩余时间压缩命令超时、墙钟提醒），外部任务的步数和墙钟上限按题目时间预算推导。仓库模式默认不变。桌面端无改动。
 - **W6 记忆与 Skill（核心已落地；spec 013 §10 已由 Eva 2026-10-12 确认）**：按仓库的记忆仓库；`tw run` **默认读记忆**（`--no-memory` 关）；蒸馏只进候选区，须 `tw memory accept`；Skill 过门禁或（repo 级）人工审核后合入，监控 −15pp 回滚；导出只到 `.claude/skills` / `.opencode/skills` / `.agents/skills`，不写用户仓库。
-- **TODO（桌面端，spec 013 §10 Q3）**：会话 / 运行详情里显示**本次用了哪些记忆**芯片。核心已备：`artifacts/memory.json`（`fact_ids` / `episode_ids` / `skills`）+ `task_started.payload.memory` 可选 stub；UI 读其一即可。可选开关对应 `tw run --no-memory`。不阻塞发版 / 不阻塞 W8-03。
+- **✅ 本次用了哪些记忆（spec 013 §10 Q3，2026-10-12）**：标题栏「记忆 N」小芯片（`components/MemoryChip.tsx`），点开列出本次注入的仓库事实与技能（类别 / 版本 / 来源 run）；数据来自 `task_started.payload.memory`（core `MemoryContext.summary()`，最多 20 条，完整列表见 `artifacts/memory.json`）；旧轨迹 / 没有记忆 / 字段残缺时不显示（`data/memory.ts` 宽松解析）。经验片段是 Planner 按需检索的，只在面板脚注提示。开发用 `?source=mock` 可看示例。
 - **W4-14b 评审者消融第二轮（核心，评测）**：Eva 本机 160 次（¥10.27），与第一轮合并每臂 120 次：checklist_t10 与 adversarial 检出 / 误报没有差别（82% / 27% 对 82% / 25%），没下结论 7% 对 20%，花费约 1/3 → **ADR-0007 确认**，默认评审不变。桌面端无改动。
 - **W5-09/10/11 第一轮 OFAT 消融（核心，评测）**：Eva 本机 dev 15 × 10 配置（¥9.92），10 个配置都是 12/15、逐题相同；thinking=high / Planner 成本约 3.3 倍且无收益；1M 默认档下上下文策略在 dev 上不会触发。默认配置不改。桌面端无改动。
 - **Eva 01:01 决定落地（核心）**：默认评审改 checklist（flash 非思考 t=1.0），共识默认关；评审最后一次调用强制提交，仍无结论标 `reviewer_inconclusive`（交互弹审批卡 `ReviewInconclusive`，评测记未解决）；修复“上限那次调用不进轨迹”的记账缺口。box 真实调用 1 次 ¥0.0015（验证关思考 + 强制 tool_choice 可用）。桌面端：审批卡是通用的，`ReviewInconclusive` 直接复用，不用改。W4-14 第二轮脚本已备好，待 Eva 本机跑（约 ¥10）。

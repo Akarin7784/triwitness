@@ -196,7 +196,8 @@ class InProcessOrchestrator:
         head = f"Issue #{self.issue_number} · {self.issue_title}" if self.issue_number is not None else self.issue_title
         rec.emit(TaskStartedPayload(issue_title=self.issue_title, repo=self.repo, config_hash=self.config_hash,
                                     issue_number=self.issue_number, mode=self.mode, display=head, harness=cfg.name,
-                                    harness_hash=cfg.config_hash(), prompt_versions=cfg.prompt_versions()))  # fmt: skip
+                                    harness_hash=cfg.config_hash(), prompt_versions=cfg.prompt_versions(),
+                                    memory=self.memory.summary() if self.memory is not None else None))  # fmt: skip
         try:
             return await self._body()
         except asyncio.CancelledError:

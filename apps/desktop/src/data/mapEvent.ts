@@ -2,6 +2,7 @@
  * tw-events/1 → UI 映射（docs/design/event-protocol.md §3）。纯函数，便于测试。
  */
 import type { ChatMessage, RoleId, StreamLine, StreamTone } from '../types'
+import { parseMemory, type MemoryUsed } from './memory'
 import { isKnown, type AnyEvent, type TaskState, type TwEvent } from './events'
 import { t } from '../lib/i18n'
 
@@ -183,6 +184,8 @@ export interface RunView {
   /** 未结案的审批数（> 0 时状态签显示“待批”） */
   approvalsPending: number
   verdict: 'pass' | 'fail' | 'inconclusive' | null
+  /** 本次注入的记忆（task_started.payload.memory；没有记忆 / 旧轨迹为 null） */
+  memory: MemoryUsed | null
 }
 
 export const EMPTY_RUN: RunView = {
@@ -201,6 +204,7 @@ export const EMPTY_RUN: RunView = {
   lastSeq: -1,
   approvalsPending: 0,
   verdict: null,
+  memory: null,
 }
 
 export function cacheHitRate(v: RunView): number | null {
@@ -241,6 +245,7 @@ export function reduceRun(v: RunView, e: AnyEvent): RunView {
     case 'task_started': {
       const p = e.payload
       next.repo = p.repo
+      next.memory = parseMemory(p.memory)
       if (v.messages.some((m) => m.role === 'user')) break
       next.title = p.issue_number ? `#${p.issue_number} ${p.issue_title}` : p.issue_title
       next.messages = [

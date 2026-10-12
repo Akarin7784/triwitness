@@ -20,6 +20,7 @@ import { ProjectPicker } from './ProjectPicker'
 import { useStickToBottom } from '../hooks/useStickToBottom'
 import { ChatScrollContext } from '../lib/chatScroll'
 import { Tip } from './Tip'
+import { MemoryChip } from './MemoryChip'
 import { PHASE_DOT } from './phase'
 import { t } from '../lib/i18n'
 
@@ -172,6 +173,7 @@ export function ChatPanel({
                 </span>
               </Tip>
             )}
+            <MemoryChip memory={run.memory ?? null} />
             <CostChip run={run} />
             {(run.label || pending) && (
               <span className="chip fade-in" key={pending ? t('待批') : run.label} data-testid="state-chip">

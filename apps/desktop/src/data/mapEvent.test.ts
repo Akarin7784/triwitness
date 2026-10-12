@@ -140,3 +140,27 @@ describe('bjClock', () => {
     expect(bjClock('2026-10-10T14:30:00Z')).toBe('22:30')
   })
 })
+
+describe('task_started.memory', () => {
+  const started = (memory?: unknown) =>
+    ({
+      ...env,
+      seq: 0,
+      kind: 'task_started',
+      payload: { issue_title: '修 bug', repo: 'o/r', config_hash: 'h', ...(memory === undefined ? {} : { memory }) },
+    }) as AnyEvent
+
+  it('没有 memory 字段（旧轨迹）/ null → run.memory 为 null', () => {
+    expect(reduceRun(EMPTY_RUN, started()).memory).toBeNull()
+    expect(reduceRun(EMPTY_RUN, started(null)).memory).toBeNull()
+  })
+
+  it('有记忆摘要 → 解析出事实与技能', () => {
+    const v = reduceRun(
+      EMPTY_RUN,
+      started({ facts: [{ id: 'f1', text: '测试命令 uv run pytest', source: 'tw://run/r_1' }], skills: [{ name: 'fix-ci', version: 1 }], facts_total: 1, skills_total: 1 }),
+    )
+    expect(v.memory?.factsTotal).toBe(1)
+    expect(v.memory?.skills[0].name).toBe('fix-ci')
+  })
+})

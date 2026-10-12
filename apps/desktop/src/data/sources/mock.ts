@@ -24,6 +24,18 @@ export function mockJsonl(): string {
         issue_title: '修复登录态刷新竞态',
         repo: 'triwitness/core',
         config_hash: 'mock',
+        // 演示「本次用了哪些记忆」芯片（spec 013 §10 Q3）
+        memory: {
+          repo_key: 'github.com_triwitness_core',
+          facts: [
+            { id: 'm-1a2b3c4d', text: '测试命令：uv run pytest -q tests/auth（全量约 40s）', kind: 'test_cmd', source: 'tw://run/r_01M4K8BERZGNJWN07PV7PJB71C' }, // i18n-ignore: 演示数据
+            { id: 'm-5e6f7a8b', text: 'token 刷新逻辑在 src/auth/session.py，锁用 asyncio.Lock', kind: 'layout', source: 'tw://run/r_01M4KEZZXH9M1VAEDJ7A4Y6MGR' }, // i18n-ignore: 演示数据
+          ],
+          skills: [{ name: 'async-race-repro', version: 2, description: '先用 asyncio.gather 写并发复现测试再修', source: 'tw://run/r_01M4KEZZXH9M1VAEDJ7A4Y6MGR' }], // i18n-ignore: 演示数据
+          facts_total: 2,
+          skills_total: 1,
+          episodes: true,
+        },
       },
     },
   ]
