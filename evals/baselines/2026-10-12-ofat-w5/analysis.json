@@ -503,8 +503,8 @@
     ]
    },
    "coverage": {
-    "result_json": 0,
-    "trajectories": 0
+    "result_json": 15,
+    "trajectories": 15
    },
    "context_events_in_available_traj": {
     "clear": 0,
@@ -512,8 +512,13 @@
    },
    "loop_warnings": 0,
    "budget_exceeded": [],
-   "max_input_in_traj": 0,
-   "tool_calls_top": {}
+   "max_input_in_traj": 55252,
+   "tool_calls_top": {
+    "bash": 336,
+    "read_file": 81,
+    "edit_file": 52,
+    "finish": 15
+   }
   },
   "w5-round1--tools-repo-map": {
    "solved": 12,
@@ -575,27 +580,27 @@
     ]
    },
    "coverage": {
-    "result_json": 3,
-    "trajectories": 3
+    "result_json": 15,
+    "trajectories": 15
    },
    "context_events_in_available_traj": {
     "clear": 0,
     "compact": 0
    },
-   "loop_warnings": 0,
+   "loop_warnings": 3,
    "budget_exceeded": [],
-   "max_input_in_traj": 35990,
+   "max_input_in_traj": 47569,
    "tool_calls_top": {
-    "bash": 56,
-    "run_tests": 12,
-    "edit_file": 10,
-    "read_file": 10,
-    "notes": 5,
-    "write_file": 4,
-    "repo_map": 3,
-    "finish": 3,
-    "list_files": 1,
-    "grep": 1
+    "bash": 198,
+    "read_file": 66,
+    "run_tests": 55,
+    "edit_file": 46,
+    "notes": 21,
+    "grep": 20,
+    "write_file": 15,
+    "finish": 15,
+    "repo_map": 12,
+    "list_files": 3
    }
   },
   "w5-round1--thinking-low": {
@@ -658,17 +663,30 @@
     ]
    },
    "coverage": {
-    "result_json": 0,
-    "trajectories": 0
+    "result_json": 15,
+    "trajectories": 15
    },
    "context_events_in_available_traj": {
     "clear": 0,
     "compact": 0
    },
-   "loop_warnings": 0,
-   "budget_exceeded": [],
-   "max_input_in_traj": 0,
-   "tool_calls_top": {}
+   "loop_warnings": 3,
+   "budget_exceeded": [
+    "swe-dymos-1021: 单任务安全上限 max_wall_seconds 已用尽：1809 / 1800"
+   ],
+   "max_input_in_traj": 39206,
+   "tool_calls_top": {
+    "bash": 150,
+    "read_file": 66,
+    "run_tests": 47,
+    "edit_file": 40,
+    "write_file": 21,
+    "grep": 16,
+    "finish": 14,
+    "notes": 10,
+    "list_files": 3,
+    "git": 2
+   }
   },
   "w5-round1--thinking-high": {
    "solved": 12,
@@ -730,27 +748,27 @@
     ]
    },
    "coverage": {
-    "result_json": 13,
-    "trajectories": 13
+    "result_json": 15,
+    "trajectories": 15
    },
    "context_events_in_available_traj": {
-    "clear": 2,
+    "clear": 3,
     "compact": 1
    },
    "loop_warnings": 0,
    "budget_exceeded": [],
    "max_input_in_traj": 101210,
    "tool_calls_top": {
-    "bash": 316,
-    "read_file": 60,
-    "edit_file": 42,
-    "run_tests": 34,
-    "notes": 23,
-    "write_file": 23,
-    "finish": 14,
+    "bash": 368,
+    "read_file": 74,
+    "edit_file": 58,
+    "run_tests": 44,
+    "write_file": 27,
+    "notes": 25,
+    "finish": 16,
     "grep": 9,
-    "git": 1,
-    "list_files": 1
+    "list_files": 4,
+    "git": 3
    }
   },
   "w5-round1--repro_first-enabled": {
