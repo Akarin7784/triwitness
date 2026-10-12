@@ -1,6 +1,6 @@
 [package]
 name = "triwitness-desktop"
-version = "0.5.0-preview"
+version = "0.5.1-preview"
 description = "TriWitness / 三证 desktop shell"
 authors = ["Eva Murphy"]
 edition = "2021"
