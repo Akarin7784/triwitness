@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TriWitness Leaderboard</title>
+<style>
+:root{--paper:#f7f3ea;--ink:#2b2622;--muted:#7a6f63;--line:#e2d9c9;--accent:#9a5b2e}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:32px 20px}
+h1{font-family:Georgia,"Songti SC",serif;font-weight:600;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 20px}
+.note{background:#fffaf0;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;background:#fffdf8}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{cursor:pointer;font-weight:600;color:var(--muted);user-select:none}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:left}
+tr.sep td{background:#efe8da;color:var(--muted);text-align:left;font-weight:600}
+.ci{color:var(--muted);font-size:12px}
+.wrap{overflow-x:auto}
+a{color:var(--accent)}
+footer{color:var(--muted);font-size:13px;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+<h1>TriWitness Leaderboard</h1>
+<p class="sub">自建评测集 · 全部数字可在仓库 <code>evals/baselines/</code> 核对 · 不与公开榜单或厂商自报分数比较</p>
+<div class="note" id="headline">加载中…</div>
+<div class="wrap"><table id="t"><thead><tr>
+<th data-k="config">配置</th><th data-k="suite">套件</th><th data-k="model">Executor 模型（快照）</th>
+<th data-k="resolved">Resolved@1（Wilson 95%）</th><th data-k="cost_per_task">¥/任务</th>
+<th data-k="cost_per_solved_idle">¥/解决</th><th data-k="cache_hit">缓存命中</th>
+<th data-k="false_success_rate">假成功率</th><th data-k="avg_steps">平均回合</th><th data-k="date">日期</th>
+</tr></thead><tbody></tbody></table></div>
+<div class="note">
+<b>口径</b>：test 臂的 ¥/任务为实付；括号内为按空闲价重算（终测基线臂 1478/1917 次调用落在高峰 2× 价）。¥/解决统一用空闲价（dev 行无高峰调用，直接用实付）。
+dev 15 题已饱和（10 个 OFAT 配置逐题结果完全相同），只用来比成本。多厂商列（Anthropic / OpenAI / Qwen）预留，v1 仅 deepseek-flash。
+</div>
+<footer>数据：<a href="data.json">data.json</a>（由 <code>scripts/build_leaderboard.py</code> 从 evals/baselines 生成）· 价格表 configs/pricing.yaml 2026-10-10 · <a href="https://github.com/Akarin7784/triwitness">GitHub</a></footer>
+</main>
+<script>
+const pct=x=>x==null?"—":(x*100).toFixed(1)+"%";
+const yuan=x=>x==null?"—":"¥"+x.toFixed(3);
+let rows=[],key=null,asc=false;
+function render(){
+  const tb=document.querySelector("#t tbody");tb.innerHTML="";
+  const groups=key?[["",rows.slice().sort((a,b)=>{const x=a[key],y=b[key];return (x>y?1:x<y?-1:0)*(asc?1:-1)})]]
+    :[["终测 · test 35（W8-01）",rows.filter(r=>r.suite.startsWith("test"))],["开发集 · dev 15（W5 OFAT）",rows.filter(r=>r.suite.startsWith("dev"))]];
+  for(const [title,rs] of groups){
+    if(title){const tr=tb.insertRow();tr.className="sep";const c=tr.insertCell();c.colSpan=10;c.textContent=title}
+    for(const r of rs){
+      const tr=tb.insertRow();
+      const per=r.cost_per_task_idle!=null&&Math.abs(r.cost_per_task_idle-r.cost_per_task)>1e-4?`${yuan(r.cost_per_task)} <span class="ci">(${yuan(r.cost_per_task_idle)})</span>`:yuan(r.cost_per_task);
+      const cells=[r.config,r.suite,`${r.model}`,`${pct(r.resolved)} <span class="ci">${r.solved}/${r.graded} · ${pct(r.ci[0])}–${pct(r.ci[1])}</span>`,per,
+        yuan(r.cost_per_solved_idle??r.cost_per_solved),pct(r.cache_hit),`${pct(r.false_success_rate)} <span class="ci">(${r.false_success})</span>`,r.avg_steps,r.date];
+      for(const c of cells){tr.insertCell().innerHTML=c}
+    }
+  }
+}
+document.querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;asc=key===k?!asc:false;key=k;render()});
+fetch("data.json").then(r=>r.json()).then(d=>{
+  rows=d.rows;const p=d.paired_final;
+  const t=rows.filter(r=>r.suite.startsWith("test"));
+  document.getElementById("headline").innerHTML=`<b>终测结论</b>：完整流水线 ${pct(t[1].resolved)} vs 单 Executor ${pct(t[0].resolved)}，`+
+   `配对 ${p.orch_only}:${p.base_only}，McNemar 精确 p = ${p.mcnemar_p} → <b>无显著差异</b>（n=35）。同价成本流水线约 ${(t[1].cost_per_task_idle/t[0].cost_per_task_idle).toFixed(1)} 倍（Planner 占一半）；假成功两臂都偏高（${t[0].false_success} / ${t[1].false_success}）。`;
+  render();
+}).catch(e=>{document.getElementById("headline").textContent="data.json 加载失败："+e});
+</script>
+</body>
+</html>

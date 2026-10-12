@@ -10,6 +10,7 @@
 
 ### Added
 - **W8-01 终测一键脚本**：`scripts/windows/run-final-eval.ps1`（test 35 题 × 单 Executor 基线 / orchestrated-1m 各 1 次，flash 非思考，冻结配置 `configs/runs/final-*.yaml`；续跑、磁盘检查、超 24MB 自动拆分 zip）+ `scripts/final_eval.py plan|run|report|bundle|reproduce`。
+- **W8-01 终测结果** 入库 `evals/baselines/2026-10-12-final-w8/`；**W8-02 静态 Leaderboard** `site/`（`scripts/build_leaderboard.py` 生成 data.json，GitHub Pages 工作流 `pages.yml`）；面试材料与 README 回填终测数字。
 - **W8-05 `tw eval reproduce <run>`**：按旧 run.json 的任务 / 配置 / 模型 ID 重跑（默认回放 ¥0，`--live` 真调），逐题对比写 `reproduce.md`，提示服务端模型可能已更新。
 - **W8-03 轨迹导出**（`tw traj export`）：OpenAI messages（SFT）、轨迹+奖励（RLVR）、Harbor 结果目录、单文件 HTML 回放；样例在 `evals/fixtures/traj_export/`。
 - **W5-13 外部对照第三轮（box，10 题 × 3，2026-10-12 13:32–14:31 UTC+8，Eva 批 `--allow-peak`，账本 ¥3.0144）**：`evals/baselines/2026-10-12-harbor-tb2-r3/`。30/30 完成、0 异常，**解决 28/30 = 93.3%**（Wilson 79%–98%）。超时守卫默认 `timeout_guard=block`：overfull-hbox 1/3→3/3，cobol / polyglot 均 3/3。fix-git 1/3 是判分环境 apt 镜像 500/404（Agent 已给出合理 merge，不是回归）。缓存命中 98.1%；比 r2 贵主要因高峰价（496/890）与 polyglot 三次偏贵。

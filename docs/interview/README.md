@@ -3,7 +3,7 @@
 - [pitch.md](pitch.md)：30 秒 / 2 分钟 / 5 分钟三版讲稿
 - [qa.md](qa.md)：按 04 §11（8 个主题）逐题作答
 
-**规则**：只用已入库的实测数字，每个数字后面都写出处；终测（W8-01）还没跑，相关位置一律写 **【待终测】**，跑完后用 `out/final/summary.json` 回填。没做的事直说没做，不说“计划中”的东西已经有了。
+**规则**：只用已入库的实测数字，每个数字后面都写出处；终测（W8-01）已于 2026-10-12 跑完并回填（不显著就说不显著）。
 
 如果队友写了 `docs/interview-book/`，以那里的口径为准，本目录只补数字与出处，不覆盖。
 
@@ -24,4 +24,4 @@
 | Terminal-Bench 2.0 子集（10 题，Harbor） | r1 9/10；r2 26/30 = 86.7%（Wilson 70%–95%）；r3（加超时守卫）28/30 = 93.3%（79%–98%），缓存命中 98.1%，每次中位 ¥0.053；r2→r3 差在噪声内 | `evals/baselines/2026-10-12-harbor-tb2{,-r2,-r3}/README.md` |
 | 红队 39 条（¥0，确定性） | 开网关 39/39 挡住（deny 16 / intercepted 17 / ask 5 / revocable 1）；关网关 35/39 攻击得逞；开臂额外延迟 p50 ≈ 9 ms | `evals/baselines/2026-10-12-redteam-gateway/README.md` |
 | 长上下文探针 | 约 900K token 针召回全对；冷请求首字约 19 s，热请求约 5 s | `evals/baselines/2026-10-11-long-context-probe/` |
-| **终测（test 35 × 基线 / 完整流水线）** | **【待终测】** | `scripts/windows/run-final-eval.ps1` → `out/final/summary.json` |
+| **终测（test 35 × 基线 / 完整流水线，2026-10-12）** | 完整流水线 19/35 = **54.3%**（Wilson 38%–70%）vs 单 Executor 16/35 = **45.7%**（30%–62%），配对 3:0，**McNemar p = 0.25，无显著差异**；同价（空闲价重算）¥0.243 vs ¥0.119/题 ≈ **2 倍**（Planner 占流水线花费 49%）；假成功 8 / 9 偏高（7 题两臂共有）；缓存命中 96.1% / 98.1%；infra 0；实付合计 ¥15.87；复现 1 题一致 | `evals/baselines/2026-10-12-final-w8/README.md`、`analysis.json` |

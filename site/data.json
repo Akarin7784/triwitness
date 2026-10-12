@@ -1,0 +1,291 @@
+{
+ "generated_from": "evals/baselines（scripts/build_leaderboard.py）",
+ "pricing": "configs/pricing.yaml verified_at 2026-10-10",
+ "paired_final": {
+  "n": 35,
+  "orch_only": 3,
+  "base_only": 0,
+  "mcnemar_p": 0.25
+ },
+ "rows": [
+  {
+   "suite": "test（35）",
+   "config": "单 Executor（long-context-1m）",
+   "model": "deepseek-flash（非思考）",
+   "snapshot": "deepseek-flash",
+   "solved": 16,
+   "graded": 35,
+   "resolved": 0.4571,
+   "ci": [
+    0.3047,
+    0.6181
+   ],
+   "cost_per_task": 0.2109,
+   "cost_per_task_idle": 0.1191,
+   "cost_per_solved_idle": 0.2605,
+   "cache_hit": 0.9814,
+   "false_success": 9,
+   "false_success_rate": 0.2571,
+   "avg_steps": 54.8,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-final-w8/"
+  },
+  {
+   "suite": "test（35）",
+   "config": "完整流水线（orchestrated-1m）",
+   "model": "deepseek-flash（非思考）",
+   "snapshot": "deepseek-flash",
+   "solved": 19,
+   "graded": 35,
+   "resolved": 0.5429,
+   "ci": [
+    0.3819,
+    0.6953
+   ],
+   "cost_per_task": 0.2426,
+   "cost_per_task_idle": 0.2426,
+   "cost_per_solved_idle": 0.4468,
+   "cache_hit": 0.9608,
+   "false_success": 8,
+   "false_success_rate": 0.2286,
+   "avg_steps": 42.0,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-final-w8/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT 基线",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.042,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.0525,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 23.9,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: context-none",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0456,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.057,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 25.4,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: context-compact-only",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0481,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.0602,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 25.7,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: context-clear-only",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0569,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.0711,
+   "cache_hit": null,
+   "false_success": 0,
+   "false_success_rate": 0.0,
+   "avg_steps": 28.5,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: tools-minimal-4",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0491,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.0614,
+   "cache_hit": null,
+   "false_success": 2,
+   "false_success_rate": 0.1333,
+   "avg_steps": 27.4,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: tools-repo-map",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0459,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.0574,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 24.9,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: thinking-low",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0464,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.058,
+   "cache_hit": null,
+   "false_success": 2,
+   "false_success_rate": 0.1333,
+   "avg_steps": 20.7,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: thinking-high",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.1381,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.1726,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 33.6,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: repro_first-enabled",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.0396,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.0495,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 23.3,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  },
+  {
+   "suite": "dev（15）",
+   "config": "OFAT: planner-enabled",
+   "model": "deepseek-flash",
+   "snapshot": "deepseek-flash",
+   "solved": 12,
+   "graded": 15,
+   "resolved": 0.8,
+   "ci": [
+    0.5481,
+    0.9295
+   ],
+   "cost_per_task": 0.1429,
+   "cost_per_task_idle": null,
+   "cost_per_solved_idle": null,
+   "cost_per_solved": 0.1786,
+   "cache_hit": null,
+   "false_success": 1,
+   "false_success_rate": 0.0667,
+   "avg_steps": 26.9,
+   "date": "2026-10-12",
+   "source": "evals/baselines/2026-10-12-ofat-w5/"
+  }
+ ],
+ "vendors_reserved": [
+  "Anthropic",
+  "OpenAI",
+  "Qwen"
+ ]
+}

@@ -60,12 +60,23 @@ uv run tw usage                                     # 用量（本机账本）
 - 没有金额上限（0.3.2 起去掉了预算控制，花多少由你自己把控；DeepSeek 账户余额是天然上限）。为防失控循环，每个任务仍有非金钱的安全上限：最多 100 轮、45 分钟、输入 / 未命中输入 / 输出 token 兜底。
 - 开发 / 测试用的回放和本机模拟服务（`packaging/mock_llm.py`）¥0，只在源码里，不在安装包里。
 
+## 评测结果（W8-01 终测，2026-10-12）
+
+自建 test 集 35 题 × 1 次，deepseek-flash 非思考，[在线 Leaderboard](https://akarin7784.github.io/triwitness/)，明细见 [`evals/baselines/2026-10-12-final-w8/`](evals/baselines/2026-10-12-final-w8/README.md)。
+
+| 配置 | Resolved@1（Wilson 95%） | ¥/任务（空闲价） | ¥/解决（空闲价） | 缓存命中 | 假成功 |
+|---|---|---|---|---|---|
+| 单 Executor（long-context-1m） | 16/35 = 45.7%（30%–62%） | 0.119 | 0.261 | 98.1% | 9 |
+| 完整流水线（orchestrated-1m） | 19/35 = 54.3%（38%–70%） | 0.243 | 0.447 | 96.1% | 8 |
+
+配对 3:0，McNemar 精确 p = 0.25 → **无显著差异**；流水线同价成本约 2 倍（Planner 占一半）。不与公开榜单或厂商自报分数比较。
+
 ## 已知限制（摘要）
 
 - **不注册 GitHub App**（v1）：默认只生成本地分支与 `pr.md`；开 PR 需你确认后用 `gh` 或细粒度 PAT（`tw pr open`）。无 Webhook / Issue 标签自动开工 / 安装令牌。
 - `tw run` **默认读本仓库记忆**（`--no-memory` 可关）；评测 / 基线不读写记忆。桌面端尚未展示「本次用了哪些记忆」。
 - 未签名、没有自动更新（“检查更新”打开 Releases 页面）。
-- 终测排行榜数字尚未冻结（W8-01 未跑）；对外不要引用未发布的 Resolved@1。
+- 终测只有 35 题 × 1 次：完整流水线 vs 单 Executor 的 +8.6pp **统计上不显著**（McNemar p = 0.25）；假成功 8–9 次仍偏高。
 - 界面上标“即将推出”的入口（语音、连接器、更多模型等）点了只会提示。
 
 完整列表：[docs/release/known-limitations.md](docs/release/known-limitations.md)。更新记录：[CHANGELOG.md](CHANGELOG.md)。
@@ -73,7 +84,7 @@ uv run tw usage                                     # 用量（本机账本）
 ## 路线图
 
 - **v0.3.x**：根据预览反馈修 bug；Windows 真机清单；安全网关与记忆默认已落地。
-- **v1.0**：代码签名、自动更新；本地分支 + 可选开 PR（**无 GitHub App**）；轨迹导出 / Leaderboard（等终测数字）；演示与讲稿（Eva）。
+- **v1.0**：代码签名、自动更新；本地分支 + 可选开 PR（**无 GitHub App**）；轨迹导出（`tw traj export`）/ [Leaderboard](https://akarin7784.github.io/triwitness/)；演示与讲稿（Eva）。
 - **之后**：WSL2 后端、Qwen / GLM 跨厂商互审（等资金）。不计划在 v1 注册 GitHub App。
 
 ## 开发

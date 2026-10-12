@@ -26,7 +26,7 @@
 
 - 已有多角色编排（Planner / Executor / Reviewer）、计划确认、验证器与证据包、CI 失败返工、记忆与 Skill、安全网关（出网白名单 + 凭证占位符 + MCP 指纹）。默认 harness 仍可能是单角色长上下文配置，见 `configs/harness/`。
 - 修的主要是 **Python 仓库**（复现测试与静态检查按 Python）；其他语言能改代码，验证会弱很多。
-- **终测排行榜数字尚未冻结**（W8-01 未跑）；对外不要引用未发布的 Resolved@1。
+- **终测样本小**：test 35 题 × 1 次（2026-10-12），流水线 vs 单 Executor +8.6pp 不显著（McNemar p = 0.25）；假成功 8–9 次偏高。见 evals/baselines/2026-10-12-final-w8/ 与 Leaderboard。
 
 ## 环境（Windows）
 
