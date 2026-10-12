@@ -2,7 +2,7 @@ import { parseJsonl, type AnyEvent } from '../events'
 import type { EventSource, SubscribeOptions } from './types'
 
 export interface FixtureOptions {
-  /** 回放倍速，默认 1.5 */
+  /** 回放倍速，默认 3（批次 2-7：演示回放原来 >25s） */
   speed?: number
   /** 两个事件之间最长等待（毫秒，倍速换算后），避免长时间空白 */
   maxGapMs?: number
@@ -45,8 +45,8 @@ export class FixtureSource implements EventSource {
   subscribe(onEvent: (e: AnyEvent) => void, sub: SubscribeOptions = {}) {
     const set = this.opts.setTimer ?? ((fn, ms) => setTimeout(fn, ms))
     const clear = this.opts.clearTimer ?? ((h) => clearTimeout(h as number))
-    const speed = this.opts.speed ?? 1.5
-    const maxGap = this.opts.maxGapMs ?? 3200
+    const speed = this.opts.speed ?? 3
+    const maxGap = this.opts.maxGapMs ?? 1500
     const lead = this.opts.leadMs ?? 300
     let active = true
     const mine = new Set<unknown>()

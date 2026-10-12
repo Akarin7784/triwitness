@@ -184,7 +184,7 @@ body {
   border: 1px solid var(--color-border-soft);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.55) inset,
-    0 8px 24px var(--color-shadow);
+    0 1px 2px var(--color-shadow);
 }
 
 .role-dot {
@@ -420,7 +420,7 @@ html {
 .stream-chapter .stream-rule-text {
   /* 走查 r2-2：不小于日志字号（日志 13px 等宽，无衬线视觉偏小 → 14px 中等字重），夜间用正文浅色 */
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: calc(var(--read-fs, 16px) - 2px);
   font-weight: 500;
   letter-spacing: normal;
   color: var(--color-ink-soft);
@@ -430,7 +430,7 @@ html {
   border-top: 1px dashed color-mix(in srgb, var(--color-amber) 45%, transparent);
 }
 .stream-divider .stream-rule-text {
-  font-size: 13px;
+  font-size: calc(var(--read-fs, 16px) - 3px);
   color: var(--color-amber);
 }
 
@@ -467,27 +467,31 @@ html {
 .md, .md-tail { font-size: var(--read-fs, 16px); line-height: 1.7; color: var(--color-ink); }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
-.md p { margin: 0.8em 0; }
-.md ul, .md ol { margin: 0.6em 0; padding-left: 1.5em; }
+.md p { --mt: 0.8em; --mb: 0.8em; margin: var(--mt) 0 var(--mb); }
+.md ul, .md ol { --mt: 0.6em; --mb: 0.6em; margin: var(--mt) 0 var(--mb); padding-left: 1.5em; }
 .md ul { list-style: disc; }
 .md ol { list-style: decimal; }
 .md li { margin: 0.35em 0; }
 .md li::marker { color: var(--color-sepia-muted); }
 .md strong { font-weight: 600; color: var(--color-ink); }
 .md a { color: var(--color-amber); text-decoration: underline; text-underline-offset: 2px; }
-.md h1, .md h2, .md h3 { font-family: var(--font-sans); color: var(--color-ink); margin: 1.2em 0 0.5em; font-weight: 600; line-height: 1.4; letter-spacing: 0; }
+.md h1, .md h2, .md h3 { font-family: var(--font-sans); color: var(--color-ink); --mt: 1.2em; --mb: 0.5em; margin: var(--mt) 0 var(--mb); font-weight: 600; line-height: 1.4; letter-spacing: 0; }
 .md h1 { font-size: 22px; padding-bottom: 0.25em; border-bottom: 1px solid var(--color-border-soft); }
 .md h2 { font-size: 19px; padding-bottom: 0.2em; border-bottom: 1px solid var(--color-border-soft); }
 .md h3 { font-size: 17px; }
-.md blockquote { margin: 0.8em 0; padding: 0 1em; border-left: 3px solid var(--color-border); color: var(--color-sepia); }
+.md blockquote { --mt: 0.8em; --mb: 0.8em; margin: var(--mt) 0 var(--mb); padding: 0 1em; border-left: 3px solid var(--color-border); color: var(--color-sepia); }
 .md code { font-family: var(--font-mono); font-size: 0.875em; background: var(--color-panel); border-radius: 4px; padding: 0.1em 0.35em; }
 .md pre { background: var(--color-panel); border: 1px solid var(--color-border-soft); border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.6; overflow: auto; }
 .md pre code { background: none; padding: 0; font-size: inherit; }
-.md table { border-collapse: collapse; margin: 0.8em 0; font-size: 14px; }
+.md table { border-collapse: collapse; --mt: 0.8em; --mb: 0.8em; margin: var(--mt) 0 var(--mb); font-size: 14px; }
 .md th, .md td { border: 1px solid var(--color-border-soft); padding: 6px 12px; }
 .md th { background: var(--color-panel); font-weight: 600; }
-.md hr { border: 0; border-top: 1px solid var(--color-border-soft); margin: 1.6em 0; }
+.md hr { border: 0; border-top: 1px solid var(--color-border-soft); --mt: 1.6em; --mb: 1.6em; margin: var(--mt) 0 var(--mb); }
 .md-tail { margin: 0.8em 0 0; }
+/* 批次 2-6：流式中正文被拆成「已定稿 .md + 尾段」两块；块间距按写完后的同一套 margin 算，收尾合并时不再跳 */
+.md-flow > .md:not(:first-child) > :first-child { margin-top: var(--mt, 0); }
+.md-flow > .md:not(:last-child) > :last-child { margin-bottom: var(--mb, 0); }
+.md-flow > .md-tail:first-child { margin-top: 0; }
 
 .tool-pre {
   margin: 0;
@@ -562,7 +566,7 @@ html {
 }
 :root[data-theme='dark'] .paper-card {
   background: var(--color-panel-raised);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px var(--color-shadow);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 3px var(--color-shadow);
 }
 :root[data-theme='dark'] .tool-pre { background: var(--color-cream); }
 :root[data-theme='dark'] .ctx-menu { background: color-mix(in srgb, var(--color-panel-raised) 97%, transparent); box-shadow: 0 12px 32px rgb(0 0 0 / 0.5); }
@@ -710,7 +714,7 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
   --hl-title: #3d5a80; --hl-builtin: #2f6a68; --hl-meta: #7a6648; --hl-del: #9a3f36; --hl-add: #4f6b3a;
 }
 :root[data-theme='dark'] {
-  --hl-keyword: #c9a3bc; --hl-string: #a9c18f; --hl-number: #d9ae7e; --hl-comment: #a39682;
+  --hl-keyword: #b9a6e8; --hl-string: #a9c18f; --hl-number: #d9ae7e; --hl-comment: #a39682;
   --hl-title: #9db5d6; --hl-builtin: #8fbcb8; --hl-meta: #c2ad8c; --hl-del: #d99a8c; --hl-add: #a9c18f;
 }
 .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-doctag { color: var(--hl-keyword); }
@@ -738,3 +742,12 @@ body { transition: background-color 400ms var(--ease-tender), color 400ms var(--
   border: 1px dashed var(--color-border);
 }
 :root[data-theme='dark'] .btn-solid:disabled { color: #a99a84; border-color: #6a5a4a; }
+
+/* 批次 2-4：夜间结论卡的「风险」「干净环境」标签提亮（卡片底上 ≥7:1），边框也清楚一点 */
+:root[data-theme='dark'] .paper-card .chip { color: var(--color-ink-soft); border-color: var(--color-border); }
+
+/* 批次 2-5：右栏行末不留孤字（Chromium/WebView2 的 text-wrap: pretty）；行内长 token 不拆 */
+.stream-line p { text-wrap: pretty; }
+.stream-log { font-size: calc(var(--read-fs, 16px) - 3px); }
+.stream-role { font-size: calc(var(--read-fs, 16px) - 3px); }
+.stream-title { font-size: var(--read-fs, 16px); }

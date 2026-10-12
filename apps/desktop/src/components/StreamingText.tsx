@@ -47,7 +47,7 @@ export function StreamingText({ text, streaming }: { text: string; streaming: bo
 
   // 光标：纯文本尾段直接跟在字后；Markdown 尾段 / 尾段为空时由 .stream-caret 伪元素贴在最后一段末尾，不单独占行
   return (
-    <div data-testid={writing ? 'streaming-text' : undefined} className={clsx(writing && (openFence || !tail) && 'stream-caret')}>
+    <div data-testid={writing ? 'streaming-text' : undefined} className={clsx('md-flow', writing && (openFence || !tail) && 'stream-caret')}>
       {head && <Markdown text={head} />}
       {writing && tail &&
         (openFence ? (
