@@ -1,9 +1,11 @@
 # 更新记录
 
-格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。桌面端版本号用 SemVer（`0.3.1-preview`），核心 Python 包用 PEP 440（`0.3.1a1`）。
+格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。桌面端版本号用 SemVer（`0.5.0-preview`），核心 Python 包用 PEP 440（`0.5.0a1`）。
 发布流程（`.github/workflows/release.yml`）会把下面对应版本的整节内容作为 GitHub Release 说明。
 
 ## [Unreleased]
+
+## [0.5.0-preview] - 未发布
 
 ### Changed
 - **GitHub App 永久不做**（Eva 2026-10-12）：取消 W7-08 / W5-02（及依赖 Webhook 的 W5-03）。v1 只走本地分支 `tw/<run_id>` + `pr.md` / 可选 `tw pr open`（gh·PAT）。见 `specs/012-github-integration.md` §8、`docs/release/known-limitations.md`。

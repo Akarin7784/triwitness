@@ -5,10 +5,10 @@ from triwitness.cli.main import app
 
 
 def test_version_string() -> None:
-    assert triwitness.__version__ == "0.3.2a1"
+    assert triwitness.__version__ == "0.5.0a1"
 
 
 def test_cli_version() -> None:
     result = CliRunner().invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "triwitness 0.3.2a1" in result.output
+    assert "triwitness 0.5.0a1" in result.output

@@ -1,3 +1,3 @@
 """TriWitness（三证）：验证优先的后台 Coding Agent。"""
 
-__version__ = "0.3.2a1"
+__version__ = "0.5.0a1"
