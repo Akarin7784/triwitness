@@ -529,6 +529,89 @@ def eval_run(
     typer.echo(f"结果：{summary.out_dir}" + (f"｜{'｜'.join(extra)}" if extra else ""))
 
 
+@eval_app.command("reproduce")
+def eval_reproduce(
+    run: Annotated[str, typer.Argument(help="旧评测结果目录（含 run.json），或 evals/results 下的名字")],
+    out: Annotated[
+        Path | None, typer.Option(help="复现结果目录（默认 <原目录>-repro-<时间>；指定已有目录即续跑）")
+    ] = None,
+    task: Annotated[list[str] | None, typer.Option(help="只复现这些任务（id），可多次")] = None,
+    concurrency: Annotated[int, typer.Option(help="并发 attempt 数")] = 2,
+    live: Annotated[bool, typer.Option("--live", help="真实调用模型；默认只回放（¥0，命中原录制）")] = False,
+    plan_only: Annotated[bool, typer.Option("--plan", help="只打印复现计划，不运行")] = False,
+) -> None:
+    """W8-05：相同任务 / 配置 / 模型 ID 重跑旧评测并逐题对比（服务端模型可能已更新，有差异属正常）。"""
+    import asyncio
+    import os
+    from datetime import UTC, datetime
+
+    from triwitness.core.errors import TriWitnessError
+    from triwitness.eval.agents import LLMAgent
+    from triwitness.eval.grade import Grader
+    from triwitness.eval.reproduce import (
+        SERVER_WARNING,
+        find_task_dirs,
+        load_plan,
+        render_markdown,
+        resolve_run,
+        write_comparison,
+    )
+    from triwitness.eval.runner import EvalRunner, RunConfig
+    from triwitness.eval.task import load_task
+    from triwitness.harness.config import HarnessConfig
+    from triwitness.llm.gate import PeakGate
+
+    try:
+        src = resolve_run(run)
+        plan = load_plan(src)
+    except TriWitnessError as e:
+        raise typer.BadParameter(str(e)) from None
+    ids = [t for t in plan.task_ids if not task or t in task]
+    dirs, missing = find_task_dirs(ids)
+    configs = [RunConfig.model_validate(c) for c in plan.configs]
+    typer.echo(SERVER_WARNING)
+    typer.echo(f"原结果 {src}：{len(configs)} 个配置（{', '.join(c.name for c in configs)}）× {len(ids)} 题 × "
+               f"{plan.attempts} 次；原模式 {'live' if plan.live else '回放'}；"
+               f"原模型快照 {plan.models or '?'}")  # fmt: skip
+    if missing:
+        typer.echo(f"本机找不到这些任务目录，跳过：{', '.join(missing)}", err=True)
+    if plan_only:
+        return
+    if not dirs:
+        raise typer.BadParameter("没有可复现的任务")
+    if live:
+        os.environ["TW_LLM_MODE"] = "live"
+    stamp = datetime.now(UTC).astimezone().strftime("%Y%m%d-%H%M")
+    out_dir = out or src.with_name(f"{src.name}-repro-{stamp}")
+
+    def llm_factory(cfg: RunConfig) -> LLMAgent:
+        from triwitness.llm.router import Router
+
+        harness = HarnessConfig.load(cfg.harness.removeprefix("configs/")) if cfg.harness else None
+        return LLMAgent(lambda: Router.deepseek_default(executor=cfg.executor), harness=harness,
+                        category=cfg.category, config_hash=cfg.name)  # fmt: skip
+
+    ledger = None
+    if live:
+        from triwitness.cost.ledger import GlobalLedger
+
+        ledger = GlobalLedger()
+    runner = EvalRunner(grader=Grader(), llm_agent_factory=llm_factory, live=live, gate=PeakGate(allow_peak=True),
+                        ledger=ledger)  # fmt: skip
+    try:
+        asyncio.run(runner.run([load_task(d) for d in dirs], configs, attempts=plan.attempts,
+                               concurrency=concurrency, out_dir=out_dir))  # fmt: skip
+    except KeyboardInterrupt:
+        typer.echo(f"已中断。续跑：tw eval reproduce {run} --out {out_dir}" + (" --live" if live else ""))
+        raise typer.Exit(130) from None
+    except TriWitnessError as e:
+        typer.echo(f"未开始：{e}", err=True)
+        raise typer.Exit(2) from None
+    cmp = write_comparison(src, out_dir)
+    typer.echo(render_markdown(cmp))
+    typer.echo(f"对比：{out_dir / 'reproduce.md'}")
+
+
 @eval_app.command("reverify")
 def eval_reverify(
     results: Annotated[Path, typer.Option(help="已保存的评测结果目录（如 W2 基线），只读")],

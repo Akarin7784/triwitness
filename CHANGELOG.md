@@ -9,6 +9,8 @@
 - **GitHub App 永久不做**（Eva 2026-10-12）：取消 W7-08 / W5-02（及依赖 Webhook 的 W5-03）。v1 只走本地分支 `tw/<run_id>` + `pr.md` / 可选 `tw pr open`（gh·PAT）。见 `specs/012-github-integration.md` §8、`docs/release/known-limitations.md`。
 
 ### Added
+- **W8-01 终测一键脚本**：`scripts/windows/run-final-eval.ps1`（test 35 题 × 单 Executor 基线 / orchestrated-1m 各 1 次，flash 非思考，冻结配置 `configs/runs/final-*.yaml`；续跑、磁盘检查、超 24MB 自动拆分 zip）+ `scripts/final_eval.py plan|run|report|bundle|reproduce`。
+- **W8-05 `tw eval reproduce <run>`**：按旧 run.json 的任务 / 配置 / 模型 ID 重跑（默认回放 ¥0，`--live` 真调），逐题对比写 `reproduce.md`，提示服务端模型可能已更新。
 - **W8-03 轨迹导出**（`tw traj export`）：OpenAI messages（SFT）、轨迹+奖励（RLVR）、Harbor 结果目录、单文件 HTML 回放；样例在 `evals/fixtures/traj_export/`。
 - **W5-13 外部对照第三轮（box，10 题 × 3，2026-10-12 13:32–14:31 UTC+8，Eva 批 `--allow-peak`，账本 ¥3.0144）**：`evals/baselines/2026-10-12-harbor-tb2-r3/`。30/30 完成、0 异常，**解决 28/30 = 93.3%**（Wilson 79%–98%）。超时守卫默认 `timeout_guard=block`：overfull-hbox 1/3→3/3，cobol / polyglot 均 3/3。fix-git 1/3 是判分环境 apt 镜像 500/404（Agent 已给出合理 merge，不是回归）。缓存命中 98.1%；比 r2 贵主要因高峰价（496/890）与 polyglot 三次偏贵。
 - **W7 安全网关首版（spec 014 / 015）**：Docker `network=allowlist` = internal 网络 + 出网网关 sidecar（域名白名单、SSRF / 元数据 / IP 直连 / DNS 外泄拦截；凭证按域名+方法+路径注入，沙箱只有 `tw-placeholder-*`；审计不记密钥）。MCP 代理（2026-07-28 无状态核心：白名单、版本固定、工具元数据指纹、第 N 次变脸隔离、返回包 untrusted）。参数级策略引擎 fail closed（分类器 uncertain→deny）。回收区 / git 只推 `tw/*` / 外部破坏性操作延迟可撤销。跨 agent 委托注入扫描 + HITL 审批令牌。红队 39 用例确定性开/关对比 39/39（¥0）。

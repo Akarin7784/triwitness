@@ -1,0 +1,9 @@
+# W8-01 终测（冻结 2026-10-12）：单 Executor 基线。long-context-1m（角色全关），flash 非思考（W5 OFAT：思考无收益、约 3.3× 成本）。
+# 评测模式：不读写记忆；计划 / 命令全部自动批准（Eva 2026-10-11 21:36，只限评测）。
+name: final-baseline
+harness: configs/harness/long-context-1m.yaml
+executor: {model: deepseek-flash, thinking: false}
+attempts: 1
+budget_profile: eval
+category: final-eval
+verifier: deterministic

@@ -1,0 +1,9 @@
+# W8-01 终测（冻结 2026-10-12）：完整流水线 orchestrated-1m = Planner → 复现 → Executor → 验证 → Reviewer(checklist, ADR-0007)。
+# 与 final-baseline 只差 harness（编排开）；Executor 同为 flash 非思考。评测模式权限全开、不读写记忆。
+name: final-orchestrated
+harness: configs/harness/orchestrated-1m.yaml
+executor: {model: deepseek-flash, thinking: false}
+attempts: 1
+budget_profile: eval
+category: final-eval
+verifier: deterministic
