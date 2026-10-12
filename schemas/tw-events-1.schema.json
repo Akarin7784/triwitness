@@ -20,7 +20,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -264,7 +265,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -456,7 +458,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -605,7 +608,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -821,7 +825,8 @@
             "verifier",
             "reviewer",
             "summarizer",
-            "classifier"
+            "classifier",
+            "reflector"
           ],
           "title": "Role",
           "type": "string"
@@ -934,7 +939,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -1152,7 +1158,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -1454,7 +1461,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -1609,7 +1617,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -1756,7 +1765,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -1917,7 +1927,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -2129,7 +2140,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -2377,7 +2389,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -2526,7 +2539,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -2694,7 +2708,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -2852,7 +2867,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -2992,7 +3008,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -3159,7 +3176,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -3390,7 +3408,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -3658,7 +3677,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -3868,7 +3888,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },
@@ -4031,7 +4052,8 @@
                 "verifier",
                 "reviewer",
                 "summarizer",
-                "classifier"
+                "classifier",
+                "reflector"
               ],
               "type": "string"
             },

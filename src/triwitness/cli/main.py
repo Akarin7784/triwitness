@@ -104,6 +104,10 @@ def run_cmd(
     no_input: Annotated[
         bool, typer.Option("--no-input", help="终端里也不弹 y/N 确认：需要确认的操作一律拒绝（脚本 / CI 用）")
     ] = False,
+    memory: Annotated[
+        bool | None,
+        typer.Option("--memory/--no-memory", help="读本仓库的记忆（默认：有就读；评测从不读）"),
+    ] = None,
     open_pr: Annotated[
         bool,
         typer.Option("--open-pr", help="完成后按风险等级开 PR（L0/L1 确认后开、L2 确认后开 Draft、L3 不开），并盯 CI"),
@@ -208,7 +212,7 @@ def run_cmd(
                              test_command=test_cmd, verify=verify, approver=approver, on_event=on_event,  # type: ignore[arg-type]
                              home=home, budget=budget, session=session, attachments=files if fresh else None,
                              guidance=guidance if fresh else None, reviewer=reviewer, recorder=recorder,
-                             resume=resume_state, harness=hcfg, publish=publish)  # fmt: skip
+                             resume=resume_state, harness=hcfg, publish=publish, memory=memory)  # fmt: skip
 
         def start(approver, on_event):  # type: ignore[no-untyped-def]
             if demo:  # 开发 / 测试用的脚本化任务：不走对话轮
@@ -250,7 +254,7 @@ def run_cmd(
                                     test_command=test_cmd, verify=verify, budget=budget,  # type: ignore[arg-type]
                                     session=session, attachments=files, guidance=guidance,
                                     reviewer=reviewer, harness=hcfg, approver=tty_approver,
-                                    publish=publish))  # fmt: skip
+                                    publish=publish, memory=memory))  # fmt: skip
     except TriWitnessError as e:
         typer.echo(f"未完成：{e}", err=True)
         raise typer.Exit(2) from None
@@ -649,6 +653,10 @@ def budget_sync() -> None:
     typer.echo(f"本地账本累计已花 ¥{b.ledger_spent:.4f}")
     typer.echo(reconcile(led.path.parent / "balance_snapshots.jsonl", b, datetime.now(UTC)))
 
+
+from triwitness.cli.memory import memory_app  # noqa: E402
+
+app.add_typer(memory_app, name="memory")
 
 sandbox_app = typer.Typer(add_completion=False, no_args_is_help=True, help="沙箱")
 app.add_typer(sandbox_app, name="sandbox")

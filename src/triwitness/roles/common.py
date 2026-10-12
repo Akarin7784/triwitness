@@ -44,6 +44,7 @@ def role_loop(
     thinking: bool | None = None,
     temperature: float | None = None,
     force_submit: str | None = None,
+    memory_sections: list[str] | None = None,
 ) -> AgentLoop:
     """角色自己的 AgentLoop：独立上下文、独立回合上限（预算守卫只限制本角色；成本照常经账本记到任务上）。"""
     role_prompt = load_prompt(prompt).text
@@ -53,7 +54,8 @@ def role_loop(
                      executor_vendor=executor_vendor, thinking=thinking, temperature=temperature,
                      force_submit=force_submit,
                      system_prompt=build_system_prompt(role_prompt, agents_md=agents_md, tool_names=registry.names,
-                                                       agents_md_max_chars=8000 if agents_md else 0))  # fmt: skip
+                                                       agents_md_max_chars=8000 if agents_md else 0,
+                                                       memory_sections=memory_sections))  # fmt: skip
 
 
 def executor_vendor(router: Any) -> str | None:

@@ -32,6 +32,7 @@ ROLE_NAMES = {
     "reviewer": "Reviewer",
     "summarizer": "Summarizer",
     "classifier": "Classifier",
+    "reflector": "Reflector",
 }
 SCOPE_NAMES = {
     "repro_base": "复现（基线）",

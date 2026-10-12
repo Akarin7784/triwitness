@@ -50,6 +50,7 @@ from triwitness.harness.prepare import PrepareOptions, PrepareResult, prepare_en
 from triwitness.harness.replay import Replay, replay_history, replay_note
 from triwitness.harness.resume import ResumeState, apply_resume, bump_checkpoint, resume_note, save_progress
 from triwitness.llm.pricing import pricing_version
+from triwitness.memory.context import MemoryContext
 from triwitness.prompts import load_prompt
 from triwitness.roles.planner import PlannerResult, criteria_texts, render_plan, run_planner
 from triwitness.roles.reviewer import ReviewInput, ReviewResult, run_review
@@ -146,6 +147,7 @@ class InProcessOrchestrator:
         progress_dir: Path | None = None,
         approver: Approver | None = None,
         publisher: Publisher | None = None,
+        memory: MemoryContext | None = None,
     ) -> None:
         self.rec = recorder
         self.router = router
@@ -170,6 +172,8 @@ class InProcessOrchestrator:
         self.progress_dir = progress_dir
         self.approver = approver
         self.publisher = publisher  # W5：tw run --open-pr 时开 PR + 盯 CI（评测永远为 None）
+        # W6：记忆（仓库事实 / 技能目录进稳定前缀，Planner 检索经验）；评测默认 None（A/B 门禁的 B 臂除外）
+        self.memory = memory if memory is not None and not memory.empty else None
         self.ledger = CostLedger(task_id=recorder.task_id, pricing_version=pricing_version())
         self.sm = TaskStateMachine(on_transition=self._emit_transition)
 
@@ -235,6 +239,7 @@ class InProcessOrchestrator:
                 repro_first_done = dict(resume.repro_check)
         ctx = ToolContext(sandbox=sandbox, task_id=rec.task_id, run_id=rec.run_id, test_command=test_command,
                           tw_dir=self.tw_dir)  # fmt: skip
+        memory_sections = self._attach_memory(registry)
 
         # ---- PLANNING（可选）
         plan: Plan | None = None
@@ -284,7 +289,8 @@ class InProcessOrchestrator:
                          category=self.category, stream=self.stream,
                          system_prompt=build_system_prompt(role_prompt, agents_md=self.agents_md,
                                                            tool_names=registry.names,
-                                                           agents_md_max_chars=max(0, room)))  # fmt: skip
+                                                           agents_md_max_chars=max(0, room),
+                                                           memory_sections=memory_sections))  # fmt: skip
         ctx.state[ASK_HUMAN_KEY] = self._ask_human
         if repro_first:
             ctx.state["repro_first"] = True
@@ -412,6 +418,21 @@ class InProcessOrchestrator:
             ok = check.get("status") == "reproduced"
             self.go(S.EXECUTING, "修复" if ok else "修复（无法复现，已降级）")
 
+    def _attach_memory(self, registry: ToolRegistry) -> list[str] | None:
+        """有技能时注册 load_skill；写一份 memory.json（用了哪些事实 / 哪个版本的技能，监控与回滚据此归因）。"""
+        mem = self.memory
+        if mem is None:
+            return None
+        if mem.skills and registry.get("load_skill") is None:
+            from triwitness.tools.skills import LoadSkill
+
+            registry.register(LoadSkill(mem))
+        self.rec.artifact("memory.json", {
+            "repo_key": mem.repo_key, "facts_chars": len(mem.facts), "episodes": mem.search is not None,
+            "skills": [{"name": s.name, "version": s.version} for s in mem.skills],
+        })  # fmt: skip
+        return mem.prefix_sections()
+
     def _role_ctx(self, ctx: ToolContext) -> ToolContext:
         """角色用独立的工具上下文（不共享 Executor 的 after_step / repro 状态）。"""
         return replace(ctx, state={})
@@ -421,7 +442,8 @@ class InProcessOrchestrator:
         return await run_planner(router=self.router, rec=self.rec, ctx=self._role_ctx(ctx), issue=self.task_prompt,
                                  cfg=self.cfg, budget=self.budget, mode=self.mode, category=self.category,
                                  agents_md=self.agents_md, gate=self.registry.gate, test_command=test_command,
-                                 baseline_failures=len(base.failures) if base else None)  # fmt: skip
+                                 baseline_failures=len(base.failures) if base else None,
+                                 memory=self.memory)  # fmt: skip
 
     async def _review(self, ctx: ToolContext, patch: str, finish: FinishReport, plan: Plan | None,
                       verification: PipelineResult | None, round_: int) -> ReviewResult:  # fmt: skip

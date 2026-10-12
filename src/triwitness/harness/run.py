@@ -16,6 +16,7 @@ from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import RouterLike
 from triwitness.harness.prepare import PrepareOptions
 from triwitness.harness.resume import ResumeState
+from triwitness.memory.context import MemoryContext
 from triwitness.orchestrator.inprocess import FinishStatus, InProcessOrchestrator, TaskResult
 from triwitness.prompts import load_prompt
 from triwitness.sandbox.base import Sandbox
@@ -51,13 +52,14 @@ async def run_task(
     progress_dir: Path | None = None,
     approver: Approver | None = None,
     publisher: Publisher | None = None,
+    memory: MemoryContext | None = None,
 ) -> TaskResult:
     orch = InProcessOrchestrator(
         recorder=recorder, router=router, registry=registry, sandbox=sandbox, issue_title=issue_title,
         task_prompt=task_prompt, repo=repo, budget=budget, config_hash=config_hash, issue_number=issue_number,
         test_command=test_command, mode=mode, agents_md=agents_md, config=config, tw_dir=tw_dir, category=category,
         verify=verify, prepare=prepare, stream=stream, resume=resume, progress_dir=progress_dir, approver=approver,
-        publisher=publisher,
+        publisher=publisher, memory=memory,
     )  # fmt: skip
     return await orch.run()
 

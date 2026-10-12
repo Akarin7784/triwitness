@@ -40,7 +40,8 @@ export type PromptVersions = {
 } | null
 export type Repo = string
 export type RoleHint = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type Role = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId = string
 export type Seq = number
 export type SpanId = string | null
@@ -69,7 +70,8 @@ export type TaskState =
   | 'failed'
   | 'cancelled'
 export type RoleHint1 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type Role1 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role1 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId1 = string
 export type Seq1 = number
 export type SpanId1 = string | null
@@ -97,7 +99,8 @@ export type CacheMissTokens = number
 export type InputTokens = number
 export type OutputTokens = number
 export type ReasoningTokens = number | null
-export type Role2 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role2 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId2 = string
 export type Seq2 = number
 export type SpanId2 = string | null
@@ -121,7 +124,8 @@ export type PermissionRule = string | null
 export type RoleHint3 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Tool = string
 export type Truncated = boolean
-export type Role3 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role3 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId3 = string
 export type Seq3 = number
 export type SpanId3 = string | null
@@ -134,7 +138,8 @@ export type Display4 = string | null
 export type Label = string
 export type Ref = string | null
 export type RoleHint4 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type Role4 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role4 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId4 = string
 export type Seq4 = number
 export type SpanId4 = string | null
@@ -148,7 +153,8 @@ export type Display5 = string | null
 export type Level = number
 export type RoleHint5 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Signal = 'repeat_action' | 'consecutive_failures' | 'no_progress'
-export type Role5 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role5 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId5 = string
 export type Seq5 = number
 export type SpanId5 = string | null
@@ -167,7 +173,8 @@ export type Summarizer = ('model' | 'fallback') | null
 export type SummaryChars = number | null
 export type TokensAfter = number
 export type TokensBefore = number
-export type Role6 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role6 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId6 = string
 export type Seq6 = number
 export type SpanId6 = string | null
@@ -182,7 +189,8 @@ export type Options = string[]
 export type Question = string
 export type RequestId = string
 export type RoleHint7 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type Role7 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role7 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId7 = string
 export type Seq7 = number
 export type SpanId7 = string | null
@@ -196,7 +204,8 @@ export type By = string
 export type Display8 = string | null
 export type RequestId1 = string
 export type RoleHint8 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
-export type Role8 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role8 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId8 = string
 export type Seq8 = number
 export type SpanId8 = string | null
@@ -218,7 +227,8 @@ export type RuleSource = ('default' | 'user' | 'project' | 'local' | 'session' |
 export type SuggestedRule = string | null
 export type TimeoutS = number | null
 export type Tool1 = string
-export type Role9 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role9 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId9 = string
 export type Seq9 = number
 export type SpanId9 = string | null
@@ -235,7 +245,8 @@ export type RequestId3 = string
 export type RoleHint10 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type SavedRule = string | null
 export type Scope = 'once' | 'session' | 'always'
-export type Role10 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role10 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId10 = string
 export type Seq10 = number
 export type SpanId10 = string | null
@@ -253,7 +264,8 @@ export type Risk1 = 'normal' | 'high'
 export type RoleHint11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Scope1 = 'task' | 'session'
 export type ToMode = 'plan' | 'ask' | 'auto_review' | 'full_access' | 'auto_edit' | 'auto' | 'unrestricted'
-export type Role11 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role11 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId11 = string
 export type Seq11 = number
 export type SpanId11 = string | null
@@ -270,7 +282,8 @@ export type RoleHint12 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'sy
 export type TestsPassed = boolean | null
 export type UnverifiedReason = ('no_sandbox' | 'backend_unavailable' | 'skipped') | null
 export type Verdict = 'pass' | 'fail' | 'inconclusive'
-export type Role12 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role12 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId12 = string
 export type Seq12 = number
 export type SpanId12 = string | null
@@ -291,7 +304,8 @@ export type Model1 = string
 export type RoleHint13 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Variant = string
 export type VendorPolicy = 'single_vendor' | 'cross_vendor'
-export type Role13 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role13 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId13 = string
 export type Seq13 = number
 export type SpanId13 = string | null
@@ -307,7 +321,8 @@ export type Calls = number
 export type CostCny1 = number
 export type Model2 = string
 export type PeakCalls = number
-export type Role14 = 'planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier'
+export type Role14 =
+  'planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector'
 export type Vendor = 'deepseek' | 'qwen' | 'zhipu'
 export type Lines = CostLine[]
 export type PricingVersion = string
@@ -328,7 +343,8 @@ export type TestsPassed1 = boolean
 export type TestsRun = string[]
 export type RoleHint14 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Status1 = 'done' | 'failed' | 'budget_exceeded' | 'stuck' | 'needs_human' | 'cancelled'
-export type Role15 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role15 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId14 = string
 export type Seq14 = number
 export type SpanId14 = string | null
@@ -341,7 +357,8 @@ export type Display15 = string | null
 export type Message1 = string
 export type RoleHint15 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Type = string
-export type Role16 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role16 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId15 = string
 export type Seq15 = number
 export type SpanId15 = string | null
@@ -362,7 +379,8 @@ export type Ok1 = boolean
 export type RoleHint16 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type SetupSource = 'repo' | 'cache' | 'model' | 'heuristic' | 'none'
 export type TestCommand = string | null
-export type Role17 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role17 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId16 = string
 export type Seq16 = number
 export type SpanId16 = string | null
@@ -376,7 +394,8 @@ export type Display17 = string | null
 export type Index = number
 export type RoleHint17 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Text = string
-export type Role18 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role18 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId17 = string
 export type Seq17 = number
 export type SpanId17 = string | null
@@ -390,7 +409,8 @@ export type Display18 = string | null
 export type Index1 = number
 export type RoleHint18 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Text1 = string
-export type Role19 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role19 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId18 = string
 export type Seq18 = number
 export type SpanId18 = string | null
@@ -404,7 +424,8 @@ export type ParentRun = string | null
 export type Repo1 = string | null
 export type RoleHint19 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Text2 = string
-export type Role20 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role20 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId19 = string
 export type Seq19 = number
 export type SpanId19 = string | null
@@ -419,7 +440,8 @@ export type Kind22 = 'chat' | 'task'
 export type Reply = string | null
 export type RoleHint20 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
 export type Status2 = string
-export type Role21 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier') | null
+export type Role21 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
 export type RunId20 = string
 export type Seq20 = number
 export type SpanId20 = string | null

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 from triwitness.config import tw_home
+from triwitness.core.errors import TriWitnessError
 from triwitness.core.ids import new_run_id, new_task_id
 from triwitness.core.models import Budget
 from triwitness.cost.report import render_cost_markdown
@@ -26,6 +27,7 @@ from triwitness.harness.inputs import archive_attachments, compose_task
 from triwitness.harness.loop import RouterLike
 from triwitness.harness.resume import ResumeState
 from triwitness.harness.run import TaskResult, run_task
+from triwitness.memory.context import MemoryContext, open_memory
 from triwitness.permissions.config import SessionOverrides, load_policy
 from triwitness.permissions.engine import PermissionEngine
 from triwitness.permissions.mode import ModeController
@@ -90,6 +92,7 @@ async def run_local(
     recorder: TrajectoryRecorder | None = None,
     resume: ResumeState | None = None,
     publish: PublishOptions | None = None,
+    memory: bool | None = None,
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
@@ -109,6 +112,7 @@ async def run_local(
         rec.subscribe(store.observe)
     branch: str | None = None
     result: TaskResult | None = None
+    mem: MemoryContext | None = None
     hcfg = harness or HarnessConfig.default()
     # 附件按 harness 的任务分配内联，避免进 ContextManager 后再被头尾截断
     composed = compose_task(issue, guidance=guidance, attachments=attachments,
@@ -148,6 +152,8 @@ async def run_local(
                         "ci": hcfg.github.ci.model_copy(update={"watch": publish.watch_ci})})})  # fmt: skip
             else:
                 log.warning("--open-pr 只支持 none 后端（%s 后端不开 PR，改动照常保留）", choice.backend.name)
+        # W6：交互运行默认读本仓库的记忆（有才读）；--no-memory 关闭。这里只读，结束后只记 Skill 监控
+        mem = open_memory(str(repo), home=home, mode="background", category="dogfood", override=memory)
         result = await run_task(
             recorder=rec,
             router=router,
@@ -170,6 +176,7 @@ async def run_local(
             progress_dir=run_dir,  # 每步存续跑进度（harness/resume.py）
             approver=approver,  # 计划确认（spec 010 §8）与权限审批共用同一通道
             publisher=publisher,
+            memory=mem,
         )
     finally:
         if store is not None:
@@ -201,8 +208,24 @@ async def run_local(
                                                       "ci": result.ci.state if result.ci else None},
                                                      ensure_ascii=False,
                                                      indent=2), encoding="utf-8")  # fmt: skip
+    if mem is not None and mem.skills and result.verification is not None:
+        _observe_skills(repo, home, mem, run_id, result.verification.evidence.verdict == "pass", run_dir)
     return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch,
                            repo=str(repo.resolve()))  # fmt: skip
+
+
+def _observe_skills(repo: Path, home: Path, mem: MemoryContext, run_id: str, solved: bool, run_dir: Path) -> None:
+    """Skill 监控（spec 013 §5.4）：记结果、退化的自动回滚。失败只记日志，不影响本次 run 的结果。"""
+    from triwitness.memory.monitor import observe_run
+    from triwitness.memory.store import MemoryStore
+
+    try:
+        store = MemoryStore.for_repo(str(repo), home)
+        for h, new in observe_run(store.root, mem.skills, run_id=run_id, solved=solved,
+                                  trajectory=run_dir / "trajectory.jsonl", commit=store.commit):  # fmt: skip
+            log.warning("Skill 监控自动回滚：%s → %s", h.line(), f"v{new}" if new else "已移除")
+    except (OSError, ValueError, TriWitnessError) as e:
+        log.warning("Skill 监控写入失败（不影响本次结果）：%s", e)
 
 
 def _open_store(home: Path):  # type: ignore[no-untyped-def]

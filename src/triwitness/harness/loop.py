@@ -79,12 +79,15 @@ def build_system_prompt(
     agents_md: str | None = None,
     tool_names: list[str] | None = None,
     agents_md_max_chars: int = 4000,
+    memory_sections: list[str] | None = None,
 ) -> str:
     """稳定前缀：角色提示 + AGENTS.md 摘要 + 工具清单（不含任何随任务变化的内容）。
     AGENTS.md 摘要的长度由 allocation.prefix 扣掉提示与工具 schema 后的余量决定（spec 007 §token 分配）。"""
     parts = [role_prompt.strip()]
     if agents_md and agents_md_max_chars > 0:
         parts.append("## 仓库约定（AGENTS.md 摘要）\n" + agents_md.strip()[:agents_md_max_chars])
+    # 记忆（spec 013 §4.1）：仓库事实 + 技能目录；同一仓库各任务相同，没有记忆时不加任何内容（前缀逐字节不变）
+    parts += [s for s in memory_sections or [] if s.strip()]
     if tool_names:
         parts.append("## 可用工具\n" + "、".join(sorted(tool_names)))
     return "\n\n".join(parts)

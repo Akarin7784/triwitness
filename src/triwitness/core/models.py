@@ -11,7 +11,7 @@ from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 Vendor = Literal["deepseek", "qwen", "zhipu"]  # v0.1 只用 deepseek；后两个为保留值（ADR-0002）
-Role = Literal["planner", "executor", "verifier", "reviewer", "summarizer", "classifier"]
+Role = Literal["planner", "executor", "verifier", "reviewer", "summarizer", "classifier", "reflector"]
 RiskLevel = Literal["L0", "L1", "L2", "L3"]
 VendorPolicy = Literal["single_vendor", "cross_vendor"]
 

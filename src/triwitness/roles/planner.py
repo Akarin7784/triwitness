@@ -8,6 +8,7 @@ from typing import Literal
 from triwitness.core.models import Budget, Plan
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import LoopOutcome, RouterLike
+from triwitness.memory.context import MemoryContext
 from triwitness.roles.common import last_model, read_only_registry, role_loop, submission_or_fallback
 from triwitness.roles.contracts import PlanSubmission, submit_plan_tool
 from triwitness.telemetry.trajectory import TrajectoryRecorder
@@ -44,17 +45,29 @@ async def run_planner(
     gate: Gate | None = None,
     test_command: str | None = None,
     baseline_failures: int | None = None,
+    memory: MemoryContext | None = None,
 ) -> PlannerResult:
     pc = cfg.orchestration.planner
     loop = role_loop(role="planner", prompt=cfg.prompts.get("planner", "planner"), router=router,
                      registry=read_only_registry(submit_plan_tool(), gate=gate), rec=rec, cfg=cfg, budget=budget,
                      max_turns=pc.max_turns, mode=mode, category=category, agents_md=agents_md,
-                     intro=INTRO)  # fmt: skip
+                     intro=INTRO, memory_sections=_facts_only(memory))  # fmt: skip
     text = planner_input(issue, test_command=test_command, baseline_failures=baseline_failures)
+    block = memory.planner_block(issue) if memory is not None else ""
+    if block:  # W6-03：相似经验片段（检索结果，数据块）追加在 Planner 输入末尾，不进稳定前缀
+        text = f"{text}\n\n{block}"
+
     outcome = await loop.run(text, ctx)
     sub, path = submission_or_fallback(loop, outcome, PlanSubmission)
     plan = sub.to_plan(task_id=rec.task_id, model=last_model(rec, "planner")) if sub is not None else None
     return PlannerResult(plan=plan, outcome=outcome, path=path)
+
+
+def _facts_only(memory: MemoryContext | None) -> list[str] | None:
+    """Planner 的前缀只放仓库事实（它的只读工具集里没有 load_skill，技能目录给 Executor）。"""
+    if memory is None or not memory.facts:
+        return None
+    return memory.prefix_sections()[:1]
 
 
 def render_plan(plan: Plan) -> str:

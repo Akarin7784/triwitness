@@ -23,6 +23,7 @@ from triwitness.harness.config import HarnessConfig
 from triwitness.harness.loop import RouterLike
 from triwitness.harness.run import run_task
 from triwitness.llm.pricing import pricing_version
+from triwitness.memory.context import MemoryContext
 from triwitness.sandbox.base import Sandbox
 from triwitness.telemetry.trajectory import TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
@@ -134,12 +135,14 @@ class LLMAgent:
         harness: HarnessConfig | None = None,
         category: str = "baseline",
         config_hash: str = "baseline",
+        memory: MemoryContext | None = None,
     ) -> None:
         self.router_factory = router_factory
         self.budget = budget or Budget.for_eval()
         self.harness = harness
         self.category = category
         self.config_hash = config_hash
+        self.memory = memory  # 评测默认不用记忆；只有 A/B 门禁的 B 臂传入待测 Skill（spec 013 §7）
 
     async def solve(self, task: EvalTask, sandbox: Sandbox, rec: TrajectoryRecorder) -> AgentRun:
         budget = self.budget  # 0.3.2：任务 [tw] max_cost_cny 不再执行
@@ -158,6 +161,7 @@ class LLMAgent:
             mode="eval",
             config=harness,
             category=self.category,
+            memory=self.memory,
         )
         # 评审无结论记为未解决（Eva 2026-10-12）：不算 agent 声称成功
         claimed = (res.status == "done" and res.finish is not None and res.finish.tests_passed
