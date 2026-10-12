@@ -31,7 +31,9 @@ RUN_ID_RE = re.compile(r"^r_[0-9A-Za-z]{8,40}$")
 MAX_TURNS = 20
 TURN_TEXT_MAX = 4000
 WORK_TOOL = "start_repo_work"
-NO_REPO_REPLY = "要在仓库里动手，需要先在输入框下方选一个本地文件夹（不是 git 仓库会自动初始化），选好后把要求再发一次。"
+NO_REPO_REPLY = (
+    "要在仓库里动手，需要先在输入框下方选一个本地文件夹（不是 git 仓库会自动初始化），选好后把要求再发一次。"
+)
 
 TOOLS: list[dict[str, Any]] = [
     {
