@@ -31,7 +31,7 @@ import yaml
 from triwitness.core.errors import TriWitnessError
 from triwitness.memory.checks import check_skill_name
 
-Status = Literal["candidate", "active", "rejected", "rolled_back", "superseded"]
+Status = Literal["candidate", "awaiting_review", "active", "rejected", "rolled_back", "superseded"]
 
 
 class SkillError(TriWitnessError):
@@ -181,6 +181,37 @@ class SkillPool:
         self._save(st)
         self._install(name, sk)
         return sk
+
+    def await_review(self, name: str, version: int, *, reason: str, gate_report: str) -> None:
+        """repo 级 Skill 凑不够 held-out：不判拒绝，转人工审核（spec 013 Q1，默认值待 Eva 审）。"""
+        st = self.state()
+        d = self.version_dir(name, version)
+        (d / "gate.md").write_text(gate_report, encoding="utf-8")
+        self._set_status(name, version, "awaiting_review", st)
+        st[name]["versions"][str(version)]["reason"] = reason
+        self._event(st, name, "await_review", version, reason)
+        self._save(st)
+
+    def approve(self, name: str, version: int, *, reviewer: str, note: str = "") -> Skill:
+        """人工审核通过：只用于 scope=repo 且处于 candidate / awaiting_review 的版本；上线后靠监控把关。"""
+        st = self.state()
+        info = (st.get(name) or {}).get("versions", {}).get(str(version))
+        if info is None:
+            raise SkillError(f"池里没有 {name} v{version}")
+        if info.get("status") not in ("candidate", "awaiting_review"):
+            raise SkillError(f"{name} v{version} 的状态是 {info.get('status')}，不能人工审核合入")
+        if self.get(name, version).scope != "repo":
+            raise SkillError("global Skill 只能经 A/B 门禁合入；人工审核只适用于 scope=repo")
+        if not reviewer.strip():
+            raise SkillError("人工审核必须写审核人")
+        report = (
+            f"# Skill 人工审核：{name} v{version}\n\n"
+            "- 方式：人工审核 + 上线监控（spec 013 Q1 默认值，待 Eva 审）\n"
+            f"- 审核人：{reviewer}\n- 备注：{note or '无'}\n"
+        )
+        return self.promote(
+            name, version, gate_report=report, summary={"human_review": True, "reviewer": reviewer, "note": note}
+        )
 
     def reject(self, name: str, version: int, *, reason: str, gate_report: str | None = None) -> None:
         st = self.state()

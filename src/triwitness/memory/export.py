@@ -5,7 +5,9 @@
 - claude-skills：`.claude/skills/<名>/SKILL.md`（Agent Skills 规范，Claude Code 读取）；
 - opencode：`.opencode/skills/<名>/SKILL.md`（OpenCode 的项目级 Skill 目录）；
 - agents-skills：`.agents/skills/<名>/SKILL.md`（跨工具通用目录，OpenCode 等也会读）。
-只导出已接受的事实 / 经验与**当前版本**的 Skill（候选、被拒、回滚的不导出）。不写用户仓库，只写 --out 指定的目录。
+只导出已接受的事实 / 经验与**当前版本**的 Skill（候选、被拒、回滚的不导出）。
+**绝不写进用户的代码仓库**（spec 013 Q6 默认值，待 Eva 审）：--out 落在来源仓库或任何 git 工作区里一律拒绝；
+Skill 只写到 --out 下的 `.claude/skills`、`.opencode/skills`、`.agents/skills`，要用时用户自己复制。
 """
 
 from __future__ import annotations
@@ -48,9 +50,39 @@ def _copy_skills(store: MemoryStore, dst: Path) -> list[Path]:
     return out
 
 
+class ExportTargetError(ValueError):
+    """导出目录落在代码仓库里。"""
+
+
+def _inside_git_worktree(p: Path) -> Path | None:
+    for d in [p, *p.parents]:
+        if (d / ".git").exists():
+            return d
+    return None
+
+
+def check_target(store: MemoryStore, out: Path) -> None:
+    """--out 不能在来源仓库里，也不能在任何 git 工作区里（防止导出物被顺手提交进用户仓库）。"""
+    o = out.expanduser().resolve()
+    if store.repo and not store.repo.startswith(("http://", "https://", "git@")):
+        r = Path(store.repo).expanduser().resolve()
+        if o == r or r in o.parents:
+            raise ExportTargetError(f"导出目录在代码仓库里（{r}），不写用户仓库；换一个仓库外的目录")
+    wt = _inside_git_worktree(o)
+    if wt is not None:
+        raise ExportTargetError(f"导出目录在 git 工作区里（{wt}），不写用户仓库；换一个仓库外的目录")
+
+
+def default_out(store: MemoryStore) -> Path:
+    from triwitness.config import tw_home
+
+    return tw_home() / "exports" / store.root.name
+
+
 def export(store: MemoryStore, fmt: str, out: Path) -> list[Path]:
     if fmt not in FORMATS:
         raise ValueError(f"未知格式 {fmt}（可选：{'、'.join(FORMATS)}）")
+    check_target(store, out)
     if not store.exists():
         raise FileNotFoundError(f"没有记忆：{store.root}")
     out.mkdir(parents=True, exist_ok=True)
@@ -69,4 +101,4 @@ def export(store: MemoryStore, fmt: str, out: Path) -> list[Path]:
     return files
 
 
-__all__ = ["FORMATS", "agents_md_fragment", "export"]
+__all__ = ["FORMATS", "SKILL_DIRS", "ExportTargetError", "agents_md_fragment", "check_target", "default_out", "export"]

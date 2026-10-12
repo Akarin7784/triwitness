@@ -1,6 +1,6 @@
 # Spec 013：记忆与 Skill（仓库事实、经验片段、Skill、蒸馏、门禁、监控、导出）
 
-- 状态：草稿（W6-01；W6-02 ~ W6-09 已实现首版，**待 Eva 审阅**，见 §10）｜负责人：Eva｜目标周：W6｜依赖：008、010、016
+- 状态：草稿（W6-01；W6-02 ~ W6-09 已实现首版，**待 Eva 审阅**；§10 六个开放问题已按建议落成默认值，标 default pending Eva review）｜负责人：Eva｜目标周：W6｜依赖：008、010、016
 - 相关文档：04-detailed-design.md §7.1、§3.4（load_skill）、§6.2（配对检验）；
   [Agent Memory Repo 规范](https://github.com/AgentMemoryRepo/agentmemoryrepo)（Cognition 发布的开放标准，MIT；亦见 cognition.com/agent-memory-repo）；
   [Agent Skills 规范](https://agentskills.io/specification)
@@ -115,7 +115,7 @@ candidates.jsonl     蒸馏出的候选（待接受 / 已拒绝）
   - 按 seed 哈希排序后确定性抽取 ≤12 个；**不足 8 个判 insufficient_heldout，不跑**。
 - **设计**：A（无 Skill）/ B（只注入该 Skill），同任务 × 2 次配对（扩档时 3 次），共 `任务数 × 次数 × 2` 次运行。
 - **判定**：B 成功率 > A（`min_gain=0`）且 B 单次成本 ≤ A ×（1 + 5%）→ 合入（版本成为当前版本，旧版本 superseded）；
-  否则拒绝并记录原因。McNemar 精确检验 p ≥ 0.05 时标“功效不足”（结论按点估计，报告写明，见 Q4）。
+  repo 级 held-out 不足转人工审核（§10 Q1），其余拒绝并记录原因。McNemar 精确检验 p ≥ 0.05 时标“功效不足”（结论按点估计，报告写明，见 Q4）。
 - **报告**：自动生成 Markdown（两臂 n、成功率、Wilson 区间、单次成本、配对差的 bootstrap 区间、McNemar），存为
   `pool/<名>/v<N>/gate.md`，摘要写进 `pool.json`。
 - **执行**：`tw memory gate plan`（只出计划与预估）、`tw memory gate fake`（假 runner，¥0，验证流程）；
@@ -144,7 +144,7 @@ candidates.jsonl     蒸馏出的候选（待接受 / 已拒绝）
 
 ## 7. 导出（W6-09）
 
-`tw memory export --format <格式> --out <目录>`（只写 `--out`，不碰代码仓库）：
+`tw memory export --format <格式> [--out <目录>]`（只写 `--out`，默认 `~/.triwitness/exports/<仓库键>/`；`--out` 在任何 git 工作区里一律拒绝，见 §10 Q6）：
 
 | 格式 | 输出 |
 |---|---|
@@ -159,7 +159,7 @@ candidates.jsonl     蒸馏出的候选（待接受 / 已拒绝）
 ## 8. CLI
 
 `tw memory show | add-fact | forget | candidates | accept | reject | distill | check | add-skill | gate plan | gate fake |
-rollback | monitor | export | history`，`tw run --memory/--no-memory`。
+approve-skill | rollback | monitor | export | history`，`tw run --memory/--no-memory`。
 
 ## 9. 验收（对应 TASKS W6）
 
@@ -171,14 +171,27 @@ rollback | monitor | export | history`，`tw run --memory/--no-memory`。
 - W6-07：时间切分 / 范围 / 排除的选择测试、判定、报告、不足不跑；
 - W6-08：模拟退化触发回滚；W6-09：五种格式的导出测试。
 
-## 10. 开放问题（待 Eva 决定）
+## 10. 开放问题 → 默认值（default pending Eva review）
 
-- **Q1 同仓库 held-out 不够**：ext-reserve 每个仓库至多 2 个任务，`scope=repo` 永远凑不够 8 个。现在 repo 级 Skill
-  会判 insufficient_heldout（不合入）。选项：(a) 允许 repo 级 Skill 用 global 门禁（测“不伤害通用能力”，不测“对本仓库有用”）；
-  (b) 为常用仓库用 task_factory 造同仓库时间序列任务；(c) repo 级 Skill 只靠人工审 + 监控上线。建议 (a)+(c)。
-- **Q2 事实自动接受**：目前事实 / 经验都要 `tw memory accept`。是否对“通过检查且来自 verdict=pass 的 test / install 类事实”自动接受？
-- **Q3 `tw run` 默认读记忆**：现在默认开（有才读）。桌面端是否需要开关 / 显示“本次用了哪些记忆”？
-- **Q4 门禁阈值**：是否要求显著（p < 0.05）才合入？以 ~10 个任务 × 2 次，几乎不可能显著；现按点估计 + 标注功效不足。
-  每次真跑门禁约 ¥4，是否给每周门禁预算？
-- **Q5 监控基线**：日常任务与 held-out 评测任务的成功率不完全可比，阈值 −15pp 是否合适？还是改为“定期在 held-out 上复测”？
-- **Q6 导出路径**：`.opencode/skills`（已核对 OpenCode 文档）、`.claude/skills`、`.agents/skills` 是否够？是否要直接写进仓库？
+Eva 截至 2026-10-12 10:19 没有回复，以下按建议先落成**可逆的默认值**，每条都标 **default pending Eva review**，
+Eva 审过后改成“已决定”或改掉。
+
+- **Q1 同仓库 held-out 不够** —— **default pending Eva review**：repo 级 Skill 走 **人工审核 + 上线监控**（选项 c）。
+  门禁判 insufficient_heldout 且 `scope=repo` 时不再拒绝，状态改 `awaiting_review`；`tw memory approve-skill <名> --version N --reviewer <人>`
+  人工合入（门禁报告写“人工审核”）。监控基线：同仓库“注入但没读”的 run 成功率（≥ 8 条才判），读取后低 15 个百分点以上自动回滚。
+  global Skill 仍只能经 A/B 门禁合入（held-out 不够就拒绝）。选项 (a)(b) 暂不做。
+- **Q2 事实自动接受** —— **default pending Eva review**：**不自动接受**。蒸馏出的事实 / 经验一律进候选区，
+  `tw memory accept <id>` 人工确认才写进记忆（再过一次静态检查）。
+- **Q3 `tw run` 默认读记忆** —— **default pending Eva review**：**默认开**（有才读，`--no-memory` 关；评测 / Harbor / 基线从不读写）。
+  桌面端显示“本次用了哪些记忆”和开关列为 UI 后续项（未做）。
+- **Q4 门禁阈值** —— **default pending Eva review**：按**点估计**合入（B 成功率 > A 且单次成本 ≤ A × 1.05），
+  McNemar p ≥ 0.05 时在报告和 `pool.json` 摘要里标 `underpowered`（功效不足）。**没有 Eva 的明确批准不跑任何付费门禁**
+  （`scripts/skill_gate.py run` 必须 `--yes`；agent 不自行加 `--yes`）；每周门禁预算（约 ¥4/次）待 Eva 定。
+- **Q5 监控基线** —— **default pending Eva review**：回滚线 **−15 个百分点**（门禁过的用 A 臂成功率，人工审核过的用 Q1 的同仓库基线）。
+  “定期在 held-out 上复测”暂不做（每次要花钱）。
+- **Q6 导出路径** —— **default pending Eva review**：Skill 只导出到 `--out` 下的 `.claude/skills`、`.opencode/skills`、`.agents/skills`；
+  **绝不写进用户仓库**：`--out` 落在来源仓库或任何 git 工作区里一律拒绝，默认 `~/.triwitness/exports/<仓库键>/`，要用时用户自己复制。
+
+## 变更记录
+
+- 2026-10-12：§10 Q1–Q6 按建议落成可逆默认值（default pending Eva review）；新增 repo 级 Skill 人工审核路径 `approve-skill` 与人工审核版本的监控基线；导出拒绝写进任何 git 工作区，默认 `~/.triwitness/exports/`。

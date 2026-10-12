@@ -286,6 +286,23 @@ def rollback_cmd(name: str, repo: RepoOpt = Path("."), reason: str = "人工回�
     typer.echo(f"{name} → {'v' + str(new) if new else '已移除'}")
 
 
+@memory_app.command("approve-skill")
+def approve_skill_cmd(name: str, version: Annotated[int, typer.Option(help="要合入的版本")],
+                      reviewer: Annotated[str, typer.Option(help="审核人")], repo: RepoOpt = Path("."),
+                      note: str = "") -> None:  # fmt: skip
+    """repo 级 Skill 人工审核合入（held-out 不够开门禁时；上线后靠监控自动回滚）。"""
+    from triwitness.memory.skills import SkillError, SkillPool
+
+    st = _store(repo)
+    try:
+        sk = SkillPool(st.root).approve(name, version, reviewer=reviewer, note=note)
+    except SkillError as e:
+        _fail(str(e))
+        return
+    st.commit(f"skill human-review {name} v{version} by {reviewer}")
+    typer.echo(f"{sk.name} v{sk.version} 已人工审核合入（上线监控：读取后成功率比基线低 15 个百分点以上自动回滚）")
+
+
 @memory_app.command("monitor")
 def monitor_cmd(
     repo: RepoOpt = Path("."),
@@ -313,13 +330,16 @@ def export_cmd(
     fmt: Annotated[
         str, typer.Option("--format", help="memory-repo / agents-md / claude-skills / opencode / agents-skills")
     ] = "memory-repo",
-    out: Annotated[Path, typer.Option(help="输出目录（不会写进代码仓库，除非你指向它）")] = Path("tw-memory-export"),
+    out: Annotated[
+        Path | None, typer.Option(help="输出目录（默认 ~/.triwitness/exports/<仓库>；不能在任何 git 工作区里）")
+    ] = None,
 ) -> None:
-    """导出记忆（Agent Memory Repo / AGENTS.md 片段 / Claude Code / OpenCode Skill 目录）。"""
-    from triwitness.memory.export import export
+    """导出记忆（Agent Memory Repo / AGENTS.md 片段 / Claude Code / OpenCode Skill 目录），不写进代码仓库。"""
+    from triwitness.memory.export import default_out, export
 
+    st = _store(repo)
     try:
-        files = export(_store(repo), fmt, out)
+        files = export(st, fmt, out or default_out(st))
     except (ValueError, FileNotFoundError) as e:
         _fail(str(e))
         return

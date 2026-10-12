@@ -4,7 +4,8 @@
   - 永远排除来源任务本身；来源是评测任务时只取 created_at **晚于**它的任务（时间切分，`after`）。
     来源是日常 run（dogfood）时 Skill 不可能见过这些公开任务的答案，不加时间限制，只排除来源。
   - scope=repo：同一仓库（按 repo_key 归一）；scope=global：任意仓库。
-  - 少于 min_tasks 个就判 insufficient_heldout，不跑（结论没有意义）。
+  - 少于 min_tasks 个就判 insufficient_heldout，不跑（结论没有意义）；scope=repo 时转人工审核 + 上线监控
+    （spec 013 Q1 默认值，待 Eva 审），global 时拒绝。
 - 设计：两臂 A（无 Skill）/ B（只注入这个 Skill，见 MemoryContext.with_skills），同任务同次数配对，默认 2 次。
 - 判定：B 的成功率 > A（至少 min_gain）且 B 的单次成本 ≤ A ×（1 + cost_tolerance）才合入；
   McNemar 精确检验 p ≥ 0.05 时标“功效不足”（结论仍按点估计给出，报告里写明，见 spec 013 开放问题 Q4）。
@@ -217,10 +218,13 @@ def render_report(plan: GatePlan, result: GateResult | None, dec: Decision | Non
 
 
 def apply_decision(pool: SkillPool, plan: GatePlan, dec: Decision | None, report: str) -> str:
-    """把门禁结论写进池：通过 → promote；未通过 / held-out 不足 → reject（附报告）。返回新状态。"""
+    """把门禁结论写进池：通过 → promote；repo 级 held-out 不足 → 转人工审核；其余 → reject（附报告）。返回新状态。"""
     if dec is not None and dec.promote:
         pool.promote(plan.skill, plan.version, gate_report=report, summary=dec.summary())
         return "active"
+    if not plan.sufficient and plan.scope == "repo":
+        pool.await_review(plan.skill, plan.version, reason=plan.note + "；转人工审核 + 上线监控", gate_report=report)
+        return "awaiting_review"
     reason = plan.note if not plan.sufficient else (dec.reason if dec else "未运行")
     pool.reject(plan.skill, plan.version, reason=reason, gate_report=report)
     return "rejected"

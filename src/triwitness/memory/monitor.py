@@ -5,7 +5,8 @@
 （loaded = 这次 Agent 是否真的调用 load_skill 读了正文）。
 
 判定（只看 loaded 的 run，最近 window 条）：样本 ≥ min_n 且成功率 < 门禁时 A 臂（无 Skill）成功率 − drop
-→ 自动回滚到上一个通过门禁的版本（没有就移除），写进 pool.json 历史并 git 提交。没有门禁记录的版本不自动回滚。
+→ 自动回滚到上一个通过门禁的版本（没有就移除），写进 pool.json 历史并 git 提交。人工审核合入的 repo 级 Skill
+用同仓库“注入但没读”的 run 成功率作基线（≥ min_n 条才判）；两者都没有的不自动回滚。
 注意：门禁是在 held-out 评测任务上测的，日常任务的成功率不完全可比；drop 留了余量（spec 013 开放问题 Q5）。
 """
 
@@ -80,7 +81,14 @@ def health(pool: SkillPool, name: str, *, window: int = WINDOW, min_n: int = MIN
     used = [r for r in rows if r.get("loaded")][-window:]
     rate = sum(1 for r in used if r.get("solved")) / len(used) if used else None
     gate = (st.get("versions", {}).get(str(v)) or {}).get("gate") or {}
-    floor = max(0.0, float(gate["rate_a"]) - drop) if "rate_a" in gate else None
+    floor = None
+    if "rate_a" in gate:
+        floor = max(0.0, float(gate["rate_a"]) - drop)
+    elif gate.get("human_review"):
+        # 人工审核合入的 repo 级 Skill 没有门禁 A 臂：用同仓库“注入了但没读”的 run 当基线（spec 013 Q1/Q5）
+        base = [r for r in rows if not r.get("loaded")][-window:]
+        if len(base) >= min_n:
+            floor = max(0.0, sum(1 for r in base if r.get("solved")) / len(base) - drop)
     degraded = floor is not None and rate is not None and len(used) >= min_n and rate < floor
     return Health(skill=name, version=int(v), n=len(used), rate=rate, floor=floor, degraded=degraded,
                   exposures=len(rows))  # fmt: skip

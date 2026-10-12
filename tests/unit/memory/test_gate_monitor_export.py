@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from triwitness.memory.export import BEGIN, END, export
+from triwitness.memory.export import BEGIN, END, ExportTargetError, export
 from triwitness.memory.gate import (
     GateResult,
     HeldoutTask,
@@ -20,7 +20,7 @@ from triwitness.memory.gate import (
     select_heldout,
 )
 from triwitness.memory.monitor import auto_rollback, health, loaded_skills, observe_run, record
-from triwitness.memory.skills import Skill, SkillPool
+from triwitness.memory.skills import Skill, SkillError, SkillPool
 from triwitness.memory.store import MemoryStore
 
 from .conftest import make_skill
@@ -97,7 +97,38 @@ def test_gate_insufficient_heldout_not_run(store: MemoryStore) -> None:
     plan = plan_gate(pool, "py-unittest-repro", 1, tasks=TASKS, source_repo="https://github.com/o/zzz")
     assert not plan.sufficient and "insufficient_heldout" in plan.note
     assert "未运行" in render_report(plan, None, None)
+    # spec 013 Q1 默认值：repo 级 held-out 不够 → 转人工审核，不判拒绝
+    assert apply_decision(pool, plan, None, "# n") == "awaiting_review"
+    assert pool.state()["py-unittest-repro"]["versions"]["1"]["status"] == "awaiting_review"
+
+
+def test_global_insufficient_heldout_rejected(store: MemoryStore) -> None:
+    pool = _pool(store, scope="global")
+    plan = plan_gate(pool, "py-unittest-repro", 1, tasks=TASKS[:3])
+    assert not plan.sufficient
     assert apply_decision(pool, plan, None, "# n") == "rejected"
+    with pytest.raises(SkillError):
+        pool.approve("py-unittest-repro", 1, reviewer="eva")
+
+
+def test_repo_skill_human_review_then_monitor_rollback(store: MemoryStore) -> None:
+    pool = _pool(store, scope="repo")
+    plan = plan_gate(pool, "py-unittest-repro", 1, tasks=TASKS, source_repo="https://github.com/o/zzz")
+    apply_decision(pool, plan, None, "# n")
+    with pytest.raises(SkillError):
+        pool.approve("py-unittest-repro", 1, reviewer=" ")
+    sk = pool.approve("py-unittest-repro", 1, reviewer="eva", note="看过正文")
+    assert sk.metadata["tw-status"] == "active" and pool.load("py-unittest-repro").name == sk.name
+    assert "人工审核" in (pool.version_dir("py-unittest-repro", 1) / "gate.md").read_text(encoding="utf-8")
+    h = health(pool, "py-unittest-repro")
+    assert h is not None and h.floor is None  # 没有基线样本时不回滚
+    # 注入但没读的 8 次全过（基线 100%），读了的 8 次只过 6 次（75% < 85%）→ 回滚
+    for i in range(8):
+        record(pool, [sk], run_id=f"b{i}", solved=True, loaded=set())
+        record(pool, [sk], run_id=f"u{i}", solved=i < 6, loaded={sk.name})
+    h = health(pool, "py-unittest-repro")
+    assert h is not None and h.floor == pytest.approx(0.85) and h.degraded
+    assert auto_rollback(pool)[0][1] is None
 
 
 def test_monitor_degradation_triggers_rollback(store: MemoryStore) -> None:
@@ -163,3 +194,21 @@ def test_export_formats(store: MemoryStore, tmp_path: Path) -> None:
     assert o.relative_to(out / "o").as_posix() == ".opencode/skills/py-unittest-repro/SKILL.md"
     with pytest.raises(ValueError):
         export(store, "zip", out)
+    (a,) = export(store, "agents-skills", out / "g")
+    assert a.relative_to(out / "g").as_posix() == ".agents/skills/py-unittest-repro/SKILL.md"
+
+
+def test_export_never_writes_into_a_repo(store: MemoryStore, tmp_path: Path) -> None:
+    """spec 013 Q6 默认值：导出目录在来源仓库或任何 git 工作区里一律拒绝。"""
+    pool = _pool(store)
+    pool.promote("py-unittest-repro", 1, gate_report="#")
+    repo = tmp_path / "work" / "proj"
+    (repo / ".git").mkdir(parents=True)
+    with pytest.raises(ExportTargetError):
+        export(store, "claude-skills", repo)
+    with pytest.raises(ExportTargetError):
+        export(store, "claude-skills", repo / "sub" / "dir")
+    src = MemoryStore(store.root, repo=str(tmp_path / "src"))
+    with pytest.raises(ExportTargetError):
+        export(src, "opencode", tmp_path / "src" / "out")
+    assert not (repo / ".claude").exists()
