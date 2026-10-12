@@ -55,7 +55,7 @@ def test_memory_cli_flow(tmp_path: Path) -> None:
     assert "假 runner" in fake and "→ active" in fake
     assert "py-unittest-repro v1：读取后 0 次" in tw("monitor", "--repo", rp)
     files = tw("export", "--repo", rp, "--format", "claude-skills", "--out", str(tmp_path / "exp")).split()
-    assert files[0].endswith(".claude/skills/py-unittest-repro/SKILL.md")
+    assert Path(files[0]).as_posix().endswith(".claude/skills/py-unittest-repro/SKILL.md")
     assert "[[skills/py-unittest-repro/SKILL]]" in st.memory_md.read_text(encoding="utf-8")
     assert "已移除" in tw("rollback", "py-unittest-repro", "--repo", rp)
     assert "[[skills/py-unittest-repro/SKILL]]" not in st.memory_md.read_text(encoding="utf-8")
@@ -85,5 +85,8 @@ def test_distill_refuses_unverified_run(tmp_path: Path, monkeypatch) -> None:  #
 
 
 def test_run_has_memory_flag() -> None:
-    r = R.invoke(app, ["run", "--help"], terminal_width=200)
-    assert "--no-memory" in r.output
+    import typer.main
+
+    run = typer.main.get_command(app).commands["run"]  # type: ignore[attr-defined]
+    (opt,) = [p for p in run.params if p.name == "memory"]
+    assert opt.opts == ["--memory"] and opt.secondary_opts == ["--no-memory"] and opt.default is None
