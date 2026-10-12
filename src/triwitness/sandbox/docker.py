@@ -13,9 +13,9 @@ import asyncio
 import atexit
 import contextlib
 import io
+import os
 import posixpath
 import shutil
-import subprocess
 import tarfile
 import time
 import uuid
@@ -37,12 +37,15 @@ from triwitness.sandbox.base import (
     Sandbox,
     SandboxSpec,
     check_sandbox_path,
+    report_progress,
     validate_sandbox_env,
 )
 from triwitness.sandbox.egress import EgressGateway, sandbox_network_kwargs
 from triwitness.sandbox.gitsnap import GitSnapshotter, git
 
 DEFAULT_IMAGE = "python:3.12-slim"
+ARCHIVE_TIMEOUT_S = 300
+PULL_TIMEOUT_S = 600  # 拉镜像的上限；可用 TW_DOCKER_PULL_TIMEOUT 覆盖（秒）
 LABEL = "tw.managed"
 SANDBOX_UID = 1000
 PIDS_LIMIT = 512
@@ -72,17 +75,27 @@ def _tar_bytes(entries: Sequence[tuple[str, bytes | None, int]], *, uid: int = S
     return buf.getvalue()
 
 
-def _repo_tar(repo: Path, base_ref: str, prefix: str) -> bytes:
-    """`git archive` → 重写成 uid 1000、带前缀目录的 tar。"""
+def pull_timeout_s() -> float:
     try:
-        raw = subprocess.run(
-            ["git", "-C", str(repo), "archive", "--format=tar", base_ref],
-            capture_output=True,
-            check=True,
-            timeout=300,
-        ).stdout
-    except (OSError, subprocess.SubprocessError) as e:
-        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：{e}") from e
+        return max(1.0, float(os.environ.get("TW_DOCKER_PULL_TIMEOUT", PULL_TIMEOUT_S)))
+    except ValueError:
+        return float(PULL_TIMEOUT_S)
+
+
+def _repo_tar(repo: Path, base_ref: str, prefix: str) -> bytes:
+    """`git archive` → 重写成 uid 1000、带前缀目录的 tar。
+
+    0.5.0：不再 subprocess.run(capture_output)——Windows 上 PATH 里的 git 是启动器，超时只杀启动器、
+    孙进程握着管道会让 communicate() 永远等下去（同 v0.3 的 local.py 卡死）。改走 run_capture：输出写临时文件、
+    stdin 为空、超时杀整棵进程树。调用方放在 asyncio.to_thread 里跑，不阻塞事件循环。
+    """
+    from triwitness.sandbox.local import run_capture
+
+    code, raw = run_capture(["git", "-C", str(repo), "archive", "--format=tar", base_ref], timeout=ARCHIVE_TIMEOUT_S)
+    if code is None:
+        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：git 起不来或超过 {ARCHIVE_TIMEOUT_S}s")
+    if code != 0:
+        raise SandboxError(f"打包仓库失败（git archive {base_ref}）：退出码 {code}")
     out = io.BytesIO()
     with tarfile.open(fileobj=io.BytesIO(raw)) as src, tarfile.open(fileobj=out, mode="w") as dst:
         for m in src.getmembers():
@@ -401,15 +414,16 @@ class DockerSandboxBackend:
             raise SandboxError("network=allowlist 需要至少一个白名单域名或凭证规则（configs/policies/egress.yaml）")
         image = spec.image or DEFAULT_IMAGE
         client = self.client()
-        repo_tar = _repo_tar(spec.repo, spec.base_ref, spec.workdir.lstrip("/")) if spec.repo else None
+        repo_tar = None
+        if spec.repo:
+            report_progress("archive", "running", "打包仓库（git archive）")
+            repo_tar = await asyncio.to_thread(_repo_tar, spec.repo, spec.base_ref, spec.workdir.lstrip("/"))
+            report_progress("archive", "done", f"仓库已打包（{len(repo_tar) // 1024} KB）")
+        await self._ensure_image(client, image)
 
         home = self._home or tw_home()
 
         def run() -> DockerSandbox:
-            try:
-                client.images.get(image)
-            except ImageNotFound:
-                client.images.pull(image)
             kwargs = container_kwargs(spec)
             gw = None
             if spec.network == "allowlist":
@@ -438,9 +452,11 @@ class DockerSandboxBackend:
                 raise
             return DockerSandbox(client, container, spec, gw)
 
+        report_progress("container", "running", "启动沙箱容器")
         try:
             sb = await asyncio.to_thread(run)
         except DockerException as e:
+            report_progress("container", "failed", "启动沙箱容器失败")
             raise SandboxError(f"创建 docker 沙箱失败：{e}") from e
         _LIVE[sb.container.id] = sb
         try:
@@ -448,7 +464,37 @@ class DockerSandboxBackend:
         except Exception:
             await sb.close()
             raise
+        report_progress("container", "done", "沙箱已就绪")
         return sb
+
+    async def _ensure_image(self, client: Any, image: str) -> None:
+        """本地没有镜像就拉；拉取放线程里、有总时限（docker-py 的 pull 本身没有超时，网络不好会一直等）。"""
+
+        def have() -> bool:
+            try:
+                client.images.get(image)
+                return True
+            except ImageNotFound:
+                return False
+
+        try:
+            if await asyncio.wait_for(asyncio.to_thread(have), timeout=60):
+                return
+        except TimeoutError as e:
+            raise SandboxError("查询本地 docker 镜像超时（60s）") from e
+        except DockerException as e:
+            raise SandboxError(f"查询 docker 镜像失败：{e}") from e
+        limit = pull_timeout_s()
+        report_progress("pull_image", "running", f"拉取镜像 {image}（首次需要，最多等 {int(limit)}s）")
+        try:
+            await asyncio.wait_for(asyncio.to_thread(client.images.pull, image), timeout=limit)
+        except TimeoutError as e:  # 线程里的 pull 停不下来，让它在后台自己结束；本次不再等
+            report_progress("pull_image", "failed", f"拉取镜像 {image} 超过 {int(limit)}s")
+            raise SandboxError(f"拉取镜像 {image} 超时（{int(limit)}s）") from e
+        except DockerException as e:
+            report_progress("pull_image", "failed", f"拉取镜像 {image} 失败")
+            raise SandboxError(f"拉取镜像 {image} 失败：{e}") from e
+        report_progress("pull_image", "done", f"镜像 {image} 已就绪")
 
     async def gc(self) -> int:
         """清理崩溃残留的 tw 容器（`tw sandbox gc`）。"""

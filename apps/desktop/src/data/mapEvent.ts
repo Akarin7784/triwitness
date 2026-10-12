@@ -120,6 +120,8 @@ function fallbackText(e: TwEvent): string {
       return e.payload.ok
         ? t('环境就绪 · 基线失败 {0}', e.payload.baseline_failure_count ?? 0)
         : t('环境构建失败')
+    case 'sandbox_progress':
+      return e.payload.message
     case 'model_delta':
     case 'reasoning_delta':
       return e.payload.text
@@ -151,6 +153,8 @@ function toneOf(e: TwEvent): StreamTone {
       return 'error'
     case 'environment_prepared':
       return e.payload.ok === false ? 'error' : 'chapter'
+    case 'sandbox_progress':
+      return e.payload.status === 'failed' ? 'error' : e.payload.status === 'warn' ? 'warn' : 'normal'
     case 'task_finished':
       return 'final'
     default:

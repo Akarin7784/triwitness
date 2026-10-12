@@ -7,6 +7,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import contextvars
 import posixpath
 import re
 from collections import deque
@@ -108,6 +110,24 @@ class SandboxBackend(Protocol):
 
     async def probe(self) -> Probe: ...
     async def create(self, spec: SandboxSpec) -> Sandbox: ...
+
+
+# ---------------------------------------------------------------- 准备进度（0.5.0）
+
+# 回调签名：(stage, status, message)。stage：git_init / archive / pull_image / container / fallback；
+# status：running / done / failed / warn。由 run_local 设置，转成 `sandbox_progress` 事件推给桌面端。
+ProgressFn = Callable[[str, str, str], None]
+SANDBOX_PROGRESS: contextvars.ContextVar[ProgressFn | None] = contextvars.ContextVar("tw_sandbox_progress",
+                                                                                    default=None)  # fmt: skip
+
+
+def report_progress(stage: str, status: str, message: str) -> None:
+    """报告沙箱准备进度；没人订阅就什么也不做。回调出错不影响沙箱创建。"""
+    fn = SANDBOX_PROGRESS.get()
+    if fn is None:
+        return
+    with contextlib.suppress(Exception):
+        fn(stage, status, message)
 
 
 # ---------------------------------------------------------------- 后端选择

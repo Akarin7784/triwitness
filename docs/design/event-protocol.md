@@ -49,6 +49,7 @@
 | `error` | `type`、`message` | 红色行 |
 | `reasoning_delta` | `call_id`、`index`、`text` | 对话流里的“思考”块：流式写入，正文开始后收成“思考了 N 秒”（UI-20） |
 | `model_delta` | `call_id`、`index`、`text` | 对话流里的助手正文：逐片淡入 + 软光标，Markdown 渲染（UI-20）；书写推流不显示 |
+| `sandbox_progress` | `stage`（git_init / archive / pull_image / container / fallback）、`status`（running / done / failed / warn）、`message`（`backend`） | 推流一行 + 对话流工具行（同阶段原地替换）；failed 赭红、warn 警示（0.5.0） |
 
 增量事件（UI-20）只在交互运行（`tw run --jsonl`）里写；片段在 core 里按约 50ms / 48 字合并，已脱敏；按 `call_id` 归到同一次模型调用，`index` 从 0 连续。调用结束后照常有 `model_call`（带同一个 `call_id`），之后的 `tool_call` 也带 `call_id`，以及 `args_preview` / `output_preview`（各截断、已脱敏），供对话流里的工具行展开。eval / 批量运行不写增量。
 

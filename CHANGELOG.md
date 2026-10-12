@@ -10,7 +10,13 @@
 ### Changed
 - **GitHub App 永久不做**（Eva 2026-10-12）：取消 W7-08 / W5-02（及依赖 Webhook 的 W5-03）。v1 只走本地分支 `tw/<run_id>` + `pr.md` / 可选 `tw pr open`（gh·PAT）。见 `specs/012-github-integration.md` §8、`docs/release/known-limitations.md`。
 
+### Fixed
+- **所选文件夹不是 git 仓库时自动初始化**（Eva 2026-10-13）：开始仓库工作前若文件夹不是仓库、也不在任何仓库里，自动 `git init` → 缺 user.name / user.email 时只写本仓库兜底身份 `TriWitness <triwitness@local>` → `git add -A`（遵守已有 .gitignore）→ 提交 `TriWitness: initial snapshot`（空文件夹用 `--allow-empty`）；已是仓库或在仓库里的绝不改动。桌面端运行时间线显示“已自动初始化 git 仓库”。`harness/repo_init.py`。
+- **docker 沙箱准备卡住**（run 停在 `start_repo_work` 之后、没有 `task_started`）：`git archive` 改走 `run_capture`（输出写临时文件、stdin 为空、超时杀进程树，同 v0.3 local.py 的 Windows git 启动器修复）并放进 `asyncio.to_thread`；拉镜像放线程里、默认上限 600s（`TW_DOCKER_PULL_TIMEOUT` 可改）；auto 模式下 docker 准备失败 / 超时（总上限 900s）回退 none 后端并发可见警告，显式 `--backend docker` 仍直接报错。
+- **核心日志落盘**：`$TW_HOME/logs/core.log`（2 MB × 5 份轮转，`core.N.log`），logging 与 stderr 同写一份，写前脱敏；`tw diag export` 原本就收 `logs/`。`TW_LOG_DIR` 改目录、`TW_NO_LOG_FILE=1` 关闭。
+
 ### Added
+- **tw-events/1 新事件 `sandbox_progress`**（只增不改）：`stage`（git_init / archive / pull_image / container / fallback）、`status`（running / done / failed / warn）、`message`、`backend`；桌面端在书写推流和对话流里显示（同阶段 running→done 原地替换，failed 赭红、warn 警示）。
 - **W8-01 终测一键脚本**：`scripts/windows/run-final-eval.ps1`（test 35 题 × 单 Executor 基线 / orchestrated-1m 各 1 次，flash 非思考，冻结配置 `configs/runs/final-*.yaml`；续跑、磁盘检查、超 24MB 自动拆分 zip）+ `scripts/final_eval.py plan|run|report|bundle|reproduce`。
 - **W8-01 终测结果** 入库 `evals/baselines/2026-10-12-final-w8/`；**W8-02 静态 Leaderboard** `site/`（`scripts/build_leaderboard.py` 生成 data.json，GitHub Pages 工作流 `pages.yml`）；面试材料与 README 回填终测数字。
 - **W8-05 `tw eval reproduce <run>`**：按旧 run.json 的任务 / 配置 / 模型 ID 重跑（默认回放 ¥0，`--live` 真调），逐题对比写 `reproduce.md`，提示服务端模型可能已更新。

@@ -150,24 +150,35 @@ def run_quiet(argv: list[str], *, timeout: float, cwd: str | Path | None = None)
 
     返回去掉首尾空白的 stdout；起不来、超时或退出码非 0 返回 None。
     """
+    code, out = run_capture(argv, timeout=timeout, cwd=cwd)
+    if code != 0:
+        return None
+    return out.decode("utf-8", "replace").strip() or None
+
+
+def run_capture(
+    argv: list[str], *, timeout: float, cwd: str | Path | None = None, env: dict[str, str] | None = None
+) -> tuple[int | None, bytes]:
+    """同 run_quiet，但返回 (退出码, 原始 stdout 字节)；起不来或超时退出码为 None。
+
+    给 `git archive` 这类输出是二进制、而且可能很大的命令用（docker 后端打包仓库，0.5.0）。
+    """
     import tempfile
 
     flags = 0x08000000 if sys.platform == "win32" else 0  # CREATE_NO_WINDOW
     with tempfile.TemporaryFile() as out:
         try:
-            proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.DEVNULL, stdout=out,
+            proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.DEVNULL, stdout=out, env=env,
                                     stderr=subprocess.DEVNULL, creationflags=flags)  # fmt: skip
         except OSError:
-            return None
+            return None, b""
         try:
             code = proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             _kill_tree(proc)
-            return None
-        if code != 0:
-            return None
+            return None, b""
         out.seek(0)
-        return out.read().decode("utf-8", "replace").strip() or None
+        return code, out.read()
 
 
 def _kill_tree(proc: subprocess.Popen[bytes]) -> None:

@@ -39,6 +39,7 @@ export const KNOWN_KINDS: ReadonlySet<string> = new Set<TwKind>([
   'task_finished',
   'error',
   'environment_prepared',
+  'sandbox_progress',
 ])
 
 /** 信封层面合法、但 kind 未知的事件：保留 seq 以便续传，渲染时忽略 */

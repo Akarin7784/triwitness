@@ -27,6 +27,7 @@ export type TwEvents1 =
   | ReasoningDeltaEvent
   | UserMessageEvent
   | TurnFinishedEvent
+  | SandboxProgressEvent
 export type Kind = 'task_started'
 export type ConfigHash = string
 export type Display = string | null
@@ -452,6 +453,22 @@ export type TaskId21 = string
 export type TraceId20 = string | null
 export type Ts20 = string
 export type V20 = 1
+export type Kind23 = 'sandbox_progress'
+export type Backend2 = ('none' | 'docker' | 'wsl2' | 'remote') | null
+export type Display21 = string | null
+export type Message2 = string
+export type RoleHint21 = ('planner' | 'executor' | 'verifier' | 'reviewer' | 'system') | null
+export type Stage = 'git_init' | 'archive' | 'pull_image' | 'container' | 'fallback'
+export type Status3 = 'running' | 'done' | 'failed' | 'warn'
+export type Role22 =
+  ('planner' | 'executor' | 'verifier' | 'reviewer' | 'summarizer' | 'classifier' | 'reflector') | null
+export type RunId21 = string
+export type Seq21 = number
+export type SpanId21 = string | null
+export type TaskId22 = string
+export type TraceId21 = string | null
+export type Ts21 = string
+export type V21 = 1
 
 export interface TaskStartedEvent {
   kind: Kind
@@ -999,5 +1016,32 @@ export interface TurnFinishedPayload {
   reply?: Reply
   role_hint?: RoleHint20
   status: Status2
+  [k: string]: unknown
+}
+export interface SandboxProgressEvent {
+  kind: Kind23
+  payload: SandboxProgressPayload
+  role?: Role22
+  run_id: RunId21
+  seq: Seq21
+  span_id?: SpanId21
+  task_id: TaskId22
+  trace_id?: TraceId21
+  ts: Ts21
+  v?: V21
+}
+/**
+ * 沙箱准备进度（0.5.0，只增不改）：建沙箱前后的慢步骤，桌面端在运行时间线里逐行显示。
+ *
+ * stage：git_init（所选文件夹不是 git 仓库，已自动 init + 首次提交）/ archive（git archive 打包）/
+ * pull_image（拉 docker 镜像）/ container（起容器）/ fallback（auto 模式 docker 准备失败，改用 none 后端）。
+ */
+export interface SandboxProgressPayload {
+  backend?: Backend2
+  display?: Display21
+  message: Message2
+  role_hint?: RoleHint21
+  stage: Stage
+  status: Status3
   [k: string]: unknown
 }

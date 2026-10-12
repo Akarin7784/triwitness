@@ -120,6 +120,28 @@ export function reduceTurn(t: Turn, e: AnyEvent): Turn {
       }
       return { ...t, streaming: false, blocks: [...t.blocks, b] }
     }
+    case 'sandbox_progress': {
+      // 0.5.0：准备沙箱的慢步骤（自动 git init / 打包 / 拉镜像 / 起容器 / 回退 none）显示成工具行；
+      // 同一阶段 running → done / failed 时原地替换，不刷屏
+      const p = e.payload
+      const id = `sb-${p.stage}`
+      const b: ToolBlock = {
+        type: 'tool',
+        id: `${id}-${e.seq}`,
+        callId: id,
+        tool: 'sandbox',
+        display: (p.display ?? '').trim() || p.message,
+        ok: p.status !== 'failed',
+        exitCode: null,
+        durationMs: 0,
+        args: null,
+        output: p.status === 'warn' ? p.message : null,
+        permission: null,
+      }
+      const last = t.blocks[t.blocks.length - 1]
+      const blocks = last?.type === 'tool' && last.callId === id ? t.blocks.slice(0, -1) : t.blocks
+      return { ...t, blocks: [...blocks, b] }
+    }
     case 'task_finished': {
       const p = e.payload
       const fr = p.finish_report

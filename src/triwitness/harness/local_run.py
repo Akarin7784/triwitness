@@ -9,6 +9,7 @@ none 后端结束时把改动提交到分支 tw/<run_id>（用户仓库工作区
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import Callable
@@ -17,7 +18,8 @@ from pathlib import Path
 from typing import Literal
 
 from triwitness.config import tw_home
-from triwitness.core.errors import TriWitnessError
+from triwitness.core.errors import SandboxError, TriWitnessError
+from triwitness.core.events import SandboxProgressPayload
 from triwitness.core.ids import new_run_id, new_task_id
 from triwitness.core.models import Budget
 from triwitness.cost.report import render_cost_markdown
@@ -25,6 +27,7 @@ from triwitness.harness.approvals import Approver, PermissionGate
 from triwitness.harness.config import HarnessConfig
 from triwitness.harness.inputs import archive_attachments, compose_task
 from triwitness.harness.loop import RouterLike
+from triwitness.harness.repo_init import ensure_git_repo
 from triwitness.harness.resume import ResumeState
 from triwitness.harness.run import TaskResult, run_task
 from triwitness.memory.context import MemoryContext, open_memory
@@ -32,7 +35,14 @@ from triwitness.permissions.config import SessionOverrides, load_policy
 from triwitness.permissions.engine import PermissionEngine
 from triwitness.permissions.mode import ModeController
 from triwitness.permissions.reviewer import Reviewer
-from triwitness.sandbox.base import SandboxBackend, SandboxSpec, select_backend
+from triwitness.sandbox.base import (
+    SANDBOX_PROGRESS,
+    BackendChoice,
+    Sandbox,
+    SandboxBackend,
+    SandboxSpec,
+    select_backend,
+)
 from triwitness.telemetry.trajectory import TrajectoryEvent, TrajectoryRecorder
 from triwitness.tools import ToolRegistry, default_tools
 from triwitness.verify.pipeline import EphemeralBackend, VerifyOptions
@@ -96,15 +106,26 @@ async def run_local(
 ) -> LocalRunOutcome:
     repo = repo.resolve()
     home = home or tw_home()
-    choice = await select_backend(backend, backends or _backends(home))
     # 对话轮（harness/chat.py）转成任务时传入已建好的 recorder：同一个 run、同一条轨迹
     run_id = recorder.run_id if recorder is not None else new_run_id()
-    spec = SandboxSpec(repo=repo, run_id=run_id, network="none")
-    sb = await choice.backend.create(spec)
     run_dir = home / "runs" / run_id
     rec = recorder or TrajectoryRecorder(new_task_id(), run_id, run_dir=run_dir)
     if on_event is not None and recorder is None:  # 桌面端桥接（tw run --jsonl）：事件写盘后同步推出去
         rec.subscribe(on_event)
+
+    def progress(stage: str, status: str, message: str, backend_name: str | None = None) -> None:
+        rec.emit(SandboxProgressPayload(stage=stage, status=status, message=message, backend=backend_name,  # type: ignore[arg-type]
+                                        display=message[:200]))  # fmt: skip
+
+    # 0.5.0：所选文件夹不是 git 仓库就自动 init + 首次提交（已是仓库 / 在仓库里则不碰）
+    if await asyncio.to_thread(ensure_git_repo, repo):
+        progress("git_init", "done", "已自动初始化 git 仓库（首次提交：TriWitness: initial snapshot）")
+    token = SANDBOX_PROGRESS.set(lambda st, status, msg: progress(st, status, msg))
+    try:
+        choice, sb = await _create_sandbox(backend, backends or _backends(home), SandboxSpec(repo=repo, run_id=run_id,
+                                           network="none"), progress)  # fmt: skip
+    finally:
+        SANDBOX_PROGRESS.reset(token)
     store = _open_store(home)  # W4-15：任务与事件写 SQLite（TW_HOME/tw.db）；打不开只记日志
     if store is not None:
         for ev in list(rec.events):  # 对话轮已写的事件（同一个 run）
@@ -212,6 +233,38 @@ async def run_local(
         _observe_skills(repo, home, mem, run_id, result.verification.evidence.verdict == "pass", run_dir)
     return LocalRunOutcome(result=result, backend=choice.backend.name, run_dir=run_dir, branch=branch,
                            repo=str(repo.resolve()))  # fmt: skip
+
+
+DOCKER_PREP_TIMEOUT_S = 900  # auto 模式下 docker 沙箱准备（打包 + 拉镜像 + 起容器）的总上限
+
+
+async def _create_sandbox(
+    pref: BackendPref,
+    backends: list[SandboxBackend],
+    spec: SandboxSpec,
+    progress: Callable[..., None],
+) -> tuple[BackendChoice, Sandbox]:
+    """选后端并建沙箱。auto 模式下 docker 准备失败 / 超时，改用 none 后端并发一条可见的警告。"""
+    choice = await select_backend(pref, backends)
+    if pref != "auto" or choice.backend.name == "none":
+        return choice, await choice.backend.create(spec)
+    try:
+        return choice, await asyncio.wait_for(choice.backend.create(spec), timeout=DOCKER_PREP_TIMEOUT_S)
+    except (SandboxError, TimeoutError, OSError) as e:
+        why = f"超过 {DOCKER_PREP_TIMEOUT_S}s" if isinstance(e, TimeoutError) else str(e)
+        fallback = next((b for b in backends if b.name == "none"), None)
+        if fallback is None:
+            raise SandboxError(f"{choice.backend.name} 沙箱准备失败：{why}") from e
+        log.warning("%s 沙箱准备失败，改用 none 后端：%s", choice.backend.name, why)
+        msg = (f"⚠ {choice.backend.name} 沙箱准备失败（{why[:120]}），本次改用无沙箱（none）后端："
+               "改动在独立分支里进行，但命令直接在本机执行")  # fmt: skip
+        progress("fallback", "warn", msg, "none")
+        probe = await fallback.probe()
+        if not probe.available:
+            raise SandboxError(f"{choice.backend.name} 沙箱准备失败（{why}），none 后端也不可用：{probe.reason}") from e
+        fb = BackendChoice(backend=fallback, reason=f"auto（{choice.backend.name} 准备失败，回退 none）",
+                           probes={**choice.probes, "none": probe})  # fmt: skip
+        return fb, await fallback.create(spec)
 
 
 def _open_memory(repo: Path, home: Path, override: bool | None) -> MemoryContext | None:

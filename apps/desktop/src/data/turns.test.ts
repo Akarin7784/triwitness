@@ -68,3 +68,17 @@ describe('对话流折叠', () => {
     expect(reduceTurn(EMPTY_TURN, e)).toBe(EMPTY_TURN)
   })
 })
+
+describe('沙箱准备进度（0.5.0）', () => {
+  const ev = (seq: number, payload: Record<string, unknown>): AnyEvent =>
+    ({ v: 1, seq, ts: '2026-10-13T00:00:00Z', task_id: 't', run_id: 'r', role: null, kind: 'sandbox_progress', payload }) as AnyEvent
+
+  it('自动 git init 显示成一行；同阶段 running → done 原地替换', () => {
+    let t = reduceTurn(EMPTY_TURN, ev(0, { stage: 'git_init', status: 'done', message: '已自动初始化 git 仓库', display: '已自动初始化 git 仓库' }))
+    t = reduceTurn(t, ev(1, { stage: 'pull_image', status: 'running', message: '拉取镜像 python:3.12-slim' }))
+    t = reduceTurn(t, ev(2, { stage: 'pull_image', status: 'failed', message: '拉取镜像超时' }))
+    t = reduceTurn(t, ev(3, { stage: 'fallback', status: 'warn', message: '⚠ 改用 none 后端' }))
+    expect(t.blocks.map((b) => (b.type === 'tool' ? b.display : ''))).toEqual(['已自动初始化 git 仓库', '拉取镜像超时', '⚠ 改用 none 后端'])
+    expect(t.blocks.map((b) => (b.type === 'tool' ? b.ok : null))).toEqual([true, false, true])
+  })
+})

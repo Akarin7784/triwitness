@@ -25,6 +25,9 @@ def main(
     version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True, help="显示版本"),
 ) -> None:
     """TriWitness 命令行。"""
+    from triwitness.telemetry.logfile import setup_file_logging
+
+    setup_file_logging()  # 0.5.0：$TW_HOME/logs/core.log（轮转、脱敏）；失败不影响命令
 
 
 @app.command()

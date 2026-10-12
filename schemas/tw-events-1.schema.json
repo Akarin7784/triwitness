@@ -2847,6 +2847,187 @@
       "title": "ReviewPayload",
       "type": "object"
     },
+    "SandboxProgressEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "sandbox_progress",
+          "title": "Kind",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/SandboxProgressPayload"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "summarizer",
+                "classifier",
+                "reflector"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "seq": {
+          "minimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "span_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Id"
+        },
+        "task_id": {
+          "title": "Task Id",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Id"
+        },
+        "ts": {
+          "format": "date-time",
+          "title": "Ts",
+          "type": "string"
+        },
+        "v": {
+          "const": 1,
+          "default": 1,
+          "title": "V",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "seq",
+        "ts",
+        "task_id",
+        "run_id",
+        "kind",
+        "payload"
+      ],
+      "title": "SandboxProgressEvent",
+      "type": "object"
+    },
+    "SandboxProgressPayload": {
+      "additionalProperties": true,
+      "description": "沙箱准备进度（0.5.0，只增不改）：建沙箱前后的慢步骤，桌面端在运行时间线里逐行显示。\n\nstage：git_init（所选文件夹不是 git 仓库，已自动 init + 首次提交）/ archive（git archive 打包）/\npull_image（拉 docker 镜像）/ container（起容器）/ fallback（auto 模式 docker 准备失败，改用 none 后端）。",
+      "properties": {
+        "backend": {
+          "anyOf": [
+            {
+              "enum": [
+                "none",
+                "docker",
+                "wsl2",
+                "remote"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backend"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "message": {
+          "maxLength": 2000,
+          "title": "Message",
+          "type": "string"
+        },
+        "role_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "planner",
+                "executor",
+                "verifier",
+                "reviewer",
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role Hint"
+        },
+        "stage": {
+          "enum": [
+            "git_init",
+            "archive",
+            "pull_image",
+            "container",
+            "fallback"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "running",
+            "done",
+            "failed",
+            "warn"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stage",
+        "status",
+        "message"
+      ],
+      "title": "SandboxProgressPayload",
+      "type": "object"
+    },
     "StateChangeEvent": {
       "additionalProperties": false,
       "properties": {
@@ -4284,6 +4465,7 @@
       "model_delta": "#/$defs/ModelDeltaEvent",
       "reasoning_delta": "#/$defs/ReasoningDeltaEvent",
       "review": "#/$defs/ReviewEvent",
+      "sandbox_progress": "#/$defs/SandboxProgressEvent",
       "state_change": "#/$defs/StateChangeEvent",
       "task_finished": "#/$defs/TaskFinishedEvent",
       "task_started": "#/$defs/TaskStartedEvent",
@@ -4357,6 +4539,9 @@
     },
     {
       "$ref": "#/$defs/TurnFinishedEvent"
+    },
+    {
+      "$ref": "#/$defs/SandboxProgressEvent"
     }
   ],
   "title": "tw-events/1"

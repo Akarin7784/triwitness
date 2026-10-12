@@ -42,6 +42,7 @@ EventKind = Literal[
     "reasoning_delta",
     "user_message",
     "turn_finished",
+    "sandbox_progress",
 ]
 RoleHint = Literal["planner", "executor", "verifier", "reviewer", "system"]
 PermissionDecision = Literal["allow", "ask", "deny"]
@@ -280,6 +281,19 @@ class TurnFinishedPayload(Payload):
     cost_cny: float = Field(default=0.0, ge=0)
 
 
+class SandboxProgressPayload(Payload):
+    """沙箱准备进度（0.5.0，只增不改）：建沙箱前后的慢步骤，桌面端在运行时间线里逐行显示。
+
+    stage：git_init（所选文件夹不是 git 仓库，已自动 init + 首次提交）/ archive（git archive 打包）/
+    pull_image（拉 docker 镜像）/ container（起容器）/ fallback（auto 模式 docker 准备失败，改用 none 后端）。
+    """
+
+    stage: Literal["git_init", "archive", "pull_image", "container", "fallback"]
+    status: Literal["running", "done", "failed", "warn"]
+    message: str = Field(max_length=PREVIEW_MAX)
+    backend: SandboxBackendName | None = None
+
+
 PAYLOADS: dict[str, type[Payload]] = {
     "task_started": TaskStartedPayload,
     "state_change": StateChangePayload,
@@ -302,6 +316,7 @@ PAYLOADS: dict[str, type[Payload]] = {
     "reasoning_delta": ReasoningDeltaPayload,
     "user_message": UserMessagePayload,
     "turn_finished": TurnFinishedPayload,
+    "sandbox_progress": SandboxProgressPayload,
 }
 
 

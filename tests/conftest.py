@@ -4,6 +4,9 @@ import os
 
 import pytest
 
+# 0.5.0 核心日志落盘：测试里默认关闭（测 logfile 的用例自己打开），避免全局 stderr 被替换
+os.environ.setdefault("TW_NO_LOG_FILE", "1")
+
 
 @pytest.fixture(autouse=True)
 def _force_replay(monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory) -> None:
