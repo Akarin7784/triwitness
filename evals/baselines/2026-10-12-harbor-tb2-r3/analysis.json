@@ -1,0 +1,1729 @@
+{
+ "kind": "harbor-tb2-r3",
+ "dataset": "terminal-bench-2@2fd12b88aafd (10-task subset)",
+ "agent": "TriWitness harness=baseline, deepseek-flash non-thinking; timeout_guard=block (default); commit f5e5c06 (timeouts.py since 731a2de)",
+ "pooled": {
+  "solved": 28,
+  "n": 30,
+  "rate": 0.9333,
+  "wilson95_naive": [
+   0.7868,
+   0.9815
+  ],
+  "task_cluster_bootstrap95": [
+   0.8,
+   1.0
+  ],
+  "bootstrap95_naive": [
+   0.8333,
+   1.0
+  ],
+  "exceptions": 0,
+  "cost_cny": 3.0144,
+  "cost_median": 0.0531,
+  "cost_max": 0.52225,
+  "calls": 890,
+  "input_tokens": 16589335,
+  "cache_hit_tokens": 16270848,
+  "output_tokens": 337889,
+  "cache_hit_rate": 0.9808,
+  "agent_s_median": 66.7,
+  "agent_s_max": 652.8,
+  "trial_s_median": 145.55,
+  "steps_median": 18.0,
+  "compact_or_clear": 0
+ },
+ "per_task": {
+  "cobol-modernization": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.2346,
+   "steps_mean": 72.3,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "constraints-scheduling": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.0415,
+   "steps_mean": 12.3,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "fix-git": {
+   "solved": 1,
+   "n": 3,
+   "cost_mean": 0.0403,
+   "steps_mean": 20.3,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": [
+    {
+     "job": "rep1",
+     "trial": "fix-git__hr755j7",
+     "steps": 18,
+     "tw_status": "done"
+    },
+    {
+     "job": "rep2",
+     "trial": "fix-git__MA6xDR9",
+     "steps": 20,
+     "tw_status": "done"
+    }
+   ]
+  },
+  "git-leak-recovery": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.0429,
+   "steps_mean": 17,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "multi-source-data-merger": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.0385,
+   "steps_mean": 13,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "nginx-request-logging": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.0518,
+   "steps_mean": 17.3,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "openssl-selfsigned-cert": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.0452,
+   "steps_mean": 13.7,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "overfull-hbox": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.1063,
+   "steps_mean": 36.3,
+   "timeouts": 2,
+   "exit124": 2,
+   "failures": []
+  },
+  "polyglot-c-py": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.3689,
+   "steps_mean": 79.3,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  },
+  "prove-plus-comm": {
+   "solved": 3,
+   "n": 3,
+   "cost_mean": 0.0348,
+   "steps_mean": 15,
+   "timeouts": 0,
+   "exit124": 0,
+   "failures": []
+  }
+ },
+ "round2": {
+  "solved": 26,
+  "n": 30,
+  "cost_cny": 1.8624,
+  "overfull": "1/3",
+  "polyglot": "2/3",
+  "cobol": "2/3",
+  "fix_git": "3/3"
+ },
+ "mde": {
+  "paired_tasks10": 0.3962,
+  "paired_n30": 0.2287
+ },
+ "jobs": {
+  "rep0": {
+   "started_at": "2026-10-12T01:33:14.463299",
+   "finished_at": "2026-10-12T01:51:43.681289",
+   "n_completed": 10,
+   "n_errors": 0,
+   "n_retries": 0,
+   "mean": 1.0
+  },
+  "rep1": {
+   "started_at": "2026-10-12T13:51:49.939551",
+   "finished_at": "2026-10-12T14:14:33.128688",
+   "n_completed": 10,
+   "n_errors": 0,
+   "n_retries": 0,
+   "mean": 0.9
+  },
+  "rep2": {
+   "started_at": "2026-10-12T14:14:39.044595",
+   "finished_at": "2026-10-12T14:31:14.356780",
+   "n_completed": 10,
+   "n_errors": 0,
+   "n_retries": 0,
+   "mean": 0.9
+  }
+ },
+ "ledger_total": {
+  "calls": 890,
+  "cost_cny": 3.014446,
+  "peak_calls": 496,
+  "served_model": "deepseek-flash",
+  "model": "deepseek-flash",
+  "first_ts": "2026-10-12T05:33:20.152399+00:00",
+  "last_ts": "2026-10-12T06:30:38.261008+00:00"
+ },
+ "timeout_guard": {
+  "mode": "block",
+  "note": "Harbor agent default timeout_guard=block; metadata records mode string only",
+  "overfull_hbox": {
+   "r2_solved": "1/3",
+   "r3_solved": "3/3",
+   "r3_timeout_tools": 2,
+   "r3_exit124": 2,
+   "detail": [
+    {
+     "job": "rep0",
+     "task": "overfull-hbox",
+     "trial": "overfull-hbox__XPPZy55",
+     "reward": 1.0,
+     "timeouts": 1,
+     "exit124": 1,
+     "steps": 53,
+     "cost": 0.100827,
+     "tg": "block"
+    },
+    {
+     "job": "rep1",
+     "task": "overfull-hbox",
+     "trial": "overfull-hbox__BHAzPo5",
+     "reward": 1.0,
+     "timeouts": 1,
+     "exit124": 1,
+     "steps": 24,
+     "cost": 0.072475,
+     "tg": "block"
+    },
+    {
+     "job": "rep2",
+     "task": "overfull-hbox",
+     "trial": "overfull-hbox__EM2skfY",
+     "reward": 1.0,
+     "timeouts": 0,
+     "exit124": 0,
+     "steps": 32,
+     "cost": 0.145589,
+     "tg": "block"
+    }
+   ],
+   "r2_note": "r2: rep0/rep1 perl brute-force timed out repeatedly → Harbor 750s agent cancel"
+  },
+  "all_trials_with_timeouts": [
+   {
+    "job": "rep0",
+    "task": "overfull-hbox",
+    "trial": "overfull-hbox__XPPZy55",
+    "reward": 1.0,
+    "timeouts": 1,
+    "exit124": 1,
+    "steps": 53,
+    "cost": 0.100827,
+    "tg": "block"
+   },
+   {
+    "job": "rep1",
+    "task": "overfull-hbox",
+    "trial": "overfull-hbox__BHAzPo5",
+    "reward": 1.0,
+    "timeouts": 1,
+    "exit124": 1,
+    "steps": 24,
+    "cost": 0.072475,
+    "tg": "block"
+   }
+  ]
+ },
+ "fix_git_failures": [
+  {
+   "job": "rep1",
+   "trial": "fix-git__hr755j7",
+   "steps": 18,
+   "cost": 0.026619,
+   "verifier_tail": ":"
+  },
+  {
+   "job": "rep2",
+   "trial": "fix-git__MA6xDR9",
+   "steps": 20,
+   "cost": 0.062362,
+   "verifier_tail": " "
+  }
+ ],
+ "trials": [
+  {
+   "job": "rep0",
+   "task": "cobol-modernization",
+   "trial": "cobol-modernization__Lp5nXZL",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 47,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 47,
+   "tool_calls": 52,
+   "top_tools": {
+    "bash": 39,
+    "write_file": 4,
+    "edit_file": 4,
+    "read_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 47,
+    "cost_cny": 0.111889,
+    "input_tokens": 855177,
+    "cache_hit_tokens": 839424,
+    "cache_miss_tokens": 15753,
+    "output_tokens": 19837,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:33:23.001990+00:00",
+    "last_ts": "2026-10-12T05:36:44.670438+00:00"
+   },
+   "cache_hit_rate": 0.9816,
+   "seconds": {
+    "total": 298.1,
+    "env_setup": 8.1,
+    "agent": 208.9,
+    "verifier": 69.4
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Re-implemented the COBOL program /app/src/program.cbl (BOOKFORUM) in Python at /app/program.py. It reads the fixed-width INPUT.DAT, validates buyer/seller against ACCOUNTS.DAT and the book/owner again"
+  },
+  {
+   "job": "rep0",
+   "task": "constraints-scheduling",
+   "trial": "constraints-scheduling__fYt3ok2",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 14,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 14,
+   "tool_calls": 18,
+   "top_tools": {
+    "bash": 11,
+    "read_file": 3,
+    "notes": 2,
+    "write_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 14,
+    "cost_cny": 0.040421,
+    "input_tokens": 144543,
+    "cache_hit_tokens": 138496,
+    "cache_miss_tokens": 6047,
+    "output_tokens": 7901,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:33:20.152399+00:00",
+    "last_ts": "2026-10-12T05:34:13.785476+00:00"
+   },
+   "cache_hit_rate": 0.9582,
+   "seconds": {
+    "total": 99.0,
+    "env_setup": 5.0,
+    "agent": 59.3,
+    "verifier": 23.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 1200.0,
+   "max_wall_seconds": 1080,
+   "finish": "Created /app/meeting_scheduled.ics containing a valid 1-hour \"Team Planning Meeting\" (Wednesday 2024-01-17 11:00–12:00 UTC) with all three required attendees.\n\nMethod: parsed the three read-only input"
+  },
+  {
+   "job": "rep0",
+   "task": "fix-git",
+   "trial": "fix-git__BotHpDi",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 23,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 23,
+   "tool_calls": 31,
+   "top_tools": {
+    "bash": 21,
+    "notes": 3,
+    "read_file": 3,
+    "write_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 23,
+    "cost_cny": 0.032017,
+    "input_tokens": 201703,
+    "cache_hit_tokens": 193280,
+    "cache_miss_tokens": 8423,
+    "output_tokens": 4932,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:34:58.089848+00:00",
+    "last_ts": "2026-10-12T05:36:00.807843+00:00"
+   },
+   "cache_hit_rate": 0.9582,
+   "seconds": {
+    "total": 153.0,
+    "env_setup": 4.1,
+    "agent": 68.2,
+    "verifier": 69.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "用户的 \"Move to Stanford\" 改动是一个孤儿提交（dangling commit）650dba4，因为它是在游离 HEAD 上提交的，之后 git checkout master 就把它丢下了。通过与 /app/setup.sh 对照确认：setup 脚本 reset --hard 到 d7d3e4b 后 checkout HEAD~1、复制 patch_files、提交 \"Mov"
+  },
+  {
+   "job": "rep0",
+   "task": "git-leak-recovery",
+   "trial": "git-leak-recovery__bZHSEkA",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 14,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 14,
+   "tool_calls": 20,
+   "top_tools": {
+    "bash": 17,
+    "notes": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 14,
+    "cost_cny": 0.026493,
+    "input_tokens": 85722,
+    "cache_hit_tokens": 81152,
+    "cache_miss_tokens": 4570,
+    "output_tokens": 5075,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:37:31.375893+00:00",
+    "last_ts": "2026-10-12T05:38:13.434302+00:00"
+   },
+   "cache_hit_rate": 0.9467,
+   "seconds": {
+    "total": 78.3,
+    "env_setup": 4.4,
+    "agent": 47.2,
+    "verifier": 15.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Recovered the accidentally-committed secret and purged it from /app/repo.\n\nRecovery: `/app/repo` had 2 commits with only README.md in the tree, but the reflog showed a `reset: moving to HEAD~1` right "
+  },
+  {
+   "job": "rep0",
+   "task": "multi-source-data-merger",
+   "trial": "multi-source-data-merger__pc57SyC",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 11,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 11,
+   "tool_calls": 16,
+   "top_tools": {
+    "bash": 10,
+    "notes": 2,
+    "write_file": 2,
+    "read_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 11,
+    "cost_cny": 0.025468,
+    "input_tokens": 67369,
+    "cache_hit_tokens": 63744,
+    "cache_miss_tokens": 3625,
+    "output_tokens": 5142,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:38:20.075143+00:00",
+    "last_ts": "2026-10-12T05:39:01.614711+00:00"
+   },
+   "cache_hit_rate": 0.9462,
+   "seconds": {
+    "total": 141.1,
+    "env_setup": 7.0,
+    "agent": 47.3,
+    "verifier": 74.9
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Built a merge pipeline that reads the three user sources (JSON / CSV / Parquet), maps their differing column names to the unified schema, merges by user_id with source priority source_a > source_b > s"
+  },
+  {
+   "job": "rep0",
+   "task": "nginx-request-logging",
+   "trial": "nginx-request-logging__DdRTpAm",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 19,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 19,
+   "tool_calls": 27,
+   "top_tools": {
+    "bash": 17,
+    "write_file": 4,
+    "notes": 2,
+    "edit_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 19,
+    "cost_cny": 0.034837,
+    "input_tokens": 138066,
+    "cache_hit_tokens": 131328,
+    "cache_miss_tokens": 6738,
+    "output_tokens": 6368,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:38:47.656252+00:00",
+    "last_ts": "2026-10-12T05:40:52.103658+00:00"
+   },
+   "cache_hit_rate": 0.9512,
+   "seconds": {
+    "total": 215.2,
+    "env_setup": 2.4,
+    "agent": 132.1,
+    "verifier": 69.2
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "安装并配置了 Nginx 基准 Web 服务器，满足 Issue 的全部要求。\n\n**完成的工作：**\n1. apt 安装了 nginx 1.22.1（Debian 12）。\n2. 在 `/etc/nginx/nginx.conf` 中：\n   - 新增 `limit_req_zone $binary_remote_addr zone=benchmark_limit:10m rate=10r/s;"
+  },
+  {
+   "job": "rep0",
+   "task": "openssl-selfsigned-cert",
+   "trial": "openssl-selfsigned-cert__aAXDsgN",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 12,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 12,
+   "tool_calls": 15,
+   "top_tools": {
+    "bash": 8,
+    "write_file": 4,
+    "notes": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 12,
+    "cost_cny": 0.024607,
+    "input_tokens": 64060,
+    "cache_hit_tokens": 60928,
+    "cache_miss_tokens": 3132,
+    "output_tokens": 5064,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:40:35.950422+00:00",
+    "last_ts": "2026-10-12T05:41:13.916313+00:00"
+   },
+   "cache_hit_rate": 0.9511,
+   "seconds": {
+    "total": 126.6,
+    "env_setup": 1.9,
+    "agent": 42.8,
+    "verifier": 70.4
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Created a self-signed TLS certificate for the internal dev server using OpenSSL. Generated /app/ssl/server.key (2048-bit RSA, chmod 600), a self-signed cert /app/ssl/server.crt (365 days, O=DevOps Tea"
+  },
+  {
+   "job": "rep0",
+   "task": "overfull-hbox",
+   "trial": "overfull-hbox__XPPZy55",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 53,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 53,
+   "tool_calls": 57,
+   "top_tools": {
+    "bash": 49,
+    "read_file": 3,
+    "notes": 2,
+    "list_files": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 1,
+    "exit124": 1,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 53,
+    "cost_cny": 0.100827,
+    "input_tokens": 983582,
+    "cache_hit_tokens": 963456,
+    "cache_miss_tokens": 20126,
+    "output_tokens": 15358,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:42:25.713324+00:00",
+    "last_ts": "2026-10-12T05:49:00.456584+00:00"
+   },
+   "cache_hit_rate": 0.9795,
+   "seconds": {
+    "total": 470.0,
+    "env_setup": 5.3,
+    "agent": 400.8,
+    "verifier": 52.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 750.0,
+   "max_wall_seconds": 675,
+   "finish": "修复了 main.tex 编译时产生 \"overfull hbox\" 警告的问题。原 input.tex 在 main.tex 设定的窄文本宽度（textwidth=2.5in）下，pdflatex 报出 7 个 Overfull \\hbox（最严重 54.69pt）。在不改动 main.tex / synonyms.txt 的前提下，仅把 input.tex 中的 6 个词替换为 synonym"
+  },
+  {
+   "job": "rep0",
+   "task": "polyglot-c-py",
+   "trial": "polyglot-c-py__TjBLbvY",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 38,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 38,
+   "tool_calls": 40,
+   "top_tools": {
+    "bash": 30,
+    "write_file": 4,
+    "notes": 3,
+    "edit_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 38,
+    "cost_cny": 0.201647,
+    "input_tokens": 1127551,
+    "cache_hit_tokens": 1108992,
+    "cache_miss_tokens": 18559,
+    "output_tokens": 40227,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:42:46.092745+00:00",
+    "last_ts": "2026-10-12T05:49:33.944017+00:00"
+   },
+   "cache_hit_rate": 0.9835,
+   "seconds": {
+    "total": 451.7,
+    "env_setup": 5.5,
+    "agent": 415.2,
+    "verifier": 19.2
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Created the polyglot file /app/polyglot/main.py.c that is simultaneously valid Python 3 and valid C. Running `python3 /app/polyglot/main.py.c N` or `gcc /app/polyglot/main.py.c -o cmain && ./cmain N` "
+  },
+  {
+   "job": "rep0",
+   "task": "prove-plus-comm",
+   "trial": "prove-plus-comm__rD6thdU",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 13,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 13,
+   "tool_calls": 13,
+   "top_tools": {
+    "bash": 7,
+    "notes": 2,
+    "edit_file": 2,
+    "read_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 13,
+    "cost_cny": 0.018065,
+    "input_tokens": 59405,
+    "cache_hit_tokens": 55808,
+    "cache_miss_tokens": 3597,
+    "output_tokens": 3338,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:50:27.081364+00:00",
+    "last_ts": "2026-10-12T05:51:03.216574+00:00"
+   },
+   "cache_hit_rate": 0.9394,
+   "seconds": {
+    "total": 93.5,
+    "env_setup": 16.6,
+    "agent": 41.9,
+    "verifier": 23.3
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "完成了 plus_comm.v 中加法交换律证明的缺口。原文件有 2 处 `admit`：\n\n1. 基础分支（`0 + m = m + 0`）：simpl 后目标变为 `m = m + 0`。直接 `apply Nat.add_0_r` 会失败（add_0_r 是 `n + 0 = n`，方向相反，报 \"Unable to unify ?M1094 + 0 = ?M1094 with m = m "
+  },
+  {
+   "job": "rep1",
+   "task": "cobol-modernization",
+   "trial": "cobol-modernization__iySfj3R",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 88,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 88,
+   "tool_calls": 91,
+   "top_tools": {
+    "bash": 73,
+    "read_file": 7,
+    "edit_file": 6,
+    "notes": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 88,
+    "cost_cny": 0.237518,
+    "input_tokens": 2576695,
+    "cache_hit_tokens": 2546944,
+    "cache_miss_tokens": 29751,
+    "output_tokens": 39207,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:51:51.763799+00:00",
+    "last_ts": "2026-10-12T05:58:43.929355+00:00"
+   },
+   "cache_hit_rate": 0.9885,
+   "seconds": {
+    "total": 501.7,
+    "env_setup": 1.4,
+    "agent": 418.7,
+    "verifier": 70.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "在 /app/program.py 中用 Python 重新实现了 /app/src/program.cbl（GnuCOBOL BOOKFORUM）的功能：读取 src/INPUT.DAT，校验买卖双方账户与图书归属，校验通过则扣减买方、增加卖方、更新图书所有者、向 TRANSACTIONS.DAT 追加成交记录，产出的 data/ACCOUNTS.DAT、data/BOOKS.DAT、data/"
+  },
+  {
+   "job": "rep1",
+   "task": "constraints-scheduling",
+   "trial": "constraints-scheduling__LmduUPQ",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 9,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 9,
+   "tool_calls": 12,
+   "top_tools": {
+    "bash": 8,
+    "write_file": 2,
+    "notes": 1,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 9,
+    "cost_cny": 0.027853,
+    "input_tokens": 66253,
+    "cache_hit_tokens": 62208,
+    "cache_miss_tokens": 4045,
+    "output_tokens": 5641,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:51:51.920145+00:00",
+    "last_ts": "2026-10-12T05:52:27.067779+00:00"
+   },
+   "cache_hit_rate": 0.9389,
+   "seconds": {
+    "total": 79.3,
+    "env_setup": 1.5,
+    "agent": 40.8,
+    "verifier": 25.3
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 1200.0,
+   "max_wall_seconds": 1080,
+   "finish": "Solved the scheduling Issue by computing the earliest valid 1-hour slot and writing /app/meeting_scheduled.ics.\n\nApproach: parsed the three input ICS files (DTSTART/DTEND, UTC), modeled each attendee'"
+  },
+  {
+   "job": "rep1",
+   "task": "fix-git",
+   "trial": "fix-git__hr755j7",
+   "reward": 0.0,
+   "tw_status": "done",
+   "steps": 18,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 18,
+   "tool_calls": 25,
+   "top_tools": {
+    "bash": 20,
+    "notes": 2,
+    "write_file": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 18,
+    "cost_cny": 0.026619,
+    "input_tokens": 150803,
+    "cache_hit_tokens": 142976,
+    "cache_miss_tokens": 7827,
+    "output_tokens": 3983,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:53:11.005758+00:00",
+    "last_ts": "2026-10-12T05:53:59.856667+00:00"
+   },
+   "cache_hit_rate": 0.9481,
+   "seconds": {
+    "total": 130.1,
+    "env_setup": 1.3,
+    "agent": 54.2,
+    "verifier": 63.1
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "用户 checkout master 后丢失了改动。定位到 master 上找不到的提交是 dangling commit 650dba4 \"Move to Stanford\"（通过 git reflog 和 git fsck --lost-found 找到），其父提交为 c4e38a1，正是 master HEAD d7d3e4b 的父提交。将该丢失提交的改动合入 master：cherry-p"
+  },
+  {
+   "job": "rep1",
+   "task": "git-leak-recovery",
+   "trial": "git-leak-recovery__mqRhPPA",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 19,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 19,
+   "tool_calls": 25,
+   "top_tools": {
+    "bash": 20,
+    "notes": 2,
+    "write_file": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 19,
+    "cost_cny": 0.03769,
+    "input_tokens": 160773,
+    "cache_hit_tokens": 153472,
+    "cache_miss_tokens": 7301,
+    "output_tokens": 6830,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:55:21.106085+00:00",
+    "last_ts": "2026-10-12T05:56:20.656016+00:00"
+   },
+   "cache_hit_rate": 0.9546,
+   "seconds": {
+    "total": 94.0,
+    "env_setup": 1.3,
+    "agent": 65.2,
+    "verifier": 15.7
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Recovered the accidentally-committed secret and scrubbed it from /app/repo.\n\nRecovery: The secret-lived in a dangling commit 6b4c75c (\"feat: add scratch notes\") that added a secret.txt file (blob 52d1"
+  },
+  {
+   "job": "rep1",
+   "task": "multi-source-data-merger",
+   "trial": "multi-source-data-merger__genq553",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 13,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 13,
+   "tool_calls": 15,
+   "top_tools": {
+    "bash": 11,
+    "write_file": 2,
+    "notes": 1,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 13,
+    "cost_cny": 0.026534,
+    "input_tokens": 87003,
+    "cache_hit_tokens": 82944,
+    "cache_miss_tokens": 4059,
+    "output_tokens": 5204,
+    "peak_calls": 0,
+    "first_ts": "2026-10-12T05:56:55.078006+00:00",
+    "last_ts": "2026-10-12T05:57:40.230900+00:00"
+   },
+   "cache_hit_rate": 0.9533,
+   "seconds": {
+    "total": 138.8,
+    "env_setup": 1.3,
+    "agent": 51.7,
+    "verifier": 73.9
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Implemented the three-source user data merge producing the two required artifacts. Wrote /app/merge_users.py which: (1) reads source_a/users.json (pandas from json), source_b/users.csv (read_csv), sou"
+  },
+  {
+   "job": "rep1",
+   "task": "nginx-request-logging",
+   "trial": "nginx-request-logging__v3EE9Zy",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 14,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 14,
+   "tool_calls": 18,
+   "top_tools": {
+    "bash": 12,
+    "write_file": 2,
+    "notes": 1,
+    "read_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 14,
+    "cost_cny": 0.049777,
+    "input_tokens": 97136,
+    "cache_hit_tokens": 91392,
+    "cache_miss_tokens": 5744,
+    "output_tokens": 4828,
+    "peak_calls": 11,
+    "first_ts": "2026-10-12T05:59:13.921735+00:00",
+    "last_ts": "2026-10-12T06:01:05.990418+00:00"
+   },
+   "cache_hit_rate": 0.9409,
+   "seconds": {
+    "total": 202.7,
+    "env_setup": 1.3,
+    "agent": 118.8,
+    "verifier": 70.6
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Installed and configured Nginx on Debian 12 to serve on port 8080 with advanced logging, rate limiting, and a custom 404 page, then verified it end-to-end.\n\nWhat was done:\n- apt-get install nginx (1.2"
+  },
+  {
+   "job": "rep1",
+   "task": "openssl-selfsigned-cert",
+   "trial": "openssl-selfsigned-cert__vMcPpkF",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 18,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 18,
+   "tool_calls": 19,
+   "top_tools": {
+    "bash": 12,
+    "notes": 2,
+    "write_file": 2,
+    "edit_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 18,
+    "cost_cny": 0.060966,
+    "input_tokens": 117488,
+    "cache_hit_tokens": 113152,
+    "cache_miss_tokens": 4336,
+    "output_tokens": 5971,
+    "peak_calls": 18,
+    "first_ts": "2026-10-12T06:00:13.379347+00:00",
+    "last_ts": "2026-10-12T06:01:07.187142+00:00"
+   },
+   "cache_hit_rate": 0.9631,
+   "seconds": {
+    "total": 143.0,
+    "env_setup": 1.3,
+    "agent": 59.5,
+    "verifier": 70.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "用 OpenSSL 为内部开发服务器创建了自签名 TLS 证书，并产出 Issue 要求的全部文件。\\n\\n实现方式：`openssl genrsa -out server.key 2048` 生成 2048 位 RSA 私钥并 chmod 600；`openssl req -new -x509 -key server.key -out server.crt -days 365 -subj \"/O"
+  },
+  {
+   "job": "rep1",
+   "task": "overfull-hbox",
+   "trial": "overfull-hbox__BHAzPo5",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 24,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 24,
+   "tool_calls": 27,
+   "top_tools": {
+    "bash": 20,
+    "read_file": 3,
+    "write_file": 3,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 1,
+    "exit124": 1,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 24,
+    "cost_cny": 0.072475,
+    "input_tokens": 225308,
+    "cache_hit_tokens": 216064,
+    "cache_miss_tokens": 9244,
+    "output_tokens": 5668,
+    "peak_calls": 24,
+    "first_ts": "2026-10-12T06:02:36.543675+00:00",
+    "last_ts": "2026-10-12T06:13:22.383525+00:00"
+   },
+   "cache_hit_rate": 0.959,
+   "seconds": {
+    "total": 718.4,
+    "env_setup": 1.4,
+    "agent": 652.8,
+    "verifier": 52.1
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 750.0,
+   "max_wall_seconds": 675,
+   "finish": "Goal: make main.tex compile with pdflatex with zero \"Overfull \\hbox\" warnings, editing ONLY words in input.tex using synonyms.txt families.\n\nApproach: baseline compile produced 7 overfull hboxes. Sinc"
+  },
+  {
+   "job": "rep1",
+   "task": "polyglot-c-py",
+   "trial": "polyglot-c-py__aiWcm94",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 120,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 120,
+   "tool_calls": 126,
+   "top_tools": {
+    "bash": 113,
+    "write_file": 6,
+    "notes": 5,
+    "read_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 120,
+    "cost_cny": 0.52225,
+    "input_tokens": 3957939,
+    "cache_hit_tokens": 3913088,
+    "cache_miss_tokens": 44851,
+    "output_tokens": 34503,
+    "peak_calls": 120,
+    "first_ts": "2026-10-12T06:02:36.789545+00:00",
+    "last_ts": "2026-10-12T06:09:56.321392+00:00"
+   },
+   "cache_hit_rate": 0.9887,
+   "seconds": {
+    "total": 479.9,
+    "env_setup": 1.4,
+    "agent": 447.2,
+    "verifier": 19.4
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Created /app/polyglot/main.py.c, a single-file Python/C polyglot. Running `python3 /app/polyglot/main.py.c N` or compiling with gcc and running the binary both print the Nth Fibonacci number (f(0)=0, "
+  },
+  {
+   "job": "rep1",
+   "task": "prove-plus-comm",
+   "trial": "prove-plus-comm__gVnmucF",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 17,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 17,
+   "tool_calls": 20,
+   "top_tools": {
+    "bash": 12,
+    "read_file": 2,
+    "write_file": 2,
+    "edit_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 17,
+    "cost_cny": 0.04692,
+    "input_tokens": 83955,
+    "cache_hit_tokens": 80256,
+    "cache_miss_tokens": 3699,
+    "output_tokens": 4539,
+    "peak_calls": 17,
+    "first_ts": "2026-10-12T06:10:36.445729+00:00",
+    "last_ts": "2026-10-12T06:12:20.677392+00:00"
+   },
+   "cache_hit_rate": 0.9559,
+   "seconds": {
+    "total": 148.1,
+    "env_setup": 1.3,
+    "agent": 110.7,
+    "verifier": 24.2
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Completed the partial commutativity-of-addition proof in plus_comm.v and compiled it with coqc. The original file had two `admit` placeholders (base and inductive cases).\n\nFix:\n- Base case (n = 0): af"
+  },
+  {
+   "job": "rep2",
+   "task": "cobol-modernization",
+   "trial": "cobol-modernization__uBFVgDd",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 82,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 82,
+   "tool_calls": 86,
+   "top_tools": {
+    "bash": 74,
+    "read_file": 3,
+    "edit_file": 3,
+    "notes": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 82,
+    "cost_cny": 0.354327,
+    "input_tokens": 2221738,
+    "cache_hit_tokens": 2190080,
+    "cache_miss_tokens": 31658,
+    "output_tokens": 25426,
+    "peak_calls": 82,
+    "first_ts": "2026-10-12T06:14:40.993206+00:00",
+    "last_ts": "2026-10-12T06:19:25.888322+00:00"
+   },
+   "cache_hit_rate": 0.9858,
+   "seconds": {
+    "total": 374.3,
+    "env_setup": 1.4,
+    "agent": 291.6,
+    "verifier": 69.6
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Re-implemented /app/src/program.cbl (BOOKFORUM) in Python at /app/program.py using only the standard library. The script reproduces the COBOL program byte-for-byte: it reads the single fixed-length 22"
+  },
+  {
+   "job": "rep2",
+   "task": "constraints-scheduling",
+   "trial": "constraints-scheduling__HBLiEp5",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 14,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 14,
+   "tool_calls": 17,
+   "top_tools": {
+    "bash": 8,
+    "read_file": 4,
+    "write_file": 2,
+    "notes": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 14,
+    "cost_cny": 0.056243,
+    "input_tokens": 107939,
+    "cache_hit_tokens": 102528,
+    "cache_miss_tokens": 5411,
+    "output_tokens": 5165,
+    "peak_calls": 14,
+    "first_ts": "2026-10-12T06:14:40.915760+00:00",
+    "last_ts": "2026-10-12T06:15:22.652268+00:00"
+   },
+   "cache_hit_rate": 0.9499,
+   "seconds": {
+    "total": 86.2,
+    "env_setup": 1.4,
+    "agent": 48.1,
+    "verifier": 24.8
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 1200.0,
+   "max_wall_seconds": 1080,
+   "finish": "解析 /app 下三个只读 ICS 日历，枚举 2024-01-15~19（周一至周五）business hours 9:00-18:00 内分钟粒度的 1 小时槽位，应用三人的硬约束（Alice 9:00-14:00 硬性、Bob ≥10:00 且 17:00 前结束/Tue-Thu 16:30 前结束、Carol 9:00-17:00 且 12:00-12:30 午休不可用），并排除与各自已有"
+  },
+  {
+   "job": "rep2",
+   "task": "fix-git",
+   "trial": "fix-git__MA6xDR9",
+   "reward": 0.0,
+   "tw_status": "done",
+   "steps": 20,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 20,
+   "tool_calls": 27,
+   "top_tools": {
+    "bash": 22,
+    "notes": 3,
+    "write_file": 1,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 20,
+    "cost_cny": 0.062362,
+    "input_tokens": 176171,
+    "cache_hit_tokens": 166912,
+    "cache_miss_tokens": 9259,
+    "output_tokens": 4646,
+    "peak_calls": 20,
+    "first_ts": "2026-10-12T06:16:07.131398+00:00",
+    "last_ts": "2026-10-12T06:17:03.806557+00:00"
+   },
+   "cache_hit_rate": 0.9474,
+   "seconds": {
+    "total": 138.4,
+    "env_setup": 1.4,
+    "agent": 62.4,
+    "verifier": 62.9
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "用户在自己个人站点（/app/personal-site）的工作中丢失了改动。排查发现：改动其实存在于一个\"游离（dangling）\"提交 650dba4 \"Move to Stanford\" 中——该提交是在分离 HEAD 状态（基于 master 的早期提交 c4e38a1）下创建的，随后切回 master，导致它脱离所有分支引用。可通过 `git reflog`（`650dba4 HEAD@"
+  },
+  {
+   "job": "rep2",
+   "task": "git-leak-recovery",
+   "trial": "git-leak-recovery__PZ282ZX",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 18,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 18,
+   "tool_calls": 24,
+   "top_tools": {
+    "bash": 19,
+    "notes": 2,
+    "write_file": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 18,
+    "cost_cny": 0.064375,
+    "input_tokens": 125077,
+    "cache_hit_tokens": 119936,
+    "cache_miss_tokens": 5141,
+    "output_tokens": 6162,
+    "peak_calls": 18,
+    "first_ts": "2026-10-12T06:18:25.370557+00:00",
+    "last_ts": "2026-10-12T06:19:19.446426+00:00"
+   },
+   "cache_hit_rate": 0.9589,
+   "seconds": {
+    "total": 90.2,
+    "env_setup": 1.3,
+    "agent": 60.1,
+    "verifier": 16.9
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Recovered the accidentally-committed secret and purged it from the git repo at /app/repo.\n\nWhat I found:\n- /app/repo had rewritten history: reflog showed initial commit 7a2420e, then commit 6b4c75c \"f"
+  },
+  {
+   "job": "rep2",
+   "task": "multi-source-data-merger",
+   "trial": "multi-source-data-merger__G9njdZs",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 15,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 15,
+   "tool_calls": 18,
+   "top_tools": {
+    "bash": 13,
+    "notes": 2,
+    "write_file": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 15,
+    "cost_cny": 0.063585,
+    "input_tokens": 114923,
+    "cache_hit_tokens": 110464,
+    "cache_miss_tokens": 4459,
+    "output_tokens": 6281,
+    "peak_calls": 15,
+    "first_ts": "2026-10-12T06:19:55.589556+00:00",
+    "last_ts": "2026-10-12T06:21:00.129791+00:00"
+   },
+   "cache_hit_rate": 0.9612,
+   "seconds": {
+    "total": 158.2,
+    "env_setup": 1.4,
+    "agent": 70.3,
+    "verifier": 74.6
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "实现了三源用户数据合并脚本 /app/merge_users.py，并生成题目要求的两个产物。\\n\\n- 读取 json/csv/parquet 三源，按字段映射表归一化列名：user_id(id/user_id/userId)、email(email/email_address/email)、name(full_name/name/userName)、created_date(registrat"
+  },
+  {
+   "job": "rep2",
+   "task": "nginx-request-logging",
+   "trial": "nginx-request-logging__bs4namP",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 19,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 19,
+   "tool_calls": 27,
+   "top_tools": {
+    "bash": 19,
+    "notes": 3,
+    "write_file": 2,
+    "read_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 19,
+    "cost_cny": 0.070892,
+    "input_tokens": 151396,
+    "cache_hit_tokens": 144896,
+    "cache_miss_tokens": 6500,
+    "output_tokens": 6512,
+    "peak_calls": 19,
+    "first_ts": "2026-10-12T06:20:55.049290+00:00",
+    "last_ts": "2026-10-12T06:23:05.910968+00:00"
+   },
+   "cache_hit_rate": 0.9571,
+   "seconds": {
+    "total": 218.5,
+    "env_setup": 1.3,
+    "agent": 137.1,
+    "verifier": 68.7
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Installed and configured Nginx 1.22.1 on Debian 12 to serve a benchmark site on port 8080 with advanced logging, rate limiting, and a custom 404 page. All Issue requirements are met: (1) nginx install"
+  },
+  {
+   "job": "rep2",
+   "task": "openssl-selfsigned-cert",
+   "trial": "openssl-selfsigned-cert__CfeXS9f",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 11,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 11,
+   "tool_calls": 13,
+   "top_tools": {
+    "bash": 8,
+    "notes": 2,
+    "write_file": 2,
+    "finish": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 11,
+    "cost_cny": 0.050052,
+    "input_tokens": 64620,
+    "cache_hit_tokens": 61312,
+    "cache_miss_tokens": 3308,
+    "output_tokens": 5123,
+    "peak_calls": 11,
+    "first_ts": "2026-10-12T06:22:33.653915+00:00",
+    "last_ts": "2026-10-12T06:23:10.559690+00:00"
+   },
+   "cache_hit_rate": 0.9488,
+   "seconds": {
+    "total": 125.2,
+    "env_setup": 1.3,
+    "agent": 42.8,
+    "verifier": 69.7
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Created a self-signed TLS certificate setup under /app per the Issue.\n\nWhat was done:\n- Created /app/ssl/.\n- Generated a 2048-bit RSA private key with `openssl genrsa`, saved as /app/ssl/server.key an"
+  },
+  {
+   "job": "rep2",
+   "task": "overfull-hbox",
+   "trial": "overfull-hbox__EM2skfY",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 32,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 32,
+   "tool_calls": 36,
+   "top_tools": {
+    "bash": 25,
+    "read_file": 3,
+    "notes": 3,
+    "edit_file": 2
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 32,
+    "cost_cny": 0.145589,
+    "input_tokens": 559516,
+    "cache_hit_tokens": 539136,
+    "cache_miss_tokens": 20380,
+    "output_tokens": 10408,
+    "peak_calls": 32,
+    "first_ts": "2026-10-12T06:24:33.513454+00:00",
+    "last_ts": "2026-10-12T06:28:05.007173+00:00"
+   },
+   "cache_hit_rate": 0.9636,
+   "seconds": {
+    "total": 278.2,
+    "env_setup": 1.2,
+    "agent": 217.8,
+    "verifier": 47.3
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 750.0,
+   "max_wall_seconds": 675,
+   "finish": "让 /app/main.tex 用 pdflatex 编译时不再产生任何 \"Overfull \\hbox\" 警告。基线编译有 7 处 overfull（全部来自 input.tex 的长段落与 2.5in 的窄版心）。我只对 input.tex 做了同义词替换，共改 4 行、7 个词，全部取自 synonyms.txt 中对应词族：\\n- 第 5 行：curious→odd、college→uni"
+  },
+  {
+   "job": "rep2",
+   "task": "polyglot-c-py",
+   "trial": "polyglot-c-py__zPi2XxU",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 80,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 80,
+   "tool_calls": 82,
+   "top_tools": {
+    "bash": 75,
+    "write_file": 3,
+    "notes": 2,
+    "edit_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 80,
+    "cost_cny": 0.382815,
+    "input_tokens": 1746889,
+    "cache_hit_tokens": 1729536,
+    "cache_miss_tokens": 17353,
+    "output_tokens": 34866,
+    "peak_calls": 80,
+    "first_ts": "2026-10-12T06:24:38.877193+00:00",
+    "last_ts": "2026-10-12T06:30:38.261008+00:00"
+   },
+   "cache_hit_rate": 0.9901,
+   "seconds": {
+    "total": 397.0,
+    "env_setup": 1.3,
+    "agent": 367.3,
+    "verifier": 16.6
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Created /app/polyglot/main.py.c, a polyglot file that is valid both as Python 3 and as C.\n\nDesign (zero-warning on both sides):\n- Python code lives inside `#if 0 ... #endif` so the C preprocessor skip"
+  },
+  {
+   "job": "rep2",
+   "task": "prove-plus-comm",
+   "trial": "prove-plus-comm__UtGezHV",
+   "reward": 1.0,
+   "tw_status": "done",
+   "steps": 15,
+   "exception": null,
+   "repro_cleanup": [],
+   "repro_dir": "/tmp/tw_repro",
+   "model_calls": 15,
+   "tool_calls": 17,
+   "top_tools": {
+    "bash": 10,
+    "edit_file": 3,
+    "list_files": 1,
+    "read_file": 1
+   },
+   "compact_or_clear_events": 0,
+   "errors": {
+    "timeout_tool": 0,
+    "exit124": 0,
+    "repeat_timeout_blockish": 0,
+    "remindish": 0
+   },
+   "ledger": {
+    "calls": 15,
+    "cost_cny": 0.039332,
+    "input_tokens": 70535,
+    "cache_hit_tokens": 66944,
+    "cache_miss_tokens": 3591,
+    "output_tokens": 3684,
+    "peak_calls": 15,
+    "first_ts": "2026-10-12T06:29:11.790268+00:00",
+    "last_ts": "2026-10-12T06:29:57.805596+00:00"
+   },
+   "cache_hit_rate": 0.9491,
+   "seconds": {
+    "total": 90.0,
+    "env_setup": 1.3,
+    "agent": 51.1,
+    "verifier": 26.0
+   },
+   "timeout_guard_mode": "block",
+   "time_budget_s": 900.0,
+   "max_wall_seconds": 810,
+   "finish": "Completed the incomplete proof of addition commutativity in plus_comm.v and compiled it with coqc.\n\nThe original file had `admit.` in both the base and inductive cases. I replaced them with real proof"
+  }
+ ],
+ "fix_git_failures_note": "rep1/rep2 verifier failed installing curl via apt (debian mirror 500/404); agent finished with plausible merge. rep0 verifier apt succeeded → reward 1. Not an agent regression.",
+ "cost_note": "Higher than r2 (¥1.86→¥3.01): (1) Eva approved --allow-peak; after 14:00 CST DeepSeek peak pricing applied to 496/890 calls; (2) polyglot-c-py costly (¥0.52+¥0.38+¥0.20).",
+ "wall": {
+  "launch_cst": "2026-10-12 13:32",
+  "finish_cst": "2026-10-12 14:31",
+  "approx_minutes": 59,
+  "jobs_minutes": {
+   "rep0": 18.5,
+   "rep1": 22.7,
+   "rep2": 16.6
+  },
+  "concurrency": 2
+ }
+}

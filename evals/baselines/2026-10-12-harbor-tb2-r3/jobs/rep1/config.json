@@ -1,0 +1,31 @@
+{
+    "job_name": "rep1",
+    "jobs_dir": "/home/box/tw-harbor/jobs/r3",
+    "n_concurrent_trials": 2,
+    "agents": [
+        {
+            "name": "triwitness.integrations.harbor_agent:TriWitnessAgent",
+            "kwargs": {
+                "harness": "baseline",
+                "thinking": false
+            }
+        }
+    ],
+    "datasets": [
+        {
+            "path": "/home/box/tw-harbor/terminal-bench-2",
+            "task_names": [
+                "fix-git",
+                "cobol-modernization",
+                "prove-plus-comm",
+                "overfull-hbox",
+                "constraints-scheduling",
+                "nginx-request-logging",
+                "openssl-selfsigned-cert",
+                "polyglot-c-py",
+                "multi-source-data-merger",
+                "git-leak-recovery"
+            ]
+        }
+    ]
+}
